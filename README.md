@@ -1,72 +1,90 @@
 # web_slicer_core
 
-Local SLA slicing agent based on PrusaSlicer CLI (headless).
+Web-based SLA slicing application powered by PrusaSlicer CLI (headless). Features a React frontend with 3D preview, configurable slicing parameters, and support mesh visualization.
+
+## Features
+
+- **SLA Slicing**: Slice STL models into layer images using PrusaSlicer engine
+- **3D Preview**: Interactive Three.js viewer with orbit controls (Z-up coordinate system)
+- **Support Generation**: Auto-generate supports with configurable parameters
+- **Support Mesh Export**: Download generated supports as STL for external use
+- **Configurable Parameters**: Layer height, exposure times, support settings, pad options
+- **Layer Navigation**: Browse through sliced layers with slider control
 
 ## Prerequisites
 
 - macOS (tested on macOS 15.x)
 - Python 3.9+
-- PrusaSlicer CLI built (see below)
+- Node.js 18+
+- PrusaSlicer Fork (with `--export-support-stl` feature)
 
 ## Quick Start
 
-### 1. Build PrusaSlicer CLI (if not already built)
+### 1. Build PrusaSlicer Fork
+
+The project uses a custom PrusaSlicer fork with support mesh STL export capability.
 
 ```bash
-# Build dependencies (first time only)
-cd upstream_repo/deps
-mkdir -p build && cd build
-/path/to/cmake-3.27.9.app/Contents/bin/cmake .. \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DPrusaSlicer_deps_PACKAGE_EXCLUDES="wxWidgets"
-make -j8
-
-# Build main project (headless/CLI only)
-cd /path/to/web_slicer_core
-mkdir -p build && cd build
-/path/to/cmake-3.27.9.app/Contents/bin/cmake ../upstream_repo \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DSLIC3R_GUI=OFF \
-  -DSLIC3R_BUILD_TESTS=OFF \
-  -DCMAKE_PREFIX_PATH="$PWD/../upstream_repo/deps/build/destdir/usr/local" \
-  -DCMAKE_EXE_LINKER_FLAGS="-framework Foundation"
-make -j8
-```
-
-### 2. Run the Agent
-
-```bash
-./scripts/run_agent.sh
-```
-
-The agent will start on `http://127.0.0.1:5179`.
-
-## Using PrusaSlicer Fork
-
-For development with a custom PrusaSlicer fork (preparation for future support-mesh export work):
-
-### Build the Fork
-
-```bash
+# Build the fork (includes --export-support-stl feature)
 ./scripts/build_prusaslicer_fork_macos.sh
 ```
 
-This clones/updates `git@github.com:MaxShih147/PrusaSlicer.git` into `third_party/prusaslicer_fork/` and builds it in `third_party/prusaslicer_build/`.
+This builds the binary at `third_party/prusaslicer_build/src/prusa-slicer`.
 
-### Run Agent with Forked Binary
+### 2. Start the Backend
 
 ```bash
-export PRUSA_SLICER_BIN=/path/to/web_slicer_core/third_party/prusaslicer_build/src/prusa-slicer
+# Set the path to the forked binary
+export PRUSA_SLICER_BIN=$(pwd)/third_party/prusaslicer_build/src/prusa-slicer
+
+# Start the agent
 ./scripts/run_agent.sh
 ```
 
-### Verify Binary
+Backend runs at `http://127.0.0.1:5179`
+
+### 3. Start the Frontend
 
 ```bash
-$PRUSA_SLICER_BIN --version
+cd web
+npm install
+npm run dev
 ```
 
-**Note:** The fork is not committed to git. Source and build artifacts are in `.gitignore`.
+Frontend runs at `http://localhost:5173`
+
+### 4. Open Browser
+
+Navigate to `http://localhost:5173`
+
+## Usage
+
+1. **Select STL File**: Click file input to select a model - 3D preview appears immediately
+2. **Configure Settings** (optional): Expand "Slicing Config" to adjust parameters
+   - Layer height: 0.025mm, 0.05mm, or 0.1mm
+   - Exposure time: 1-30 seconds
+   - Initial exposure: 5-60 seconds
+   - Enable/disable supports with detailed settings
+   - Enable/disable pad
+3. **Slice**: Click "Slice" button to start processing
+4. **View Results**:
+   - **3D Preview**: Model (blue) with support mesh overlay (red) if supports enabled
+   - **Layer View**: Navigate through individual slice images
+5. **Download Support STL**: When supports are generated, download button appears
+
+## SLA Configuration Parameters
+
+| Parameter | Description | Range | Default |
+|-----------|-------------|-------|---------|
+| `layer_height` | Height of each slice layer | 0.025, 0.05, 0.1 mm | 0.05 mm |
+| `exposure_time` | UV exposure per layer | 1-30 s | 10 s |
+| `initial_exposure_time` | First layers exposure | 5-60 s | 15 s |
+| `supports_enable` | Generate support structures | on/off | off |
+| `support_head_front_diameter` | Support tip diameter | 0.2-1.0 mm | 0.4 mm |
+| `support_head_penetration` | Tip penetration depth | 0.1-0.5 mm | 0.2 mm |
+| `support_pillar_diameter` | Support pillar width | 0.5-2.0 mm | 1.0 mm |
+| `support_points_density_relative` | Support density | 50-200% | 100% |
+| `pad_enable` | Generate base pad | on/off | off |
 
 ## API Reference
 
@@ -76,16 +94,17 @@ $PRUSA_SLICER_BIN --version
 curl http://127.0.0.1:5179/
 ```
 
-Response:
-```json
-{"service": "web_slicer_core", "status": "running", "cli_available": true}
-```
-
 ### Create Slicing Job
 
 ```bash
+# Basic (default config)
 curl -X POST http://127.0.0.1:5179/api/jobs \
-  -F "file=@/path/to/model.stl"
+  -F "file=@model.stl"
+
+# With custom config
+curl -X POST http://127.0.0.1:5179/api/jobs \
+  -F "file=@model.stl" \
+  -F 'config={"layer_height":0.05,"supports_enable":true,"exposure_time":12}'
 ```
 
 Response:
@@ -99,19 +118,15 @@ Response:
 curl http://127.0.0.1:5179/api/jobs/{job_id}
 ```
 
-Response (processing):
+Response:
 ```json
-{"job_id": "a1b2c3d4", "status": "processing", "layer_count": null, "error": null}
-```
-
-Response (completed):
-```json
-{"job_id": "a1b2c3d4", "status": "completed", "layer_count": 123, "error": null}
-```
-
-Response (failed):
-```json
-{"job_id": "a1b2c3d4", "status": "failed", "layer_count": null, "error": "Exit code 1: ..."}
+{
+  "job_id": "a1b2c3d4",
+  "status": "completed",
+  "layer_count": 750,
+  "error": null,
+  "has_support_mesh": true
+}
 ```
 
 ### Get Layer Image
@@ -120,107 +135,71 @@ Response (failed):
 curl http://127.0.0.1:5179/api/jobs/{job_id}/layers/50.png --output layer50.png
 ```
 
-Returns `image/png` or 404 if layer doesn't exist.
-
-## Web UI (Phase A2)
-
-A minimal React-based web UI for uploading models and viewing sliced layers.
-
-### Prerequisites
-
-- Node.js 18+ (for npm/npx)
-
-### Running the Web UI
-
-1. **Start the backend agent** (Terminal 1):
-   ```bash
-   ./scripts/run_agent.sh
-   ```
-   Backend runs at `http://127.0.0.1:5179`
-
-2. **Start the frontend** (Terminal 2):
-   ```bash
-   cd web
-   npm install
-   npm run dev
-   ```
-   Frontend runs at `http://localhost:5173`
-
-3. **Open browser** at `http://localhost:5173`
-
-### Usage
-
-1. Select an `.stl` file using the file input
-2. Click "Slice" to upload and start slicing
-3. Wait for slicing to complete (status updates automatically)
-4. Use Prev/Next buttons or slider to navigate layers
-
-## Example Workflow
+### Get Original Model STL
 
 ```bash
-# 1. Start the agent (in terminal 1)
-./scripts/run_agent.sh
-
-# 2. Submit a job (in terminal 2)
-JOB=$(curl -s -X POST http://127.0.0.1:5179/api/jobs \
-  -F "file=@workspace/input/01.stl" | jq -r '.job_id')
-echo "Job ID: $JOB"
-
-# 3. Poll for completion
-while true; do
-  STATUS=$(curl -s http://127.0.0.1:5179/api/jobs/$JOB | jq -r '.status')
-  echo "Status: $STATUS"
-  if [ "$STATUS" = "completed" ] || [ "$STATUS" = "failed" ]; then
-    break
-  fi
-  sleep 1
-done
-
-# 4. Get layer count
-curl -s http://127.0.0.1:5179/api/jobs/$JOB | jq
-
-# 5. Download a layer
-curl http://127.0.0.1:5179/api/jobs/$JOB/layers/50.png --output layer50.png
-open layer50.png
+curl http://127.0.0.1:5179/api/jobs/{job_id}/model.stl --output model.stl
 ```
 
-## Experimental: 3MF Project Export (Disabled)
+### Get Support Mesh STL
 
-~~When a slicing job completes, the agent can export a 3MF project file alongside the PNG layers.~~
+```bash
+curl http://127.0.0.1:5179/api/jobs/{job_id}/support.stl --output support.stl
+```
 
-**Status: DISABLED** - Testing confirmed that PrusaSlicer CLI `--export-3mf` does **not** preserve support information. The exported 3MF contains only the base model geometry, equivalent to the input STL wrapped in 3MF format.
+Only available when `has_support_mesh: true` in job status.
 
-The code remains in `agent/jobs.py` for future reference. To re-enable, set `EXPORT_PROJECT_3MF = True` in `agent/config.py`.
+## Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   React + Vite  │────▶│  FastAPI Agent  │────▶│  PrusaSlicer    │
+│   (Frontend)    │     │  (Backend)      │     │  CLI (Fork)     │
+│   :5173         │     │  :5179          │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │
+        │                       ▼
+        │               ┌─────────────────┐
+        │               │  Job Storage    │
+        │               │  agent/jobs/    │
+        │               └─────────────────┘
+        │
+        ▼
+┌─────────────────┐
+│  Three.js       │
+│  3D Viewer      │
+└─────────────────┘
+```
 
 ## Directory Structure
 
 ```
 web_slicer_core/
 ├── agent/
-│   ├── __init__.py
-│   ├── main.py         # FastAPI application
-│   ├── config.py       # Configuration
-│   ├── models.py       # Pydantic models
-│   ├── jobs.py         # Job management
-│   └── jobs/           # Job data (gitignored)
+│   ├── main.py              # FastAPI application & endpoints
+│   ├── config.py            # Configuration constants
+│   ├── models.py            # Pydantic models (SLAConfig, JobStatus)
+│   ├── jobs.py              # Job management & slicing logic
+│   └── jobs/                # Job data storage (gitignored)
 │       └── {job_id}/
 │           ├── input/model.stl
-│           ├── output/model.sl1
+│           ├── output/
+│           │   ├── model.sl1
+│           │   └── model_support.stl  # If supports enabled
 │           ├── layers/{0..N}.png
-│           ├── status.json
-│           └── stderr.log
-├── web/                # React frontend (Phase A2)
+│           ├── config.ini
+│           └── status.json
+├── web/
 │   ├── src/
-│   │   ├── App.tsx
-│   │   ├── App.css
-│   │   └── main.tsx
+│   │   ├── App.tsx          # Main application component
+│   │   ├── App.css          # Styles
+│   │   ├── STLViewer.tsx    # Three.js 3D viewer component
+│   │   └── main.tsx         # Entry point
 │   ├── package.json
 │   └── vite.config.ts
-├── build/              # PrusaSlicer build (gitignored)
-├── upstream_repo/      # PrusaSlicer submodule (legacy)
-├── third_party/        # Fork source + build (gitignored)
-│   ├── prusaslicer_fork/
-│   └── prusaslicer_build/
+├── third_party/
+│   ├── prusaslicer_fork/    # PrusaSlicer fork (submodule)
+│   └── prusaslicer_build/   # Build output (gitignored)
 ├── scripts/
 │   ├── run_agent.sh
 │   └── build_prusaslicer_fork_macos.sh
@@ -228,6 +207,79 @@ web_slicer_core/
 └── README.md
 ```
 
+## PrusaSlicer Fork
+
+This project uses a custom fork of PrusaSlicer (`github.com:MaxShih147/PrusaSlicer.git`) with an additional CLI option:
+
+### `--export-support-stl`
+
+Exports the generated support mesh as a separate STL file after SLA slicing.
+
+```bash
+prusa-slicer --export-sla --export-support-stl -o output.sl1 model.stl
+# Creates: output.sl1 and model_support.stl
+```
+
+**Implementation details:**
+- Added in `src/libslic3r/PrintConfig.cpp` (CLI option definition)
+- Export logic in `src/CLI/ProcessActions.cpp`
+- Uses `SLAPrintObject::support_mesh()` to get the mesh data
+
+## Development
+
+### Backend Development
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run with auto-reload
+cd agent && uvicorn main:app --reload --port 5179
+```
+
+### Frontend Development
+
+```bash
+cd web
+npm install
+npm run dev  # Vite dev server with HMR
+```
+
+### Building PrusaSlicer Fork
+
+If you need to modify the PrusaSlicer fork:
+
+1. Edit source in `third_party/prusaslicer_fork/`
+2. Rebuild:
+   ```bash
+   cd third_party/prusaslicer_build
+   make -j8
+   ```
+3. Test the binary:
+   ```bash
+   ./src/prusa-slicer --help | grep export-support
+   ```
+
+## Troubleshooting
+
+### "CLI not available"
+
+Ensure `PRUSA_SLICER_BIN` is set correctly:
+```bash
+export PRUSA_SLICER_BIN=$(pwd)/third_party/prusaslicer_build/src/prusa-slicer
+$PRUSA_SLICER_BIN --version
+```
+
+### CORS errors in browser
+
+The backend includes CORS middleware for `localhost:5173`. If using a different port, update `agent/main.py`.
+
+### Support mesh not appearing
+
+1. Ensure "Enable Supports" is checked in config panel
+2. Check backend logs for "Support mesh exported" message
+3. Verify `has_support_mesh: true` in job status response
+
 ## License
 
-PrusaSlicer is licensed under AGPLv3. See `upstream_repo/LICENSE` for details.
+PrusaSlicer is licensed under AGPLv3. See the fork repository for details.
