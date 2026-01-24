@@ -256,3 +256,24 @@ h1 {
   accent-color: #e94560;
   cursor: pointer;
 }
+
+/* Support mesh download */
+.support-download {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.download-btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: #4ade80;
+  color: #1a1a2e;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.download-btn:hover {
+  background: #22c55e;
+}

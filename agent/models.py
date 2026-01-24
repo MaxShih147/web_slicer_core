@@ -22,6 +22,7 @@ class JobStatusResponse(BaseModel):
     status: JobStatus
     layer_count: Optional[int] = None
     error: Optional[str] = None
+    has_support_mesh: bool = False
 
 
 class SLAConfig(BaseModel):

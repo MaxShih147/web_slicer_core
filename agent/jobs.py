@@ -42,13 +42,20 @@ def read_job_status(job_id: str) -> dict:
     return {"status": JobStatus.PENDING, "error": None, "layer_count": None}
 
 
-def write_job_status(job_id: str, status: JobStatus, error: Optional[str] = None, layer_count: Optional[int] = None):
+def write_job_status(
+    job_id: str,
+    status: JobStatus,
+    error: Optional[str] = None,
+    layer_count: Optional[int] = None,
+    has_support_mesh: bool = False,
+):
     """Write the job status to disk."""
     status_file = get_job_status_file(job_id)
     data = {
         "status": status.value,
         "error": error,
         "layer_count": layer_count,
+        "has_support_mesh": has_support_mesh,
     }
     with open(status_file, "w") as f:
         json.dump(data, f)
@@ -87,9 +94,13 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     job_dir = get_job_dir(job_id)
     input_file = job_dir / "input" / "model.stl"
     output_file = job_dir / "output" / "model.sl1"
+    support_stl_file = job_dir / "output" / "model_support.stl"
     layers_dir = job_dir / "layers"
     stderr_file = job_dir / "stderr.log"
     config_file = job_dir / "config.ini"
+
+    # Check if supports are enabled
+    supports_enabled = config.supports_enable if config else False
 
     # Update status to processing
     write_job_status(job_id, JobStatus.PROCESSING)
@@ -108,6 +119,10 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
             "--export-sla",
             "--output", str(output_file),
         ]
+
+        # Add support STL export if supports are enabled
+        if supports_enabled:
+            cmd.append("--export-support-stl")
 
         # Add config file if generated
         if config and config_file.exists():
@@ -136,11 +151,14 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         if output_file.exists():
             layer_count = extract_layers(output_file, layers_dir)
 
+            # Check if support mesh was generated
+            has_support_mesh = support_stl_file.exists()
+
             # Experimental: Export 3MF project file for support inspection
             if EXPORT_PROJECT_3MF:
                 await export_project_3mf(job_id, input_file, job_dir / "output")
 
-            write_job_status(job_id, JobStatus.COMPLETED, layer_count=layer_count)
+            write_job_status(job_id, JobStatus.COMPLETED, layer_count=layer_count, has_support_mesh=has_support_mesh)
         else:
             write_job_status(job_id, JobStatus.FAILED, error="Output file not created")
 
@@ -227,4 +245,12 @@ def get_layer_path(job_id: str, layer_idx: int) -> Optional[Path]:
     layer_path = get_job_dir(job_id) / "layers" / f"{layer_idx}.png"
     if layer_path.exists():
         return layer_path
+    return None
+
+
+def get_support_mesh_path(job_id: str) -> Optional[Path]:
+    """Get the path to the support mesh STL file."""
+    support_path = get_job_dir(job_id) / "output" / "model_support.stl"
+    if support_path.exists():
+        return support_path
     return None

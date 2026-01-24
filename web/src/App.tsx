@@ -9,6 +9,7 @@ interface JobStatus {
   status: 'pending' | 'processing' | 'completed' | 'failed'
   layer_count: number | null
   error: string | null
+  has_support_mesh: boolean
 }
 
 interface SLAConfig {
@@ -46,6 +47,7 @@ function App() {
   const pollingRef = useRef<number | null>(null)
   const [config, setConfig] = useState<SLAConfig>({ ...DEFAULT_CONFIG })
   const [configExpanded, setConfigExpanded] = useState(false)
+  const [hasSupportMesh, setHasSupportMesh] = useState(false)
 
   const updateConfig = <K extends keyof SLAConfig>(key: K, value: SLAConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }))
@@ -101,6 +103,7 @@ function App() {
       } else if (data.status === 'completed') {
         setStatus('done')
         setLayerCount(data.layer_count ?? 0)
+        setHasSupportMesh(data.has_support_mesh ?? false)
         setStatusMessage(`Slicing complete! ${data.layer_count} layers generated.`)
         // Load first layer
         if (data.layer_count && data.layer_count > 0) {
@@ -129,6 +132,7 @@ function App() {
     setStatusMessage('Uploading file...')
     setLayerUrl(null)
     setLayerCount(0)
+    setHasSupportMesh(false)
 
     try {
       const formData = new FormData()
@@ -330,6 +334,18 @@ function App() {
       <div className={`status ${status === 'error' ? 'error' : status === 'done' ? 'done' : ''}`}>
         {statusMessage}
       </div>
+
+      {hasSupportMesh && jobId && (
+        <div className="support-download">
+          <a
+            href={`${API_BASE}/api/jobs/${jobId}/support.stl`}
+            download="support.stl"
+            className="download-btn"
+          >
+            Download Support Mesh (STL)
+          </a>
+        </div>
+      )}
 
       <div className="viewer">
         {layerCount > 0 && (

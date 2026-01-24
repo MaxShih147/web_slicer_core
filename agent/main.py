@@ -16,6 +16,7 @@ from .jobs import (
     create_job_id,
     get_job_dir,
     get_layer_path,
+    get_support_mesh_path,
     job_exists,
     read_job_status,
     run_slicing,
@@ -108,6 +109,7 @@ async def get_job_status(job_id: str):
         status=JobStatus(status_data["status"]),
         layer_count=status_data.get("layer_count"),
         error=status_data.get("error"),
+        has_support_mesh=status_data.get("has_support_mesh", False),
     )
 
 
@@ -136,6 +138,34 @@ async def get_layer_image(job_id: str, idx: int):
         layer_path,
         media_type="image/png",
         filename=f"{idx}.png",
+    )
+
+
+@app.get("/api/jobs/{job_id}/support.stl")
+async def get_support_mesh(job_id: str):
+    """
+    Get the support mesh as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Check job is completed
+    status_data = read_job_status(job_id)
+    if status_data["status"] != JobStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job is not completed (status: {status_data['status']})"
+        )
+
+    # Get support mesh path
+    support_path = get_support_mesh_path(job_id)
+    if support_path is None:
+        raise HTTPException(status_code=404, detail="Support mesh not available")
+
+    return FileResponse(
+        support_path,
+        media_type="application/octet-stream",
+        filename="support.stl",
     )
 
 
