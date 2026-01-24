@@ -15,6 +15,7 @@ from .jobs import (
     create_job,
     create_job_id,
     get_job_dir,
+    get_input_model_path,
     get_layer_path,
     get_support_mesh_path,
     job_exists,
@@ -166,6 +167,26 @@ async def get_support_mesh(job_id: str):
         support_path,
         media_type="application/octet-stream",
         filename="support.stl",
+    )
+
+
+@app.get("/api/jobs/{job_id}/model.stl")
+async def get_input_model(job_id: str):
+    """
+    Get the original input model as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Get input model path
+    model_path = get_input_model_path(job_id)
+    if model_path is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    return FileResponse(
+        model_path,
+        media_type="application/octet-stream",
+        filename="model.stl",
     )
 
 

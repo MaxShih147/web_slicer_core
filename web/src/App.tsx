@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { STLViewer } from './STLViewer'
 
 const API_BASE = 'http://127.0.0.1:5179'
 
@@ -48,6 +49,8 @@ function App() {
   const [config, setConfig] = useState<SLAConfig>({ ...DEFAULT_CONFIG })
   const [configExpanded, setConfigExpanded] = useState(false)
   const [hasSupportMesh, setHasSupportMesh] = useState(false)
+  const [viewMode, setViewMode] = useState<'3d' | 'layers'>('3d')
+  const [localModelUrl, setLocalModelUrl] = useState<string | null>(null)
 
   const updateConfig = <K extends keyof SLAConfig>(key: K, value: SLAConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }))
@@ -64,6 +67,12 @@ function App() {
       setCurrentLayer(0)
       setLayerUrl(null)
       setStatus('idle')
+      setHasSupportMesh(false)
+      // Create local URL for immediate 3D preview
+      if (localModelUrl) {
+        URL.revokeObjectURL(localModelUrl)
+      }
+      setLocalModelUrl(URL.createObjectURL(selected))
     }
   }
 
@@ -133,6 +142,7 @@ function App() {
     setLayerUrl(null)
     setLayerCount(0)
     setHasSupportMesh(false)
+    setViewMode('3d')
 
     try {
       const formData = new FormData()
@@ -335,19 +345,53 @@ function App() {
         {statusMessage}
       </div>
 
-      {hasSupportMesh && jobId && (
-        <div className="support-download">
-          <a
-            href={`${API_BASE}/api/jobs/${jobId}/support.stl`}
-            download="support.stl"
-            className="download-btn"
-          >
-            Download Support Mesh (STL)
-          </a>
+      {(localModelUrl || (status === 'done' && jobId)) && (
+        <div className="view-controls">
+          {status === 'done' && (
+            <div className="view-toggle">
+              <button
+                className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
+                onClick={() => setViewMode('3d')}
+              >
+                3D Preview
+              </button>
+              <button
+                className={`toggle-btn ${viewMode === 'layers' ? 'active' : ''}`}
+                onClick={() => setViewMode('layers')}
+              >
+                Layer View
+              </button>
+            </div>
+          )}
+          {hasSupportMesh && jobId && (
+            <a
+              href={`${API_BASE}/api/jobs/${jobId}/support.stl`}
+              download="support.stl"
+              className="download-btn"
+            >
+              Download Support STL
+            </a>
+          )}
         </div>
       )}
 
-      <div className="viewer">
+      {localModelUrl && viewMode === '3d' && (
+        <div className="viewer-3d">
+          <STLViewer
+            key={`${localModelUrl}-${hasSupportMesh}`}
+            modelUrl={localModelUrl}
+            supportUrl={hasSupportMesh && jobId ? `${API_BASE}/api/jobs/${jobId}/support.stl` : undefined}
+            width={600}
+            height={450}
+          />
+          <div className="viewer-legend">
+            <span className="legend-item"><span className="color-box model"></span> Model</span>
+            {hasSupportMesh && <span className="legend-item"><span className="color-box support"></span> Supports</span>}
+          </div>
+        </div>
+      )}
+
+      <div className="viewer" style={{ display: viewMode === 'layers' ? 'block' : 'none' }}>
         {layerCount > 0 && (
           <>
             <div className="layer-nav">

@@ -254,3 +254,11 @@ def get_support_mesh_path(job_id: str) -> Optional[Path]:
     if support_path.exists():
         return support_path
     return None
+
+
+def get_input_model_path(job_id: str) -> Optional[Path]:
+    """Get the path to the original input model STL file."""
+    model_path = get_job_dir(job_id) / "input" / "model.stl"
+    if model_path.exists():
+        return model_path
+    return None
