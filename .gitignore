@@ -82,8 +82,7 @@ cmake-*.app/
 
 
 #######################################
-# PrusaSlicer fork (source + build)
+# PrusaSlicer fork build artifacts
 #######################################
 
-third_party/prusaslicer_fork/
 third_party/prusaslicer_build/

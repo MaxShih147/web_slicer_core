@@ -1,3 +1,7 @@
 [submodule "upstream_repo"]
 	path = upstream_repo
 	url = git@github.com:prusa3d/PrusaSlicer.git
+
+[submodule "third_party/prusaslicer_fork"]
+	path = third_party/prusaslicer_fork
+	url = git@github.com:MaxShih147/PrusaSlicer.git
