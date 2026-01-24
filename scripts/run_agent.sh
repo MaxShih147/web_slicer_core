@@ -22,12 +22,14 @@ echo "Installing dependencies..."
 pip install -q -r requirements.txt
 
 # Check if PrusaSlicer CLI exists
-CLI_PATH="$REPO_ROOT/build/src/prusa-slicer"
+# Use PRUSA_SLICER_BIN env var if set, otherwise use default path
+CLI_PATH="${PRUSA_SLICER_BIN:-$REPO_ROOT/build/src/prusa-slicer}"
 if [ ! -f "$CLI_PATH" ]; then
     echo "ERROR: PrusaSlicer CLI not found at $CLI_PATH"
-    echo "Please build PrusaSlicer first."
+    echo "Please build PrusaSlicer first or set PRUSA_SLICER_BIN environment variable."
     exit 1
 fi
+export PRUSA_SLICER_BIN="$CLI_PATH"
 
 echo "Starting web_slicer_core agent on http://127.0.0.1:5179"
 echo "Press Ctrl+C to stop"
