@@ -79,3 +79,11 @@ node_modules/
 
 cmake-*.dmg
 cmake-*.app/
+
+
+#######################################
+# PrusaSlicer fork (source + build)
+#######################################
+
+third_party/prusaslicer_fork/
+third_party/prusaslicer_build/

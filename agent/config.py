@@ -9,7 +9,9 @@ REPO_ROOT = AGENT_DIR.parent
 JOBS_DIR = AGENT_DIR / "jobs"
 
 # PrusaSlicer CLI path
-PRUSA_SLICER_CLI = REPO_ROOT / "build" / "src" / "prusa-slicer"
+# Use PRUSA_SLICER_BIN env var if set, otherwise fall back to local build
+_default_cli = REPO_ROOT / "build" / "src" / "prusa-slicer"
+PRUSA_SLICER_CLI = Path(os.getenv("PRUSA_SLICER_BIN", str(_default_cli)))
 
 # Server config
 HOST = "127.0.0.1"

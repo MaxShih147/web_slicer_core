@@ -41,6 +41,33 @@ make -j8
 
 The agent will start on `http://127.0.0.1:5179`.
 
+## Using PrusaSlicer Fork
+
+For development with a custom PrusaSlicer fork (preparation for future support-mesh export work):
+
+### Build the Fork
+
+```bash
+./scripts/build_prusaslicer_fork_macos.sh
+```
+
+This clones/updates `git@github.com:MaxShih147/PrusaSlicer.git` into `third_party/prusaslicer_fork/` and builds it in `third_party/prusaslicer_build/`.
+
+### Run Agent with Forked Binary
+
+```bash
+export PRUSA_SLICER_BIN=/path/to/web_slicer_core/third_party/prusaslicer_build/src/prusa-slicer
+./scripts/run_agent.sh
+```
+
+### Verify Binary
+
+```bash
+$PRUSA_SLICER_BIN --version
+```
+
+**Note:** The fork is not committed to git. Source and build artifacts are in `.gitignore`.
+
 ## API Reference
 
 ### Health Check
@@ -190,9 +217,13 @@ web_slicer_core/
 │   ├── package.json
 │   └── vite.config.ts
 ├── build/              # PrusaSlicer build (gitignored)
-├── upstream_repo/      # PrusaSlicer submodule
+├── upstream_repo/      # PrusaSlicer submodule (legacy)
+├── third_party/        # Fork source + build (gitignored)
+│   ├── prusaslicer_fork/
+│   └── prusaslicer_build/
 ├── scripts/
-│   └── run_agent.sh
+│   ├── run_agent.sh
+│   └── build_prusaslicer_fork_macos.sh
 ├── requirements.txt
 └── README.md
 ```
