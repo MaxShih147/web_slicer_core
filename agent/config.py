@@ -16,8 +16,11 @@ HOST = "127.0.0.1"
 PORT = 5179
 
 # Experimental: Export 3MF project file alongside SLA layers
-# This is used to inspect whether auto-generated supports are preserved
-EXPORT_PROJECT_3MF = True
+# DISABLED: Testing confirmed that PrusaSlicer CLI --export-3mf exports only
+# the base model geometry and does NOT preserve support information.
+# The exported 3MF is equivalent to the input STL wrapped in 3MF format.
+# Keeping code for future reference; set to True to re-enable if needed.
+EXPORT_PROJECT_3MF = False
 
 # Ensure jobs directory exists
 JOBS_DIR.mkdir(exist_ok=True)

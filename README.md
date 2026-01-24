@@ -157,16 +157,13 @@ curl http://127.0.0.1:5179/api/jobs/$JOB/layers/50.png --output layer50.png
 open layer50.png
 ```
 
-## Experimental: 3MF Project Export
+## Experimental: 3MF Project Export (Disabled)
 
-When a slicing job completes, the agent also exports a 3MF project file (`project_with_support.3mf`) alongside the PNG layers. This is an **experimental feature** intended for:
+~~When a slicing job completes, the agent can export a 3MF project file alongside the PNG layers.~~
 
-- Inspecting whether auto-generated supports are preserved in the 3MF output
-- Opening in PrusaSlicer GUI to verify support reconstruction
+**Status: DISABLED** - Testing confirmed that PrusaSlicer CLI `--export-3mf` does **not** preserve support information. The exported 3MF contains only the base model geometry, equivalent to the input STL wrapped in 3MF format.
 
-**Note:** This feature is not yet used for UI visualization. It is enabled by default via `EXPORT_PROJECT_3MF = True` in `agent/config.py`.
-
-Output location: `agent/jobs/{job_id}/output/project_with_support.3mf`
+The code remains in `agent/jobs.py` for future reference. To re-enable, set `EXPORT_PROJECT_3MF = True` in `agent/config.py`.
 
 ## Directory Structure
 
@@ -182,7 +179,6 @@ web_slicer_core/
 │       └── {job_id}/
 │           ├── input/model.stl
 │           ├── output/model.sl1
-│           ├── output/project_with_support.3mf  # experimental
 │           ├── layers/{0..N}.png
 │           ├── status.json
 │           └── stderr.log
