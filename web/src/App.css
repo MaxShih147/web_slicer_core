@@ -144,3 +144,115 @@ h1 {
   color: #666;
   font-style: italic;
 }
+
+/* Config panel styles */
+.config-panel {
+  background: #16213e;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.config-toggle {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: #eee;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.config-toggle:hover {
+  background: #1a2a4e;
+}
+
+.config-content {
+  padding: 1rem;
+  border-top: 1px solid #0f3460;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.config-group {
+  background: #0f3460;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.config-group h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.config-group label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.config-group label:last-child {
+  margin-bottom: 0;
+}
+
+.config-group select,
+.config-group input[type="range"] {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.config-group select {
+  padding: 0.4rem;
+  background: #16213e;
+  border: 1px solid #1a4a7e;
+  border-radius: 4px;
+  color: #eee;
+  cursor: pointer;
+}
+
+.config-group input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: #16213e;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.config-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #e94560;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.config-group input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #e94560;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.toggle-label {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #e94560;
+  cursor: pointer;
+}

@@ -11,6 +11,30 @@ interface JobStatus {
   error: string | null
 }
 
+interface SLAConfig {
+  layer_height: number
+  exposure_time: number
+  initial_exposure_time: number
+  supports_enable: boolean
+  support_head_front_diameter: number
+  support_head_penetration: number
+  support_pillar_diameter: number
+  support_points_density_relative: number
+  pad_enable: boolean
+}
+
+const DEFAULT_CONFIG: SLAConfig = {
+  layer_height: 0.05,
+  exposure_time: 10.0,
+  initial_exposure_time: 15.0,
+  supports_enable: false,
+  support_head_front_diameter: 0.4,
+  support_head_penetration: 0.2,
+  support_pillar_diameter: 1.0,
+  support_points_density_relative: 100,
+  pad_enable: false,
+}
+
 function App() {
   const [file, setFile] = useState<File | null>(null)
   const [status, setStatus] = useState<Status>('idle')
@@ -20,6 +44,12 @@ function App() {
   const [currentLayer, setCurrentLayer] = useState(0)
   const [layerUrl, setLayerUrl] = useState<string | null>(null)
   const pollingRef = useRef<number | null>(null)
+  const [config, setConfig] = useState<SLAConfig>({ ...DEFAULT_CONFIG })
+  const [configExpanded, setConfigExpanded] = useState(false)
+
+  const updateConfig = <K extends keyof SLAConfig>(key: K, value: SLAConfig[K]) => {
+    setConfig(prev => ({ ...prev, [key]: value }))
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0]
@@ -103,6 +133,7 @@ function App() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('config', JSON.stringify(config))
 
       const response = await fetch(`${API_BASE}/api/jobs`, {
         method: 'POST',
@@ -159,6 +190,141 @@ function App() {
         >
           {isWorking ? 'Working...' : 'Slice'}
         </button>
+      </div>
+
+      <div className="config-panel">
+        <button
+          className="config-toggle"
+          onClick={() => setConfigExpanded(!configExpanded)}
+        >
+          {configExpanded ? '▼' : '▶'} Slicing Config
+        </button>
+
+        {configExpanded && (
+          <div className="config-content">
+            <div className="config-group">
+              <h3>Layer</h3>
+              <label>
+                Layer Height
+                <select
+                  value={config.layer_height}
+                  onChange={e => updateConfig('layer_height', parseFloat(e.target.value))}
+                  disabled={isWorking}
+                >
+                  <option value={0.025}>0.025 mm</option>
+                  <option value={0.05}>0.05 mm</option>
+                  <option value={0.1}>0.1 mm</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="config-group">
+              <h3>Exposure</h3>
+              <label>
+                Exposure Time: {config.exposure_time}s
+                <input
+                  type="range"
+                  min={1}
+                  max={30}
+                  step={0.5}
+                  value={config.exposure_time}
+                  onChange={e => updateConfig('exposure_time', parseFloat(e.target.value))}
+                  disabled={isWorking}
+                />
+              </label>
+              <label>
+                Initial Exposure: {config.initial_exposure_time}s
+                <input
+                  type="range"
+                  min={5}
+                  max={60}
+                  step={1}
+                  value={config.initial_exposure_time}
+                  onChange={e => updateConfig('initial_exposure_time', parseFloat(e.target.value))}
+                  disabled={isWorking}
+                />
+              </label>
+            </div>
+
+            <div className="config-group">
+              <h3>Supports</h3>
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={config.supports_enable}
+                  onChange={e => updateConfig('supports_enable', e.target.checked)}
+                  disabled={isWorking}
+                />
+                Enable Supports
+              </label>
+              {config.supports_enable && (
+                <>
+                  <label>
+                    Head Diameter: {config.support_head_front_diameter}mm
+                    <input
+                      type="range"
+                      min={0.2}
+                      max={1.0}
+                      step={0.1}
+                      value={config.support_head_front_diameter}
+                      onChange={e => updateConfig('support_head_front_diameter', parseFloat(e.target.value))}
+                      disabled={isWorking}
+                    />
+                  </label>
+                  <label>
+                    Head Penetration: {config.support_head_penetration}mm
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={0.5}
+                      step={0.05}
+                      value={config.support_head_penetration}
+                      onChange={e => updateConfig('support_head_penetration', parseFloat(e.target.value))}
+                      disabled={isWorking}
+                    />
+                  </label>
+                  <label>
+                    Pillar Diameter: {config.support_pillar_diameter}mm
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={2.0}
+                      step={0.1}
+                      value={config.support_pillar_diameter}
+                      onChange={e => updateConfig('support_pillar_diameter', parseFloat(e.target.value))}
+                      disabled={isWorking}
+                    />
+                  </label>
+                  <label>
+                    Density: {config.support_points_density_relative}%
+                    <input
+                      type="range"
+                      min={50}
+                      max={200}
+                      step={10}
+                      value={config.support_points_density_relative}
+                      onChange={e => updateConfig('support_points_density_relative', parseInt(e.target.value, 10))}
+                      disabled={isWorking}
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+
+            <div className="config-group">
+              <h3>Pad</h3>
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={config.pad_enable}
+                  onChange={e => updateConfig('pad_enable', e.target.checked)}
+                  disabled={isWorking}
+                />
+                Enable Pad
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={`status ${status === 'error' ? 'error' : status === 'done' ? 'done' : ''}`}>

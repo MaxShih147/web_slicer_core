@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from .config import JOBS_DIR, PRUSA_SLICER_CLI, EXPORT_PROJECT_3MF
-from .models import JobStatus
+from .models import JobStatus, SLAConfig
 
 
 def create_job_id() -> str:
@@ -64,16 +64,42 @@ def create_job(job_id: str) -> Path:
     return job_dir
 
 
-async def run_slicing(job_id: str):
+def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
+    """Generate a PrusaSlicer INI config file from SLAConfig."""
+    lines = [
+        "# Generated SLA config",
+        f"layer_height = {config.layer_height}",
+        f"exposure_time = {config.exposure_time}",
+        f"initial_exposure_time = {config.initial_exposure_time}",
+        f"supports_enable = {1 if config.supports_enable else 0}",
+        f"support_head_front_diameter = {config.support_head_front_diameter}",
+        f"support_head_penetration = {config.support_head_penetration}",
+        f"support_pillar_diameter = {config.support_pillar_diameter}",
+        f"support_points_density_relative = {config.support_points_density_relative}",
+        f"pad_enable = {1 if config.pad_enable else 0}",
+    ]
+    with open(output_path, "w") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     """Run PrusaSlicer in the background."""
     job_dir = get_job_dir(job_id)
     input_file = job_dir / "input" / "model.stl"
     output_file = job_dir / "output" / "model.sl1"
     layers_dir = job_dir / "layers"
     stderr_file = job_dir / "stderr.log"
+    config_file = job_dir / "config.ini"
 
     # Update status to processing
     write_job_status(job_id, JobStatus.PROCESSING)
+
+    # Generate config INI if config provided
+    if config:
+        generate_config_ini(config, config_file)
+        # Also save config as JSON for reference
+        with open(job_dir / "config.json", "w") as f:
+            json.dump(config.model_dump(), f, indent=2)
 
     try:
         # Run PrusaSlicer CLI
@@ -81,8 +107,13 @@ async def run_slicing(job_id: str):
             str(PRUSA_SLICER_CLI),
             "--export-sla",
             "--output", str(output_file),
-            str(input_file),
         ]
+
+        # Add config file if generated
+        if config and config_file.exists():
+            cmd.extend(["--load", str(config_file)])
+
+        cmd.append(str(input_file))
 
         process = await asyncio.create_subprocess_exec(
             *cmd,

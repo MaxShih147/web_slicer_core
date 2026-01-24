@@ -1,14 +1,16 @@
 """FastAPI application for the web_slicer_core agent."""
 
 import asyncio
+import json
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .config import HOST, PORT, PRUSA_SLICER_CLI
-from .models import JobCreateResponse, JobStatus, JobStatusResponse
+from .models import JobCreateResponse, JobStatus, JobStatusResponse, SLAConfig
 from .jobs import (
     create_job,
     create_job_id,
@@ -49,15 +51,28 @@ async def root():
 async def create_slicing_job(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    config: Optional[str] = Form(None),
 ):
     """
     Create a new slicing job.
 
     Upload a .stl file to start SLA slicing.
+    Optionally provide a JSON config string with slicing parameters.
     """
     # Validate file extension
     if not file.filename or not file.filename.lower().endswith(".stl"):
         raise HTTPException(status_code=400, detail="Only .stl files are supported")
+
+    # Parse config if provided
+    sla_config: Optional[SLAConfig] = None
+    if config:
+        try:
+            config_data = json.loads(config)
+            sla_config = SLAConfig(**config_data)
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid config JSON: {e}")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid config: {e}")
 
     # Create job
     job_id = create_job_id()
@@ -73,7 +88,7 @@ async def create_slicing_job(
         raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
 
     # Schedule slicing in background
-    background_tasks.add_task(run_slicing, job_id)
+    background_tasks.add_task(run_slicing, job_id, sla_config)
 
     return JobCreateResponse(job_id=job_id, status=JobStatus.PENDING)
 
