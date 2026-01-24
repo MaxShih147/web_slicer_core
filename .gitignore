@@ -1,0 +1,73 @@
+#######################################
+# Workspace / tooling
+#######################################
+
+# Claude Code workspace (tool state, not project assets)
+.claude/
+
+# Generic workspace temp
+workspace/
+
+
+#######################################
+# Build artifacts
+#######################################
+
+# Project build outputs
+build/
+deps/build/
+
+# PrusaSlicer upstream (kept local only, not versioned here)
+upstream_repo/
+upstream_repo/deps/build/
+
+
+#######################################
+# Agent runtime data
+#######################################
+
+# Generated slicing jobs & outputs
+agent/jobs/
+
+
+#######################################
+# Python
+#######################################
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Packaging / distribution
+*.egg-info/
+dist/
+build/
+
+
+#######################################
+# IDE / Editor
+#######################################
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+
+#######################################
+# macOS
+#######################################
+
+.DS_Store
+
+
+#######################################
+# CMake / large local tools
+#######################################
+
+cmake-*.dmg
+cmake-*.app/
