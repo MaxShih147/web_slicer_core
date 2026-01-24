@@ -95,6 +95,39 @@ curl http://127.0.0.1:5179/api/jobs/{job_id}/layers/50.png --output layer50.png
 
 Returns `image/png` or 404 if layer doesn't exist.
 
+## Web UI (Phase A2)
+
+A minimal React-based web UI for uploading models and viewing sliced layers.
+
+### Prerequisites
+
+- Node.js 18+ (for npm/npx)
+
+### Running the Web UI
+
+1. **Start the backend agent** (Terminal 1):
+   ```bash
+   ./scripts/run_agent.sh
+   ```
+   Backend runs at `http://127.0.0.1:5179`
+
+2. **Start the frontend** (Terminal 2):
+   ```bash
+   cd web
+   npm install
+   npm run dev
+   ```
+   Frontend runs at `http://localhost:5173`
+
+3. **Open browser** at `http://localhost:5173`
+
+### Usage
+
+1. Select an `.stl` file using the file input
+2. Click "Slice" to upload and start slicing
+3. Wait for slicing to complete (status updates automatically)
+4. Use Prev/Next buttons or slider to navigate layers
+
 ## Example Workflow
 
 ```bash
@@ -141,6 +174,13 @@ web_slicer_core/
 │           ├── layers/{0..N}.png
 │           ├── status.json
 │           └── stderr.log
+├── web/                # React frontend (Phase A2)
+│   ├── src/
+│   │   ├── App.tsx
+│   │   ├── App.css
+│   │   └── main.tsx
+│   ├── package.json
+│   └── vite.config.ts
 ├── build/              # PrusaSlicer build (gitignored)
 ├── upstream_repo/      # PrusaSlicer submodule
 ├── scripts/

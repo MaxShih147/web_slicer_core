@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .config import HOST, PORT, PRUSA_SLICER_CLI
@@ -22,6 +23,15 @@ app = FastAPI(
     title="web_slicer_core Agent",
     description="Local agent for SLA slicing using PrusaSlicer CLI",
     version="0.1.0",
+)
+
+# CORS configuration for local development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
