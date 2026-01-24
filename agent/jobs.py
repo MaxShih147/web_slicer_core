@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-from .config import JOBS_DIR, PRUSA_SLICER_CLI
+from .config import JOBS_DIR, PRUSA_SLICER_CLI, EXPORT_PROJECT_3MF
 from .models import JobStatus
 
 
@@ -104,12 +104,60 @@ async def run_slicing(job_id: str):
         # Extract PNG layers from .sl1 (zip file)
         if output_file.exists():
             layer_count = extract_layers(output_file, layers_dir)
+
+            # Experimental: Export 3MF project file for support inspection
+            if EXPORT_PROJECT_3MF:
+                await export_project_3mf(job_id, input_file, job_dir / "output")
+
             write_job_status(job_id, JobStatus.COMPLETED, layer_count=layer_count)
         else:
             write_job_status(job_id, JobStatus.FAILED, error="Output file not created")
 
     except Exception as e:
         write_job_status(job_id, JobStatus.FAILED, error=str(e))
+
+
+async def export_project_3mf(job_id: str, input_file: Path, output_dir: Path):
+    """
+    Experimental: Export 3MF project file to inspect support preservation.
+
+    This runs a separate PrusaSlicer CLI invocation with --export-3mf.
+    The 3MF file can be opened in PrusaSlicer GUI to check if supports
+    are preserved or need to be reconstructed.
+    """
+    output_3mf = output_dir / "project_with_support.3mf"
+    stderr_file = output_dir / "3mf_export_stderr.log"
+
+    try:
+        cmd = [
+            str(PRUSA_SLICER_CLI),
+            "--export-3mf",
+            "--output", str(output_3mf),
+            str(input_file),
+        ]
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        stdout, stderr = await process.communicate()
+
+        # Save stderr for debugging
+        with open(stderr_file, "wb") as f:
+            f.write(stderr)
+
+        if process.returncode != 0:
+            # Log but don't fail the job - this is experimental
+            error_msg = stderr.decode("utf-8", errors="replace")
+            print(f"[experimental] 3MF export failed for job {job_id}: {error_msg}")
+        else:
+            print(f"[experimental] 3MF exported: {output_3mf}")
+
+    except Exception as e:
+        # Log but don't fail the job
+        print(f"[experimental] 3MF export error for job {job_id}: {e}")
 
 
 def extract_layers(sl1_file: Path, layers_dir: Path) -> int:

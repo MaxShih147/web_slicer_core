@@ -15,5 +15,9 @@ PRUSA_SLICER_CLI = REPO_ROOT / "build" / "src" / "prusa-slicer"
 HOST = "127.0.0.1"
 PORT = 5179
 
+# Experimental: Export 3MF project file alongside SLA layers
+# This is used to inspect whether auto-generated supports are preserved
+EXPORT_PROJECT_3MF = True
+
 # Ensure jobs directory exists
 JOBS_DIR.mkdir(exist_ok=True)
