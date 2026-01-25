@@ -8,7 +8,7 @@ Both v1 (/api/jobs) and v2 (/api/v2/slices) share the same underlying job manage
 import json
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from .jobs import (
@@ -133,6 +133,43 @@ async def add_models_to_slice_job(job_id: str, request: V2ModelsAddRequest):
         success=True,
         message=f"Added {len(model_ids)} model(s)",
         data={"modelIds": model_ids}
+    )
+
+
+@router.post("/slices/{job_id}/upload", response_model=V2Response)
+async def upload_model_file(job_id: str, file: UploadFile = File(...)):
+    """
+    Upload an STL file to a slice job.
+
+    This is the recommended way to add models - upload the file directly.
+    The file will be stored and used when execute is called.
+    """
+    if job_id not in _pending_jobs:
+        raise HTTPException(status_code=404, detail="Job not found or already executed")
+
+    # Validate file extension
+    if not file.filename or not file.filename.lower().endswith(".stl"):
+        raise HTTPException(status_code=400, detail="Only .stl files are supported")
+
+    # Read file content
+    try:
+        content = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {e}")
+
+    # Store file content in pending job
+    model_id = f"file_{len(_pending_jobs[job_id]['models'])}"
+    _pending_jobs[job_id]["models"].append({
+        "id": model_id,
+        "filename": file.filename,
+        "stl_data": content,
+        "type": "file_upload",
+    })
+
+    return V2Response(
+        success=True,
+        message=f"File '{file.filename}' uploaded",
+        data={"modelId": model_id, "filename": file.filename}
     )
 
 
