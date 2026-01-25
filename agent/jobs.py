@@ -262,3 +262,35 @@ def get_input_model_path(job_id: str) -> Optional[Path]:
     if model_path.exists():
         return model_path
     return None
+
+
+async def run_support_generation(job_id: str, config: Optional[SLAConfig] = None):
+    """
+    Generate support mesh only (without layer extraction).
+
+    Uses the sla_operations API for clean implementation.
+    """
+    from .sla_operations import generate_supports
+
+    job_dir = get_job_dir(job_id)
+    write_job_status(job_id, JobStatus.PROCESSING)
+
+    try:
+        # Use default config if not provided
+        if config is None:
+            config = SLAConfig(supports_enable=True)
+
+        result = await generate_supports(job_dir, config)
+
+        if result.success:
+            write_job_status(
+                job_id,
+                JobStatus.COMPLETED,
+                layer_count=0,  # No layers extracted for support-only
+                has_support_mesh=True,
+            )
+        else:
+            write_job_status(job_id, JobStatus.FAILED, error=result.error)
+
+    except Exception as e:
+        write_job_status(job_id, JobStatus.FAILED, error=str(e))

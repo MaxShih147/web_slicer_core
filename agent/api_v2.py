@@ -18,6 +18,7 @@ from .jobs import (
     job_exists,
     read_job_status,
     run_slicing,
+    run_support_generation,
 )
 from .models import JobStatus, SLAConfig
 
@@ -236,12 +237,92 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
     )
 
 
+@router.post("/slices/{job_id}/generate-supports", response_model=V2Response)
+async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks):
+    """
+    Generate support mesh only (without slicing).
+
+    This allows users to preview supports before committing to a full slice.
+    The support mesh can be fetched via GET /api/jobs/{job_id}/support.stl
+    """
+    if job_id not in _pending_jobs:
+        # Check if it's already on disk
+        if job_exists(job_id):
+            status = read_job_status(job_id)
+            if status.get("has_support_mesh"):
+                return V2Response(
+                    success=True,
+                    message="Supports already generated",
+                    data={"hasSupportMesh": True}
+                )
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    pending = _pending_jobs[job_id]
+
+    # Check if models were added
+    if not pending["models"]:
+        raise HTTPException(status_code=400, detail="No models added to job")
+
+    # Create job directory structure
+    job_dir = create_job(job_id)
+
+    # Save model data
+    model_data = pending["models"][0]
+    input_path = job_dir / "input" / "model.stl"
+
+    if "vertices" in model_data:
+        raise HTTPException(
+            status_code=501,
+            detail="Direct vertex data not yet supported. Please use file upload."
+        )
+    elif "stl_data" in model_data:
+        with open(input_path, "wb") as f:
+            f.write(model_data["stl_data"])
+    else:
+        raise HTTPException(status_code=400, detail="Model must contain vertices or stl_data")
+
+    # Convert v2 config to SLAConfig (ensure supports_enable is True)
+    config = pending["config"]
+    config["supports_enable"] = True
+    sla_config = _convert_v2_config_to_sla(config)
+
+    # Keep job in pending so it can still be sliced later
+    # But mark that we've saved the model
+    pending["model_saved"] = True
+    pending["job_dir"] = str(job_dir)
+
+    # Start support generation in background
+    background_tasks.add_task(run_support_generation, job_id, sla_config)
+
+    return V2Response(
+        success=True,
+        message="Support generation started",
+        data={"currentConfig": config}
+    )
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
     Get the status of a slice job.
     """
-    # Check pending jobs first
+    # Check disk status first (for jobs that have been executed/generated)
+    if job_exists(job_id):
+        status_data = read_job_status(job_id)
+        # If job is on disk and not pending, return disk status
+        if status_data["status"] != "pending":
+            return V2Response(
+                success=True,
+                data={
+                    "jobId": job_id,
+                    "status": status_data["status"],
+                    "layerCount": status_data.get("layer_count"),
+                    "error": status_data.get("error"),
+                    "hasSupportMesh": status_data.get("has_support_mesh", False),
+                }
+            )
+
+    # Check pending jobs (not yet executed)
     if job_id in _pending_jobs:
         return V2Response(
             success=True,
@@ -253,22 +334,8 @@ async def get_slice_job_status(job_id: str):
             }
         )
 
-    # Check disk jobs
-    if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    status_data = read_job_status(job_id)
-
-    return V2Response(
-        success=True,
-        data={
-            "jobId": job_id,
-            "status": status_data["status"],
-            "layerCount": status_data.get("layer_count"),
-            "error": status_data.get("error"),
-            "hasSupportMesh": status_data.get("has_support_mesh", False),
-        }
-    )
+    # Job not found anywhere
+    raise HTTPException(status_code=404, detail="Job not found")
 
 
 @router.get("/slices/{job_id}/uchars", response_model=V2Response)
