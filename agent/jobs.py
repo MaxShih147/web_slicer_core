@@ -48,6 +48,7 @@ def write_job_status(
     error: Optional[str] = None,
     layer_count: Optional[int] = None,
     has_support_mesh: bool = False,
+    has_hollow_mesh: bool = False,
 ):
     """Write the job status to disk."""
     status_file = get_job_status_file(job_id)
@@ -56,6 +57,7 @@ def write_job_status(
         "error": error,
         "layer_count": layer_count,
         "has_support_mesh": has_support_mesh,
+        "has_hollow_mesh": has_hollow_mesh,
     }
     with open(status_file, "w") as f:
         json.dump(data, f)
@@ -288,6 +290,46 @@ async def run_support_generation(job_id: str, config: Optional[SLAConfig] = None
                 JobStatus.COMPLETED,
                 layer_count=0,  # No layers extracted for support-only
                 has_support_mesh=True,
+            )
+        else:
+            write_job_status(job_id, JobStatus.FAILED, error=result.error)
+
+    except Exception as e:
+        write_job_status(job_id, JobStatus.FAILED, error=str(e))
+
+
+def get_hollow_mesh_path(job_id: str) -> Optional[Path]:
+    """Get the path to the hollow interior mesh STL file."""
+    hollow_path = get_job_dir(job_id) / "output" / "model_hollow.stl"
+    if hollow_path.exists():
+        return hollow_path
+    return None
+
+
+async def run_hollow_generation(job_id: str, config: Optional[SLAConfig] = None):
+    """
+    Generate hollow interior mesh only.
+
+    Uses the sla_operations API for clean implementation.
+    """
+    from .sla_operations import generate_hollow
+
+    job_dir = get_job_dir(job_id)
+    write_job_status(job_id, JobStatus.PROCESSING)
+
+    try:
+        # Use default config if not provided
+        if config is None:
+            config = SLAConfig(hollowing_enable=True)
+
+        result = await generate_hollow(job_dir, config)
+
+        if result.success:
+            write_job_status(
+                job_id,
+                JobStatus.COMPLETED,
+                layer_count=0,  # No layers extracted for hollow-only
+                has_hollow_mesh=True,
             )
         else:
             write_job_status(job_id, JobStatus.FAILED, error=result.error)

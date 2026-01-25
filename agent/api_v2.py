@@ -19,6 +19,7 @@ from .jobs import (
     read_job_status,
     run_slicing,
     run_support_generation,
+    run_hollow_generation,
 )
 from .models import JobStatus, SLAConfig
 
@@ -301,6 +302,70 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
     )
 
 
+@router.post("/slices/{job_id}/generate-hollow", response_model=V2Response)
+async def generate_hollow_only(job_id: str, background_tasks: BackgroundTasks):
+    """
+    Generate hollow interior mesh only (without slicing).
+
+    This allows users to preview the hollow interior before committing to a full slice.
+    The hollow mesh can be fetched via GET /api/jobs/{job_id}/hollow.stl
+    """
+    if job_id not in _pending_jobs:
+        # Check if it's already on disk
+        if job_exists(job_id):
+            status = read_job_status(job_id)
+            if status.get("has_hollow_mesh"):
+                return V2Response(
+                    success=True,
+                    message="Hollow already generated",
+                    data={"hasHollowMesh": True}
+                )
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    pending = _pending_jobs[job_id]
+
+    # Check if models were added
+    if not pending["models"]:
+        raise HTTPException(status_code=400, detail="No models added to job")
+
+    # Create job directory structure
+    job_dir = create_job(job_id)
+
+    # Save model data
+    model_data = pending["models"][0]
+    input_path = job_dir / "input" / "model.stl"
+
+    if "vertices" in model_data:
+        raise HTTPException(
+            status_code=501,
+            detail="Direct vertex data not yet supported. Please use file upload."
+        )
+    elif "stl_data" in model_data:
+        with open(input_path, "wb") as f:
+            f.write(model_data["stl_data"])
+    else:
+        raise HTTPException(status_code=400, detail="Model must contain vertices or stl_data")
+
+    # Convert v2 config to SLAConfig (ensure hollowing_enable is True)
+    config = pending["config"]
+    config["hollowing_enable"] = True
+    sla_config = _convert_v2_config_to_sla(config)
+
+    # Keep job in pending so it can still be sliced later
+    # But mark that we've saved the model
+    pending["model_saved"] = True
+    pending["job_dir"] = str(job_dir)
+
+    # Start hollow generation in background
+    background_tasks.add_task(run_hollow_generation, job_id, sla_config)
+
+    return V2Response(
+        success=True,
+        message="Hollow generation started",
+        data={"currentConfig": config}
+    )
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
@@ -319,6 +384,7 @@ async def get_slice_job_status(job_id: str):
                     "layerCount": status_data.get("layer_count"),
                     "error": status_data.get("error"),
                     "hasSupportMesh": status_data.get("has_support_mesh", False),
+                    "hasHollowMesh": status_data.get("has_hollow_mesh", False),
                 }
             )
 
@@ -433,7 +499,9 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
 
     # Also handle direct snake_case keys (for v1 compatibility)
     for key in ["layer_height", "exposure_time", "initial_exposure_time",
-                "supports_enable", "pad_enable"]:
+                "supports_enable", "pad_enable",
+                "hollowing_enable", "hollowing_min_thickness",
+                "hollowing_quality", "hollowing_closing_distance"]:
         if key in config:
             sla_dict[key] = config[key]
 

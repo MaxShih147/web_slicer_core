@@ -23,6 +23,7 @@ class JobStatusResponse(BaseModel):
     layer_count: Optional[int] = None
     error: Optional[str] = None
     has_support_mesh: bool = False
+    has_hollow_mesh: bool = False
 
 
 class SLAConfig(BaseModel):
@@ -44,3 +45,9 @@ class SLAConfig(BaseModel):
 
     # Pad settings
     pad_enable: bool = False
+
+    # Hollow settings
+    hollowing_enable: bool = False
+    hollowing_min_thickness: float = 3.0
+    hollowing_quality: float = 0.5
+    hollowing_closing_distance: float = 2.0

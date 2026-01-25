@@ -10,7 +10,7 @@ JOBS_DIR = AGENT_DIR / "jobs"
 
 # PrusaSlicer CLI path
 # Use PRUSA_SLICER_BIN env var if set, otherwise fall back to local build
-_default_cli = REPO_ROOT / "build" / "src" / "prusa-slicer"
+_default_cli = REPO_ROOT / "third_party" / "prusaslicer_build" / "src" / "prusa-slicer"
 PRUSA_SLICER_CLI = Path(os.getenv("PRUSA_SLICER_BIN", str(_default_cli)))
 
 # Server config

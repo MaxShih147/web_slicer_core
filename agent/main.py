@@ -18,6 +18,7 @@ from .jobs import (
     get_input_model_path,
     get_layer_path,
     get_support_mesh_path,
+    get_hollow_mesh_path,
     job_exists,
     read_job_status,
     run_slicing,
@@ -123,6 +124,7 @@ async def get_job_status(job_id: str):
         layer_count=status_data.get("layer_count"),
         error=status_data.get("error"),
         has_support_mesh=status_data.get("has_support_mesh", False),
+        has_hollow_mesh=status_data.get("has_hollow_mesh", False),
     )
 
 
@@ -199,6 +201,34 @@ async def get_input_model(job_id: str):
         model_path,
         media_type="application/octet-stream",
         filename="model.stl",
+    )
+
+
+@app.get("/api/jobs/{job_id}/hollow.stl")
+async def get_hollow_mesh(job_id: str):
+    """
+    Get the hollow interior mesh as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Check job is completed
+    status_data = read_job_status(job_id)
+    if status_data["status"] != JobStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job is not completed (status: {status_data['status']})"
+        )
+
+    # Get hollow mesh path
+    hollow_path = get_hollow_mesh_path(job_id)
+    if hollow_path is None:
+        raise HTTPException(status_code=404, detail="Hollow mesh not available")
+
+    return FileResponse(
+        hollow_path,
+        media_type="application/octet-stream",
+        filename="hollow.stl",
     )
 
 

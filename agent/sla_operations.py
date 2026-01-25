@@ -28,9 +28,9 @@ from .models import SLAConfig
 class OperationType(str, Enum):
     """Available SLA operations."""
     GENERATE_SUPPORTS = "generate_supports"
+    GENERATE_HOLLOW = "generate_hollow"
     SLICE = "slice"
     # Future operations
-    # HOLLOW = "hollow"
     # DRILL = "drill"
 
 
@@ -43,6 +43,7 @@ class OperationResult:
     error: Optional[str] = None
     # Output paths
     support_mesh_path: Optional[Path] = None
+    hollow_mesh_path: Optional[Path] = None
     sl1_path: Optional[Path] = None
     layer_count: int = 0
     # Metadata
@@ -55,6 +56,7 @@ class OperationResult:
             "job_id": self.job_id,
             "error": self.error,
             "support_mesh_path": str(self.support_mesh_path) if self.support_mesh_path else None,
+            "hollow_mesh_path": str(self.hollow_mesh_path) if self.hollow_mesh_path else None,
             "sl1_path": str(self.sl1_path) if self.sl1_path else None,
             "layer_count": self.layer_count,
             "metadata": self.metadata,
@@ -74,6 +76,11 @@ def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
         f"support_pillar_diameter = {config.support_pillar_diameter}",
         f"support_points_density_relative = {config.support_points_density_relative}",
         f"pad_enable = {1 if config.pad_enable else 0}",
+        # Hollowing parameters
+        f"hollowing_enable = {1 if config.hollowing_enable else 0}",
+        f"hollowing_min_thickness = {config.hollowing_min_thickness}",
+        f"hollowing_quality = {config.hollowing_quality}",
+        f"hollowing_closing_distance = {config.hollowing_closing_distance}",
     ]
     with open(output_path, "w") as f:
         f.write("\n".join(lines) + "\n")
@@ -288,23 +295,80 @@ def _extract_layers_from_sl1(sl1_file: Path, layers_dir: Path) -> int:
 
 
 # =============================================================================
-# Future Operations (stubs for extension)
+# Hollow Operation
 # =============================================================================
 
-async def hollow_model(
+async def generate_hollow(
     job_dir: Path,
-    wall_thickness: float = 2.0,
+    config: SLAConfig,
     input_file: Optional[Path] = None,
 ) -> OperationResult:
     """
-    Hollow the model (future implementation).
+    Generate hollow interior mesh only.
 
-    PrusaSlicer supports hollowing via:
-    - GUI: Right-click → Hollow
-    - CLI: May need custom implementation or external tool
+    This runs PrusaSlicer with --export-hollow-stl to generate just the
+    interior mesh for visualization. The frontend will combine this with
+    the original mesh.
+
+    Args:
+        job_dir: Job directory containing input/output folders
+        config: SLA configuration with hollowing parameters
+        input_file: Optional input STL path. Defaults to job_dir/input/model.stl
+
+    Returns:
+        OperationResult with hollow_mesh_path if successful
     """
-    raise NotImplementedError("Hollow operation not yet implemented")
+    job_id = job_dir.name
+    input_file = input_file or (job_dir / "input" / "model.stl")
+    hollow_stl = job_dir / "output" / "model_hollow.stl"
+    stderr_file = job_dir / "stderr_hollow.log"
 
+    # Save config as JSON for reference
+    with open(job_dir / "config_hollow.json", "w") as f:
+        json.dump(config.model_dump(), f, indent=2)
+
+    # Build command for hollow export
+    cmd = [
+        str(PRUSA_SLICER_CLI),
+        "--export-hollow-stl",
+        f"--hollowing-min-thickness={config.hollowing_min_thickness}",
+        f"--hollowing-quality={config.hollowing_quality}",
+        f"--hollowing-closing-distance={config.hollowing_closing_distance}",
+        "--output", str(hollow_stl),
+        str(input_file),
+    ]
+
+    returncode, stdout, stderr = await run_prusa_cli(cmd, stderr_file)
+
+    if returncode != 0:
+        error_msg = stderr.decode("utf-8", errors="replace")
+        return OperationResult(
+            success=False,
+            operation=OperationType.GENERATE_HOLLOW,
+            job_id=job_id,
+            error=f"PrusaSlicer failed (exit {returncode}): {error_msg}",
+        )
+
+    if not hollow_stl.exists():
+        return OperationResult(
+            success=False,
+            operation=OperationType.GENERATE_HOLLOW,
+            job_id=job_id,
+            error="Hollow interior mesh was not generated.",
+        )
+
+    return OperationResult(
+        success=True,
+        operation=OperationType.GENERATE_HOLLOW,
+        job_id=job_id,
+        hollow_mesh_path=hollow_stl,
+        metadata={"config": config.model_dump()},
+    )
+
+
+# =============================================================================
+# Future Operations (stubs for extension)
+# =============================================================================
 
 async def drill_hole(
     job_dir: Path,
