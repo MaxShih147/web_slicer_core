@@ -22,21 +22,33 @@ from .jobs import (
     read_job_status,
     run_slicing,
 )
+from .api_v2 import router as v2_router
 
 app = FastAPI(
     title="web_slicer_core Agent",
-    description="Local agent for SLA slicing using PrusaSlicer CLI",
-    version="0.1.0",
+    description="Local agent for SLA slicing using PrusaSlicer CLI. Supports multiple frontends via versioned APIs.",
+    version="0.2.0",
 )
 
 # CORS configuration for local development
+# Supports both web_slicer_core React UI and DS-Online Vue UI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",   # DS-Online (default Vite port)
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",   # web_slicer_core React UI (alternate port)
+        "http://127.0.0.1:5174",
+        "http://localhost:3000",   # Common dev port
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include v2 API router (DS-Online compatible)
+app.include_router(v2_router)
 
 
 @app.get("/")

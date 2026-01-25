@@ -151,24 +151,65 @@ Returns combined mesh of supports and pad (if enabled). Only available when `has
 
 ## Architecture
 
+The backend supports multiple frontends through versioned API endpoints:
+
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   React + Vite  │────▶│  FastAPI Agent  │────▶│  PrusaSlicer    │
-│   (Frontend)    │     │  (Backend)      │     │  CLI (Fork)     │
-│   :5173         │     │  :5179          │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │
-        │                       ▼
-        │               ┌─────────────────┐
-        │               │  Job Storage    │
-        │               │  agent/jobs/    │
-        │               └─────────────────┘
-        │
-        ▼
-┌─────────────────┐
-│  Three.js       │
-│  3D Viewer      │
-└─────────────────┘
+┌─────────────────────┐     ┌─────────────────────┐
+│   DS-Online (Vue)   │     │  web_slicer_core    │
+│   Dental Slicer UI  │     │  (React) Basic UI   │
+│   :5173             │     │  :5174              │
+└──────────┬──────────┘     └──────────┬──────────┘
+           │                           │
+           │  /api/v2/slices           │  /api/jobs
+           │                           │
+           ▼                           ▼
+┌─────────────────────────────────────────────────┐
+│            FastAPI Backend (:5179)              │
+│  ┌─────────────────┐   ┌─────────────────────┐  │
+│  │ /api/v2/slices  │   │ /api/jobs (v1)      │  │
+│  │ DS-Online API   │   │ Original API        │  │
+│  └────────┬────────┘   └──────────┬──────────┘  │
+│           └────────────┬──────────┘             │
+│                        ▼                        │
+│           ┌─────────────────────┐               │
+│           │    Job Manager      │               │
+│           │  (shared service)   │               │
+│           └──────────┬──────────┘               │
+│                      ▼                          │
+│           ┌─────────────────────┐               │
+│           │   PrusaSlicer CLI   │               │
+│           │   (Fork + support   │               │
+│           │    mesh export)     │               │
+│           └─────────────────────┘               │
+└─────────────────────────────────────────────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │  Job Storage    │
+              │  agent/jobs/    │
+              └─────────────────┘
+```
+
+### Layer Abstraction
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  UI Layer                                                   │
+│  - DS-Online (Vue + Three.js + PrimeVue)                   │
+│  - web_slicer_core (React + Three.js)                      │
+├─────────────────────────────────────────────────────────────┤
+│  API Layer (FastAPI)                                        │
+│  - /api/jobs/* (v1 - original)                             │
+│  - /api/v2/slices/* (v2 - DS-Online compatible)            │
+├─────────────────────────────────────────────────────────────┤
+│  Service Layer                                              │
+│  - Job Manager (create, status, polling)                   │
+│  - Config Manager (INI generation, validation)             │
+├─────────────────────────────────────────────────────────────┤
+│  Engine Layer                                               │
+│  - PrusaSlicer CLI Adapter                                 │
+│  - Support mesh export (--export-support-stl)              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Directory Structure
