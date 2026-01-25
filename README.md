@@ -141,13 +141,13 @@ curl http://127.0.0.1:5179/api/jobs/{job_id}/layers/50.png --output layer50.png
 curl http://127.0.0.1:5179/api/jobs/{job_id}/model.stl --output model.stl
 ```
 
-### Get Support Mesh STL
+### Get Support Mesh STL (includes pad)
 
 ```bash
 curl http://127.0.0.1:5179/api/jobs/{job_id}/support.stl --output support.stl
 ```
 
-Only available when `has_support_mesh: true` in job status.
+Returns combined mesh of supports and pad (if enabled). Only available when `has_support_mesh: true` in job status.
 
 ## Architecture
 
@@ -213,17 +213,21 @@ This project uses a custom fork of PrusaSlicer (`github.com:MaxShih147/PrusaSlic
 
 ### `--export-support-stl`
 
-Exports the generated support mesh as a separate STL file after SLA slicing.
+Exports the generated support and pad meshes as a combined STL file after SLA slicing.
 
 ```bash
 prusa-slicer --export-sla --export-support-stl -o output.sl1 model.stl
 # Creates: output.sl1 and model_support.stl
 ```
 
+The exported STL includes:
+- Support structures (if `supports_enable = true`)
+- Pad/raft (if `pad_enable = true`)
+
 **Implementation details:**
 - Added in `src/libslic3r/PrintConfig.cpp` (CLI option definition)
 - Export logic in `src/CLI/ProcessActions.cpp`
-- Uses `SLAPrintObject::support_mesh()` to get the mesh data
+- Uses `SLAPrintObject::support_mesh()` and `SLAPrintObject::pad_mesh()`
 
 ## Development
 
