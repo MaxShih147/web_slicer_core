@@ -8,7 +8,8 @@ Web-based SLA slicing application powered by PrusaSlicer CLI (headless). Feature
 - **3D Preview**: Interactive Three.js viewer with orbit controls (Z-up coordinate system)
 - **Support Generation**: Auto-generate supports with configurable parameters
 - **Support Mesh Export**: Download generated supports as STL for external use
-- **Configurable Parameters**: Layer height, exposure times, support settings, pad options
+- **Hollow Interior Generation**: Generate hollow interior mesh for visualization (NEW)
+- **Configurable Parameters**: Layer height, exposure times, support settings, pad options, hollowing
 - **Layer Navigation**: Browse through sliced layers with slider control
 
 ## Prerequisites
@@ -85,6 +86,10 @@ Navigate to `http://localhost:5173`
 | `support_pillar_diameter` | Support pillar width | 0.5-2.0 mm | 1.0 mm |
 | `support_points_density_relative` | Support density | 50-200% | 100% |
 | `pad_enable` | Generate base pad | on/off | off |
+| `hollowing_enable` | Enable hollowing | on/off | off |
+| `hollowing_min_thickness` | Wall thickness | 0.5-10 mm | 3.0 mm |
+| `hollowing_quality` | Voxel quality (higher = finer) | 0.1-1.0 | 0.5 |
+| `hollowing_closing_distance` | Smoothing distance | 0-10 mm | 2.0 mm |
 
 ## API Reference
 
@@ -149,6 +154,37 @@ curl http://127.0.0.1:5179/api/jobs/{job_id}/support.stl --output support.stl
 
 Returns combined mesh of supports and pad (if enabled). Only available when `has_support_mesh: true` in job status.
 
+### Generate Hollow Interior (v2 API)
+
+```bash
+# 1. Create job with hollow config
+curl -X POST http://127.0.0.1:5179/api/v2/slices \
+  -H "Content-Type: application/json" \
+  -d '{"config": {"hollowing_enable": true, "hollowing_min_thickness": 2.0}}'
+
+# 2. Upload model
+curl -X POST http://127.0.0.1:5179/api/v2/slices/{job_id}/upload \
+  -F "file=@model.stl"
+
+# 3. Generate hollow interior
+curl -X POST http://127.0.0.1:5179/api/v2/slices/{job_id}/generate-hollow
+
+# 4. Poll status until completed
+curl http://127.0.0.1:5179/api/v2/slices/{job_id}
+# Response: {"data": {"status": "completed", "hasHollowMesh": true}}
+
+# 5. Download hollow mesh
+curl http://127.0.0.1:5179/api/jobs/{job_id}/hollow.stl --output hollow.stl
+```
+
+### Get Hollow Mesh STL
+
+```bash
+curl http://127.0.0.1:5179/api/jobs/{job_id}/hollow.stl --output hollow.stl
+```
+
+Returns the hollow interior mesh. Only available when `has_hollow_mesh: true` in job status.
+
 ## Architecture
 
 The backend supports multiple frontends through versioned API endpoints:
@@ -209,6 +245,7 @@ The backend supports multiple frontends through versioned API endpoints:
 │  Engine Layer                                               │
 │  - PrusaSlicer CLI Adapter                                 │
 │  - Support mesh export (--export-support-stl)              │
+│  - Hollow interior export (--export-hollow-stl)            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -250,7 +287,7 @@ web_slicer_core/
 
 ## PrusaSlicer Fork
 
-This project uses a custom fork of PrusaSlicer (`github.com:MaxShih147/PrusaSlicer.git`) with an additional CLI option:
+This project uses a custom fork of PrusaSlicer (`github.com:MaxShih147/PrusaSlicer.git`) with additional CLI options:
 
 ### `--export-support-stl`
 
@@ -269,6 +306,35 @@ The exported STL includes:
 - Added in `src/libslic3r/PrintConfig.cpp` (CLI option definition)
 - Export logic in `src/CLI/ProcessActions.cpp`
 - Uses `SLAPrintObject::support_mesh()` and `SLAPrintObject::pad_mesh()`
+
+### `--export-hollow-stl`
+
+Generates and exports the hollow interior mesh as STL. This is a standalone operation that doesn't require full slicing.
+
+```bash
+prusa-slicer --export-hollow-stl \
+  --hollowing-min-thickness 2 \
+  --hollowing-quality 0.5 \
+  --hollowing-closing-distance 1 \
+  -o interior.stl model.stl
+# Creates: interior.stl (hollow interior mesh only)
+```
+
+**Parameters:**
+- `--hollowing-min-thickness`: Wall thickness in mm (default: 2.0)
+- `--hollowing-quality`: Voxel quality 0.1-1.0 (default: 0.5, higher = finer detail)
+- `--hollowing-closing-distance`: Morphological closing distance in mm (default: 0.5)
+
+**Important notes:**
+- Wall thickness must be appropriate for model size (small models need thinner walls)
+- The interior mesh has flipped normals for proper visualization
+- Uses OpenVDB for voxelization and interior generation
+
+**Implementation details:**
+- CLI option defined in `src/libslic3r/PrintConfig.cpp`
+- Handler in `src/CLI/ProcessActions.cpp`
+- Uses `sla::generate_interior()` from `libslic3r/SLA/Hollowing.hpp`
+- Normals flipped via `sla::swap_normals()` for visualization
 
 ## Development
 
@@ -324,6 +390,131 @@ The backend includes CORS middleware for `localhost:5173`. If using a different 
 1. Ensure "Enable Supports" is checked in config panel
 2. Check backend logs for "Support mesh exported" message
 3. Verify `has_support_mesh: true` in job status response
+
+---
+
+## Feature Status & Roadmap
+
+### ✅ Implemented Features
+
+| Feature | CLI | Backend API | Frontend | Notes |
+|---------|-----|-------------|----------|-------|
+| SLA Slicing | ✅ `--export-sla` | ✅ `/execute` | ✅ | Full layer export |
+| Support Generation | ✅ `--export-support-stl` | ✅ `/generate-supports` | ✅ | Includes pad mesh |
+| Hollow Interior | ✅ `--export-hollow-stl` | ✅ `/generate-hollow` | ✅ | Interior mesh only |
+| Layer Preview | ✅ | ✅ `/layers/{idx}.png` | ✅ | PNG extraction from SL1 |
+| 3D Visualization | - | - | ✅ | Three.js with Z-up |
+
+### 🚧 TODO / Future Work
+
+#### High Priority
+- [ ] **Drain Holes**: Add `--export-drill-stl` for drain hole generation
+  - PrusaSlicer has `DrainHole` in `Hollowing.hpp`
+  - Needs position input (click-to-place in UI)
+- [ ] **Combined Hollow + Supports**: Single operation for hollowed model with internal supports
+- [ ] **Hollow Preview Before Apply**: Show preview without generating full mesh
+
+#### Medium Priority
+- [ ] **Auto-Orient**: Expose PrusaSlicer's auto-orient via CLI
+- [ ] **Support Editing**: Manual support point placement/removal
+- [ ] **Infill Patterns**: Support for partial hollowing with infill
+- [ ] **Multi-Model Support**: Handle multiple models in single job
+
+#### Low Priority / Research
+- [ ] **WebAssembly Port**: Run hollowing in browser (OpenVDB is complex)
+- [ ] **Streaming Layers**: WebSocket for real-time layer streaming during slice
+- [ ] **Diff Slicing**: Only re-slice changed regions
+
+### ⚠️ Known Issues & Limitations
+
+1. **Wall Thickness vs Model Size**
+   - Small models need thinner walls (0.5-1mm)
+   - Large models can use thicker walls (2-3mm)
+   - Error "interior mesh is empty" means wall is too thick for model
+
+2. **Hollow Mesh Positioning**
+   - Frontend must apply same transform as original model
+   - Currently copies position/rotation/scale from selected model
+   - If model is transformed after hollow generation, mesh will be misaligned
+
+3. **Memory Usage**
+   - Hollowing uses OpenVDB which can be memory-intensive
+   - High quality setting (1.0) on large models may use several GB RAM
+
+4. **No Incremental Updates**
+   - Changing hollow parameters requires full regeneration
+   - No caching of intermediate voxel grids
+
+5. **Single Model Per Job**
+   - v2 API currently only processes first uploaded model
+   - Multi-model support requires job structure changes
+
+### 🏗️ Architecture Decisions
+
+#### Why Export Interior Mesh Only?
+
+**Decision**: Export only the hollow interior mesh, not a combined hollowed model.
+
+**Rationale**:
+- Frontend already has the original mesh
+- Smaller data transfer (interior only vs full hollowed model)
+- Can toggle hollow preview on/off without re-fetching
+- Allows different materials/transparency for interior visualization
+- PrusaSlicer stores interior separately in `sla::Interior`
+
+**Trade-off**: Frontend must combine meshes; can't directly print the exported hollow mesh.
+
+#### Why Flip Normals in CLI?
+
+**Decision**: Flip normals in PrusaSlicer CLI before export (`sla::swap_normals()`).
+
+**Rationale**:
+- Interior mesh faces inward by default (for boolean subtraction)
+- Visualization requires outward-facing normals
+- Better to flip once at export than in every frontend
+- Consistent with how support mesh is exported
+
+#### Why Separate `/generate-hollow` Endpoint?
+
+**Decision**: Hollow generation is a separate endpoint, not part of `/execute`.
+
+**Rationale**:
+- Hollow preview doesn't need full slicing
+- Faster feedback loop for parameter tuning
+- Can hollow without committing to slice
+- Matches `/generate-supports` pattern
+- Future: could cache hollow result for final slice
+
+#### Job State Model
+
+```
+                    ┌─────────────┐
+                    │   created   │  (in-memory, _pending_jobs)
+                    └──────┬──────┘
+                           │ upload model
+                           ▼
+                    ┌─────────────┐
+         ┌─────────│   pending   │─────────┐
+         │         └─────────────┘         │
+         │ generate-supports    generate-hollow
+         ▼                                 ▼
+   ┌───────────┐                    ┌───────────┐
+   │ processing│                    │ processing│
+   └─────┬─────┘                    └─────┬─────┘
+         │                                │
+         ▼                                ▼
+   ┌───────────┐                    ┌───────────┐
+   │ completed │                    │ completed │
+   │ +supports │                    │ +hollow   │
+   └───────────┘                    └───────────┘
+         │
+         │ execute (full slice)
+         ▼
+   ┌───────────┐
+   │ completed │
+   │ +layers   │
+   └───────────┘
+```
 
 ---
 
