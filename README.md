@@ -284,6 +284,101 @@ The backend includes CORS middleware for `localhost:5173`. If using a different 
 2. Check backend logs for "Support mesh exported" message
 3. Verify `has_support_mesh: true` in job status response
 
+---
+
+## Future Directions & Business Paths (Internal Checklist)
+
+> This section is a self-reminder for future product and business evolution.
+> Not all items are meant to be pursued at once.
+
+### A. Slicing-as-a-Service (SaaS / API-first)
+
+**Idea**: Expose the slicer as a headless, scalable service rather than a desktop tool.
+
+**Potential value**:
+- Remove slicer maintenance burden for customers
+- Enable cloud / automation / AI pipelines
+- Natural fit for batch processing and scale
+
+**Target users**:
+- Manufacturing platforms
+- Dental labs
+- Cloud manufacturing services
+- AI-generated model pipelines
+
+**Indicators to revisit**:
+- [ ] Stable job-based API
+- [ ] Clear cost metrics (per job / per GB / per minute)
+- [ ] Demand for non-interactive slicing
+
+### B. Process Intelligence Layer (High-margin differentiation)
+
+**Idea**: Sell decision-making instead of slicing itself.
+
+**Examples**:
+- Support quality evaluation
+- Failure risk estimation
+- Auto parameter / support suggestions
+- Comparative analysis between slicing strategies
+
+**Why this matters**:
+- Support = process know-how, not just geometry
+- Enables AI-driven optimization
+- Hard to copy, high long-term value
+
+**Indicators to revisit**:
+- [ ] Support data is structured and comparable
+- [ ] Repeated slicing failures observed in users
+- [ ] Need for "why did this fail?" answers
+
+### C. OEM / Embedded Slicer Licensing
+
+**Idea**: Provide the slicer as an embedded or white-label component for hardware vendors.
+
+**Potential value**:
+- Recurring licensing revenue
+- Strong fit with device-centric workflows
+- Avoids consumer software competition
+
+**Target customers**:
+- 3D printer manufacturers
+- Specialized hardware startups
+- Non-general-purpose printing systems
+
+**Indicators to revisit**:
+- [ ] Requests for custom workflow / UI
+- [ ] Need for tight hardware-software integration
+- [ ] Vendor reluctance to maintain slicer teams
+
+### D. Data, Traceability & Compliance Layer
+
+**Idea**: Turn slicing outputs and parameters into auditable, traceable production records.
+
+**Examples**:
+- Layer-level archives
+- Parameter history
+- Reproducibility reports
+- Compliance-ready logs
+
+**Why it's valuable**:
+- Required in medical / dental / industrial contexts
+- Seen as a cost of doing business, not a feature
+- High willingness to pay
+
+**Indicators to revisit**:
+- [ ] Regulated customers (medical, dental, ISO)
+- [ ] Need for print reproducibility
+- [ ] QA / audit requirements
+
+### Strategic Notes
+
+- This project is not just a slicer; it is a **platform around slicing**
+- Engine choice is a means, not the product
+- Supports, layers, and parameters are **data assets**, not UI details
+- Monetization should prioritize **process value**, not feature count
+
+---
+
 ## License
 
 PrusaSlicer is licensed under AGPLv3. See the fork repository for details.
