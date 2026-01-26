@@ -55,6 +55,7 @@ class V2ModelsAddRequest(BaseModel):
 class V2CutRequest(BaseModel):
     """Request to cut model at a specified Z height."""
     cut_height: float
+    keep_mode: str = "both"  # "both", "upper", or "lower"
 
 
 # ============================================================================
@@ -421,12 +422,12 @@ async def cut_model(job_id: str, request: V2CutRequest, background_tasks: Backgr
     pending["job_dir"] = str(job_dir)
 
     # Start cut operation in background
-    background_tasks.add_task(run_cut_operation, job_id, request.cut_height)
+    background_tasks.add_task(run_cut_operation, job_id, request.cut_height, request.keep_mode)
 
     return V2Response(
         success=True,
         message="Cut operation started",
-        data={"cutHeight": request.cut_height}
+        data={"cutHeight": request.cut_height, "keepMode": request.keep_mode}
     )
 
 

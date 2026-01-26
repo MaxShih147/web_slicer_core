@@ -54,7 +54,15 @@ class SLAConfig(BaseModel):
     hollowing_closing_distance: float = 2.0
 
 
+class CutMode(str, Enum):
+    """Which parts to keep after cutting."""
+    BOTH = "both"
+    UPPER = "upper"
+    LOWER = "lower"
+
+
 class CutConfig(BaseModel):
     """Configuration for plane-cut operation."""
 
     cut_height: float = 0.0  # Z height to cut at (mm)
+    keep_mode: CutMode = CutMode.BOTH  # Which parts to keep

@@ -341,47 +341,72 @@ async def run_hollow_generation(job_id: str, config: Optional[SLAConfig] = None)
 
 
 def get_cut_mesh_path(job_id: str) -> Optional[Path]:
-    """Get the path to the cut mesh STL file (contains both upper and lower parts)."""
+    """Get the path to the combined cut mesh STL file (contains both upper and lower parts)."""
     output_dir = get_job_dir(job_id) / "output"
 
-    # Check standard naming
+    # Check standard naming for combined file
     cut_path = output_dir / "model_cut.stl"
     if cut_path.exists():
         return cut_path
 
-    # Check for alternative naming patterns
-    for f in output_dir.glob("*_cut*.stl"):
-        return f
+    # If no combined file, return upper part as default
+    upper_path = output_dir / "model_upper.stl"
+    if upper_path.exists():
+        return upper_path
 
     return None
 
 
 def get_cut_upper_mesh_path(job_id: str) -> Optional[Path]:
-    """Get the path to the cut mesh STL file (alias for get_cut_mesh_path)."""
-    return get_cut_mesh_path(job_id)
+    """Get the path to the upper cut mesh STL file."""
+    output_dir = get_job_dir(job_id) / "output"
 
+    # Check for separated upper file
+    upper_path = output_dir / "model_upper.stl"
+    if upper_path.exists():
+        return upper_path
 
-def get_cut_lower_mesh_path(job_id: str) -> Optional[Path]:
-    """Get the path to the lower cut mesh STL file (not available - parts are combined)."""
-    # PrusaSlicer combines both parts into one file
-    # Return None as there's no separate lower part file
+    # Fallback to combined file
+    cut_path = output_dir / "model_cut.stl"
+    if cut_path.exists():
+        return cut_path
+
     return None
 
 
-async def run_cut_operation(job_id: str, cut_height: float):
+def get_cut_lower_mesh_path(job_id: str) -> Optional[Path]:
+    """Get the path to the lower cut mesh STL file."""
+    output_dir = get_job_dir(job_id) / "output"
+
+    # Check for separated lower file
+    lower_path = output_dir / "model_lower.stl"
+    if lower_path.exists():
+        return lower_path
+
+    return None
+
+
+async def run_cut_operation(job_id: str, cut_height: float, keep_mode: str = "both"):
     """
     Cut mesh at specified Z height.
 
     Uses the sla_operations API for clean implementation.
+
+    Args:
+        job_id: Job ID
+        cut_height: Z height to cut at
+        keep_mode: "both", "upper", or "lower"
     """
-    from .models import CutConfig
+    from .models import CutConfig, CutMode
     from .sla_operations import cut_with_plane
 
     job_dir = get_job_dir(job_id)
     write_job_status(job_id, JobStatus.PROCESSING)
 
     try:
-        cut_config = CutConfig(cut_height=cut_height)
+        # Convert string to CutMode enum
+        mode = CutMode(keep_mode) if keep_mode in [m.value for m in CutMode] else CutMode.BOTH
+        cut_config = CutConfig(cut_height=cut_height, keep_mode=mode)
         result = await cut_with_plane(job_dir, cut_config)
 
         if result.success:

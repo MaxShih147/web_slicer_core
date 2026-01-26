@@ -21,8 +21,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
+import struct
+
 from .config import PRUSA_SLICER_CLI
-from .models import CutConfig, SLAConfig
+from .models import CutConfig, CutMode, SLAConfig
 
 
 class OperationType(str, Enum):
@@ -372,6 +374,159 @@ async def generate_hollow(
 
 
 # =============================================================================
+# STL Mesh Utilities
+# =============================================================================
+
+def parse_binary_stl(file_path: Path) -> List[tuple]:
+    """
+    Parse a binary STL file and return list of triangles.
+    Each triangle is (normal, v1, v2, v3) where each is (x, y, z).
+    """
+    triangles = []
+    with open(file_path, "rb") as f:
+        # Skip 80-byte header
+        f.read(80)
+        # Read triangle count
+        num_triangles = struct.unpack("<I", f.read(4))[0]
+
+        for _ in range(num_triangles):
+            # Normal (3 floats)
+            normal = struct.unpack("<3f", f.read(12))
+            # Vertex 1, 2, 3 (each 3 floats)
+            v1 = struct.unpack("<3f", f.read(12))
+            v2 = struct.unpack("<3f", f.read(12))
+            v3 = struct.unpack("<3f", f.read(12))
+            # Attribute byte count (unused)
+            f.read(2)
+            triangles.append((normal, v1, v2, v3))
+
+    return triangles
+
+
+def write_binary_stl(file_path: Path, triangles: List[tuple], header: str = ""):
+    """Write triangles to a binary STL file."""
+    with open(file_path, "wb") as f:
+        # 80-byte header
+        header_bytes = header.encode("utf-8")[:80].ljust(80, b"\0")
+        f.write(header_bytes)
+        # Triangle count
+        f.write(struct.pack("<I", len(triangles)))
+        # Triangles
+        for normal, v1, v2, v3 in triangles:
+            f.write(struct.pack("<3f", *normal))
+            f.write(struct.pack("<3f", *v1))
+            f.write(struct.pack("<3f", *v2))
+            f.write(struct.pack("<3f", *v3))
+            f.write(struct.pack("<H", 0))  # Attribute byte count
+
+
+def separate_mesh_components(triangles: List[tuple]) -> List[List[tuple]]:
+    """
+    Separate triangles into connected components using Union-Find.
+    Returns list of triangle lists, one per component.
+    """
+    if not triangles:
+        return []
+
+    # Build vertex-to-triangle mapping
+    # Round vertices to handle floating point precision
+    def vertex_key(v):
+        return (round(v[0], 4), round(v[1], 4), round(v[2], 4))
+
+    vertex_to_triangles: Dict[tuple, List[int]] = {}
+    for i, (_, v1, v2, v3) in enumerate(triangles):
+        for v in [v1, v2, v3]:
+            key = vertex_key(v)
+            if key not in vertex_to_triangles:
+                vertex_to_triangles[key] = []
+            vertex_to_triangles[key].append(i)
+
+    # Union-Find
+    parent = list(range(len(triangles)))
+
+    def find(x):
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+
+    def union(x, y):
+        px, py = find(x), find(y)
+        if px != py:
+            parent[px] = py
+
+    # Union triangles that share vertices
+    for tri_indices in vertex_to_triangles.values():
+        for i in range(1, len(tri_indices)):
+            union(tri_indices[0], tri_indices[i])
+
+    # Group triangles by component
+    components: Dict[int, List[tuple]] = {}
+    for i, tri in enumerate(triangles):
+        root = find(i)
+        if root not in components:
+            components[root] = []
+        components[root].append(tri)
+
+    return list(components.values())
+
+
+def get_component_z_range(component: List[tuple]) -> tuple:
+    """Get the min and max Z values of a component."""
+    min_z = float("inf")
+    max_z = float("-inf")
+    for _, v1, v2, v3 in component:
+        for v in [v1, v2, v3]:
+            min_z = min(min_z, v[2])
+            max_z = max(max_z, v[2])
+    return min_z, max_z
+
+
+def separate_stl_parts(
+    input_path: Path,
+    output_dir: Path,
+    base_name: str = "model"
+) -> tuple[Optional[Path], Optional[Path]]:
+    """
+    Separate a multi-part STL into upper and lower components.
+
+    PrusaSlicer's --cut places both parts at z=0, but they remain
+    as separate connected components. We identify upper vs lower
+    by comparing the original Z extent of each component.
+
+    Returns (upper_path, lower_path) - either may be None if not found.
+    """
+    triangles = parse_binary_stl(input_path)
+    components = separate_mesh_components(triangles)
+
+    if len(components) < 2:
+        # Only one component, can't separate
+        return None, None
+
+    # Sort components by their max Z (higher = upper part)
+    # After PrusaSlicer cut, the "upper" part typically has a larger Z extent
+    components_with_z = []
+    for comp in components:
+        min_z, max_z = get_component_z_range(comp)
+        components_with_z.append((max_z - min_z, max_z, comp))
+
+    # Sort by Z extent (largest first) - the upper part is usually taller after placement
+    components_with_z.sort(key=lambda x: (-x[0], -x[1]))
+
+    upper_path = None
+    lower_path = None
+
+    if len(components_with_z) >= 1:
+        upper_path = output_dir / f"{base_name}_upper.stl"
+        write_binary_stl(upper_path, components_with_z[0][2], f"{base_name} upper part")
+
+    if len(components_with_z) >= 2:
+        lower_path = output_dir / f"{base_name}_lower.stl"
+        write_binary_stl(lower_path, components_with_z[1][2], f"{base_name} lower part")
+
+    return upper_path, lower_path
+
+
+# =============================================================================
 # Cut Operation
 # =============================================================================
 
@@ -383,17 +538,16 @@ async def cut_with_plane(
     """
     Cut mesh at specified Z height using PrusaSlicer's --cut option.
 
-    This uses PrusaSlicer CLI to cut the model at the specified Z height.
-    Note: PrusaSlicer outputs both upper and lower parts combined into a single
-    STL file (multi-solid). Both parts are repositioned to z=0.
+    This uses PrusaSlicer CLI to cut the model at the specified Z height,
+    then separates the parts based on the keep_mode setting.
 
     Args:
         job_dir: Job directory containing input/output folders
-        cut_config: Configuration with cut_height parameter
+        cut_config: Configuration with cut_height and keep_mode parameters
         input_file: Optional input STL path. Defaults to job_dir/input/model.stl
 
     Returns:
-        OperationResult with cut_upper_mesh_path pointing to the combined output
+        OperationResult with cut_upper_mesh_path and/or cut_lower_mesh_path
     """
     job_id = job_dir.name
     input_file = input_file or (job_dir / "input" / "model.stl")
@@ -402,13 +556,16 @@ async def cut_with_plane(
     output_dir = job_dir / "output"
     output_dir.mkdir(exist_ok=True)
 
-    # Output file for the cut result
-    output_stl = output_dir / "model_cut.stl"
+    # Temporary output file for PrusaSlicer (combined parts)
+    combined_stl = output_dir / "model_cut_combined.stl"
 
     # Save config as JSON for reference
     with open(job_dir / "config_cut.json", "w") as f:
         import json
-        json.dump({"cut_height": cut_config.cut_height}, f, indent=2)
+        json.dump({
+            "cut_height": cut_config.cut_height,
+            "keep_mode": cut_config.keep_mode.value,
+        }, f, indent=2)
 
     # Build command for cut operation
     # PrusaSlicer --cut <Z> outputs both upper and lower parts in one STL
@@ -416,7 +573,7 @@ async def cut_with_plane(
         str(PRUSA_SLICER_CLI),
         f"--cut={cut_config.cut_height}",
         "--export-stl",
-        "--output", str(output_stl),
+        "--output", str(combined_stl),
         str(input_file),
     ]
 
@@ -431,7 +588,7 @@ async def cut_with_plane(
             error=f"PrusaSlicer cut failed (exit {returncode}): {error_msg}",
         )
 
-    if not output_stl.exists():
+    if not combined_stl.exists():
         return OperationResult(
             success=False,
             operation=OperationType.CUT,
@@ -439,13 +596,58 @@ async def cut_with_plane(
             error="Cut operation did not produce output file. The cut height may be outside the model bounds.",
         )
 
+    # Separate the combined STL into upper and lower parts
+    upper_path, lower_path = separate_stl_parts(combined_stl, output_dir, "model")
+
+    # Determine which files to return based on keep_mode
+    result_upper = None
+    result_lower = None
+
+    if cut_config.keep_mode == CutMode.BOTH:
+        result_upper = upper_path
+        result_lower = lower_path
+        # Also keep the combined file as model_cut.stl for backwards compatibility
+        combined_stl.rename(output_dir / "model_cut.stl")
+    elif cut_config.keep_mode == CutMode.UPPER:
+        result_upper = upper_path
+        # Clean up lower and combined
+        if lower_path and lower_path.exists():
+            lower_path.unlink()
+        if combined_stl.exists():
+            combined_stl.unlink()
+    elif cut_config.keep_mode == CutMode.LOWER:
+        result_lower = lower_path
+        # Clean up upper and combined
+        if upper_path and upper_path.exists():
+            upper_path.unlink()
+        if combined_stl.exists():
+            combined_stl.unlink()
+
+    # Check if we got any output
+    if result_upper is None and result_lower is None:
+        # Fallback: if separation failed, use the combined file
+        if combined_stl.exists():
+            combined_stl.rename(output_dir / "model_cut.stl")
+            result_upper = output_dir / "model_cut.stl"
+
+    if result_upper is None and result_lower is None:
+        return OperationResult(
+            success=False,
+            operation=OperationType.CUT,
+            job_id=job_id,
+            error="Failed to separate cut parts. The model may have only one component.",
+        )
+
     return OperationResult(
         success=True,
         operation=OperationType.CUT,
         job_id=job_id,
-        cut_upper_mesh_path=output_stl,  # Contains both parts combined
-        cut_lower_mesh_path=None,
-        metadata={"cut_height": cut_config.cut_height},
+        cut_upper_mesh_path=result_upper,
+        cut_lower_mesh_path=result_lower,
+        metadata={
+            "cut_height": cut_config.cut_height,
+            "keep_mode": cut_config.keep_mode.value,
+        },
     )
 
 
