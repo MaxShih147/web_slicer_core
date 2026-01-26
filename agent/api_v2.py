@@ -20,6 +20,7 @@ from .jobs import (
     run_slicing,
     run_support_generation,
     run_hollow_generation,
+    run_cut_operation,
 )
 from .models import JobStatus, SLAConfig
 
@@ -49,6 +50,11 @@ class V2ConfigUpdateRequest(BaseModel):
 class V2ModelsAddRequest(BaseModel):
     """Request to add models to a slice job."""
     models: List[Dict[str, Any]]
+
+
+class V2CutRequest(BaseModel):
+    """Request to cut model at a specified Z height."""
+    cut_height: float
 
 
 # ============================================================================
@@ -366,6 +372,64 @@ async def generate_hollow_only(job_id: str, background_tasks: BackgroundTasks):
     )
 
 
+@router.post("/slices/{job_id}/cut", response_model=V2Response)
+async def cut_model(job_id: str, request: V2CutRequest, background_tasks: BackgroundTasks):
+    """
+    Cut model at specified Z height.
+
+    This uses PrusaSlicer's --cut option to split the model into upper and lower parts.
+    The upper part can be fetched via GET /api/jobs/{job_id}/cut.stl
+    """
+    if job_id not in _pending_jobs:
+        # Check if it's already on disk
+        if job_exists(job_id):
+            status = read_job_status(job_id)
+            if status.get("has_cut_mesh"):
+                return V2Response(
+                    success=True,
+                    message="Cut already performed",
+                    data={"hasCutMesh": True}
+                )
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    pending = _pending_jobs[job_id]
+
+    # Check if models were added
+    if not pending["models"]:
+        raise HTTPException(status_code=400, detail="No models added to job")
+
+    # Create job directory structure
+    job_dir = create_job(job_id)
+
+    # Save model data
+    model_data = pending["models"][0]
+    input_path = job_dir / "input" / "model.stl"
+
+    if "vertices" in model_data:
+        raise HTTPException(
+            status_code=501,
+            detail="Direct vertex data not yet supported. Please use file upload."
+        )
+    elif "stl_data" in model_data:
+        with open(input_path, "wb") as f:
+            f.write(model_data["stl_data"])
+    else:
+        raise HTTPException(status_code=400, detail="Model must contain vertices or stl_data")
+
+    # Keep job in pending so it can be used for other operations
+    pending["model_saved"] = True
+    pending["job_dir"] = str(job_dir)
+
+    # Start cut operation in background
+    background_tasks.add_task(run_cut_operation, job_id, request.cut_height)
+
+    return V2Response(
+        success=True,
+        message="Cut operation started",
+        data={"cutHeight": request.cut_height}
+    )
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
@@ -385,6 +449,7 @@ async def get_slice_job_status(job_id: str):
                     "error": status_data.get("error"),
                     "hasSupportMesh": status_data.get("has_support_mesh", False),
                     "hasHollowMesh": status_data.get("has_hollow_mesh", False),
+                    "hasCutMesh": status_data.get("has_cut_mesh", False),
                 }
             )
 

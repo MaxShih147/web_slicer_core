@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 from .config import PRUSA_SLICER_CLI
-from .models import SLAConfig
+from .models import CutConfig, SLAConfig
 
 
 class OperationType(str, Enum):
@@ -30,6 +30,7 @@ class OperationType(str, Enum):
     GENERATE_SUPPORTS = "generate_supports"
     GENERATE_HOLLOW = "generate_hollow"
     SLICE = "slice"
+    CUT = "cut"
     # Future operations
     # DRILL = "drill"
 
@@ -44,6 +45,8 @@ class OperationResult:
     # Output paths
     support_mesh_path: Optional[Path] = None
     hollow_mesh_path: Optional[Path] = None
+    cut_upper_mesh_path: Optional[Path] = None
+    cut_lower_mesh_path: Optional[Path] = None
     sl1_path: Optional[Path] = None
     layer_count: int = 0
     # Metadata
@@ -57,6 +60,8 @@ class OperationResult:
             "error": self.error,
             "support_mesh_path": str(self.support_mesh_path) if self.support_mesh_path else None,
             "hollow_mesh_path": str(self.hollow_mesh_path) if self.hollow_mesh_path else None,
+            "cut_upper_mesh_path": str(self.cut_upper_mesh_path) if self.cut_upper_mesh_path else None,
+            "cut_lower_mesh_path": str(self.cut_lower_mesh_path) if self.cut_lower_mesh_path else None,
             "sl1_path": str(self.sl1_path) if self.sl1_path else None,
             "layer_count": self.layer_count,
             "metadata": self.metadata,
@@ -363,6 +368,84 @@ async def generate_hollow(
         job_id=job_id,
         hollow_mesh_path=hollow_stl,
         metadata={"config": config.model_dump()},
+    )
+
+
+# =============================================================================
+# Cut Operation
+# =============================================================================
+
+async def cut_with_plane(
+    job_dir: Path,
+    cut_config: CutConfig,
+    input_file: Optional[Path] = None,
+) -> OperationResult:
+    """
+    Cut mesh at specified Z height using PrusaSlicer's --cut option.
+
+    This uses PrusaSlicer CLI to cut the model at the specified Z height.
+    Note: PrusaSlicer outputs both upper and lower parts combined into a single
+    STL file (multi-solid). Both parts are repositioned to z=0.
+
+    Args:
+        job_dir: Job directory containing input/output folders
+        cut_config: Configuration with cut_height parameter
+        input_file: Optional input STL path. Defaults to job_dir/input/model.stl
+
+    Returns:
+        OperationResult with cut_upper_mesh_path pointing to the combined output
+    """
+    job_id = job_dir.name
+    input_file = input_file or (job_dir / "input" / "model.stl")
+    stderr_file = job_dir / "stderr_cut.log"
+
+    output_dir = job_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+
+    # Output file for the cut result
+    output_stl = output_dir / "model_cut.stl"
+
+    # Save config as JSON for reference
+    with open(job_dir / "config_cut.json", "w") as f:
+        import json
+        json.dump({"cut_height": cut_config.cut_height}, f, indent=2)
+
+    # Build command for cut operation
+    # PrusaSlicer --cut <Z> outputs both upper and lower parts in one STL
+    cmd = [
+        str(PRUSA_SLICER_CLI),
+        f"--cut={cut_config.cut_height}",
+        "--export-stl",
+        "--output", str(output_stl),
+        str(input_file),
+    ]
+
+    returncode, stdout, stderr = await run_prusa_cli(cmd, stderr_file)
+
+    if returncode != 0:
+        error_msg = stderr.decode("utf-8", errors="replace")
+        return OperationResult(
+            success=False,
+            operation=OperationType.CUT,
+            job_id=job_id,
+            error=f"PrusaSlicer cut failed (exit {returncode}): {error_msg}",
+        )
+
+    if not output_stl.exists():
+        return OperationResult(
+            success=False,
+            operation=OperationType.CUT,
+            job_id=job_id,
+            error="Cut operation did not produce output file. The cut height may be outside the model bounds.",
+        )
+
+    return OperationResult(
+        success=True,
+        operation=OperationType.CUT,
+        job_id=job_id,
+        cut_upper_mesh_path=output_stl,  # Contains both parts combined
+        cut_lower_mesh_path=None,
+        metadata={"cut_height": cut_config.cut_height},
     )
 
 

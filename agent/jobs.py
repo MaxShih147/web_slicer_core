@@ -49,6 +49,7 @@ def write_job_status(
     layer_count: Optional[int] = None,
     has_support_mesh: bool = False,
     has_hollow_mesh: bool = False,
+    has_cut_mesh: bool = False,
 ):
     """Write the job status to disk."""
     status_file = get_job_status_file(job_id)
@@ -58,6 +59,7 @@ def write_job_status(
         "layer_count": layer_count,
         "has_support_mesh": has_support_mesh,
         "has_hollow_mesh": has_hollow_mesh,
+        "has_cut_mesh": has_cut_mesh,
     }
     with open(status_file, "w") as f:
         json.dump(data, f)
@@ -330,6 +332,64 @@ async def run_hollow_generation(job_id: str, config: Optional[SLAConfig] = None)
                 JobStatus.COMPLETED,
                 layer_count=0,  # No layers extracted for hollow-only
                 has_hollow_mesh=True,
+            )
+        else:
+            write_job_status(job_id, JobStatus.FAILED, error=result.error)
+
+    except Exception as e:
+        write_job_status(job_id, JobStatus.FAILED, error=str(e))
+
+
+def get_cut_mesh_path(job_id: str) -> Optional[Path]:
+    """Get the path to the cut mesh STL file (contains both upper and lower parts)."""
+    output_dir = get_job_dir(job_id) / "output"
+
+    # Check standard naming
+    cut_path = output_dir / "model_cut.stl"
+    if cut_path.exists():
+        return cut_path
+
+    # Check for alternative naming patterns
+    for f in output_dir.glob("*_cut*.stl"):
+        return f
+
+    return None
+
+
+def get_cut_upper_mesh_path(job_id: str) -> Optional[Path]:
+    """Get the path to the cut mesh STL file (alias for get_cut_mesh_path)."""
+    return get_cut_mesh_path(job_id)
+
+
+def get_cut_lower_mesh_path(job_id: str) -> Optional[Path]:
+    """Get the path to the lower cut mesh STL file (not available - parts are combined)."""
+    # PrusaSlicer combines both parts into one file
+    # Return None as there's no separate lower part file
+    return None
+
+
+async def run_cut_operation(job_id: str, cut_height: float):
+    """
+    Cut mesh at specified Z height.
+
+    Uses the sla_operations API for clean implementation.
+    """
+    from .models import CutConfig
+    from .sla_operations import cut_with_plane
+
+    job_dir = get_job_dir(job_id)
+    write_job_status(job_id, JobStatus.PROCESSING)
+
+    try:
+        cut_config = CutConfig(cut_height=cut_height)
+        result = await cut_with_plane(job_dir, cut_config)
+
+        if result.success:
+            write_job_status(
+                job_id,
+                JobStatus.COMPLETED,
+                layer_count=0,  # No layers for cut operation
+                has_cut_mesh=True,
             )
         else:
             write_job_status(job_id, JobStatus.FAILED, error=result.error)

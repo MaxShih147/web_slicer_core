@@ -24,6 +24,7 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
     has_support_mesh: bool = False
     has_hollow_mesh: bool = False
+    has_cut_mesh: bool = False
 
 
 class SLAConfig(BaseModel):
@@ -51,3 +52,9 @@ class SLAConfig(BaseModel):
     hollowing_min_thickness: float = 3.0
     hollowing_quality: float = 0.5
     hollowing_closing_distance: float = 2.0
+
+
+class CutConfig(BaseModel):
+    """Configuration for plane-cut operation."""
+
+    cut_height: float = 0.0  # Z height to cut at (mm)
