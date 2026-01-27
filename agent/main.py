@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from .config import HOST, PORT, PRUSA_SLICER_CLI
 from .models import JobCreateResponse, JobStatus, JobStatusResponse, SLAConfig
@@ -72,6 +72,397 @@ async def root():
         "status": "running",
         "cli_available": PRUSA_SLICER_CLI.exists(),
     }
+
+
+@app.get("/test/boolean", response_class=HTMLResponse)
+async def boolean_test_page():
+    """Test page for boolean operations."""
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boolean Operations Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; }
+        .container { display: flex; height: 100vh; }
+        .panel { width: 350px; padding: 20px; background: #16213e; overflow-y: auto; }
+        .viewer { flex: 1; position: relative; }
+        h1 { font-size: 1.4em; margin-bottom: 10px; color: #4ecca3; }
+        h2 { font-size: 1.1em; margin: 15px 0 10px; color: #4ecca3; }
+        .hint { font-size: 0.85em; color: #888; margin-bottom: 15px; }
+        .file-input { margin: 10px 0; }
+        .file-input label { display: block; margin-bottom: 5px; font-size: 0.9em; color: #aaa; }
+        .file-input input { width: 100%; padding: 8px; border: 1px solid #333; border-radius: 4px; background: #0f0f23; color: #eee; }
+        .operation-select { margin: 15px 0; }
+        .operation-select label { display: block; margin-bottom: 5px; font-size: 0.9em; color: #aaa; }
+        .operation-select select { width: 100%; padding: 10px; border: 1px solid #333; border-radius: 4px; background: #0f0f23; color: #eee; font-size: 1em; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #4ecca3; color: #1a1a2e; }
+        .btn-primary:hover { background: #3db892; }
+        .btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .btn-secondary { background: #333; color: #eee; }
+        .btn-secondary:hover { background: #444; }
+        .btn-small { width: 48%; display: inline-block; padding: 8px; font-size: 0.9em; }
+        .btn-active { background: #4ecca3; color: #1a1a2e; }
+        .status { margin: 15px 0; padding: 12px; border-radius: 4px; font-size: 0.9em; }
+        .status.info { background: #1e3a5f; border: 1px solid #2d5a87; }
+        .status.success { background: #1e5f3a; border: 1px solid #2d8757; }
+        .status.error { background: #5f1e1e; border: 1px solid #872d2d; }
+        .transform-controls { margin: 10px 0; }
+        .position-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin: 10px 0; }
+        .position-inputs label { font-size: 0.8em; color: #888; }
+        .position-inputs input { width: 100%; padding: 6px; border: 1px solid #333; border-radius: 4px; background: #0f0f23; color: #eee; font-size: 0.9em; }
+        .preview-info { margin-top: 15px; padding: 15px; background: #0f0f23; border-radius: 4px; font-size: 0.85em; }
+        .preview-info h3 { color: #4ecca3; margin-bottom: 10px; font-size: 1em; }
+        .preview-info p { margin: 5px 0; color: #aaa; }
+        .preview-info span { color: #eee; }
+        #canvas-container { width: 100%; height: 100%; }
+        .keyboard-hint { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 4px; font-size: 0.8em; color: #aaa; }
+        .keyboard-hint kbd { background: #333; padding: 2px 6px; border-radius: 3px; margin: 0 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <h1>Boolean Operations Test</h1>
+            <p class="hint">Click mesh to select, then drag to move. Use buttons to switch transform mode.</p>
+
+            <div class="file-input">
+                <label>Mesh A (Base) - Green</label>
+                <input type="file" id="meshA" accept=".stl">
+            </div>
+
+            <div class="file-input">
+                <label>Mesh B (Tool) - Red</label>
+                <input type="file" id="meshB" accept=".stl">
+            </div>
+
+            <h2>Transform Selected Mesh</h2>
+            <div class="transform-controls">
+                <button class="btn-secondary btn-small btn-active" id="modeTranslate" onclick="setTransformMode('translate')">Move</button>
+                <button class="btn-secondary btn-small" id="modeRotate" onclick="setTransformMode('rotate')">Rotate</button>
+            </div>
+
+            <div id="positionControls" style="display:none;">
+                <label style="font-size:0.85em; color:#aaa;">Position (selected mesh)</label>
+                <div class="position-inputs">
+                    <div><label>X</label><input type="number" id="posX" step="1" onchange="updatePosition()"></div>
+                    <div><label>Y</label><input type="number" id="posY" step="1" onchange="updatePosition()"></div>
+                    <div><label>Z</label><input type="number" id="posZ" step="1" onchange="updatePosition()"></div>
+                </div>
+            </div>
+
+            <h2>Boolean Operation</h2>
+            <div class="operation-select">
+                <select id="operation">
+                    <option value="difference">Difference (A - B)</option>
+                    <option value="union">Union (A + B)</option>
+                    <option value="intersection">Intersection (A ∩ B)</option>
+                </select>
+            </div>
+
+            <button id="executeBtn" class="btn-primary" disabled>Execute Boolean</button>
+
+            <div id="status" class="status info">Upload two STL files to begin</div>
+
+            <button id="downloadBtn" class="btn-secondary" style="display:none;">Download Result</button>
+
+            <div id="previewInfo" class="preview-info" style="display:none;">
+                <h3>Result Info</h3>
+                <p>Faces: <span id="faceCount">-</span></p>
+            </div>
+
+            <h2>View</h2>
+            <button class="btn-secondary btn-small" onclick="showMesh('a')">Mesh A</button>
+            <button class="btn-secondary btn-small" onclick="showMesh('b')">Mesh B</button>
+            <button class="btn-secondary btn-small" onclick="showMesh('result')">Result</button>
+            <button class="btn-secondary btn-small" onclick="showMesh('all')">All</button>
+        </div>
+
+        <div class="viewer">
+            <div id="canvas-container"></div>
+            <div class="keyboard-hint">
+                <kbd>W</kbd> Move | <kbd>E</kbd> Rotate | <kbd>Click</kbd> Select mesh
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, orbitControls, transformControls;
+        let meshA, meshB, meshResult;
+        let selectedMesh = null;
+        let resultJobId = null;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(50, 50, 50);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Orbit controls
+            orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true;
+
+            // Transform controls
+            transformControls = new THREE.TransformControls(camera, renderer.domElement);
+            transformControls.addEventListener('dragging-changed', function(event) {
+                orbitControls.enabled = !event.value;
+            });
+            transformControls.addEventListener('change', updatePositionInputs);
+            scene.add(transformControls);
+
+            // Lights
+            scene.add(new THREE.AmbientLight(0x404040, 0.5));
+            const light1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            light1.position.set(50, 50, 50);
+            scene.add(light1);
+            const light2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            light2.position.set(-50, -50, -50);
+            scene.add(light2);
+
+            // Grid
+            scene.add(new THREE.GridHelper(100, 20, 0x333333, 0x222222));
+
+            // Raycaster for selection
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            renderer.domElement.addEventListener('click', function(event) {
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const meshes = [meshA, meshB, meshResult].filter(m => m && m.visible);
+                const intersects = raycaster.intersectObjects(meshes);
+
+                if (intersects.length > 0) {
+                    selectMesh(intersects[0].object);
+                }
+            });
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', function(event) {
+                if (event.key === 'w') setTransformMode('translate');
+                if (event.key === 'e') setTransformMode('rotate');
+            });
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function selectMesh(mesh) {
+            selectedMesh = mesh;
+            transformControls.attach(mesh);
+            document.getElementById('positionControls').style.display = 'block';
+            updatePositionInputs();
+        }
+
+        function setTransformMode(mode) {
+            transformControls.setMode(mode);
+            document.getElementById('modeTranslate').classList.toggle('btn-active', mode === 'translate');
+            document.getElementById('modeRotate').classList.toggle('btn-active', mode === 'rotate');
+        }
+
+        function updatePositionInputs() {
+            if (selectedMesh) {
+                document.getElementById('posX').value = selectedMesh.position.x.toFixed(1);
+                document.getElementById('posY').value = selectedMesh.position.y.toFixed(1);
+                document.getElementById('posZ').value = selectedMesh.position.z.toFixed(1);
+            }
+        }
+
+        function updatePosition() {
+            if (selectedMesh) {
+                selectedMesh.position.set(
+                    parseFloat(document.getElementById('posX').value) || 0,
+                    parseFloat(document.getElementById('posY').value) || 0,
+                    parseFloat(document.getElementById('posZ').value) || 0
+                );
+            }
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            orbitControls.update();
+            renderer.render(scene, camera);
+        }
+
+        function loadSTL(file, color) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const loader = new THREE.STLLoader();
+                    const geometry = loader.parse(e.target.result);
+                    geometry.computeBoundingBox();
+
+                    const material = new THREE.MeshPhongMaterial({
+                        color: color,
+                        specular: 0x111111,
+                        shininess: 30,
+                        transparent: true,
+                        opacity: 0.85
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    resolve(mesh);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function loadSTLFromURL(url, color) {
+            return new Promise((resolve, reject) => {
+                const loader = new THREE.STLLoader();
+                loader.load(url, function(geometry) {
+                    const material = new THREE.MeshPhongMaterial({ color: color, specular: 0x111111, shininess: 30 });
+                    resolve(new THREE.Mesh(geometry, material));
+                }, undefined, reject);
+            });
+        }
+
+        // Export mesh with transforms applied to geometry
+        function exportMeshAsSTL(mesh) {
+            // Clone geometry and apply world matrix
+            const clonedGeometry = mesh.geometry.clone();
+            mesh.updateMatrixWorld();
+            clonedGeometry.applyMatrix4(mesh.matrixWorld);
+
+            const exporter = new THREE.STLExporter();
+            const tempMesh = new THREE.Mesh(clonedGeometry);
+            const stlString = exporter.parse(tempMesh, { binary: true });
+            return new Blob([stlString], { type: 'application/octet-stream' });
+        }
+
+        function showMesh(which) {
+            if (meshA) meshA.visible = (which === 'a' || which === 'all');
+            if (meshB) meshB.visible = (which === 'b' || which === 'all');
+            if (meshResult) meshResult.visible = (which === 'result' || which === 'all');
+            transformControls.detach();
+            selectedMesh = null;
+            document.getElementById('positionControls').style.display = 'none';
+        }
+
+        function setStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        function updateExecuteButton() {
+            document.getElementById('executeBtn').disabled = !(meshA && meshB);
+        }
+
+        // File input handlers
+        document.getElementById('meshA').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (meshA) scene.remove(meshA);
+                meshA = await loadSTL(file, 0x4ecca3);
+                scene.add(meshA);
+                selectMesh(meshA);
+                setStatus('Mesh A loaded. Click to select, drag to move.', 'success');
+            }
+            updateExecuteButton();
+        });
+
+        document.getElementById('meshB').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (meshB) scene.remove(meshB);
+                meshB = await loadSTL(file, 0xe94560);
+                meshB.position.set(10, 0, 0); // Offset so they don't overlap initially
+                scene.add(meshB);
+                selectMesh(meshB);
+                setStatus('Mesh B loaded. Position it over Mesh A for boolean.', 'success');
+            }
+            updateExecuteButton();
+        });
+
+        // Execute boolean with transformed positions
+        document.getElementById('executeBtn').addEventListener('click', async function() {
+            const operation = document.getElementById('operation').value;
+            const btn = this;
+
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            setStatus('Applying transforms and executing ' + operation + '...', 'info');
+
+            // Export meshes with their current transforms
+            const blobA = exportMeshAsSTL(meshA);
+            const blobB = exportMeshAsSTL(meshB);
+
+            const formData = new FormData();
+            formData.append('mesh_a', blobA, 'mesh_a.stl');
+            formData.append('mesh_b', blobB, 'mesh_b.stl');
+            formData.append('operation', operation);
+
+            try {
+                const response = await fetch('/api/v2/boolean', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    resultJobId = result.data.jobId;
+                    setStatus('Boolean ' + operation + ' completed!', 'success');
+
+                    if (meshResult) scene.remove(meshResult);
+                    meshResult = await loadSTLFromURL(result.data.resultPath, 0xf9ed69);
+                    scene.add(meshResult);
+
+                    showMesh('result');
+
+                    document.getElementById('downloadBtn').style.display = 'block';
+                    document.getElementById('previewInfo').style.display = 'block';
+                    document.getElementById('faceCount').textContent = meshResult.geometry.attributes.position.count / 3;
+
+                } else {
+                    setStatus('Error: ' + (result.detail || result.message || 'Unknown error'), 'error');
+                }
+            } catch (err) {
+                setStatus('Error: ' + err.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Execute Boolean';
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (resultJobId) {
+                window.location.href = '/api/jobs/' + resultJobId + '/boolean.stl';
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
+"""
 
 
 @app.post("/api/jobs", response_model=JobCreateResponse)

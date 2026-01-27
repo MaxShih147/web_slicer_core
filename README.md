@@ -52,11 +52,15 @@ npm install
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173`
+Frontend runs at `http://localhost:5174`
 
-### 4. Open Browser
+### 4. Web Interfaces
 
-Navigate to `http://localhost:5173`
+| Interface | URL | Description |
+|-----------|-----|-------------|
+| **React UI** | http://localhost:5174 | Main frontend - slicing, preview, supports, hollow |
+| **Boolean Test** | http://localhost:5179/test/boolean | Experimental boolean operations test page |
+| **API Docs** | http://localhost:5179/docs | Swagger UI for API exploration |
 
 ## Usage
 
