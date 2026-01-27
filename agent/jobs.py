@@ -386,6 +386,19 @@ def get_cut_lower_mesh_path(job_id: str) -> Optional[Path]:
     return None
 
 
+def get_boolean_mesh_path(job_id: str) -> Optional[Path]:
+    """Get the path to the boolean result STL file."""
+    output_dir = get_job_dir(job_id) / "output"
+
+    # Check for any boolean result file
+    for op in ["union", "difference", "intersection"]:
+        bool_path = output_dir / f"model_boolean_{op}.stl"
+        if bool_path.exists():
+            return bool_path
+
+    return None
+
+
 async def run_cut_operation(job_id: str, cut_height: float, keep_mode: str = "both"):
     """
     Cut mesh at specified Z height.

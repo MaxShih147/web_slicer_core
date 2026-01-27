@@ -22,6 +22,7 @@ from .jobs import (
     get_cut_mesh_path,
     get_cut_upper_mesh_path,
     get_cut_lower_mesh_path,
+    get_boolean_mesh_path,
     job_exists,
     read_job_status,
     run_slicing,
@@ -324,6 +325,25 @@ async def get_cut_lower_mesh(job_id: str):
         cut_path,
         media_type="application/octet-stream",
         filename="cut_lower.stl",
+    )
+
+
+@app.get("/api/jobs/{job_id}/boolean.stl")
+async def get_boolean_mesh(job_id: str):
+    """
+    Get the boolean operation result as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    bool_path = get_boolean_mesh_path(job_id)
+    if bool_path is None:
+        raise HTTPException(status_code=404, detail="Boolean result not available")
+
+    return FileResponse(
+        bool_path,
+        media_type="application/octet-stream",
+        filename="boolean.stl",
     )
 
 

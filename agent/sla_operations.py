@@ -24,7 +24,7 @@ from typing import Optional, Dict, Any, List
 import struct
 
 from .config import PRUSA_SLICER_CLI
-from .models import CutConfig, CutMode, SLAConfig
+from .models import BooleanOperation, CutConfig, CutMode, SLAConfig
 
 
 class OperationType(str, Enum):
@@ -33,6 +33,7 @@ class OperationType(str, Enum):
     GENERATE_HOLLOW = "generate_hollow"
     SLICE = "slice"
     CUT = "cut"
+    BOOLEAN = "boolean"
     # Future operations
     # DRILL = "drill"
 
@@ -49,6 +50,7 @@ class OperationResult:
     hollow_mesh_path: Optional[Path] = None
     cut_upper_mesh_path: Optional[Path] = None
     cut_lower_mesh_path: Optional[Path] = None
+    boolean_mesh_path: Optional[Path] = None
     sl1_path: Optional[Path] = None
     layer_count: int = 0
     # Metadata
@@ -64,6 +66,7 @@ class OperationResult:
             "hollow_mesh_path": str(self.hollow_mesh_path) if self.hollow_mesh_path else None,
             "cut_upper_mesh_path": str(self.cut_upper_mesh_path) if self.cut_upper_mesh_path else None,
             "cut_lower_mesh_path": str(self.cut_lower_mesh_path) if self.cut_lower_mesh_path else None,
+            "boolean_mesh_path": str(self.boolean_mesh_path) if self.boolean_mesh_path else None,
             "sl1_path": str(self.sl1_path) if self.sl1_path else None,
             "layer_count": self.layer_count,
             "metadata": self.metadata,
@@ -668,3 +671,111 @@ async def drill_hole(
     May need to use CSG operations or external tools.
     """
     raise NotImplementedError("Drill operation not yet implemented")
+
+
+# =============================================================================
+# Boolean Operations (Experimental)
+# =============================================================================
+
+def boolean_operation(
+    mesh_a_path: Path,
+    mesh_b_path: Path,
+    operation: BooleanOperation,
+    output_path: Path,
+) -> tuple[bool, Optional[str]]:
+    """
+    Perform boolean operation on two meshes using trimesh + manifold3d.
+
+    Args:
+        mesh_a_path: Path to first mesh (STL)
+        mesh_b_path: Path to second mesh (STL)
+        operation: Boolean operation type (union, difference, intersection)
+        output_path: Path to write result STL
+
+    Returns:
+        Tuple of (success, error_message)
+    """
+    try:
+        import trimesh
+    except ImportError:
+        return False, "trimesh not installed. Run: pip install trimesh manifold3d"
+
+    try:
+        # Load meshes
+        mesh_a = trimesh.load(str(mesh_a_path))
+        mesh_b = trimesh.load(str(mesh_b_path))
+
+        # Ensure we have Trimesh objects (not Scene)
+        if isinstance(mesh_a, trimesh.Scene):
+            mesh_a = trimesh.util.concatenate(mesh_a.dump())
+        if isinstance(mesh_b, trimesh.Scene):
+            mesh_b = trimesh.util.concatenate(mesh_b.dump())
+
+        # Perform boolean operation
+        if operation == BooleanOperation.UNION:
+            result = mesh_a.union(mesh_b, engine='manifold')
+        elif operation == BooleanOperation.DIFFERENCE:
+            result = mesh_a.difference(mesh_b, engine='manifold')
+        elif operation == BooleanOperation.INTERSECTION:
+            result = mesh_a.intersection(mesh_b, engine='manifold')
+        else:
+            return False, f"Unknown operation: {operation}"
+
+        # Check result
+        if result is None or (hasattr(result, 'is_empty') and result.is_empty):
+            return False, "Boolean operation resulted in empty mesh"
+
+        # Export result
+        result.export(str(output_path))
+        return True, None
+
+    except Exception as e:
+        return False, f"Boolean operation failed: {str(e)}"
+
+
+async def perform_boolean(
+    job_dir: Path,
+    mesh_a_path: Path,
+    mesh_b_path: Path,
+    operation: BooleanOperation,
+) -> OperationResult:
+    """
+    Perform boolean operation on two meshes.
+
+    Args:
+        job_dir: Job directory for output
+        mesh_a_path: Path to first mesh (STL)
+        mesh_b_path: Path to second mesh (STL)
+        operation: Boolean operation type
+
+    Returns:
+        OperationResult with boolean_mesh_path if successful
+    """
+    job_id = job_dir.name
+    output_dir = job_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+
+    output_path = output_dir / f"model_boolean_{operation.value}.stl"
+
+    # Run boolean operation (blocking, but typically fast)
+    success, error = boolean_operation(mesh_a_path, mesh_b_path, operation, output_path)
+
+    if not success:
+        return OperationResult(
+            success=False,
+            operation=OperationType.BOOLEAN,
+            job_id=job_id,
+            error=error,
+        )
+
+    return OperationResult(
+        success=True,
+        operation=OperationType.BOOLEAN,
+        job_id=job_id,
+        boolean_mesh_path=output_path,
+        metadata={
+            "operation": operation.value,
+            "mesh_a": str(mesh_a_path),
+            "mesh_b": str(mesh_b_path),
+        },
+    )

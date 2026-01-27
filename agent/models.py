@@ -66,3 +66,10 @@ class CutConfig(BaseModel):
 
     cut_height: float = 0.0  # Z height to cut at (mm)
     keep_mode: CutMode = CutMode.BOTH  # Which parts to keep
+
+
+class BooleanOperation(str, Enum):
+    """Boolean operation type."""
+    UNION = "union"
+    DIFFERENCE = "difference"
+    INTERSECTION = "intersection"

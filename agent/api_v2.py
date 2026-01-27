@@ -8,13 +8,14 @@ Both v1 (/api/jobs) and v2 (/api/v2/slices) share the same underlying job manage
 import json
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from .jobs import (
     create_job,
     create_job_id,
     get_layer_path,
+    get_job_dir,
     job_exists,
     read_job_status,
     run_slicing,
@@ -22,6 +23,8 @@ from .jobs import (
     run_hollow_generation,
     run_cut_operation,
 )
+from .sla_operations import perform_boolean
+from .models import BooleanOperation
 from .models import JobStatus, SLAConfig
 
 
@@ -56,6 +59,11 @@ class V2CutRequest(BaseModel):
     """Request to cut model at a specified Z height."""
     cut_height: float
     keep_mode: str = "both"  # "both", "upper", or "lower"
+
+
+class V2BooleanRequest(BaseModel):
+    """Request for boolean operation on two meshes."""
+    operation: str = "difference"  # "union", "difference", or "intersection"
 
 
 # ============================================================================
@@ -428,6 +436,74 @@ async def cut_model(job_id: str, request: V2CutRequest, background_tasks: Backgr
         success=True,
         message="Cut operation started",
         data={"cutHeight": request.cut_height, "keepMode": request.keep_mode}
+    )
+
+
+@router.post("/boolean", response_model=V2Response)
+async def boolean_operation_endpoint(
+    mesh_a: UploadFile = File(..., description="First mesh (STL)"),
+    mesh_b: UploadFile = File(..., description="Second mesh (STL)"),
+    operation: str = Form(default="difference", description="Boolean operation: union, difference, or intersection"),
+):
+    """
+    Perform boolean operation on two meshes (experimental).
+
+    This endpoint accepts two STL files and performs a boolean operation:
+    - union: Combine both meshes
+    - difference: Subtract mesh_b from mesh_a
+    - intersection: Keep only overlapping region
+
+    Returns a job_id that can be used to fetch the result via
+    GET /api/jobs/{job_id}/boolean.stl
+    """
+    # Validate operation
+    try:
+        bool_op = BooleanOperation(operation)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid operation: {operation}. Must be 'union', 'difference', or 'intersection'"
+        )
+
+    # Validate file extensions
+    for f, name in [(mesh_a, "mesh_a"), (mesh_b, "mesh_b")]:
+        if not f.filename or not f.filename.lower().endswith(".stl"):
+            raise HTTPException(status_code=400, detail=f"{name} must be an STL file")
+
+    # Create job
+    job_id = create_job_id()
+    job_dir = create_job(job_id)
+
+    # Save uploaded files
+    input_dir = job_dir / "input"
+    mesh_a_path = input_dir / "mesh_a.stl"
+    mesh_b_path = input_dir / "mesh_b.stl"
+
+    try:
+        mesh_a_content = await mesh_a.read()
+        mesh_b_content = await mesh_b.read()
+
+        with open(mesh_a_path, "wb") as f:
+            f.write(mesh_a_content)
+        with open(mesh_b_path, "wb") as f:
+            f.write(mesh_b_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save files: {e}")
+
+    # Perform boolean operation
+    result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
+
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+
+    return V2Response(
+        success=True,
+        message=f"Boolean {operation} completed",
+        data={
+            "jobId": job_id,
+            "operation": operation,
+            "resultPath": f"/api/jobs/{job_id}/boolean.stl",
+        }
     )
 
 
