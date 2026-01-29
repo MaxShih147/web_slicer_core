@@ -439,7 +439,7 @@ async def cut_model(job_id: str, request: V2CutRequest, background_tasks: Backgr
     )
 
 
-@router.post("/boolean", response_model=V2Response)
+@router.post("/boolean")
 async def boolean_operation_endpoint(
     mesh_a: UploadFile = File(..., description="First mesh (STL)"),
     mesh_b: UploadFile = File(..., description="Second mesh (STL)"),
@@ -447,15 +447,20 @@ async def boolean_operation_endpoint(
 ):
     """
     Perform boolean operation on two meshes (experimental).
-
-    This endpoint accepts two STL files and performs a boolean operation:
-    - union: Combine both meshes
-    - difference: Subtract mesh_b from mesh_a
-    - intersection: Keep only overlapping region
-
-    Returns a job_id that can be used to fetch the result via
-    GET /api/jobs/{job_id}/boolean.stl
     """
+    import traceback as tb
+    try:
+        return await _boolean_operation_impl(mesh_a, mesh_b, operation)
+    except HTTPException:
+        raise
+    except Exception as e:
+        err = tb.format_exc()
+        with open("/tmp/boolean_error.log", "a") as f:
+            f.write(f"\n=== top-level exception ===\n{err}\n")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _boolean_operation_impl(mesh_a, mesh_b, operation):
     # Validate operation
     try:
         bool_op = BooleanOperation(operation)
@@ -491,9 +496,18 @@ async def boolean_operation_endpoint(
         raise HTTPException(status_code=500, detail=f"Failed to save files: {e}")
 
     # Perform boolean operation
-    result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
+    import traceback as tb
+    try:
+        result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
+    except Exception as e:
+        err = tb.format_exc()
+        with open("/tmp/boolean_error.log", "a") as f:
+            f.write(f"\n=== {job_id} exception ===\n{err}\n")
+        raise HTTPException(status_code=500, detail=str(e))
 
     if not result.success:
+        with open("/tmp/boolean_error.log", "a") as f:
+            f.write(f"\n=== {job_id} failed ===\n{result.error}\n")
         raise HTTPException(status_code=500, detail=result.error)
 
     return V2Response(

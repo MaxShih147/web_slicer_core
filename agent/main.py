@@ -60,6 +60,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global exception handler to catch unhandled errors
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
+import traceback as _tb
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    err = _tb.format_exc()
+    with open("/tmp/boolean_error.log", "a") as f:
+        f.write(f"\n=== GLOBAL {request.url.path} ===\n{err}\n")
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
+
 # Include v2 API router (DS-Online compatible)
 app.include_router(v2_router)
 

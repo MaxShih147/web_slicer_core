@@ -740,7 +740,9 @@ def boolean_operation(
 
     except Exception as e:
         import traceback
-        return False, f"Boolean operation failed: {str(e)}\n{traceback.format_exc()}"
+        err = f"Boolean operation failed: {str(e)}\n{traceback.format_exc()}"
+        print(err, flush=True)
+        return False, err
 
 
 async def perform_boolean(
@@ -767,8 +769,12 @@ async def perform_boolean(
 
     output_path = output_dir / f"model_boolean_{operation.value}.stl"
 
-    # Run boolean operation (blocking, but typically fast)
-    success, error = boolean_operation(mesh_a_path, mesh_b_path, operation, output_path)
+    # Run boolean operation in thread pool to avoid blocking the event loop
+    import asyncio
+    loop = asyncio.get_event_loop()
+    success, error = await loop.run_in_executor(
+        None, boolean_operation, mesh_a_path, mesh_b_path, operation, output_path
+    )
 
     if not success:
         return OperationResult(

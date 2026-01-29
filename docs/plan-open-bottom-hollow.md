@@ -119,11 +119,38 @@ async def create_open_bottom_hollow(
 
 ---
 
-## 下一步：Boolean 實驗
+## 目前進度：Open Bottom with Honeycomb
 
-在實作完整功能前，先驗證 trimesh boolean 的效果：
+### 完成的流程（整合為一鍵按鈕）
 
-1. 新增獨立的 boolean API endpoint
-2. 前端傳入兩個模型
-3. 執行 union 或 difference
-4. 檢視結果品質
+```
+1. Generate hollow → H (inner mesh)          ← PrusaSlicer backend
+2. Extend H bottom → H_e                     ← 前端 extendBottomVertices()
+3. Generate honeycomb cells (raycast heights) → hc  ← 前端 showHexGrid()
+4. Extend hc bottom → hc_e                   ← 前端 _buildHexCell(bottomZ)
+5. A = H_e ∩ hc_e (intersection)             ← backend boolean API
+6. Result = M - A (difference)               ← backend boolean API
+```
+
+### 關鍵設計決策
+
+- **所有 boolean 使用前端座標系（matrixWorld）**：因為 outer 和 inner mesh 各自做了 `geometry.center()`，local space 座標不一致。用 matrixWorld 導出可保證 "what you see is what you get"。
+- **Intersection 結果用 `addTempPreviewMesh()` 載入**：不做 `center()` 和 landing，保持 world-space 位置。
+- **Raycast miss 的 cell 保留**：高度設為 inner mesh 頂部 + 5mm，intersection 會自動裁切。
+
+### 已知問題（待修復）
+
+**M - A (Step 6) 回傳 server 500 error**
+
+- Step 1-5 皆正常完成
+- Step 6（M - A difference）呼叫 `POST /api/v2/boolean` 時回傳 HTTP 500
+
+### 檔案結構
+
+| 檔案 | 角色 |
+|------|------|
+| `DS-Online/src/three/sceneCoordinator.js` | hex grid 建構、cell 底部延伸、temp preview mesh |
+| `DS-Online/src/components/features/slicing/BackendSlicerPanel.vue` | UI + 一鍵流程 `handleOpenBottomFull()` |
+| `DS-Online/src/services/backendSlicer.js` | `geometryToSTLBlob()`, `performBoolean()` |
+| `web_slicer_core/agent/sla_operations.py` | `boolean_operation()` (trimesh + manifold3d) |
+| `web_slicer_core/agent/api_v2.py` | `POST /api/v2/boolean` endpoint |
