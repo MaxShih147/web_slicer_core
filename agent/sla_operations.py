@@ -701,6 +701,9 @@ def boolean_operation(
         return False, "trimesh not installed. Run: pip install trimesh manifold3d"
 
     try:
+        import logging
+        logger = logging.getLogger(__name__)
+
         # Load meshes
         mesh_a = trimesh.load(str(mesh_a_path))
         mesh_b = trimesh.load(str(mesh_b_path))
@@ -710,6 +713,10 @@ def boolean_operation(
             mesh_a = trimesh.util.concatenate(mesh_a.dump())
         if isinstance(mesh_b, trimesh.Scene):
             mesh_b = trimesh.util.concatenate(mesh_b.dump())
+
+        logger.warning(f"Boolean {operation.value}: A={len(mesh_a.faces)} faces, B={len(mesh_b.faces)} faces")
+        logger.warning(f"  A watertight={mesh_a.is_watertight}, volume={mesh_a.is_volume}, bounds={mesh_a.bounds.tolist()}")
+        logger.warning(f"  B watertight={mesh_b.is_watertight}, volume={mesh_b.is_volume}, bounds={mesh_b.bounds.tolist()}")
 
         # Perform boolean operation
         if operation == BooleanOperation.UNION:
@@ -725,12 +732,15 @@ def boolean_operation(
         if result is None or (hasattr(result, 'is_empty') and result.is_empty):
             return False, "Boolean operation resulted in empty mesh"
 
+        logger.warning(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
+
         # Export result
         result.export(str(output_path))
         return True, None
 
     except Exception as e:
-        return False, f"Boolean operation failed: {str(e)}"
+        import traceback
+        return False, f"Boolean operation failed: {str(e)}\n{traceback.format_exc()}"
 
 
 async def perform_boolean(
