@@ -53,6 +53,8 @@ echo Press Ctrl+C to stop
 echo.
 
 :: Run the agent
-python -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --reload
+::python -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --reload
+:: Run uvicorn directly with .venv python
+"%REPO_ROOT%\.venv\Scripts\python.exe" -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --app-dir "%REPO_ROOT%"
 
 endlocal

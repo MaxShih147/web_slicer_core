@@ -1,6 +1,25 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: ============================================
+:: Memory Mode Configuration
+:: Usage: build_prusaslicer_fork_windows.bat [full|low]
+::   full - 4 parallel projects, /MP enabled (32GB+ RAM)
+::   low  - 1 parallel project, /MP:2 (16GB RAM) [default]
+:: ============================================
+set MEMORY_MODE=%1
+if "%MEMORY_MODE%"=="" set MEMORY_MODE=low
+
+if /i "%MEMORY_MODE%"=="full" (
+    set BUILD_FLAGS=/m:4
+    echo [CONFIG] Memory mode: FULL - 4 parallel projects, /MP enabled ^(32GB+ RAM^)
+) else (
+    set MEMORY_MODE=low
+    set BUILD_FLAGS=/m:1 /p:CL_MPCount=1 /p:UseMultiToolTask=false
+    echo [CONFIG] Memory mode: LOW - 1 parallel project, /MP disabled ^(16GB RAM^)
+)
+echo.
+
 set FORK_URL=git@github.com:MaxShih147/PrusaSlicer.git
 set FORK_BRANCH=master
 
@@ -36,7 +55,7 @@ if "%CMAKE_BIN%"=="" (
 
 echo [PrusaSlicer] Using fork: %FORK_URL% (%FORK_BRANCH%)
 echo [PrusaSlicer] Using CMake: %CMAKE_BIN%
-echo [PrusaSlicer] Building with SINGLE THREAD
+echo [PrusaSlicer] Build flags: %BUILD_FLAGS%
 
 :: Clone or update fork
 if not exist "%SRC_DIR%\.git" (
@@ -67,7 +86,7 @@ if not exist "%DEPS_DESTDIR%" (
     echo.
     echo [PrusaSlicer] ==========================================
     echo [PrusaSlicer] Step 1: Building dependencies...
-    echo [PrusaSlicer] Using single thread - this will take a while...
+    echo [PrusaSlicer] This may take a while...
     echo [PrusaSlicer] ==========================================
     echo.
 
@@ -86,8 +105,8 @@ if not exist "%DEPS_DESTDIR%" (
         exit /b 1
     )
 
-    :: Build with single thread (-j 1)
-    "%CMAKE_BIN%" --build . --config Release -- /m:4
+    :: Build dependencies
+    "%CMAKE_BIN%" --build . --config Release -- %BUILD_FLAGS%
 
     if !errorlevel! neq 0 (
         echo [ERROR] Dependencies build failed
@@ -103,7 +122,6 @@ if not exist "%DEPS_DESTDIR%" (
 echo.
 echo [PrusaSlicer] ==========================================
 echo [PrusaSlicer] Step 2: Building PrusaSlicer CLI...
-echo [PrusaSlicer] Using single thread
 echo [PrusaSlicer] ==========================================
 echo.
 
@@ -124,8 +142,8 @@ if !errorlevel! neq 0 (
     exit /b 1
 )
 
-echo [PrusaSlicer] Building with single thread...
-"%CMAKE_BIN%" --build . --config Release -- /m:4
+echo [PrusaSlicer] Building...
+"%CMAKE_BIN%" --build . --config Release -- %BUILD_FLAGS%
 
 if !errorlevel! neq 0 (
     echo [ERROR] Build failed
