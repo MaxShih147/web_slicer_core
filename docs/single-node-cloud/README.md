@@ -15,7 +15,56 @@ This experiment treats a single Mac Studio as a cloud-like deployment node. The 
 - **Docker optional**: bare-metal processes for simplicity now, Compose for migration rehearsal
 - **One machine, cloud shape**: ingress + API + queue + workers + storage, all on localhost
 
-## Architecture Diagram
+## System Overview
+
+```mermaid
+flowchart LR
+    %% Clients
+    U[Browser<br/>Frontend UI]
+
+    %% Ingress
+    G[Ingress<br/>Nginx / Traefik<br/>Single-origin routing]
+
+    %% Services
+    FE[Static Frontend]
+    API[API Service<br/>Stateless Control Plane]
+    EVT[Event Stream<br/>SSE now / WebSocket later<br/>/events/*]
+
+    %% Backend infra
+    DB[(DB<br/>job metadata + status)]
+    Q[(Queue<br/>Redis)]
+    W[Worker Pool<br/>N workers]
+    RT[PrusaSlicer Runtime<br/>CLI only<br/>AGPL boundary]
+    ST[(Storage<br/>LocalFS now<br/>S3 later)]
+
+    %% Client entry
+    U -->|HTTPS| G
+    G -->|/| FE
+    G -->|/api/*| API
+    G -->|/events/*| EVT
+
+    %% Job control plane
+    U -->|POST /api/jobs| API
+    API -->|enqueue job| Q
+    API -->|create/update metadata| DB
+
+    %% Data plane
+    W -->|pull job| Q
+    W -->|update progress/status| DB
+    W -->|run slicer| RT
+    W -->|write artifacts| ST
+
+    %% Progress streaming
+    DB -. progress source .-> EVT
+    EVT -->|push progress| U
+
+    %% Status fallback & downloads
+    U -.->|GET /api/jobs/id fallback| API
+    API -->|read status| DB
+    U -->|download artifacts<br/>single-node: direct<br/>cloud: signed URL| ST
+```
+
+## Architecture Diagram (Deployment View)
 
 ```mermaid
 flowchart LR
