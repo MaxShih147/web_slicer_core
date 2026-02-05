@@ -656,6 +656,8 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     # Also handle direct snake_case keys (for v1 compatibility)
     for key in ["layer_height", "exposure_time", "initial_exposure_time",
                 "supports_enable", "pad_enable",
+                "support_points_density_relative","support_head_penetration",
+                "support_pillar_diameter","support_head_front_diameter",
                 "hollowing_enable", "hollowing_min_thickness",
                 "hollowing_quality", "hollowing_closing_distance"]:
         if key in config:
