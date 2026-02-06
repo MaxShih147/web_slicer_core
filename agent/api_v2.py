@@ -521,6 +521,22 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation):
     )
 
 
+@router.post("/debug/save-stl")
+async def debug_save_stl(
+    file: UploadFile = File(...),
+    name: str = Form(..., description="Filename to save as (e.g. debug_01_inner.stl)"),
+):
+    """Save a debug STL file to /tmp/debug_stl/ for inspection."""
+    from pathlib import Path
+    debug_dir = Path("/tmp/debug_stl")
+    debug_dir.mkdir(exist_ok=True)
+    out_path = debug_dir / name
+    content = await file.read()
+    with open(out_path, "wb") as f:
+        f.write(content)
+    return {"saved": str(out_path), "size": len(content)}
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """

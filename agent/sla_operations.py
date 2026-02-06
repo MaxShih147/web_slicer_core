@@ -720,15 +720,55 @@ def boolean_operation(
         logger.warning(f"  A watertight={mesh_a.is_watertight}, volume={mesh_a.is_volume}, bounds={mesh_a.bounds.tolist()}")
         logger.warning(f"  B watertight={mesh_b.is_watertight}, volume={mesh_b.is_volume}, bounds={mesh_b.bounds.tolist()}")
 
-        # Perform boolean operation
+        # Use manifold3d directly to bypass trimesh's volume check.
+        # Manifold can handle non-volume meshes by forcing them through
+        # its own internal repair pipeline.
+        import manifold3d
+        import numpy as np
+
+        def trimesh_to_manifold(mesh):
+            """Convert trimesh to Manifold, forcing repair for non-volume meshes."""
+            verts = np.array(mesh.vertices, dtype=np.float32)
+            faces = np.array(mesh.faces, dtype=np.int32)
+            mesh_gl = manifold3d.Mesh(vert_properties=verts, tri_verts=faces)
+            return manifold3d.Manifold(mesh_gl)
+
+        def manifold_to_trimesh(man):
+            """Convert Manifold back to trimesh."""
+            mesh_gl = man.to_mesh()
+            result_mesh = trimesh.Trimesh(
+                vertices=mesh_gl.vert_properties[:, :3],
+                faces=mesh_gl.tri_verts,
+                process=True,
+            )
+            return result_mesh
+
+        try:
+            man_a = trimesh_to_manifold(mesh_a)
+            man_b = trimesh_to_manifold(mesh_b)
+        except Exception as e:
+            logger.warning(f"  Manifold conversion failed: {e}, falling back to trimesh repair")
+            # Fallback: try trimesh repair + trimesh boolean
+            for label, mesh in [("A", mesh_a), ("B", mesh_b)]:
+                if not mesh.is_volume:
+                    trimesh.repair.fill_holes(mesh)
+                    trimesh.repair.fix_winding(mesh)
+                    trimesh.repair.fix_normals(mesh)
+                    mesh.merge_vertices()
+            man_a = trimesh_to_manifold(mesh_a)
+            man_b = trimesh_to_manifold(mesh_b)
+
+        # Perform boolean operation via manifold3d
         if operation == BooleanOperation.UNION:
-            result = mesh_a.union(mesh_b, engine='manifold')
+            result_man = man_a + man_b
         elif operation == BooleanOperation.DIFFERENCE:
-            result = mesh_a.difference(mesh_b, engine='manifold')
+            result_man = man_a - man_b
         elif operation == BooleanOperation.INTERSECTION:
-            result = mesh_a.intersection(mesh_b, engine='manifold')
+            result_man = man_a ^ man_b
         else:
             return False, f"Unknown operation: {operation}"
+
+        result = manifold_to_trimesh(result_man)
 
         # Check result
         if result is None or (hasattr(result, 'is_empty') and result.is_empty):
