@@ -43,6 +43,8 @@ class SLAConfig(BaseModel):
     support_head_penetration: float = 0.2
     support_pillar_diameter: float = 1.0
     support_points_density_relative: int = 100
+    support_object_elevation: float = 5.0
+    support_critical_angle: float = 45.0
 
     # Pad settings
     pad_enable: bool = False

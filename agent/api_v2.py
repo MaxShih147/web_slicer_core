@@ -658,6 +658,8 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
                 "supports_enable", "pad_enable",
                 "support_points_density_relative","support_head_penetration",
                 "support_pillar_diameter","support_head_front_diameter",
+                "support_object_elevation",
+                "support_critical_angle",
                 "hollowing_enable", "hollowing_min_thickness",
                 "hollowing_quality", "hollowing_closing_distance"]:
         if key in config:

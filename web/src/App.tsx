@@ -22,6 +22,8 @@ interface SLAConfig {
   support_head_penetration: number
   support_pillar_diameter: number
   support_points_density_relative: number
+  support_object_elevation: number
+  support_critical_angle: number
   pad_enable: boolean
 }
 
@@ -34,6 +36,8 @@ const DEFAULT_CONFIG: SLAConfig = {
   support_head_penetration: 0.2,
   support_pillar_diameter: 1.0,
   support_points_density_relative: 100,
+  support_object_elevation: 5.0,
+  support_critical_angle: 45.0,
   pad_enable: false,
 }
 
@@ -318,6 +322,30 @@ function App() {
                       step={10}
                       value={config.support_points_density_relative}
                       onChange={e => updateConfig('support_points_density_relative', parseInt(e.target.value, 10))}
+                      disabled={isWorking}
+                    />
+                  </label>
+                  <label>
+                    Object Elevation: {config.support_object_elevation}mm
+                    <input
+                      type="range"
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      value={config.support_object_elevation}
+                      onChange={e => updateConfig('support_object_elevation', parseFloat(e.target.value))}
+                      disabled={isWorking}
+                    />
+                  </label>
+                  <label>
+                    Critical Angle: {config.support_critical_angle}°
+                    <input
+                      type="range"
+                      min={0}
+                      max={90}
+                      step={1}
+                      value={config.support_critical_angle}
+                      onChange={e => updateConfig('support_critical_angle', parseFloat(e.target.value))}
                       disabled={isWorking}
                     />
                   </label>

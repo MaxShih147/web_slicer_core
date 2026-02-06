@@ -87,6 +87,8 @@ def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
         f"support_head_penetration = {config.support_head_penetration}",
         f"support_pillar_diameter = {config.support_pillar_diameter}",
         f"support_points_density_relative = {config.support_points_density_relative}",
+        f"support_object_elevation = {max(5.0, config.support_object_elevation)}",
+        f"support_critical_angle = {config.support_critical_angle}",
         f"pad_enable = {1 if config.pad_enable else 0}",
     ]
     with open(output_path, "w") as f:
