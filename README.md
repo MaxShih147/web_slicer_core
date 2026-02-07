@@ -340,6 +340,84 @@ prusa-slicer --export-hollow-stl \
 - Uses `sla::generate_interior()` from `libslic3r/SLA/Hollowing.hpp`
 - Normals flipped via `sla::swap_normals()` for visualization
 
+## PrusaSlicer Default Printer Configuration
+
+### The Problem: Frontend vs Backend Parameter Disconnect
+
+The DS-Online frontend (`paramsStore.bedSize`) and the PrusaSlicer backend use **separate, unconnected** parameter sets. When slicing via backend CLI, `generate_config_ini()` in `agent/sla_operations.py` writes only slicing parameters (layer_height, exposure, supports, hollowing) to the config INI — **no printer/display parameters are included**. PrusaSlicer therefore falls back to its hardcoded defaults.
+
+This matters for any feature that needs to map between PNG pixel coordinates and real-world mm coordinates (e.g., island detection 3D overlay, cross-section alignment).
+
+### Hardcoded Defaults (from `PrintConfig.cpp`)
+
+Source: `third_party/prusaslicer_fork/src/libslic3r/PrintConfig.cpp` (lines ~4272-4295)
+
+| Parameter | Default Value | Description |
+|---|---|---|
+| `display_width` | **120.0 mm** | Physical display width |
+| `display_height` | **68.0 mm** | Physical display height |
+| `display_pixels_x` | **2560** | Horizontal pixel count |
+| `display_pixels_y` | **1440** | Vertical pixel count |
+| `display_orientation` | **portrait** | Display rotation |
+
+These defaults closely match the **Original Prusa SL1** printer profile.
+
+### Available SLA Printer Profiles
+
+Profiles are stored in `third_party/prusaslicer_build/resources/profiles/`:
+
+| Printer | display_width | display_height | pixels_x | pixels_y | orientation |
+|---|---|---|---|---|---|
+| **Prusa SL1** | 120.96 mm | 68.04 mm | 2560 | 1440 | portrait |
+| **Prusa SL1S SPEED** | 128.00 mm | 81.00 mm | 2560 | 1620 | portrait |
+| Anycubic Photon Mono | (see AnycubicSLA.ini) | | | | |
+| Anycubic Photon Mono X | (see AnycubicSLA.ini) | | | | |
+| Anycubic Photon Mono X 6K | (see AnycubicSLA.ini) | | | | |
+
+### PNG Pixel-to-World Coordinate Mapping
+
+Output PNGs are `1440 x 2560` pixels (width x height). With `display_orientation = portrait`, the pixel layout is rotated 90 degrees from the physical display:
+
+```
+PNG width  (1440 px) → physical short axis → 68.0 mm (display_height)
+PNG height (2560 px) → physical long axis  → 120.0 mm (display_width)
+```
+
+Pixel-to-mm conversion:
+```
+world_x = (px / png_width)  * display_height   // 68.0 mm
+world_y = (py / png_height) * display_width     // 120.0 mm
+```
+
+Note: PrusaSlicer auto-centers the model on the bed and auto-drops it to Z=0. The model's position in the PNG is relative to the bed center.
+
+### CLI Config Flow
+
+```
+Frontend config          generate_config_ini()         PrusaSlicer CLI
+(backendSlicer.js)  -->  (sla_operations.py)      -->  (--load config.ini)
+                         Writes:                       Reads config.ini +
+                         - layer_height                Falls back to defaults for:
+                         - exposure_time               - display_width    (120.0)
+                         - supports_enable             - display_height   (68.0)
+                         - hollowing_*                  - display_pixels_x (2560)
+                         - etc.                         - display_pixels_y (1440)
+                         Does NOT write:
+                         - display_width
+                         - display_height
+                         - display_pixels_*
+```
+
+### TODO: Sync Frontend Parameters with PrusaSlicer Config
+
+- [ ] **Add printer/display config to `generate_config_ini()`** — Write `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y`, `display_orientation` into the INI file so PrusaSlicer uses the same bed as the frontend
+- [ ] **Add printer profile selection to frontend** — Let users choose a printer profile (SL1, SL1S, Anycubic, custom) or enter custom display dimensions
+- [ ] **Return display config from backend API** — Include `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y` in slice job status response so the frontend knows the actual bed size used
+- [ ] **Sync `paramsStore.bedSize` with PrusaSlicer display** — Frontend's `paramsStore.bedSize` (currently [195.84, 122.4] for LS Plus) should match the PrusaSlicer printer profile, or be overridden by it
+- [ ] **Read actual PNG dimensions** — Instead of assuming 1440x2560, read the IHDR header from the first layer PNG to get actual pixel dimensions (supports different printer profiles)
+- [ ] **Handle display_orientation** — Account for portrait vs landscape orientation when mapping pixel coordinates to world coordinates
+- [ ] **Add layer_height to job status response** — Backend currently returns `layerCount` but not `layer_height`; needed for accurate Z coordinate mapping
+
 ## Development
 
 ### Backend Development
