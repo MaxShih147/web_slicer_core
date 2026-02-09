@@ -657,7 +657,8 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         "Layer Height": "layer_height",
         "Exposure Time": "exposure_time",
         "Bottom Exposure Time": "initial_exposure_time",
-        # Add more mappings as needed
+        "Machine Type": "printer_model",
+        "Resin": "sla_material_settings_id",
     }
 
     sla_dict = {}
@@ -669,15 +670,20 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         if ds_key in print_config:
             sla_dict[sla_key] = print_config[ds_key]
 
+    # Handle "Image Size" array -> display_pixels_x, display_pixels_y
+    image_size = print_config.get("Image Size")
+    if isinstance(image_size, list) and len(image_size) >= 2:
+        sla_dict["display_pixels_x"] = image_size[0]
+        sla_dict["display_pixels_y"] = image_size[1]
+
+    # Handle "Bed Size" array -> display_width, display_height
+    bed_size = print_config.get("Bed Size")
+    if isinstance(bed_size, list) and len(bed_size) >= 2:
+        sla_dict["display_width"] = bed_size[0]
+        sla_dict["display_height"] = bed_size[1]
+
     # Also handle direct snake_case keys (for v1 compatibility)
-    for key in ["layer_height", "exposure_time", "initial_exposure_time",
-                "supports_enable", "pad_enable",
-                "support_points_density_relative","support_head_penetration",
-                "support_pillar_diameter","support_head_front_diameter",
-                "support_object_elevation",
-                "support_critical_angle",
-                "hollowing_enable", "hollowing_min_thickness",
-                "hollowing_quality", "hollowing_closing_distance"]:
+    for key in SLAConfig.model_fields:
         if key in config:
             sla_dict[key] = config[key]
 

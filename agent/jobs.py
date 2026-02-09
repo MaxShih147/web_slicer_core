@@ -11,6 +11,7 @@ from typing import Optional
 
 from .config import JOBS_DIR, PRUSA_SLICER_CLI, EXPORT_PROJECT_3MF
 from .models import JobStatus, SLAConfig
+from .sla_operations import generate_config_ini
 
 
 def create_job_id() -> str:
@@ -73,26 +74,6 @@ def create_job(job_id: str) -> Path:
     (job_dir / "layers").mkdir(exist_ok=True)
     write_job_status(job_id, JobStatus.PENDING)
     return job_dir
-
-
-def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
-    """Generate a PrusaSlicer INI config file from SLAConfig."""
-    lines = [
-        "# Generated SLA config",
-        f"layer_height = {config.layer_height}",
-        f"exposure_time = {config.exposure_time}",
-        f"initial_exposure_time = {config.initial_exposure_time}",
-        f"supports_enable = {1 if config.supports_enable else 0}",
-        f"support_head_front_diameter = {config.support_head_front_diameter}",
-        f"support_head_penetration = {config.support_head_penetration}",
-        f"support_pillar_diameter = {config.support_pillar_diameter}",
-        f"support_points_density_relative = {config.support_points_density_relative}",
-        f"support_object_elevation = {max(5.0, config.support_object_elevation)}",
-        f"support_critical_angle = {config.support_critical_angle}",
-        f"pad_enable = {1 if config.pad_enable else 0}",
-    ]
-    with open(output_path, "w") as f:
-        f.write("\n".join(lines) + "\n")
 
 
 async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):

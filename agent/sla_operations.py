@@ -75,25 +75,12 @@ class OperationResult:
 
 def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
     """Generate a PrusaSlicer INI config file from SLAConfig."""
-    lines = [
-        "# Generated SLA config",
-        f"layer_height = {config.layer_height}",
-        f"exposure_time = {config.exposure_time}",
-        f"initial_exposure_time = {config.initial_exposure_time}",
-        f"supports_enable = {1 if config.supports_enable else 0}",
-        f"support_head_front_diameter = {config.support_head_front_diameter}",
-        f"support_head_penetration = {config.support_head_penetration}",
-        f"support_pillar_diameter = {config.support_pillar_diameter}",
-        f"support_points_density_relative = {config.support_points_density_relative}",
-        f"support_object_elevation = {max(5.0, config.support_object_elevation)}",
-        f"support_critical_angle = {config.support_critical_angle}",
-        f"pad_enable = {1 if config.pad_enable else 0}",
-        # Hollowing parameters
-        f"hollowing_enable = {1 if config.hollowing_enable else 0}",
-        f"hollowing_min_thickness = {config.hollowing_min_thickness}",
-        f"hollowing_quality = {config.hollowing_quality}",
-        f"hollowing_closing_distance = {config.hollowing_closing_distance}",
-    ]
+    lines = ["# Generated SLA config"]
+    for field_name, value in config.model_dump().items():
+        if isinstance(value, bool):
+            lines.append(f"{field_name} = {1 if value else 0}")
+        else:
+            lines.append(f"{field_name} = {value}")
     with open(output_path, "w") as f:
         f.write("\n".join(lines) + "\n")
 

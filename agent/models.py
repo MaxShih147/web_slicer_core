@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class JobStatus(str, Enum):
@@ -46,6 +46,11 @@ class SLAConfig(BaseModel):
     support_object_elevation: float = 5.0
     support_critical_angle: float = 45.0
 
+    @field_validator('support_object_elevation')
+    @classmethod
+    def enforce_min_elevation(cls, v: float) -> float:
+        return max(5.0, v)
+
     # Pad settings
     pad_enable: bool = False
 
@@ -54,6 +59,21 @@ class SLAConfig(BaseModel):
     hollowing_min_thickness: float = 3.0
     hollowing_quality: float = 0.5
     hollowing_closing_distance: float = 2.0
+
+    # Gamma correction
+    gamma_correction: float = 1.0
+
+    # Printer / material
+    printer_model: str = ""
+    sla_material_settings_id: str = ""
+
+    # Display resolution
+    display_pixels_x: int = 2560
+    display_pixels_y: int = 1440
+
+    # Display physical size (mm)
+    display_width: float = 120.0
+    display_height: float = 68.0
 
 
 class CutMode(str, Enum):
