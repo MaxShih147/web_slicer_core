@@ -465,7 +465,12 @@ $PRUSA_SLICER_BIN --version
 
 ### CORS errors in browser
 
-The backend includes CORS middleware for `localhost:5173`. If using a different port, update `agent/main.py`.
+The backend includes CORS middleware for common localhost dev origins and `https://dentalslice.onrender.com`.
+To add more origins without editing code, set:
+
+```bash
+export CORS_ALLOWED_ORIGINS="https://your-ui.example.com,https://another.example.com"
+```
 
 ### Support mesh not appearing
 
