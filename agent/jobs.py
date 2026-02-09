@@ -40,7 +40,13 @@ def read_job_status(job_id: str) -> dict:
     if status_file.exists():
         with open(status_file, "r") as f:
             return json.load(f)
-    return {"status": JobStatus.PENDING, "error": None, "layer_count": None}
+    return {
+        "status": JobStatus.PENDING,
+        "error": None,
+        "layer_count": None,
+        "estimated_print_time": None,
+        "resin_volume_ml": None,
+    }
 
 
 def write_job_status(
@@ -48,6 +54,8 @@ def write_job_status(
     status: JobStatus,
     error: Optional[str] = None,
     layer_count: Optional[int] = None,
+    estimated_print_time: Optional[float] = None,
+    resin_volume_ml: Optional[float] = None,
     has_support_mesh: bool = False,
     has_hollow_mesh: bool = False,
     has_cut_mesh: bool = False,
@@ -58,6 +66,8 @@ def write_job_status(
         "status": status.value,
         "error": error,
         "layer_count": layer_count,
+        "estimated_print_time": estimated_print_time,
+        "resin_volume_ml": resin_volume_ml,
         "has_support_mesh": has_support_mesh,
         "has_hollow_mesh": has_hollow_mesh,
         "has_cut_mesh": has_cut_mesh,
@@ -136,7 +146,7 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
 
         # Extract PNG layers from .sl1 (zip file)
         if output_file.exists():
-            layer_count = extract_layers(output_file, layers_dir)
+            layer_count, estimated_print_time, resin_volume_ml = extract_layers(output_file, layers_dir)
 
             # Check if support mesh was generated
             has_support_mesh = support_stl_file.exists()
@@ -145,7 +155,14 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
             if EXPORT_PROJECT_3MF:
                 await export_project_3mf(job_id, input_file, job_dir / "output")
 
-            write_job_status(job_id, JobStatus.COMPLETED, layer_count=layer_count, has_support_mesh=has_support_mesh)
+            write_job_status(
+                job_id,
+                JobStatus.COMPLETED,
+                layer_count=layer_count,
+                estimated_print_time=estimated_print_time,
+                resin_volume_ml=resin_volume_ml,
+                has_support_mesh=has_support_mesh,
+            )
         else:
             write_job_status(job_id, JobStatus.FAILED, error="Output file not created")
 
@@ -196,11 +213,30 @@ async def export_project_3mf(job_id: str, input_file: Path, output_dir: Path):
         print(f"[experimental] 3MF export error for job {job_id}: {e}")
 
 
-def extract_layers(sl1_file: Path, layers_dir: Path) -> int:
-    """Extract PNG layers from .sl1 file to layers directory."""
+def extract_layers(sl1_file: Path, layers_dir: Path) -> tuple[int, Optional[float], Optional[float]]:
+    """Extract PNG layers and metadata from .sl1 file."""
     layer_count = 0
+    estimated_print_time = None
+    resin_volume_ml = None
 
     with zipfile.ZipFile(sl1_file, "r") as zf:
+        if "config.ini" in zf.namelist():
+            try:
+                with zf.open("config.ini") as config_file:
+                    for raw_line in config_file:
+                        line = raw_line.decode("utf-8", errors="ignore").strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        key, value = (part.strip() for part in line.split("=", 1))
+                        if key == "printTime":
+                            estimated_print_time = float(value)
+                        elif key == "usedMaterial":
+                            resin_volume_ml = float(value)
+            except Exception:
+                # Keep slicing success even if metadata parsing fails.
+                estimated_print_time = None
+                resin_volume_ml = None
+
         for name in sorted(zf.namelist()):
             if name.endswith(".png"):
                 # Extract to layers directory with simplified naming
@@ -224,7 +260,7 @@ def extract_layers(sl1_file: Path, layers_dir: Path) -> int:
                 except (ValueError, IndexError):
                     continue
 
-    return layer_count
+    return layer_count, estimated_print_time, resin_volume_ml
 
 
 def get_layer_path(job_id: str, layer_idx: int) -> Optional[Path]:

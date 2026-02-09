@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -35,26 +36,38 @@ app = FastAPI(
     version="0.2.0",
 )
 
-# CORS configuration for local development
-# Supports both web_slicer_core React UI and DS-Online Vue UI
+# CORS configuration:
+# - local development ports
+# - hosted UI origin for local-agent bridge
+# - optional comma-separated overrides via CORS_ALLOWED_ORIGINS env var
+_cors_origins = {
+    "https://dentalslice.onrender.com",
+    "http://localhost:5173",   # DS-Online (default Vite port)
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",   # web_slicer_core React UI (alternate port)
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:5176",
+    "http://127.0.0.1:5176",
+    "http://localhost:5177",
+    "http://127.0.0.1:5177",
+    "http://localhost:5178",   # DS-Online (when other ports in use)
+    "http://127.0.0.1:5178",
+    "http://localhost:3000",   # Common dev port
+    "http://127.0.0.1:3000",
+}
+_extra_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
+if _extra_cors_origins.strip():
+    _cors_origins.update(
+        origin.strip()
+        for origin in _extra_cors_origins.split(",")
+        if origin.strip()
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # DS-Online (default Vite port)
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",   # web_slicer_core React UI (alternate port)
-        "http://127.0.0.1:5174",
-        "http://localhost:5175",
-        "http://127.0.0.1:5175",
-        "http://localhost:5176",
-        "http://127.0.0.1:5176",
-        "http://localhost:5177",
-        "http://127.0.0.1:5177",
-        "http://localhost:5178",   # DS-Online (when other ports in use)
-        "http://127.0.0.1:5178",
-        "http://localhost:3000",   # Common dev port
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=sorted(_cors_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -537,6 +550,8 @@ async def get_job_status(job_id: str):
         job_id=job_id,
         status=JobStatus(status_data["status"]),
         layer_count=status_data.get("layer_count"),
+        estimated_print_time=status_data.get("estimated_print_time"),
+        resin_volume_ml=status_data.get("resin_volume_ml"),
         error=status_data.get("error"),
         has_support_mesh=status_data.get("has_support_mesh", False),
         has_hollow_mesh=status_data.get("has_hollow_mesh", False),
