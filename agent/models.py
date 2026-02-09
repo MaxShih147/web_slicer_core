@@ -21,6 +21,8 @@ class JobStatusResponse(BaseModel):
     job_id: str
     status: JobStatus
     layer_count: Optional[int] = None
+    estimated_print_time: Optional[float] = None
+    resin_volume_ml: Optional[float] = None
     error: Optional[str] = None
     has_support_mesh: bool = False
     has_hollow_mesh: bool = False

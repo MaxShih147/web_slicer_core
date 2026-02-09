@@ -553,6 +553,8 @@ async def get_slice_job_status(job_id: str):
                     "jobId": job_id,
                     "status": status_data["status"],
                     "layerCount": status_data.get("layer_count"),
+                    "estimatedPrintTime": status_data.get("estimated_print_time"),
+                    "resinVolumeMl": status_data.get("resin_volume_ml"),
                     "error": status_data.get("error"),
                     "hasSupportMesh": status_data.get("has_support_mesh", False),
                     "hasHollowMesh": status_data.get("has_hollow_mesh", False),
@@ -634,6 +636,8 @@ async def get_slice_gcode(job_id: str):
         data={
             "gcode": None,
             "layerCount": status_data.get("layer_count", 0),
+            "estimatedPrintTime": status_data.get("estimated_print_time"),
+            "resinVolumeMl": status_data.get("resin_volume_ml"),
             "format": "sl1",
         }
     )
