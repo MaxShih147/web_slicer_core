@@ -6,6 +6,7 @@ Both v1 (/api/jobs) and v2 (/api/v2/slices) share the same underlying job manage
 """
 
 import json
+import math
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from .jobs import (
     create_job,
     create_job_id,
+    get_hollow_mesh_path,
     get_layer_path,
     get_job_dir,
     job_exists,
@@ -23,7 +25,7 @@ from .jobs import (
     run_hollow_generation,
     run_cut_operation,
 )
-from .sla_operations import perform_boolean
+from .sla_operations import parse_binary_stl, perform_boolean, write_binary_stl
 from .models import BooleanOperation
 from .models import JobStatus, SLAConfig
 
@@ -59,6 +61,12 @@ class V2CutRequest(BaseModel):
     """Request to cut model at a specified Z height."""
     cut_height: float
     keep_mode: str = "both"  # "both", "upper", or "lower"
+
+
+class V2ExtendBottomRequest(BaseModel):
+    """Request to extend bottom vertices of hollow mesh."""
+    bottom_z_threshold: float = 0.5  # mm above mesh min Z to select vertices
+    extension_distance: float = 10.0  # mm to extend downward
 
 
 class V2BooleanRequest(BaseModel):
@@ -436,6 +444,69 @@ async def cut_model(job_id: str, request: V2CutRequest, background_tasks: Backgr
         success=True,
         message="Cut operation started",
         data={"cutHeight": request.cut_height, "keepMode": request.keep_mode}
+    )
+
+
+@router.post("/slices/{job_id}/extend-bottom", response_model=V2Response)
+async def extend_bottom(job_id: str, request: V2ExtendBottomRequest):
+    """
+    Extend bottom vertices of the hollow mesh downward.
+
+    Synchronous operation — reads hollow.stl, moves bottom vertices down,
+    recomputes normals, and overwrites the file.
+    """
+    hollow_path = get_hollow_mesh_path(job_id)
+    if hollow_path is None:
+        raise HTTPException(status_code=404, detail="Hollow mesh not found for this job")
+
+    # Read the hollow mesh
+    triangles = parse_binary_stl(hollow_path)
+    if not triangles:
+        raise HTTPException(status_code=400, detail="Hollow mesh is empty")
+
+    # Find mesh min Z
+    min_z = float("inf")
+    for _, v1, v2, v3 in triangles:
+        for v in [v1, v2, v3]:
+            min_z = min(min_z, v[2])
+
+    z1 = min_z + request.bottom_z_threshold
+
+    # Extend vertices below threshold and recompute normals
+    moved_vertices = set()
+    new_triangles = []
+    for _, v1, v2, v3 in triangles:
+        # Move vertices that are at or below z1
+        verts = []
+        for v in [v1, v2, v3]:
+            if v[2] <= z1:
+                moved_vertices.add(v)
+                verts.append((v[0], v[1], v[2] - request.extension_distance))
+            else:
+                verts.append(v)
+
+        # Recompute face normal
+        e1 = (verts[1][0] - verts[0][0], verts[1][1] - verts[0][1], verts[1][2] - verts[0][2])
+        e2 = (verts[2][0] - verts[0][0], verts[2][1] - verts[0][1], verts[2][2] - verts[0][2])
+        nx = e1[1] * e2[2] - e1[2] * e2[1]
+        ny = e1[2] * e2[0] - e1[0] * e2[2]
+        nz = e1[0] * e2[1] - e1[1] * e2[0]
+        length = math.sqrt(nx * nx + ny * ny + nz * nz)
+        if length > 0:
+            nx /= length
+            ny /= length
+            nz /= length
+        normal = (nx, ny, nz)
+
+        new_triangles.append((normal, verts[0], verts[1], verts[2]))
+
+    # Overwrite hollow.stl
+    write_binary_stl(hollow_path, new_triangles, "hollow extended")
+
+    return V2Response(
+        success=True,
+        message=f"Extended {len(moved_vertices)} vertices by {request.extension_distance}mm",
+        data={"vertices_moved": len(moved_vertices)},
     )
 
 
