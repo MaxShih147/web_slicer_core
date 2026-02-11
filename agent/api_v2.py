@@ -757,6 +757,12 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         sla_dict["display_width"] = bed_size[0]
         sla_dict["display_height"] = bed_size[1]
 
+    # Handle "Center" array -> center_x, center_y
+    center = print_config.get("Center")
+    if isinstance(center, list) and len(center) >= 2:
+        sla_dict["center_x"] = center[0]
+        sla_dict["center_y"] = center[1]
+
     # Also handle direct snake_case keys (for v1 compatibility)
     for key in SLAConfig.model_fields:
         if key in config:

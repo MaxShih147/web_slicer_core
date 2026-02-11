@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class JobStatus(str, Enum):
@@ -76,6 +76,18 @@ class SLAConfig(BaseModel):
     # Display physical size (mm)
     display_width: float = 120.0
     display_height: float = 68.0
+
+    # Center position (mm), defaults to center of display
+    center_x: Optional[float] = None
+    center_y: Optional[float] = None
+
+    @model_validator(mode='after')
+    def set_center_defaults(self) -> 'SLAConfig':
+        if self.center_x is None or self.center_x < 0:
+            self.center_x = self.display_width / 2
+        if self.center_y is None or self.center_y < 0:
+            self.center_y = self.display_height / 2
+        return self
 
 
 class CutMode(str, Enum):

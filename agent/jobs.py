@@ -121,6 +121,10 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         if supports_enabled:
             cmd.append("--export-support-stl")
 
+        # Add center position
+        if config:
+            cmd.extend(["--center", f"{config.center_x},{config.center_y}"])
+
         # Add config file if generated
         if config and config_file.exists():
             cmd.extend(["--load", str(config_file)])
