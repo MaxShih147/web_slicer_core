@@ -734,6 +734,7 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         "Bottom Exposure Time": "initial_exposure_time",
         "Machine Type": "printer_model",
         "Resin": "sla_material_settings_id",
+        "Center": "center"
     }
 
     sla_dict = {}
@@ -741,6 +742,12 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     # Handle Print section if present
     print_config = config.get("Print", config)
 
+    # First, load direct snake_case keys (v1 compatibility) as base values
+    for key in SLAConfig.model_fields:
+        if key in config:
+            sla_dict[key] = config[key]
+
+    # Then apply DS-Online key mapping (overrides snake_case if both exist)
     for ds_key, sla_key in mapping.items():
         if ds_key in print_config:
             sla_dict[sla_key] = print_config[ds_key]
@@ -758,15 +765,14 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         sla_dict["display_height"] = bed_size[1]
 
     # Handle "Center" array -> center_x, center_y
-    center = print_config.get("Center")
+    # External center values are offsets from display center,
+    # so add display_width/2 and display_height/2 to get absolute position.
+    center = print_config.get("center")
     if isinstance(center, list) and len(center) >= 2:
-        sla_dict["center_x"] = center[0]
-        sla_dict["center_y"] = center[1]
-
-    # Also handle direct snake_case keys (for v1 compatibility)
-    for key in SLAConfig.model_fields:
-        if key in config:
-            sla_dict[key] = config[key]
+        dw = sla_dict.get("display_width", SLAConfig.model_fields["display_width"].default)
+        dh = sla_dict.get("display_height", SLAConfig.model_fields["display_height"].default)
+        sla_dict["center_x"] = center[0] + dw / 2
+        sla_dict["center_y"] = center[1] + dh / 2
 
     if sla_dict:
         return SLAConfig(**sla_dict)
