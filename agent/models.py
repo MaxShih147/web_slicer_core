@@ -76,6 +76,7 @@ class SLAConfig(BaseModel):
     # Display physical size (mm)
     display_width: float = 120.0
     display_height: float = 68.0
+    display_orientation: str = "landscape"
 
     # Center position (mm), defaults to center of display
     center_x: Optional[float] = None
