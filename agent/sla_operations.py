@@ -81,6 +81,7 @@ def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
             lines.append(f"{field_name} = {1 if value else 0}")
         else:
             lines.append(f"{field_name} = {value}")
+    lines.append(f"bed_shape = {config.display_width},{config.display_height}")
     with open(output_path, "w") as f:
         f.write("\n".join(lines) + "\n")
 
