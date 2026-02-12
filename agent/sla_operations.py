@@ -704,9 +704,7 @@ def boolean_operation(
         if isinstance(mesh_b, trimesh.Scene):
             mesh_b = trimesh.util.concatenate(mesh_b.dump())
 
-        logger.warning(f"Boolean {operation.value}: A={len(mesh_a.faces)} faces, B={len(mesh_b.faces)} faces")
-        logger.warning(f"  A watertight={mesh_a.is_watertight}, volume={mesh_a.is_volume}, bounds={mesh_a.bounds.tolist()}")
-        logger.warning(f"  B watertight={mesh_b.is_watertight}, volume={mesh_b.is_volume}, bounds={mesh_b.bounds.tolist()}")
+        logger.info(f"Boolean {operation.value}: A={len(mesh_a.faces)} faces, B={len(mesh_b.faces)} faces")
 
         # Use manifold3d directly to bypass trimesh's volume check.
         # Manifold can handle non-volume meshes by forcing them through
@@ -762,7 +760,7 @@ def boolean_operation(
         if result is None or (hasattr(result, 'is_empty') and result.is_empty):
             return False, "Boolean operation resulted in empty mesh"
 
-        logger.warning(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
+        logger.info(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
 
         # Export result
         result.export(str(output_path))
