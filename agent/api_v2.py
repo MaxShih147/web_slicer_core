@@ -628,7 +628,9 @@ async def generate_hex_grid_endpoint(job_id: str, request: V2GenerateHexGridRequ
     logger.info(f"generate-hex-grid: hollow bounds={hollow_mesh.bounds.tolist()}, "
                 f"bottom_z={request.bottom_z}")
 
-    # Debug: export aligned hollow mesh
+    # Save aligned hollow for frontend use and debug
+    output_dir = job_dir / "output"
+    hollow_mesh.export(str(output_dir / "model_hollow_aligned.stl"))
     hollow_mesh.export(str(debug_dir / "hollow_for_raycasting.stl"))
 
     mesh = generate_hex_grid(

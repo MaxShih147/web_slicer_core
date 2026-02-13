@@ -703,6 +703,23 @@ async def get_hex_grid_mesh(job_id: str):
     )
 
 
+@app.get("/api/jobs/{job_id}/hollow_aligned.stl")
+async def get_hollow_aligned_mesh(job_id: str):
+    """Get the aligned hollow mesh (translated to match input model coordinates)."""
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    path = get_job_dir(job_id) / "output" / "model_hollow_aligned.stl"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Aligned hollow mesh not available")
+
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        filename="hollow_aligned.stl",
+    )
+
+
 @app.get("/api/jobs/{job_id}/cut.stl")
 async def get_cut_mesh(job_id: str):
     """
