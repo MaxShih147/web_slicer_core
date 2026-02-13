@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from .jobs import (
     create_job,
     create_job_id,
+    get_drain_holes_path,
     get_hollow_mesh_path,
     get_layer_path,
     get_job_dir,
@@ -25,7 +26,7 @@ from .jobs import (
     run_hollow_generation,
     run_cut_operation,
 )
-from .sla_operations import parse_binary_stl, perform_boolean, write_binary_stl
+from .sla_operations import generate_drain_holes, parse_binary_stl, perform_boolean, write_binary_stl
 from .models import BooleanOperation
 from .models import JobStatus, SLAConfig
 
@@ -72,6 +73,15 @@ class V2ExtendBottomRequest(BaseModel):
 class V2BooleanRequest(BaseModel):
     """Request for boolean operation on two meshes."""
     operation: str = "difference"  # "union", "difference", or "intersection"
+
+
+class V2GenerateDrainHolesRequest(BaseModel):
+    """Request to generate drain hole cylinders at hex grid wall edges."""
+    hex_cell_radius: float = 5.0
+    wall_thickness: float = 1.0
+    grid_count: int = 10
+    drain_radius: float = 1.5
+    bottom_z: float = 0.0
 
 
 # ============================================================================
@@ -507,6 +517,50 @@ async def extend_bottom(job_id: str, request: V2ExtendBottomRequest):
         success=True,
         message=f"Extended {len(moved_vertices)} vertices by {request.extension_distance}mm",
         data={"vertices_moved": len(moved_vertices)},
+    )
+
+
+@router.post("/slices/{job_id}/generate-drain-holes", response_model=V2Response)
+async def generate_drain_holes_endpoint(job_id: str, request: V2GenerateDrainHolesRequest):
+    """
+    Generate drain hole cylinders at hex grid wall edge midpoints.
+
+    Synchronous operation — generates drain cylinders using trimesh and saves
+    the result to job_dir/output/model_drain_holes.stl.
+    The STL can be fetched via GET /api/jobs/{job_id}/drain_holes.stl
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job_dir = get_job_dir(job_id)
+    output_dir = job_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+
+    mesh = generate_drain_holes(
+        hex_cell_radius=request.hex_cell_radius,
+        wall_thickness=request.wall_thickness,
+        grid_count=request.grid_count,
+        drain_radius=request.drain_radius,
+        bottom_z=request.bottom_z,
+    )
+
+    if mesh is None:
+        return V2Response(
+            success=True,
+            message="No drain holes generated (no wall edges found)",
+            data={"cylinderCount": 0},
+        )
+
+    output_path = output_dir / "model_drain_holes.stl"
+    mesh.export(str(output_path))
+
+    return V2Response(
+        success=True,
+        message=f"Drain holes generated ({len(mesh.faces)} faces)",
+        data={
+            "resultPath": f"/api/jobs/{job_id}/drain_holes.stl",
+            "faces": len(mesh.faces),
+        },
     )
 
 

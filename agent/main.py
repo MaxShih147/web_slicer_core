@@ -20,6 +20,7 @@ from .jobs import (
     get_layer_path,
     get_support_mesh_path,
     get_hollow_mesh_path,
+    get_drain_holes_path,
     get_cut_mesh_path,
     get_cut_upper_mesh_path,
     get_cut_lower_mesh_path,
@@ -660,6 +661,25 @@ async def get_hollow_mesh(job_id: str):
         hollow_path,
         media_type="application/octet-stream",
         filename="hollow.stl",
+    )
+
+
+@app.get("/api/jobs/{job_id}/drain_holes.stl")
+async def get_drain_holes_mesh(job_id: str):
+    """
+    Get the drain holes mesh as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    drain_path = get_drain_holes_path(job_id)
+    if drain_path is None:
+        raise HTTPException(status_code=404, detail="Drain holes mesh not available")
+
+    return FileResponse(
+        drain_path,
+        media_type="application/octet-stream",
+        filename="drain_holes.stl",
     )
 
 

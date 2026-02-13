@@ -409,6 +409,14 @@ def get_cut_lower_mesh_path(job_id: str) -> Optional[Path]:
     return None
 
 
+def get_drain_holes_path(job_id: str) -> Optional[Path]:
+    """Get the path to the drain holes STL file."""
+    drain_path = get_job_dir(job_id) / "output" / "model_drain_holes.stl"
+    if drain_path.exists():
+        return drain_path
+    return None
+
+
 def get_boolean_mesh_path(job_id: str) -> Optional[Path]:
     """Get the path to the boolean result STL file."""
     output_dir = get_job_dir(job_id) / "output"

@@ -773,6 +773,104 @@ def boolean_operation(
         return False, err
 
 
+def generate_drain_holes(
+    hex_cell_radius: float = 5.0,
+    wall_thickness: float = 1.0,
+    grid_count: int = 10,
+    drain_radius: float = 1.5,
+    bottom_z: float = 0.0,
+):
+    """
+    Generate drain hole cylinders at hex grid wall edge midpoints.
+
+    Ports the algorithm from DS-Online drillService.js generateDrainHoles().
+    Creates cylinders at each wall midpoint between neighboring hex cells,
+    oriented perpendicular to the wall direction, lying in the XY plane.
+
+    Args:
+        hex_cell_radius: Hex cell radius (mm)
+        wall_thickness: Gap between cells (mm)
+        grid_count: Number of cells per row
+        drain_radius: Drain hole cylinder radius (mm)
+        bottom_z: Z position of the print bed
+
+    Returns:
+        trimesh.Trimesh mesh of all drain cylinders, or None if no walls found
+    """
+    import math
+    import numpy as np
+    import trimesh
+    from trimesh import transformations
+
+    spacing = hex_cell_radius + wall_thickness / 2
+    col_step = spacing * math.sqrt(3)
+    row_step = spacing * 1.5
+    half_cols = (grid_count - 1) / 2
+    half_rows = (grid_count - 1) / 2
+
+    def cell_center(row, col):
+        x_offset = (row % 2) * (col_step / 2)
+        return (
+            (col - half_cols) * col_step + x_offset,
+            (row - half_rows) * row_step,
+        )
+
+    walls = []
+    seen = set()
+
+    def edge_key(r1, c1, r2, c2):
+        a = r1 * 1000 + c1
+        b = r2 * 1000 + c2
+        return (min(a, b), max(a, b))
+
+    for row in range(grid_count):
+        for col in range(grid_count):
+            neighbors = [
+                (row, col + 1),
+                (row + 1, (col - 1) if (row % 2 == 0) else col),
+                (row + 1, col if (row % 2 == 0) else (col + 1)),
+            ]
+
+            for nr, nc in neighbors:
+                if nr < 0 or nr >= grid_count or nc < 0 or nc >= grid_count:
+                    continue
+                key = edge_key(row, col, nr, nc)
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                ax, ay = cell_center(row, col)
+                bx, by = cell_center(nr, nc)
+                mid_x = (ax + bx) / 2
+                mid_y = (ay + by) / 2
+                angle = math.atan2(by - ay, bx - ax)
+                walls.append((mid_x, mid_y, angle))
+
+    if not walls:
+        return None
+
+    cyl_length = wall_thickness * 3
+    cylinders = []
+
+    for mid_x, mid_y, angle in walls:
+        cyl = trimesh.creation.cylinder(
+            radius=drain_radius,
+            height=cyl_length,
+            sections=32,
+        )
+        # Rotate from Z-aligned to XY plane at the wall direction angle.
+        # Ry(PI/2) maps Z→X, then Rz(angle) maps X→wall direction.
+        ry = transformations.rotation_matrix(np.pi / 2, [0, 1, 0])
+        rz = transformations.rotation_matrix(angle, [0, 0, 1])
+        transform = rz @ ry
+        transform[:3, 3] = [mid_x, mid_y, bottom_z]
+        cyl.apply_transform(transform)
+        cylinders.append(cyl)
+
+    merged = trimesh.util.concatenate(cylinders)
+    return merged
+
+
 async def perform_boolean(
     job_dir: Path,
     mesh_a_path: Path,
