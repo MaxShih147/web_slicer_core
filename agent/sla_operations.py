@@ -871,6 +871,163 @@ def generate_drain_holes(
     return merged
 
 
+def generate_hex_grid(
+    radius: float = 5.0,
+    fallback_height: float = 20.0,
+    pyramid_height: float = 5.0,
+    wall_thickness: float = 1.0,
+    grid_count: int = 5,
+    bottom_z: float = 0.0,
+    hollow_mesh=None,
+):
+    """
+    Generate a honeycomb hex grid mesh with heights adapted to hollow mesh ceiling.
+
+    Ports the algorithm from DS-Online infillService.js generateHexGrid().
+
+    Args:
+        radius: Hex cell radius (mm)
+        fallback_height: Fallback prism height if no hollow mesh or ray miss (mm)
+        pyramid_height: Height of the hexagonal pyramid dome (mm)
+        wall_thickness: Gap between cells (mm)
+        grid_count: Number of cells per row
+        bottom_z: Z position of the print bed
+        hollow_mesh: trimesh.Trimesh hollow mesh for ray-based height adaptation
+
+    Returns:
+        trimesh.Trimesh mesh or None if no cells built
+    """
+    import math
+    import numpy as np
+    import trimesh
+
+    vertices = []
+    faces = []
+    base_idx = 0
+    vertices_per_cell = 14  # 1 bottom center + 6 bottom ring + 6 top ring + 1 apex
+
+    # Honeycomb spacing (flat-top hex)
+    spacing = radius + wall_thickness / 2
+    col_step = spacing * math.sqrt(3)
+    row_step = spacing * 1.5
+
+    # Center the grid
+    half_cols = (grid_count - 1) / 2
+    half_rows = (grid_count - 1) / 2
+
+    # Setup raycasting for finding hollow mesh ceiling
+    has_hollow = hollow_mesh is not None
+    inner_max_z = fallback_height
+
+    # Batch all ray origins/directions for a single intersects_location call
+    ray_origins_list = []
+    ray_cells = []  # (row, col, cx, cy) for each ray
+
+    if has_hollow:
+        inner_max_z = hollow_mesh.bounds[1][2] + 5  # max Z + 5
+
+    for row in range(grid_count):
+        for col in range(grid_count):
+            x_offset = (row % 2) * (col_step / 2)
+            cx = (col - half_cols) * col_step + x_offset
+            cy = (row - half_rows) * row_step
+            ray_origins_list.append([cx, cy, -100.0])
+            ray_cells.append((row, col, cx, cy))
+
+    # Perform batched raycasting
+    cell_heights = {}  # (row, col) -> prism_height or None (skip)
+
+    if has_hollow and ray_origins_list:
+        ray_origins = np.array(ray_origins_list, dtype=np.float64)
+        ray_dirs = np.tile([0.0, 0.0, 1.0], (len(ray_origins_list), 1))
+        locations, index_ray, _ = hollow_mesh.ray.intersects_location(ray_origins, ray_dirs)
+
+        # Group hit Z values by ray index
+        for i, (row, col, cx, cy) in enumerate(ray_cells):
+            hits = locations[index_ray == i]
+            if len(hits) > 0:
+                max_z = float(hits[:, 2].max())
+                h_val = max_z - pyramid_height
+                if h_val < 1:
+                    cell_heights[(row, col)] = None  # skip
+                else:
+                    cell_heights[(row, col)] = h_val
+            else:
+                cell_heights[(row, col)] = inner_max_z - pyramid_height
+
+    cells_built = 0
+    cells_skipped = 0
+
+    for row, col, cx, cy in ray_cells:
+        if has_hollow:
+            h = cell_heights.get((row, col))
+            if h is None:
+                cells_skipped += 1
+                continue
+            prism_height = h
+        else:
+            prism_height = fallback_height
+
+        # Build hex cell vertices
+        hex_points = []
+        for i in range(6):
+            angle = (math.pi / 3) * i - math.pi / 6
+            hex_points.append((
+                cx + radius * math.cos(angle),
+                cy + radius * math.sin(angle),
+            ))
+
+        # Bottom center (base_idx + 0)
+        vertices.append([cx, cy, bottom_z])
+        # Bottom ring (base_idx + 1..6)
+        for i in range(6):
+            vertices.append([hex_points[i][0], hex_points[i][1], bottom_z])
+        # Top ring (base_idx + 7..12)
+        for i in range(6):
+            vertices.append([hex_points[i][0], hex_points[i][1], prism_height])
+        # Apex (base_idx + 13)
+        vertices.append([cx, cy, prism_height + pyramid_height])
+
+        # Bottom face (6 triangles, fan from center)
+        for i in range(6):
+            nxt = (i + 1) % 6
+            faces.append([base_idx + 0, base_idx + 1 + nxt, base_idx + 1 + i])
+
+        # Prism side faces (6 quads = 12 triangles)
+        for i in range(6):
+            nxt = (i + 1) % 6
+            b0 = base_idx + 1 + i
+            b1 = base_idx + 1 + nxt
+            t0 = base_idx + 7 + i
+            t1 = base_idx + 7 + nxt
+            faces.append([b0, b1, t1])
+            faces.append([b0, t1, t0])
+
+        # Pyramid faces (6 triangles)
+        for i in range(6):
+            nxt = (i + 1) % 6
+            faces.append([base_idx + 7 + i, base_idx + 7 + nxt, base_idx + 13])
+
+        base_idx += vertices_per_cell
+        cells_built += 1
+
+    if cells_built == 0:
+        return None
+
+    mesh = trimesh.Trimesh(
+        vertices=np.array(vertices, dtype=np.float64),
+        faces=np.array(faces, dtype=np.int64),
+        process=False,
+    )
+
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Hex grid: {cells_built} cells built, {cells_skipped} skipped, "
+                f"radius={radius}, wall={wall_thickness}, pyramid={pyramid_height}")
+
+    return mesh
+
+
 async def perform_boolean(
     job_dir: Path,
     mesh_a_path: Path,

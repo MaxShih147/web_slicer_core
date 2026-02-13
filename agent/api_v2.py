@@ -6,9 +6,13 @@ Both v1 (/api/jobs) and v2 (/api/v2/slices) share the same underlying job manage
 """
 
 import json
+import logging
 import math
+import shutil
+import traceback as tb
 from typing import Any, Dict, List, Optional
 
+import trimesh
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
@@ -17,6 +21,7 @@ from .jobs import (
     create_job_id,
     get_drain_holes_path,
     get_hollow_mesh_path,
+    get_input_model_path,
     get_layer_path,
     get_job_dir,
     job_exists,
@@ -26,9 +31,18 @@ from .jobs import (
     run_hollow_generation,
     run_cut_operation,
 )
-from .sla_operations import generate_drain_holes, parse_binary_stl, perform_boolean, write_binary_stl
-from .models import BooleanOperation
-from .models import JobStatus, SLAConfig
+from .models import BooleanOperation, JobStatus, SLAConfig
+from .sla_operations import generate_drain_holes, generate_hex_grid, parse_binary_stl, perform_boolean, write_binary_stl
+
+logger = logging.getLogger(__name__)
+
+
+def _load_trimesh(path):
+    """Load an STL file as a single trimesh.Trimesh."""
+    mesh = trimesh.load(str(path))
+    if isinstance(mesh, trimesh.Scene):
+        mesh = trimesh.util.concatenate(mesh.dump())
+    return mesh
 
 
 # ============================================================================
@@ -81,6 +95,16 @@ class V2GenerateDrainHolesRequest(BaseModel):
     wall_thickness: float = 1.0
     grid_count: int = 10
     drain_radius: float = 1.5
+    bottom_z: float = 0.0
+
+
+class V2GenerateHexGridRequest(BaseModel):
+    """Request to generate honeycomb hex grid infill mesh."""
+    hex_cell_radius: float = 5.0
+    wall_thickness: float = 1.0
+    grid_count: int = 10
+    pyramid_height: float = 3.0
+    fallback_height: float = 20.0
     bottom_z: float = 0.0
 
 
@@ -564,29 +588,107 @@ async def generate_drain_holes_endpoint(job_id: str, request: V2GenerateDrainHol
     )
 
 
+@router.post("/slices/{job_id}/generate-hex-grid", response_model=V2Response)
+async def generate_hex_grid_endpoint(job_id: str, request: V2GenerateHexGridRequest):
+    """
+    Generate honeycomb hex grid infill mesh using raycasting against hollow mesh.
+
+    Synchronous operation — loads hollow.stl, raycasts to determine cell heights,
+    builds hex grid geometry, and saves result to model_hex_grid.stl.
+    The STL can be fetched via GET /api/jobs/{job_id}/hex_grid.stl
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Reset boolean debug counter and prepare debug folder
+    global _boolean_step_counter
+    _boolean_step_counter = 0
+    job_dir = get_job_dir(job_id)
+    debug_dir = job_dir / "debug"
+    if debug_dir.exists():
+        shutil.rmtree(debug_dir)
+    debug_dir.mkdir(exist_ok=True)
+
+    # Load hollow mesh
+    hollow_path = get_hollow_mesh_path(job_id)
+    if hollow_path is None:
+        raise HTTPException(status_code=404, detail="Hollow mesh not found for this job")
+
+    hollow_mesh = _load_trimesh(hollow_path)
+
+    # PrusaSlicer centers the model's bounding box at origin before hollowing.
+    # Undo this by translating the hollow mesh by the input model's bbox center.
+    input_model_path = get_input_model_path(job_id)
+    if input_model_path is not None:
+        input_mesh = _load_trimesh(input_model_path)
+        input_center = (input_mesh.bounds[0] + input_mesh.bounds[1]) / 2
+        hollow_mesh.apply_translation(input_center)
+        shutil.copy2(input_model_path, debug_dir / "input_model_outer.stl")
+
+    logger.info(f"generate-hex-grid: hollow bounds={hollow_mesh.bounds.tolist()}, "
+                f"bottom_z={request.bottom_z}")
+
+    # Debug: export aligned hollow mesh
+    hollow_mesh.export(str(debug_dir / "hollow_for_raycasting.stl"))
+
+    mesh = generate_hex_grid(
+        radius=request.hex_cell_radius,
+        fallback_height=request.fallback_height,
+        pyramid_height=request.pyramid_height,
+        wall_thickness=request.wall_thickness,
+        grid_count=request.grid_count,
+        bottom_z=request.bottom_z,
+        hollow_mesh=hollow_mesh,
+    )
+
+    if mesh is None:
+        return V2Response(
+            success=True,
+            message="No hex grid cells built",
+            data={"cellsBuilt": 0},
+        )
+
+    output_dir = job_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+    mesh.export(str(output_dir / "model_hex_grid.stl"))
+
+    return V2Response(
+        success=True,
+        message=f"Hex grid generated ({len(mesh.faces)} faces)",
+        data={
+            "resultPath": f"/api/jobs/{job_id}/hex_grid.stl",
+            "faces": len(mesh.faces),
+        },
+    )
+
+
 @router.post("/boolean")
 async def boolean_operation_endpoint(
     mesh_a: UploadFile = File(..., description="First mesh (STL)"),
     mesh_b: UploadFile = File(..., description="Second mesh (STL)"),
     operation: str = Form(default="difference", description="Boolean operation: union, difference, or intersection"),
+    parent_job_id: str = Form(default="", description="Parent job ID for debug export"),
 ):
     """
     Perform boolean operation on two meshes (experimental).
     """
-    import traceback as tb
     try:
-        return await _boolean_operation_impl(mesh_a, mesh_b, operation)
+        return await _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id or None)
     except HTTPException:
         raise
     except Exception as e:
-        err = tb.format_exc()
-        with open("/tmp/boolean_error.log", "a") as f:
-            f.write(f"\n=== top-level exception ===\n{err}\n")
+        logger.exception(f"Boolean {operation} failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def _boolean_operation_impl(mesh_a, mesh_b, operation):
-    # Validate operation
+_boolean_step_counter = 0
+
+
+async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None):
+    global _boolean_step_counter
+    _boolean_step_counter += 1
+    step = _boolean_step_counter
+
     try:
         bool_op = BooleanOperation(operation)
     except ValueError:
@@ -595,45 +697,37 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation):
             detail=f"Invalid operation: {operation}. Must be 'union', 'difference', or 'intersection'"
         )
 
-    # Validate file extensions
     for f, name in [(mesh_a, "mesh_a"), (mesh_b, "mesh_b")]:
         if not f.filename or not f.filename.lower().endswith(".stl"):
             raise HTTPException(status_code=400, detail=f"{name} must be an STL file")
 
-    # Create job
     job_id = create_job_id()
     job_dir = create_job(job_id)
-
-    # Save uploaded files
     input_dir = job_dir / "input"
     mesh_a_path = input_dir / "mesh_a.stl"
     mesh_b_path = input_dir / "mesh_b.stl"
 
-    try:
-        mesh_a_content = await mesh_a.read()
-        mesh_b_content = await mesh_b.read()
+    mesh_a_content = await mesh_a.read()
+    mesh_b_content = await mesh_b.read()
+    with open(mesh_a_path, "wb") as f:
+        f.write(mesh_a_content)
+    with open(mesh_b_path, "wb") as f:
+        f.write(mesh_b_content)
 
-        with open(mesh_a_path, "wb") as f:
-            f.write(mesh_a_content)
-        with open(mesh_b_path, "wb") as f:
-            f.write(mesh_b_content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save files: {e}")
+    # Debug: save inputs/output to parent job's debug/ folder
+    debug_dir = None
+    if parent_job_id and job_exists(parent_job_id):
+        debug_dir = get_job_dir(parent_job_id) / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        shutil.copy2(mesh_a_path, debug_dir / f"step{step}_{operation}_inputA.stl")
+        shutil.copy2(mesh_b_path, debug_dir / f"step{step}_{operation}_inputB.stl")
 
-    # Perform boolean operation
-    import traceback as tb
-    try:
-        result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
-    except Exception as e:
-        err = tb.format_exc()
-        with open("/tmp/boolean_error.log", "a") as f:
-            f.write(f"\n=== {job_id} exception ===\n{err}\n")
-        raise HTTPException(status_code=500, detail=str(e))
-
+    result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
     if not result.success:
-        with open("/tmp/boolean_error.log", "a") as f:
-            f.write(f"\n=== {job_id} failed ===\n{result.error}\n")
         raise HTTPException(status_code=500, detail=result.error)
+
+    if debug_dir and result.boolean_mesh_path and result.boolean_mesh_path.exists():
+        shutil.copy2(result.boolean_mesh_path, debug_dir / f"step{step}_{operation}_output.stl")
 
     return V2Response(
         success=True,
@@ -644,22 +738,6 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation):
             "resultPath": f"/api/jobs/{job_id}/boolean.stl",
         }
     )
-
-
-@router.post("/debug/save-stl")
-async def debug_save_stl(
-    file: UploadFile = File(...),
-    name: str = Form(..., description="Filename to save as (e.g. debug_01_inner.stl)"),
-):
-    """Save a debug STL file to /tmp/debug_stl/ for inspection."""
-    from pathlib import Path
-    debug_dir = Path("/tmp/debug_stl")
-    debug_dir.mkdir(exist_ok=True)
-    out_path = debug_dir / name
-    content = await file.read()
-    with open(out_path, "wb") as f:
-        f.write(content)
-    return {"saved": str(out_path), "size": len(content)}
 
 
 @router.get("/slices/{job_id}", response_model=V2Response)

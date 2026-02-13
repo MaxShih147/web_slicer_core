@@ -417,6 +417,14 @@ def get_drain_holes_path(job_id: str) -> Optional[Path]:
     return None
 
 
+def get_hex_grid_path(job_id: str) -> Optional[Path]:
+    """Get the path to the hex grid STL file."""
+    hex_path = get_job_dir(job_id) / "output" / "model_hex_grid.stl"
+    if hex_path.exists():
+        return hex_path
+    return None
+
+
 def get_boolean_mesh_path(job_id: str) -> Optional[Path]:
     """Get the path to the boolean result STL file."""
     output_dir = get_job_dir(job_id) / "output"

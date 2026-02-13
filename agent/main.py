@@ -21,6 +21,7 @@ from .jobs import (
     get_support_mesh_path,
     get_hollow_mesh_path,
     get_drain_holes_path,
+    get_hex_grid_path,
     get_cut_mesh_path,
     get_cut_upper_mesh_path,
     get_cut_lower_mesh_path,
@@ -680,6 +681,25 @@ async def get_drain_holes_mesh(job_id: str):
         drain_path,
         media_type="application/octet-stream",
         filename="drain_holes.stl",
+    )
+
+
+@app.get("/api/jobs/{job_id}/hex_grid.stl")
+async def get_hex_grid_mesh(job_id: str):
+    """
+    Get the hex grid infill mesh as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    hex_path = get_hex_grid_path(job_id)
+    if hex_path is None:
+        raise HTTPException(status_code=404, detail="Hex grid mesh not available")
+
+    return FileResponse(
+        hex_path,
+        media_type="application/octet-stream",
+        filename="hex_grid.stl",
     )
 
 
