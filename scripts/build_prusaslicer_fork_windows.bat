@@ -53,8 +53,20 @@ if "%CMAKE_BIN%"=="" (
     exit /b 1
 )
 
+:: Detect Visual Studio generator via vswhere (catalog_productLineVersion: 18=2026, 17=2022, 16=2019)
+set VS_GENERATOR=Visual Studio 17 2022
+set "VSWhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if exist "%VSWhere%" (
+    for /f "usebackq delims=" %%v in (`"%VSWhere%" -latest -property catalog_productLineVersion 2^>nul`) do set "VS_VER=%%v"
+    if "!VS_VER!"=="18" set VS_GENERATOR=Visual Studio 18 2026
+    if "!VS_VER!"=="17" set VS_GENERATOR=Visual Studio 17 2022
+    if "!VS_VER!"=="16" set VS_GENERATOR=Visual Studio 16 2019
+    if "!VS_VER!"=="15" set VS_GENERATOR=Visual Studio 15 2017
+)
+
 echo [PrusaSlicer] Using fork: %FORK_URL% (%FORK_BRANCH%)
 echo [PrusaSlicer] Using CMake: %CMAKE_BIN%
+echo [PrusaSlicer] Using generator: %VS_GENERATOR%
 echo [PrusaSlicer] Build flags: %BUILD_FLAGS%
 
 :: Clone or update fork
@@ -94,8 +106,9 @@ if not exist "%DEPS_DESTDIR%" (
     cd /d "%DEPS_BUILD_DIR%"
 
     :: Build deps without wxWidgets (headless/CLI mode)
+    :: CMAKE_POLICY_VERSION_MINIMUM=3.5 allows subprojects with old cmake_minimum_required to work with CMake 4.x
     "%CMAKE_BIN%" .. ^
-        -G "Visual Studio 17 2022" ^
+        -G "%VS_GENERATOR%" ^
         -A x64 ^
         -DCMAKE_BUILD_TYPE=Release ^
         -DPrusaSlicer_deps_PACKAGE_EXCLUDES="wxWidgets"
@@ -130,7 +143,7 @@ cd /d "%BUILD_DIR%"
 
 echo [PrusaSlicer] Configuring build...
 "%CMAKE_BIN%" "%SRC_DIR%" ^
-    -G "Visual Studio 17 2022" ^
+    -G "%VS_GENERATOR%" ^
     -A x64 ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DSLIC3R_GUI=OFF ^

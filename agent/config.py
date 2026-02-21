@@ -6,7 +6,8 @@ from pathlib import Path
 # Base paths
 AGENT_DIR = Path(__file__).parent
 REPO_ROOT = AGENT_DIR.parent
-JOBS_DIR = AGENT_DIR / "jobs"
+# Use BUNDLE_JOBS_DIR when set by Bundle Launcher (packaged Windows/macOS) so jobs dir is user-writable; otherwise use agent dir (dev or standalone).
+JOBS_DIR = Path(os.getenv("BUNDLE_JOBS_DIR", str(AGENT_DIR / "jobs")))
 
 # PrusaSlicer CLI path
 # Use PRUSA_SLICER_BIN env var if set, otherwise fall back to local build
@@ -28,5 +29,5 @@ PORT = 5179
 # Keeping code for future reference; set to True to re-enable if needed.
 EXPORT_PROJECT_3MF = False
 
-# Ensure jobs directory exists
-JOBS_DIR.mkdir(exist_ok=True)
+# Ensure jobs directory exists (parents=True when using BUNDLE_JOBS_DIR under user data)
+JOBS_DIR.mkdir(parents=True, exist_ok=True)
