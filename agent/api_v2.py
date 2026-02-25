@@ -868,7 +868,11 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         "Bottom Exposure Time": "initial_exposure_time",
         "Machine Type": "printer_model",
         "Resin": "sla_material_settings_id",
-        "Center": "center"
+        "Center": "center",
+        "Anti-aliasing": "anti_aliasing",
+        "Anti-aliasing Level": "anti_aliasing_level",
+        "Grey Level": "gray_level",
+        "Image Blur Pixel": "blur",
     }
 
     sla_dict = {}

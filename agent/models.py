@@ -62,6 +62,12 @@ class SLAConfig(BaseModel):
     hollowing_quality: float = 0.5
     hollowing_closing_distance: float = 2.0
 
+    # Image quality settings
+    anti_aliasing: bool = True
+    anti_aliasing_level: int = 0
+    gray_level: int = 0
+    blur: int = 0
+
     # Gamma correction
     gamma_correction: float = 1.0
 
