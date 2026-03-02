@@ -85,7 +85,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     err = _tb.format_exc()
     with open("/tmp/boolean_error.log", "a") as f:
         f.write(f"\n=== GLOBAL {request.url.path} ===\n{err}\n")
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if origin in _cors_origins:
+        headers["access-control-allow-origin"] = origin
+        headers["access-control-allow-credentials"] = "true"
+    return JSONResponse(status_code=500, content={"detail": str(exc)}, headers=headers)
 
 # Include v2 API router (DS-Online compatible)
 app.include_router(v2_router)
