@@ -67,13 +67,16 @@ if _extra_cors_origins.strip():
         if origin.strip()
     )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=sorted(_cors_origins),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_enable_cors = os.getenv("ENABLE_CORS", "true").lower() in ("true", "1", "yes")
+
+if _enable_cors:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=sorted(_cors_origins),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Global exception handler to catch unhandled errors
 from fastapi.responses import JSONResponse
@@ -85,11 +88,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     err = _tb.format_exc()
     with open("/tmp/boolean_error.log", "a") as f:
         f.write(f"\n=== GLOBAL {request.url.path} ===\n{err}\n")
-    origin = request.headers.get("origin", "")
     headers = {}
-    if origin in _cors_origins:
-        headers["access-control-allow-origin"] = origin
-        headers["access-control-allow-credentials"] = "true"
+    if _enable_cors:
+        origin = request.headers.get("origin", "")
+        if origin in _cors_origins:
+            headers["access-control-allow-origin"] = origin
+            headers["access-control-allow-credentials"] = "true"
     return JSONResponse(status_code=500, content={"detail": str(exc)}, headers=headers)
 
 # Include v2 API router (DS-Online compatible)

@@ -86,3 +86,10 @@ cmake-*.app/
 #######################################
 
 third_party/prusaslicer_build/
+
+
+#######################################
+# Deploy (machine-specific config)
+#######################################
+
+deploy/.env

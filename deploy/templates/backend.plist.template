@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dentalslice.backend</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>${PYTHON_BIN}</string>
+        <string>-m</string>
+        <string>uvicorn</string>
+        <string>agent.main:app</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>${BACKEND_PORT}</string>
+        <string>--workers</string>
+        <string>1</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>${BACKEND_DIR}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PRUSA_SLICER_BIN</key>
+        <string>${PRUSA_SLICER_BIN}</string>
+        <key>ENABLE_CORS</key>
+        <string>false</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>${LOG_DIR}/dentalslice_backend.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>${LOG_DIR}/dentalslice_backend_error.log</string>
+</dict>
+</plist>

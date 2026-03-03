@@ -1,0 +1,7 @@
+tunnel: ${TUNNEL_UUID}
+credentials-file: ${CLOUDFLARED_CREDS}
+
+ingress:
+  - hostname: ${DEPLOY_DOMAIN}
+    service: http://localhost:${NGINX_PORT}
+  - service: http_status:404
