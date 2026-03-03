@@ -22,7 +22,7 @@ server {
     add_header Cross-Origin-Embedder-Policy "require-corp" always;
     add_header Cross-Origin-Opener-Policy  "same-origin"  always;
 
-    client_max_body_size 100m;
+    client_max_body_size 500m;
 
     # Frontend SPA
     root ${FRONTEND_DIST};

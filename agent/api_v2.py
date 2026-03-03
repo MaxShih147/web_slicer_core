@@ -232,6 +232,41 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
     )
 
 
+@router.post("/slices/{job_id}/use-model-from/{source_job_id}", response_model=V2Response)
+async def use_model_from_job(job_id: str, source_job_id: str, source_file: str = "boolean.stl"):
+    """
+    Reference an existing job's output file as the model for this slice job.
+    Avoids re-uploading large files that are already on the server.
+    """
+    if job_id not in _pending_jobs:
+        raise HTTPException(status_code=404, detail="Job not found or already executed")
+
+    # Find the source file on disk
+    source_dir = get_job_dir(source_job_id)
+    source_path = source_dir / "output" / source_file
+    if not source_path.exists():
+        # Also check input dir
+        source_path = source_dir / "input" / source_file
+    if not source_path.exists():
+        raise HTTPException(status_code=404, detail=f"Source file '{source_file}' not found in job {source_job_id}")
+
+    # Read the file content and add to pending job
+    content = source_path.read_bytes()
+    model_id = f"ref_{source_job_id}_{len(_pending_jobs[job_id]['models'])}"
+    _pending_jobs[job_id]["models"].append({
+        "id": model_id,
+        "filename": "model.stl",
+        "stl_data": content,
+        "type": "server_reference",
+    })
+
+    return V2Response(
+        success=True,
+        message=f"Model referenced from job {source_job_id}/{source_file}",
+        data={"modelId": model_id, "sourceJobId": source_job_id}
+    )
+
+
 @router.post("/slices/{job_id}/execute", response_model=V2Response)
 async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
     """
