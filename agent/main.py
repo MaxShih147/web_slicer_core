@@ -831,6 +831,25 @@ async def get_boolean_mesh(job_id: str):
     )
 
 
+@app.get("/api/jobs/{job_id}/ortho_result.stl")
+async def get_ortho_result(job_id: str):
+    """
+    Get the consolidated ortho processing result as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    ortho_path = get_job_dir(job_id) / "output" / "ortho_result.stl"
+    if not ortho_path.exists():
+        raise HTTPException(status_code=404, detail="Ortho result not available")
+
+    return FileResponse(
+        ortho_path,
+        media_type="application/octet-stream",
+        filename="ortho_result.stl",
+    )
+
+
 def main():
     """Run the server."""
     import uvicorn

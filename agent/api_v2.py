@@ -32,17 +32,9 @@ from .jobs import (
     run_cut_operation,
 )
 from .models import BooleanOperation, JobStatus, SLAConfig
-from .sla_operations import generate_drain_holes, generate_hex_grid, parse_binary_stl, perform_boolean, write_binary_stl
+from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
 
 logger = logging.getLogger(__name__)
-
-
-def _load_trimesh(path):
-    """Load an STL file as a single trimesh.Trimesh."""
-    mesh = trimesh.load(str(path))
-    if isinstance(mesh, trimesh.Scene):
-        mesh = trimesh.util.concatenate(mesh.dump())
-    return mesh
 
 
 # ============================================================================
@@ -106,6 +98,20 @@ class V2GenerateHexGridRequest(BaseModel):
     pyramid_height: float = 3.0
     fallback_height: float = 20.0
     bottom_z: float = 0.0
+
+
+class V2OrthoProcessRequest(BaseModel):
+    """Request for consolidated ortho processing pipeline."""
+    hollowing_min_thickness: float = 3.0
+    hollowing_quality: float = 0.5
+    hollowing_closing_distance: float = 2.0
+    bottom_z_threshold: float = 0.5
+    extension_distance: float = 10.0
+    hex_cell_radius: float = 5.0
+    hex_wall_thickness: float = 1.0
+    hex_grid_count: int = 10
+    hex_pyramid_height: float = 3.0
+    drain_hole_radius: float = 1.5
 
 
 # ============================================================================
@@ -649,13 +655,13 @@ async def generate_hex_grid_endpoint(job_id: str, request: V2GenerateHexGridRequ
     if hollow_path is None:
         raise HTTPException(status_code=404, detail="Hollow mesh not found for this job")
 
-    hollow_mesh = _load_trimesh(hollow_path)
+    hollow_mesh = load_trimesh(hollow_path)
 
     # PrusaSlicer centers the model's bounding box at origin before hollowing.
     # Undo this by translating the hollow mesh by the input model's bbox center.
     input_model_path = get_input_model_path(job_id)
     if input_model_path is not None:
-        input_mesh = _load_trimesh(input_model_path)
+        input_mesh = load_trimesh(input_model_path)
         input_center = (input_mesh.bounds[0] + input_mesh.bounds[1]) / 2
         hollow_mesh.apply_translation(input_center)
         shutil.copy2(input_model_path, debug_dir / "input_model_outer.stl")
@@ -787,9 +793,7 @@ async def get_slice_job_status(job_id: str):
         status_data = read_job_status(job_id)
         # If job is on disk and not pending, return disk status
         if status_data["status"] != "pending":
-            return V2Response(
-                success=True,
-                data={
+            response_data = {
                     "jobId": job_id,
                     "status": status_data["status"],
                     "layerCount": status_data.get("layer_count"),
@@ -799,8 +803,11 @@ async def get_slice_job_status(job_id: str):
                     "hasSupportMesh": status_data.get("has_support_mesh", False),
                     "hasHollowMesh": status_data.get("has_hollow_mesh", False),
                     "hasCutMesh": status_data.get("has_cut_mesh", False),
-                }
-            )
+                    "hasOrthoResult": status_data.get("has_ortho_result", False),
+            }
+            if "ortho_progress" in status_data:
+                response_data["orthoProgress"] = status_data["ortho_progress"]
+            return V2Response(success=True, data=response_data)
 
     # Check pending jobs (not yet executed)
     if job_id in _pending_jobs:
@@ -880,6 +887,66 @@ async def get_slice_gcode(job_id: str):
             "resinVolumeMl": status_data.get("resin_volume_ml"),
             "format": "sl1",
         }
+    )
+
+
+@router.post("/slices/{job_id}/ortho-process", response_model=V2Response)
+async def ortho_process(job_id: str, request: V2OrthoProcessRequest, background_tasks: BackgroundTasks):
+    """
+    Run the consolidated ortho processing pipeline server-side.
+
+    Performs all 10 steps (hollow, extend, align, hex grid, drain holes,
+    side wall drains, 4x boolean ops) as a single background task.
+
+    The final result can be downloaded via GET /api/jobs/{job_id}/ortho_result.stl
+    Poll GET /api/v2/slices/{job_id} for progress updates in orthoProgress field.
+    """
+    if job_id not in _pending_jobs:
+        raise HTTPException(status_code=404, detail="Job not found or already executed")
+
+    pending = _pending_jobs[job_id]
+
+    if not pending["models"]:
+        raise HTTPException(status_code=400, detail="No models added to job")
+
+    # Create job directory structure
+    job_dir = create_job(job_id)
+
+    # Save model data
+    model_data = pending["models"][0]
+    input_path = job_dir / "input" / "model.stl"
+
+    if "stl_data" in model_data:
+        with open(input_path, "wb") as f:
+            f.write(model_data["stl_data"])
+    else:
+        raise HTTPException(status_code=400, detail="Model must contain stl_data (use file upload)")
+
+    # Remove from pending
+    del _pending_jobs[job_id]
+
+    # Start ortho pipeline in background
+    from .ortho_pipeline import run_ortho_pipeline
+
+    background_tasks.add_task(
+        run_ortho_pipeline,
+        job_id,
+        hollowing_min_thickness=request.hollowing_min_thickness,
+        hollowing_quality=request.hollowing_quality,
+        hollowing_closing_distance=request.hollowing_closing_distance,
+        bottom_z_threshold=request.bottom_z_threshold,
+        extension_distance=request.extension_distance,
+        hex_cell_radius=request.hex_cell_radius,
+        hex_wall_thickness=request.hex_wall_thickness,
+        hex_grid_count=request.hex_grid_count,
+        hex_pyramid_height=request.hex_pyramid_height,
+        drain_hole_radius=request.drain_hole_radius,
+    )
+
+    return V2Response(
+        success=True,
+        message="Ortho processing pipeline started",
+        data={"jobId": job_id}
     )
 
 
