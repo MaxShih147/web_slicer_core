@@ -89,12 +89,17 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "=== Loading launchd services ==="
+UID_NUM="$(id -u)"
 for service in backend nginx; do
     plist="$HOME/Library/LaunchAgents/com.dentalslice.${service}.plist"
-    # Unload first if already loaded (ignore errors)
-    launchctl bootout "gui/$(id -u)/com.dentalslice.${service}" 2>/dev/null || true
-    launchctl bootstrap "gui/$(id -u)" "$plist"
-    echo "  Loaded com.dentalslice.${service}"
+    label="com.dentalslice.${service}"
+    # Unload if already loaded (ignore errors), then reload
+    if launchctl print "gui/${UID_NUM}/${label}" &>/dev/null; then
+        launchctl bootout "gui/${UID_NUM}/${label}" 2>/dev/null || true
+        sleep 1
+    fi
+    launchctl bootstrap "gui/${UID_NUM}" "$plist"
+    echo "  Loaded ${label}"
 done
 
 echo ""

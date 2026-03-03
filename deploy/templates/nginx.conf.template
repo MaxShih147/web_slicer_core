@@ -7,6 +7,17 @@ server {
     listen ${NGINX_PORT};
     server_name _;
 
+    # Gzip compression — critical for tunnel performance
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 5;
+    gzip_types
+        text/plain text/css text/javascript text/xml
+        application/javascript application/json application/xml
+        application/wasm application/octet-stream
+        image/svg+xml;
+
     # WASM/SharedArrayBuffer headers
     add_header Cross-Origin-Embedder-Policy "require-corp" always;
     add_header Cross-Origin-Opener-Policy  "same-origin"  always;
@@ -19,6 +30,14 @@ server {
 
     location / {
         try_files $uri $uri/ /index.html;
+    }
+
+    # Static assets — aggressive caching (hashed filenames)
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        add_header Cross-Origin-Embedder-Policy "require-corp" always;
+        add_header Cross-Origin-Opener-Policy  "same-origin"  always;
     }
 
     location = /index.html {
@@ -36,8 +55,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
         proxy_request_buffering off;
-        proxy_read_timeout 120s;
-        proxy_send_timeout 120s;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
     }
 
     # WebSocket support (future)
