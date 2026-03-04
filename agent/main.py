@@ -570,6 +570,28 @@ async def get_job_status(job_id: str):
     )
 
 
+@app.get("/api/jobs/{job_id}/layers.zip")
+async def get_layers_zip(job_id: str):
+    """
+    Download all layer PNGs as a single ZIP (serves the SL1 file directly).
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    status_data = read_job_status(job_id)
+    if status_data["status"] != JobStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job is not completed (status: {status_data['status']})"
+        )
+
+    sl1_path = get_job_dir(job_id) / "output" / "model.sl1"
+    if not sl1_path.exists():
+        raise HTTPException(status_code=404, detail="Layers not available")
+
+    return FileResponse(sl1_path, media_type="application/zip", filename="layers.zip")
+
+
 @app.get("/api/jobs/{job_id}/layers/{idx}.png")
 async def get_layer_image(job_id: str, idx: int):
     """
@@ -828,6 +850,25 @@ async def get_boolean_mesh(job_id: str):
         bool_path,
         media_type="application/octet-stream",
         filename="boolean.stl",
+    )
+
+
+@app.get("/api/jobs/{job_id}/ortho_result.stl")
+async def get_ortho_result(job_id: str):
+    """
+    Get the consolidated ortho processing result as STL file.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    ortho_path = get_job_dir(job_id) / "output" / "ortho_result.stl"
+    if not ortho_path.exists():
+        raise HTTPException(status_code=404, detail="Ortho result not available")
+
+    return FileResponse(
+        ortho_path,
+        media_type="application/octet-stream",
+        filename="ortho_result.stl",
     )
 
 
