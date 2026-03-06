@@ -16,6 +16,7 @@ Design principles:
 
 import asyncio
 import json
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -649,6 +650,68 @@ async def drill_hole(
 # =============================================================================
 # Boolean Operations (Experimental)
 # =============================================================================
+
+def boolean_meshes(
+    mesh_a: "trimesh.Trimesh",
+    mesh_b: "trimesh.Trimesh",
+    operation: BooleanOperation,
+) -> "trimesh.Trimesh":
+    """
+    Perform boolean operation on two trimesh objects in memory.
+
+    Returns the result trimesh. Raises RuntimeError on failure.
+    """
+    import manifold3d
+    import numpy as np
+    import trimesh as _trimesh
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Boolean {operation.value}: A={len(mesh_a.faces)} faces, B={len(mesh_b.faces)} faces")
+
+    def trimesh_to_manifold(mesh):
+        verts = np.array(mesh.vertices, dtype=np.float32)
+        faces = np.array(mesh.faces, dtype=np.int32)
+        mesh_gl = manifold3d.Mesh(vert_properties=verts, tri_verts=faces)
+        return manifold3d.Manifold(mesh_gl)
+
+    def manifold_to_trimesh(man):
+        mesh_gl = man.to_mesh()
+        return _trimesh.Trimesh(
+            vertices=mesh_gl.vert_properties[:, :3],
+            faces=mesh_gl.tri_verts,
+            process=True,
+        )
+
+    try:
+        man_a = trimesh_to_manifold(mesh_a)
+        man_b = trimesh_to_manifold(mesh_b)
+    except Exception as e:
+        logger.warning(f"  Manifold conversion failed: {e}, falling back to trimesh repair")
+        for mesh in [mesh_a, mesh_b]:
+            if not mesh.is_volume:
+                _trimesh.repair.fill_holes(mesh)
+                _trimesh.repair.fix_winding(mesh)
+                _trimesh.repair.fix_normals(mesh)
+                mesh.merge_vertices()
+        man_a = trimesh_to_manifold(mesh_a)
+        man_b = trimesh_to_manifold(mesh_b)
+
+    if operation == BooleanOperation.UNION:
+        result_man = man_a + man_b
+    elif operation == BooleanOperation.DIFFERENCE:
+        result_man = man_a - man_b
+    elif operation == BooleanOperation.INTERSECTION:
+        result_man = man_a ^ man_b
+    else:
+        raise RuntimeError(f"Unknown operation: {operation}")
+
+    result = manifold_to_trimesh(result_man)
+    if result is None or (hasattr(result, 'is_empty') and result.is_empty):
+        raise RuntimeError("Boolean operation resulted in empty mesh")
+
+    logger.info(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
+    return result
+
 
 def boolean_operation(
     mesh_a_path: Path,

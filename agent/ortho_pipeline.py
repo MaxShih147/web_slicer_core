@@ -29,7 +29,7 @@ import trimesh
 from .jobs import get_job_dir
 from .models import BooleanOperation, JobStatus, SLAConfig
 from .sla_operations import (
-    boolean_operation,
+    boolean_meshes,
     generate_drain_holes,
     generate_hex_grid,
     generate_hollow,
@@ -597,10 +597,6 @@ async def run_ortho_pipeline(
         input_center = (input_mesh.bounds[0] + input_mesh.bounds[1]) / 2
         hollow_mesh.apply_translation(input_center)
 
-        # Save aligned hollow for potential debug/reuse
-        hollow_aligned_path = output_dir / "model_hollow_aligned.stl"
-        hollow_mesh.export(str(hollow_aligned_path))
-
         # Get bounding box for bottom_z
         bottom_z = float(input_mesh.bounds[0][2])
 
@@ -620,9 +616,6 @@ async def run_ortho_pipeline(
         if hex_mesh is None:
             raise RuntimeError("Step 4: Hex grid generation failed - no cells built")
 
-        hex_path = output_dir / "model_hex_grid.stl"
-        hex_mesh.export(str(hex_path))
-
         # ===== Step 5: Generate drain holes =====
         _update_progress(job_id, 5, total_steps, "Generating drain holes...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 5: Generating drain holes")
@@ -634,11 +627,6 @@ async def run_ortho_pipeline(
             drain_radius=drain_hole_radius,
             bottom_z=bottom_z,
         )
-
-        drain_path = None
-        if drain_mesh is not None:
-            drain_path = output_dir / "model_drain_holes.stl"
-            drain_mesh.export(str(drain_path))
 
         # ===== Step 6: Generate side wall drains =====
         _update_progress(job_id, 6, total_steps, "Generating side wall drains...", status_data)
@@ -654,69 +642,49 @@ async def run_ortho_pipeline(
             hex_wall_thickness=hex_wall_thickness,
         )
 
-        if side_wall_mesh is not None:
-            side_wall_path = output_dir / "model_side_wall_drains.stl"
-            side_wall_mesh.export(str(side_wall_path))
-
         # ===== Step 7: Boolean union(hex_grid, drain_holes) =====
         _update_progress(job_id, 7, total_steps, "Boolean union: hex grid + drain holes...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 7: Boolean union(hex, drain)")
 
         if drain_mesh is not None:
-            step7_path = output_dir / "step7_hex_drain_union.stl"
-            ok, err = boolean_operation(hex_path, drain_path, BooleanOperation.UNION, step7_path)
-            if not ok:
-                raise RuntimeError(f"Step 7: Boolean union failed: {err}")
-            step7_mesh_path = step7_path
+            step7_mesh = boolean_meshes(hex_mesh, drain_mesh, BooleanOperation.UNION)
         else:
-            step7_mesh_path = hex_path
+            step7_mesh = hex_mesh
 
         # ===== Step 8: Flip hollow -> Boolean intersection =====
         _update_progress(job_id, 8, total_steps, "Boolean intersection with flipped hollow...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 8: Flip hollow + intersection")
 
-        # Create flipped hollow
         flipped_hollow = hollow_mesh.copy()
         flip_mesh_faces(flipped_hollow)
-        flipped_hollow_path = output_dir / "step8_flipped_hollow.stl"
-        flipped_hollow.export(str(flipped_hollow_path))
-
-        step8_path = output_dir / "step8_intersection.stl"
-        ok, err = boolean_operation(
-            flipped_hollow_path, step7_mesh_path,
-            BooleanOperation.INTERSECTION, step8_path,
-        )
-        if not ok:
-            raise RuntimeError(f"Step 8: Boolean intersection failed: {err}")
+        step8_mesh = boolean_meshes(flipped_hollow, step7_mesh, BooleanOperation.INTERSECTION)
 
         # ===== Step 9: Boolean union(side_wall_drains, step8) =====
         _update_progress(job_id, 9, total_steps, "Boolean union: side wall drains...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 9: Union side wall drains")
 
         if side_wall_mesh is not None:
-            side_wall_export_path = output_dir / "model_side_wall_drains.stl"
-            step9_path = output_dir / "step9_wall_drain_union.stl"
-            ok, err = boolean_operation(
-                side_wall_export_path, step8_path,
-                BooleanOperation.UNION, step9_path,
-            )
-            if not ok:
-                raise RuntimeError(f"Step 9: Boolean union failed: {err}")
-            step9_mesh_path = step9_path
+            step9_mesh = boolean_meshes(side_wall_mesh, step8_mesh, BooleanOperation.UNION)
         else:
-            step9_mesh_path = step8_path
+            step9_mesh = step8_mesh
 
         # ===== Step 10: Boolean difference(input_model, step9) =====
         _update_progress(job_id, 10, total_steps, "Computing final difference...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 10: Final boolean difference")
 
+        result_mesh = boolean_meshes(input_mesh, step9_mesh, BooleanOperation.DIFFERENCE)
         ortho_result_path = output_dir / "ortho_result.stl"
-        ok, err = boolean_operation(
-            input_path, step9_mesh_path,
-            BooleanOperation.DIFFERENCE, ortho_result_path,
-        )
-        if not ok:
-            raise RuntimeError(f"Step 10: Boolean difference failed: {err}")
+        result_mesh.export(str(ortho_result_path))
+
+        # ===== Cleanup PrusaSlicer intermediate outputs =====
+        for p in [
+            output_dir / "model_hollow.stl",
+            job_dir / "stderr_hollow.log",
+            job_dir / "config_hollow.json",
+        ]:
+            if p.exists():
+                p.unlink()
+        logger.info(f"[ortho_pipeline:{job_id}] Cleaned up intermediate files")
 
         # ===== Done =====
         logger.info(f"[ortho_pipeline:{job_id}] Pipeline completed successfully")
