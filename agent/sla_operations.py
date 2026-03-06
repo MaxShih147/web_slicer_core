@@ -217,7 +217,6 @@ async def slice_model(
     input_file = input_file or (job_dir / "input" / "model.stl")
     output_file = job_dir / "output" / "model.sl1"
     support_stl = job_dir / "output" / "model_support.stl"
-    layers_dir = job_dir / "layers"
     config_file = job_dir / "config.ini"
     stderr_file = job_dir / "stderr_slice.log"
 
@@ -259,9 +258,12 @@ async def slice_model(
             error="Output SL1 file was not created",
         )
 
+    # Count layers from .sl1 (no extraction needed, served directly on demand)
     layer_count = 0
     if extract_layers:
-        layer_count = _extract_layers_from_sl1(output_file, layers_dir)
+        import zipfile as _zf
+        with _zf.ZipFile(output_file, "r") as zf:
+            layer_count = sum(1 for n in zf.namelist() if n.endswith(".png"))
 
     return OperationResult(
         success=True,
@@ -273,35 +275,6 @@ async def slice_model(
         metadata={"config": config.model_dump()},
     )
 
-
-def _extract_layers_from_sl1(sl1_file: Path, layers_dir: Path) -> int:
-    """Extract PNG layers from .sl1 file to layers directory."""
-    import zipfile
-
-    layer_count = 0
-    layers_dir.mkdir(exist_ok=True)
-
-    with zipfile.ZipFile(sl1_file, "r") as zf:
-        for name in sorted(zf.namelist()):
-            if name.endswith(".png"):
-                try:
-                    base = Path(name).stem
-                    idx_str = ""
-                    for c in reversed(base):
-                        if c.isdigit():
-                            idx_str = c + idx_str
-                        else:
-                            break
-                    if idx_str:
-                        idx = int(idx_str)
-                        target_path = layers_dir / f"{idx}.png"
-                        with zf.open(name) as src, open(target_path, "wb") as dst:
-                            dst.write(src.read())
-                        layer_count += 1
-                except (ValueError, IndexError):
-                    continue
-
-    return layer_count
 
 
 # =============================================================================

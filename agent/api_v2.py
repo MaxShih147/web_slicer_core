@@ -23,7 +23,6 @@ from .jobs import (
     get_drain_holes_path,
     get_hollow_mesh_path,
     get_input_model_path,
-    get_layer_path,
     get_job_dir,
     job_exists,
     read_job_status,

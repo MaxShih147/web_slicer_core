@@ -19,15 +19,6 @@ def create_job_id() -> str:
     return str(uuid.uuid4())[:8]
 
 
-def _generate_preview_zip_sync(sl1_path: Path, output_path: Path):
-    """Synchronous wrapper for preview ZIP generation (runs in thread pool)."""
-    try:
-        from .preview_service import generate_preview_zip
-        generate_preview_zip(sl1_path, output_path)
-    except Exception as e:
-        print(f"[preview] Failed to pre-generate preview.zip: {e}")
-
-
 
 def get_job_dir(job_id: str) -> Path:
     """Get the directory for a job."""
@@ -91,7 +82,6 @@ def create_job(job_id: str) -> Path:
     job_dir = get_job_dir(job_id)
     (job_dir / "input").mkdir(parents=True, exist_ok=True)
     (job_dir / "output").mkdir(exist_ok=True)
-    (job_dir / "layers").mkdir(exist_ok=True)
     write_job_status(job_id, JobStatus.PENDING)
     return job_dir
 
@@ -102,7 +92,6 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     input_file = job_dir / "input" / "model.stl"
     output_file = job_dir / "output" / "model.sl1"
     support_stl_file = job_dir / "output" / "model_support.stl"
-    layers_dir = job_dir / "layers"
     stderr_file = job_dir / "stderr.log"
     config_file = job_dir / "config.ini"
 
@@ -158,9 +147,9 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
             write_job_status(job_id, JobStatus.FAILED, error=f"Exit code {process.returncode}: {error_msg}")
             return
 
-        # Extract PNG layers from .sl1 (zip file)
+        # Parse metadata from .sl1 (layers served directly from .sl1 on demand)
         if output_file.exists():
-            layer_count, estimated_print_time, resin_volume_ml = extract_layers(output_file, layers_dir)
+            layer_count, estimated_print_time, resin_volume_ml = parse_sl1_metadata(output_file)
 
             # Check if support mesh was generated
             has_support_mesh = support_stl_file.exists()
@@ -227,8 +216,8 @@ async def export_project_3mf(job_id: str, input_file: Path, output_dir: Path):
         print(f"[experimental] 3MF export error for job {job_id}: {e}")
 
 
-def extract_layers(sl1_file: Path, layers_dir: Path) -> tuple[int, Optional[float], Optional[float]]:
-    """Extract PNG layers and metadata from .sl1 file."""
+def parse_sl1_metadata(sl1_file: Path) -> tuple[int, Optional[float], Optional[float]]:
+    """Parse layer count and metadata from .sl1 file without extracting PNGs."""
     layer_count = 0
     estimated_print_time = None
     resin_volume_ml = None
@@ -250,33 +239,21 @@ def extract_layers(sl1_file: Path, layers_dir: Path) -> tuple[int, Optional[floa
                 estimated_print_time = None
                 resin_volume_ml = None
 
-        for name in sorted(zf.namelist()):
-            if name.endswith(".png"):
-                try:
-                    base = Path(name).stem
-                    idx_str = ""
-                    for c in reversed(base):
-                        if c.isdigit():
-                            idx_str = c + idx_str
-                        else:
-                            break
-                    if idx_str:
-                        idx = int(idx_str)
-                        target_path = layers_dir / f"{idx}.png"
-                        with zf.open(name) as src, open(target_path, "wb") as dst:
-                            dst.write(src.read())
-                        layer_count += 1
-                except (ValueError, IndexError):
-                    continue
+        layer_count = sum(1 for name in zf.namelist() if name.endswith(".png"))
 
     return layer_count, estimated_print_time, resin_volume_ml
 
 
-def get_layer_path(job_id: str, layer_idx: int) -> Optional[Path]:
-    """Get the path to a specific layer PNG."""
-    layer_path = get_job_dir(job_id) / "layers" / f"{layer_idx}.png"
-    if layer_path.exists():
-        return layer_path
+def get_layer_png_from_sl1(job_id: str, layer_idx: int) -> Optional[bytes]:
+    """Read a single layer PNG directly from the .sl1 archive."""
+    sl1_path = get_job_dir(job_id) / "output" / "model.sl1"
+    if not sl1_path.exists():
+        return None
+
+    with zipfile.ZipFile(sl1_path, "r") as zf:
+        png_names = sorted(n for n in zf.namelist() if n.endswith(".png"))
+        if 0 <= layer_idx < len(png_names):
+            return zf.read(png_names[layer_idx])
     return None
 
 

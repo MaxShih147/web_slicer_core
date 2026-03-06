@@ -17,7 +17,7 @@ from .jobs import (
     create_job_id,
     get_job_dir,
     get_input_model_path,
-    get_layer_path,
+    get_layer_png_from_sl1,
     get_support_mesh_path,
     get_hollow_mesh_path,
     get_drain_holes_path,
@@ -608,15 +608,16 @@ async def get_layer_image(job_id: str, idx: int):
             detail=f"Job is not completed (status: {status_data['status']})"
         )
 
-    # Get layer path
-    layer_path = get_layer_path(job_id, idx)
-    if layer_path is None:
+    # Read layer directly from .sl1 archive
+    png_data = get_layer_png_from_sl1(job_id, idx)
+    if png_data is None:
         raise HTTPException(status_code=404, detail=f"Layer {idx} not found")
 
-    return FileResponse(
-        layer_path,
+    from starlette.responses import Response
+    return Response(
+        content=png_data,
         media_type="image/png",
-        filename=f"{idx}.png",
+        headers={"Content-Disposition": f"inline; filename={idx}.png"},
     )
 
 
