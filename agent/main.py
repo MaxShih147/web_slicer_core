@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 from .config import HOST, PORT, PRUSA_SLICER_CLI
 from .models import JobCreateResponse, JobStatus, JobStatusResponse, SLAConfig
@@ -617,6 +617,79 @@ async def get_layer_image(job_id: str, idx: int):
         layer_path,
         media_type="image/png",
         filename=f"{idx}.png",
+    )
+
+
+@app.get("/api/jobs/{job_id}/preview.zip")
+async def get_preview_zip(job_id: str):
+    """
+    Get a ZIP of downscaled WebP preview images for layer display.
+
+    Generated lazily on first request from the .sl1 archive, then cached.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    status_data = read_job_status(job_id)
+    if status_data["status"] != JobStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job is not completed (status: {status_data['status']})"
+        )
+
+    job_dir = get_job_dir(job_id)
+    sl1_path = job_dir / "output" / "model.sl1"
+    preview_path = job_dir / "output" / "preview.zip"
+
+    if not sl1_path.exists():
+        raise HTTPException(status_code=404, detail=".sl1 archive not found")
+
+    from .preview_service import generate_preview_zip
+    generate_preview_zip(sl1_path, preview_path)
+
+    return FileResponse(
+        preview_path,
+        media_type="application/zip",
+        filename="preview.zip",
+    )
+
+
+@app.post("/api/jobs/{job_id}/download.prz")
+async def download_prz(job_id: str, request: Request):
+    """
+    Generate and stream a PRZ file from the .sl1 layers + posted config.
+
+    The POST body is the Mechado config JSON (same structure as default profile).
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    status_data = read_job_status(job_id)
+    if status_data["status"] != JobStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job is not completed (status: {status_data['status']})"
+        )
+
+    job_dir = get_job_dir(job_id)
+    sl1_path = job_dir / "output" / "model.sl1"
+
+    if not sl1_path.exists():
+        raise HTTPException(status_code=404, detail=".sl1 archive not found")
+
+    config = await request.json()
+
+    from .prz_encoder import encode_prz_streaming
+
+    return StreamingResponse(
+        encode_prz_streaming(
+            config=config,
+            sl1_path=sl1_path,
+            estimated_print_time=status_data.get("estimated_print_time") or 0,
+            resin_volume_ml=status_data.get("resin_volume_ml") or 0,
+        ),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model.prz"},
     )
 
 
