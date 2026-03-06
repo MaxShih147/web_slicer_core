@@ -19,6 +19,16 @@ def create_job_id() -> str:
     return str(uuid.uuid4())[:8]
 
 
+def _generate_preview_zip_sync(sl1_path: Path, output_path: Path):
+    """Synchronous wrapper for preview ZIP generation (runs in thread pool)."""
+    try:
+        from .preview_service import generate_preview_zip
+        generate_preview_zip(sl1_path, output_path)
+    except Exception as e:
+        print(f"[preview] Failed to pre-generate preview.zip: {e}")
+
+
+
 def get_job_dir(job_id: str) -> Path:
     """Get the directory for a job."""
     return JOBS_DIR / job_id
@@ -237,18 +247,13 @@ def extract_layers(sl1_file: Path, layers_dir: Path) -> tuple[int, Optional[floa
                         elif key == "usedMaterial":
                             resin_volume_ml = float(value)
             except Exception:
-                # Keep slicing success even if metadata parsing fails.
                 estimated_print_time = None
                 resin_volume_ml = None
 
         for name in sorted(zf.namelist()):
             if name.endswith(".png"):
-                # Extract to layers directory with simplified naming
-                # Original: model00000.png -> 0.png
                 try:
-                    # Parse the layer index from filename like "model00042.png"
                     base = Path(name).stem
-                    # Find the numeric part at the end
                     idx_str = ""
                     for c in reversed(base):
                         if c.isdigit():

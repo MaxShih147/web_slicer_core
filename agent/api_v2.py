@@ -788,7 +788,7 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
 async def get_preview_zip_v2(job_id: str):
     """
     Get a ZIP of downscaled WebP preview images for layer display.
-    Generated lazily on first request, then cached.
+    Pre-generated in background after slicing; generated on-demand if not ready.
     """
     if not job_exists(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
@@ -807,13 +807,46 @@ async def get_preview_zip_v2(job_id: str):
     if not sl1_path.exists():
         raise HTTPException(status_code=404, detail=".sl1 archive not found")
 
+    # Run in thread pool to avoid blocking the event loop
+    import asyncio
     from .preview_service import generate_preview_zip
-    generate_preview_zip(sl1_path, preview_path)
+    await asyncio.get_event_loop().run_in_executor(
+        None, generate_preview_zip, sl1_path, preview_path
+    )
 
     return FileResponse(
         preview_path,
         media_type="application/zip",
         filename="preview.zip",
+    )
+
+
+@router.get("/slices/{job_id}/layers.zip")
+async def get_layers_zip_v2(job_id: str):
+    """
+    Get layer PNGs as a ZIP. Serves the .sl1 directly (it IS a ZIP of PNGs).
+    Zero processing time — no resize/re-encode needed.
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    status_data = read_job_status(job_id)
+    if status_data["status"] != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job is not completed (status: {status_data['status']})"
+        )
+
+    job_dir = get_job_dir(job_id)
+    sl1_path = job_dir / "output" / "model.sl1"
+
+    if not sl1_path.exists():
+        raise HTTPException(status_code=404, detail=".sl1 archive not found")
+
+    return FileResponse(
+        sl1_path,
+        media_type="application/zip",
+        filename="layers.zip",
     )
 
 
