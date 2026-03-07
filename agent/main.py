@@ -985,6 +985,39 @@ async def get_ortho_result(job_id: str):
     )
 
 
+_MATCAP_CACHE_DIR = Path(__file__).parent / "static" / "matcaps"
+_MATCAP_CDNS = [
+    "https://makio135.com/matcaps/1024/{id}.png",
+    "https://cdn.jsdelivr.net/gh/nidorx/matcaps@master/1024/{id}.png",
+]
+
+
+@app.get("/api/matcaps/{matcap_id}.png")
+async def get_matcap(matcap_id: str):
+    """Serve a matcap texture, caching on first request from upstream CDN."""
+    import re
+    if not re.match(r'^[0-9A-Fa-f_]+$', matcap_id):
+        raise HTTPException(status_code=400, detail="Invalid matcap ID")
+
+    cached = _MATCAP_CACHE_DIR / f"{matcap_id}.png"
+    if cached.exists():
+        return FileResponse(cached, media_type="image/png")
+
+    import httpx
+    _MATCAP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    async with httpx.AsyncClient(timeout=15) as client:
+        for url_tpl in _MATCAP_CDNS:
+            try:
+                resp = await client.get(url_tpl.format(id=matcap_id))
+                if resp.status_code == 200:
+                    cached.write_bytes(resp.content)
+                    return FileResponse(cached, media_type="image/png")
+            except Exception:
+                continue
+
+    raise HTTPException(status_code=404, detail="Matcap not found on any CDN")
+
+
 def main():
     """Run the server."""
     import uvicorn
