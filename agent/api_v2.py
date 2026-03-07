@@ -801,12 +801,21 @@ async def get_preview_zip_v2(job_id: str):
 
     job_dir = get_job_dir(job_id)
     sl1_path = job_dir / "output" / "model.sl1"
+    prusa_preview_path = job_dir / "output" / "model_preview.zip"
     preview_path = job_dir / "output" / "preview.zip"
 
     if not sl1_path.exists():
         raise HTTPException(status_code=404, detail=".sl1 archive not found")
 
-    # Run in thread pool to avoid blocking the event loop
+    # Prefer PrusaSlicer-generated preview ZIP (much faster)
+    if prusa_preview_path.exists():
+        return FileResponse(
+            prusa_preview_path,
+            media_type="application/zip",
+            filename="preview.zip",
+        )
+
+    # Fallback: Python-generated preview
     import asyncio
     from .preview_service import generate_preview_zip
     await asyncio.get_event_loop().run_in_executor(

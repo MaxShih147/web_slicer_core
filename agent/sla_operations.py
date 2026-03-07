@@ -230,6 +230,7 @@ async def slice_model(
     cmd = [
         str(PRUSA_SLICER_CLI),
         "--export-sla",
+        "--export-preview-pngs", "0.25",
         "--output", str(output_file),
         "--load", str(config_file),
     ]

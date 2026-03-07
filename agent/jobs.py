@@ -113,6 +113,7 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         cmd = [
             str(PRUSA_SLICER_CLI),
             "--export-sla",
+            "--export-preview-pngs", "0.25",
             "--output", str(output_file),
         ]
 
