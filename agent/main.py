@@ -101,6 +101,7 @@ app.include_router(v2_router)
 
 
 @app.get("/")
+@app.get("/api/health")
 async def root():
     """Health check endpoint."""
     return {
