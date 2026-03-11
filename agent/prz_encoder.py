@@ -165,7 +165,7 @@ def _rle_encode_layer(gray_pixels: np.ndarray) -> bytes:
     """
     RLE-encode a grayscale layer image (row-by-row, left-to-right).
 
-    Uses numpy to find run boundaries (vectorized), then encodes each run.
+    Fully vectorized with numpy — no Python loop over runs.
     Layer starts with 0x55 header. Ends with checksum = (~sum) & 0xFF.
     """
     flat = gray_pixels.ravel()
@@ -176,12 +176,10 @@ def _rle_encode_layer(gray_pixels: np.ndarray) -> bytes:
         out.append((~PRZ_LAYER_HEADER) & 0xFF)
         return bytes(out)
 
-    # Vectorized run-length detection: find indices where value changes
+    # Vectorized run-length detection
     diff_mask = flat[1:] != flat[:-1]
     change_indices = np.flatnonzero(diff_mask)
 
-    # Build run starts and lengths
-    # Runs start at: 0, change_indices[0]+1, change_indices[1]+1, ...
     run_starts = np.empty(len(change_indices) + 1, dtype=np.intp)
     run_starts[0] = 0
     run_starts[1:] = change_indices + 1
@@ -190,21 +188,80 @@ def _rle_encode_layer(gray_pixels: np.ndarray) -> bytes:
     run_ends[:-1] = run_starts[1:]
     run_ends[-1] = n
 
-    run_lengths = run_ends - run_starts
+    run_lengths = (run_ends - run_starts).astype(np.int64)
     run_values = flat[run_starts]
+    num_runs = len(run_values)
 
-    # Encode all runs
-    out = bytearray()
-    out.append(PRZ_LAYER_HEADER)
+    # Vectorized color type classification
+    color_types = np.full(num_runs, RLE_GRAY, dtype=np.uint8)
+    color_types[run_values == 0] = RLE_BLACK
+    color_types[run_values == 255] = RLE_WHITE
+    is_gray = color_types == RLE_GRAY
 
-    for val, rlen in zip(run_values, run_lengths):
-        out.extend(_encode_run(int(val), int(rlen)))
+    # Vectorized byte count bits and extra count
+    byte_count_bits = np.zeros(num_runs, dtype=np.uint8)
+    extra_counts = np.zeros(num_runs, dtype=np.int32)
+
+    mask_16 = run_lengths >= 16
+    mask_4096 = run_lengths >= 4096
+    mask_1m = run_lengths >= 1048576
+
+    byte_count_bits[mask_16] = 0x10
+    extra_counts[mask_16] = 1
+    byte_count_bits[mask_4096] = 0x20
+    extra_counts[mask_4096] = 2
+    byte_count_bits[mask_1m] = 0x30
+    extra_counts[mask_1m] = 3
+
+    first_bytes = color_types | byte_count_bits | (run_lengths & 0x0F).astype(np.uint8)
+
+    # Pre-compute shifted lengths for extra bytes
+    shifted = (run_lengths >> 4).astype(np.int64)
+
+    # Calculate total output size to pre-allocate
+    # Each run: 1 (first_byte) + is_gray (gray value byte) + extra_counts
+    total_size = 1 + int(np.sum(1 + is_gray.astype(np.int32) + extra_counts)) + 1  # header + runs + checksum
+
+    out = bytearray(total_size)
+    out[0] = PRZ_LAYER_HEADER
+    pos = 1
+
+    # Batch encode — use numpy arrays but write sequentially
+    # (sequential write is unavoidable for variable-length encoding, but inner work is minimal)
+    fb_arr = first_bytes
+    rv_arr = run_values
+    ec_arr = extra_counts
+    sh_arr = shifted
+    ig_arr = is_gray
+
+    for i in range(num_runs):
+        out[pos] = fb_arr[i]
+        pos += 1
+        if ig_arr[i]:
+            out[pos] = rv_arr[i]
+            pos += 1
+        ec = ec_arr[i]
+        if ec > 0:
+            s = int(sh_arr[i])
+            if ec == 1:
+                out[pos] = s & 0xFF
+                pos += 1
+            elif ec == 2:
+                out[pos] = (s >> 8) & 0xFF
+                out[pos + 1] = s & 0xFF
+                pos += 2
+            else:
+                out[pos] = (s >> 16) & 0xFF
+                out[pos + 1] = (s >> 8) & 0xFF
+                out[pos + 2] = s & 0xFF
+                pos += 3
 
     # Checksum
-    checksum = (~sum(out)) & 0xFF
-    out.append(checksum)
+    checksum = (~sum(out[:pos])) & 0xFF
+    out[pos] = checksum
+    pos += 1
 
-    return bytes(out)
+    return bytes(out[:pos])
 
 
 # ---------- Header ----------
@@ -574,6 +631,13 @@ def encode_prz(
     return output.getvalue()
 
 
+def _decode_and_rle(png_bytes: bytes) -> bytes:
+    """Decode PNG bytes to grayscale and RLE-encode. Used by parallel encoder."""
+    img = Image.open(BytesIO(png_bytes))
+    gray = np.array(img.convert("L"), dtype=np.uint8)
+    return _rle_encode_layer(gray)
+
+
 def encode_prz_streaming(
     config: dict,
     sl1_path: Path,
@@ -583,9 +647,11 @@ def encode_prz_streaming(
     """
     Generator that yields PRZ chunks for streaming response.
 
-    Same as encode_prz but yields header, each layer, and footer separately
-    to avoid holding the entire file in memory.
+    Uses ThreadPoolExecutor to parallelize PNG decode + RLE encode
+    while maintaining sequential output order.
     """
+    from concurrent.futures import ThreadPoolExecutor
+
     with zipfile.ZipFile(sl1_path, "r") as zf:
         png_names = sorted(n for n in zf.namelist() if n.endswith(".png"))
 
@@ -598,25 +664,31 @@ def encode_prz_streaming(
         resin_volume_ml=resin_volume_ml,
     )
 
-    # Yield each layer
+    # Read all PNGs from ZIP first (ZIP is sequential I/O, fast)
+    png_data_list = []
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        for layer_idx, png_name in enumerate(png_names):
-            layer_buf = BytesIO()
+        for png_name in png_names:
+            png_data_list.append(zf.read(png_name))
 
-            layer_buf.write(_write_layer_definition(config, layer_idx, total_layers))
-            layer_buf.write(PRZ_CRLF)
+    # Parallel decode + RLE encode (ProcessPool to bypass GIL)
+    from concurrent.futures import ProcessPoolExecutor
+    import os
+    num_workers = min(os.cpu_count() or 4, 8)
+    with ProcessPoolExecutor(max_workers=num_workers) as pool:
+        rle_futures = list(pool.map(_decode_and_rle, png_data_list, chunksize=32))
 
-            with zf.open(png_name) as f:
-                img = Image.open(f)
-                gray = np.array(img.convert("L"), dtype=np.uint8)
+    # Yield each layer (sequential, must be in order)
+    for layer_idx, rle_data in enumerate(rle_futures):
+        layer_buf = BytesIO()
 
-            rle_data = _rle_encode_layer(gray)
+        layer_buf.write(_write_layer_definition(config, layer_idx, total_layers))
+        layer_buf.write(PRZ_CRLF)
 
-            layer_buf.write(struct.pack(">I", len(rle_data)))
-            layer_buf.write(rle_data)
-            layer_buf.write(PRZ_CRLF)
+        layer_buf.write(struct.pack(">I", len(rle_data)))
+        layer_buf.write(rle_data)
+        layer_buf.write(PRZ_CRLF)
 
-            yield layer_buf.getvalue()
+        yield layer_buf.getvalue()
 
     # Yield footer
     yield PRZ_FOOTER_TAG
