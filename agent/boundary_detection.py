@@ -5,7 +5,7 @@ Extracts open boundary edges from dental scan meshes,
 chains them into closed loops, and identifies the main
 boundary (typically the arch opening).
 
-V1: Detection and visualization only — no smoothing, no base generation.
+V2: Detection + boundary smoothing (line-only, does not modify mesh).
 """
 
 from __future__ import annotations
@@ -177,6 +177,75 @@ def _compute_loop_properties(indices: list[int], points: np.ndarray) -> Boundary
         bbox_min=points.min(axis=0),
         bbox_max=points.max(axis=0),
     )
+
+
+# ---------- Boundary Smoothing (line-only) ----------
+
+def smooth_boundary_loop(
+    points: np.ndarray,
+    iterations: int = 20,
+    lam: float = 0.5,
+    mu: float = -0.53,
+) -> np.ndarray:
+    """
+    Taubin smoothing on a closed boundary loop (line-only, does not modify mesh).
+
+    Taubin smoothing alternates between a positive (shrinking) step and a
+    negative (inflating) step, which prevents the overall shrinkage that
+    plain Laplacian smoothing causes.
+
+    Args:
+        points: (N, 3) boundary points in order.
+        iterations: Number of shrink/inflate cycles.
+        lam: Shrink factor (positive, typically 0.3–0.7).
+        mu: Inflate factor (negative, |mu| > lam to prevent shrinkage).
+
+    Returns:
+        Smoothed (N, 3) points.
+    """
+    pts = points.copy().astype(np.float64)
+    n = len(pts)
+    if n < 4:
+        return pts
+
+    for _ in range(iterations):
+        # Laplacian: average of neighbors minus current point (closed loop)
+        prev = np.roll(pts, 1, axis=0)
+        nxt = np.roll(pts, -1, axis=0)
+        laplacian = (prev + nxt) / 2.0 - pts
+
+        # Shrink step
+        pts = pts + lam * laplacian
+
+        # Recompute Laplacian after shrink
+        prev = np.roll(pts, 1, axis=0)
+        nxt = np.roll(pts, -1, axis=0)
+        laplacian = (prev + nxt) / 2.0 - pts
+
+        # Inflate step
+        pts = pts + mu * laplacian
+
+    return pts
+
+
+def smooth_boundary_result(
+    result: BoundaryDetectionResult,
+    iterations: int = 20,
+    lam: float = 0.5,
+    mu: float = -0.53,
+) -> list[BoundaryLoop]:
+    """
+    Smooth all boundary loops in a detection result.
+
+    Returns new BoundaryLoop list with smoothed points.
+    Original vertex_indices are preserved (for later mesh snapping).
+    """
+    smoothed = []
+    for loop in result.loops:
+        new_points = smooth_boundary_loop(loop.points, iterations, lam, mu)
+        new_loop = _compute_loop_properties(loop.vertex_indices, new_points)
+        smoothed.append(new_loop)
+    return smoothed
 
 
 # ---------- Main Boundary Selection ----------

@@ -938,6 +938,37 @@ async def detect_boundary_endpoint(file: UploadFile = File(...)):
     )
 
 
+@router.post("/smooth-boundary", response_model=V2Response)
+async def smooth_boundary_endpoint(request: Request):
+    """
+    Smooth boundary loop points using Taubin smoothing.
+
+    Accepts raw points and smoothing parameters, returns smoothed points.
+    No STL upload needed — works purely on point data.
+    """
+    import numpy as np
+    from .boundary_detection import smooth_boundary_loop
+
+    body = await request.json()
+    loops = body.get("loops", [])
+    iterations = body.get("iterations", 20)
+    lam = body.get("lambda", 0.5)
+    mu = body.get("mu", -0.53)
+
+    smoothed_loops = []
+    for loop in loops:
+        points = np.array(loop["points"], dtype=np.float64)
+        smoothed = smooth_boundary_loop(points, iterations=iterations, lam=lam, mu=mu)
+        smoothed_loops.append({
+            "points": smoothed.tolist(),
+            "perimeter": round(float(np.sum(np.linalg.norm(
+                np.diff(smoothed, axis=0, append=smoothed[:1]), axis=1
+            ))), 2),
+        })
+
+    return V2Response(success=True, data={"loops": smoothed_loops})
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
