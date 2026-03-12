@@ -896,6 +896,48 @@ async def download_prz_v2(job_id: str, request: Request):
     )
 
 
+@router.post("/detect-boundary", response_model=V2Response)
+async def detect_boundary_endpoint(file: UploadFile = File(...)):
+    """Detect boundary edges on an uploaded STL mesh and return boundary loop points."""
+    import asyncio
+    import tempfile
+    from .boundary_detection import detect_boundary
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        result = await asyncio.to_thread(detect_boundary, tmp_path)
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    if not result.loops:
+        return V2Response(success=True, message="No boundary loops found", data={"loops": []})
+
+    loops_data = []
+    for i, loop in enumerate(result.loops):
+        loops_data.append({
+            "index": i,
+            "vertex_count": len(loop.vertex_indices),
+            "perimeter": round(loop.perimeter, 2),
+            "centroid": loop.centroid.tolist(),
+            "points": loop.points.tolist(),
+            "is_main": i == result.main_loop_index,
+        })
+
+    return V2Response(
+        success=True,
+        data={
+            "total_boundary_edges": result.total_boundary_edges,
+            "loop_count": len(result.loops),
+            "main_loop_index": result.main_loop_index,
+            "loops": loops_data,
+        },
+    )
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
