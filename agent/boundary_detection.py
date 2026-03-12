@@ -361,6 +361,75 @@ def apply_boundary_to_mesh(
     return mesh.export(file_type='stl')
 
 
+# ---------- Base Generation ----------
+
+def generate_base(
+    mesh_path: str | Path,
+    boundary_points: list[list[float]],
+    base_z: float = 0.0,
+) -> bytes:
+    """
+    Generate a base for a dental mesh by projecting boundary down and closing.
+
+    1. Load original mesh
+    2. Create wall mesh: triangulate between boundary loop and its Z-projection
+    3. Create bottom face: earcut triangulate the projected 2D polygon
+    4. Merge original + wall + bottom into one mesh
+
+    Args:
+        mesh_path: Path to STL file (already has smoothed boundary applied).
+        boundary_points: Boundary loop points [[x,y,z], ...] in order.
+        base_z: Z height of the print bed (default 0.0).
+
+    Returns:
+        Combined mesh as STL bytes.
+    """
+    from mapbox_earcut import triangulate_float64
+
+    mesh = load_mesh(mesh_path)
+    mesh = clean_mesh(mesh)
+
+    boundary = np.array(boundary_points, dtype=np.float64)
+    n = len(boundary)
+
+    # --- Bottom vertices: project boundary XY to base_z ---
+    bottom = boundary.copy()
+    bottom[:, 2] = base_z
+
+    # --- Wall mesh ---
+    # Vertices: boundary (top) + bottom, total 2*n
+    wall_verts = np.vstack([boundary, bottom])  # [0..n-1] = top, [n..2n-1] = bottom
+
+    # Triangulate wall as quad strip: for each edge i→i+1, two triangles
+    wall_faces = []
+    for i in range(n):
+        j = (i + 1) % n
+        # Top indices: i, j; Bottom indices: n+i, n+j
+        # Two triangles per quad, normals pointing outward
+        wall_faces.append([i, n + i, j])
+        wall_faces.append([j, n + i, n + j])
+    wall_faces = np.array(wall_faces, dtype=np.int64)
+
+    wall_mesh = trimesh.Trimesh(vertices=wall_verts, faces=wall_faces, process=False)
+
+    # --- Bottom face ---
+    # Earcut on 2D XY of bottom points
+    bottom_2d = bottom[:, :2].copy()
+    rings = np.array([n])
+    tri_indices = triangulate_float64(bottom_2d, rings)
+    bottom_faces = tri_indices.reshape(-1, 3)
+
+    # Flip winding so normal points down (negative Z)
+    bottom_faces = bottom_faces[:, ::-1]
+
+    bottom_mesh = trimesh.Trimesh(vertices=bottom, faces=bottom_faces, process=False)
+
+    # --- Merge all ---
+    combined = trimesh.util.concatenate([mesh, wall_mesh, bottom_mesh])
+
+    return combined.export(file_type='stl')
+
+
 # ---------- Main Boundary Selection ----------
 
 def select_main_boundary(loops: list[BoundaryLoop]) -> int:

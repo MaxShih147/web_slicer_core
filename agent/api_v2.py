@@ -1013,6 +1013,48 @@ async def apply_boundary_endpoint(
     )
 
 
+@router.post("/generate-base")
+async def generate_base_endpoint(
+    file: UploadFile = File(...),
+    data: str = Form(...),
+):
+    """
+    Generate base for dental mesh: wall + bottom from boundary projection.
+
+    Accepts STL file + JSON with boundary_points and optional base_z.
+    Returns combined STL (original + wall + bottom).
+    """
+    import asyncio
+    import json
+    import tempfile
+    from .boundary_detection import generate_base
+
+    params = json.loads(data)
+    boundary_points = params["boundary_points"]
+    base_z = params.get("base_z", 0.0)
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            generate_base,
+            tmp_path,
+            boundary_points,
+            base_z,
+        )
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model_with_base.stl"},
+    )
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
