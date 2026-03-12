@@ -361,25 +361,100 @@ def apply_boundary_to_mesh(
     return mesh.export(file_type='stl')
 
 
+# ---------- Auto-Orient ----------
+
+def _compute_boundary_plane_normal(points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute the plane normal of a boundary loop via PCA.
+
+    Returns:
+        (normal, centroid) — normal is the eigenvector with smallest eigenvalue.
+    """
+    centroid = points.mean(axis=0)
+    centered = points - centroid
+    cov = centered.T @ centered
+    eigenvalues, eigenvectors = np.linalg.eigh(cov)
+    # Smallest eigenvalue = normal direction
+    normal = eigenvectors[:, 0]
+    return normal, centroid
+
+
+def auto_orient_mesh(
+    mesh: trimesh.Trimesh,
+    boundary_points: np.ndarray,
+) -> trimesh.Trimesh:
+    """
+    Rotate mesh so the main boundary opening faces downward (-Z).
+
+    Uses PCA on boundary loop to find the plane normal, determines
+    which side the mesh body is on, then rotates so the opening
+    points in -Z direction.
+
+    Args:
+        mesh: The mesh to orient.
+        boundary_points: (N, 3) main boundary loop points.
+
+    Returns:
+        The mesh (modified in-place) after rotation.
+    """
+    from scipy.spatial.transform import Rotation
+
+    normal, boundary_centroid = _compute_boundary_plane_normal(boundary_points)
+
+    # Normal should point outward (away from mesh body, through the opening).
+    # Compare with vector from boundary centroid to mesh centroid.
+    mesh_centroid = mesh.vertices.mean(axis=0)
+    to_mesh = mesh_centroid - boundary_centroid
+
+    if np.dot(normal, to_mesh) > 0:
+        # Normal points toward mesh body — flip it
+        normal = -normal
+
+    # Target: opening faces -Z
+    target = np.array([0.0, 0.0, -1.0])
+
+    dot = np.dot(normal, target)
+    if dot > 0.9999:
+        # Already facing down
+        return mesh
+
+    if dot < -0.9999:
+        # Exactly opposite — rotate 180° around X
+        rot = Rotation.from_rotvec([np.pi, 0, 0])
+    else:
+        axis = np.cross(normal, target)
+        axis = axis / np.linalg.norm(axis)
+        angle = np.arccos(np.clip(dot, -1.0, 1.0))
+        rot = Rotation.from_rotvec(axis * angle)
+
+    # Rotate around mesh centroid so model stays centered
+    vertices = mesh.vertices - mesh_centroid
+    vertices = rot.apply(vertices)
+    vertices += mesh_centroid
+    mesh.vertices = vertices
+
+    # Shift so bottom sits on Z=0
+    mesh.vertices[:, 2] -= mesh.vertices[:, 2].min()
+
+    return mesh
+
+
 # ---------- Base Generation ----------
 
 def generate_base(
     mesh_path: str | Path,
-    boundary_points: list[list[float]],
-    base_z: float = 0.0,
 ) -> bytes:
     """
-    Generate a base for a dental mesh by projecting boundary down and closing.
+    Generate a base for a dental mesh.
 
-    1. Load original mesh
-    2. Create wall mesh: triangulate between boundary loop and its Z-projection
-    3. Create bottom face: earcut triangulate the projected 2D polygon
-    4. Merge original + wall + bottom into one mesh
+    1. Load mesh, detect boundary, auto-orient so opening faces down
+    2. Re-detect boundary after orientation
+    3. Create wall mesh: triangulate between boundary loop and its Z-projection
+    4. Create bottom face: earcut triangulate the projected 2D polygon
+    5. Merge original + wall + bottom into one mesh
 
     Args:
-        mesh_path: Path to STL file (already has smoothed boundary applied).
-        boundary_points: Boundary loop points [[x,y,z], ...] in order.
-        base_z: Z height of the print bed (default 0.0).
+        mesh_path: Path to STL file.
 
     Returns:
         Combined mesh as STL bytes.
@@ -389,23 +464,46 @@ def generate_base(
     mesh = load_mesh(mesh_path)
     mesh = clean_mesh(mesh)
 
-    boundary = np.array(boundary_points, dtype=np.float64)
+    # Detect boundary for orientation
+    boundary_edges = extract_boundary_edges(mesh)
+    loops = build_boundary_loops(mesh, boundary_edges)
+    if not loops:
+        raise ValueError("No boundary loops found on mesh")
+    loops.sort(key=lambda l: l.perimeter, reverse=True)
+
+    # Auto-orient using main boundary loop
+    mesh = auto_orient_mesh(mesh, loops[0].points)
+
+    # Re-detect boundary on the oriented mesh to get updated points
+    boundary_edges = extract_boundary_edges(mesh)
+    loops = build_boundary_loops(mesh, boundary_edges)
+    if not loops:
+        raise ValueError("No boundary loops found after orientation")
+    loops.sort(key=lambda l: l.perimeter, reverse=True)
+    boundary = loops[0].points
+
     n = len(boundary)
 
-    # --- Bottom vertices: project boundary XY to base_z ---
+    # Ensure boundary is CCW in XY so we can use a single winding convention
+    signed_area = 0.0
+    for i in range(n):
+        j = (i + 1) % n
+        signed_area += boundary[i, 0] * boundary[j, 1] - boundary[j, 0] * boundary[i, 1]
+    if signed_area < 0:
+        boundary = boundary[::-1]
+
+    # Project boundary down to Z=0 (mesh was shifted so bottom sits on Z=0)
     bottom = boundary.copy()
-    bottom[:, 2] = base_z
+    bottom[:, 2] = 0.0
 
     # --- Wall mesh ---
     # Vertices: boundary (top) + bottom, total 2*n
     wall_verts = np.vstack([boundary, bottom])  # [0..n-1] = top, [n..2n-1] = bottom
 
-    # Triangulate wall as quad strip: for each edge i→i+1, two triangles
+    # CCW loop: [i, n+i, j] produces outward-pointing wall normals
     wall_faces = []
     for i in range(n):
         j = (i + 1) % n
-        # Top indices: i, j; Bottom indices: n+i, n+j
-        # Two triangles per quad, normals pointing outward
         wall_faces.append([i, n + i, j])
         wall_faces.append([j, n + i, n + j])
     wall_faces = np.array(wall_faces, dtype=np.int64)
@@ -413,13 +511,11 @@ def generate_base(
     wall_mesh = trimesh.Trimesh(vertices=wall_verts, faces=wall_faces, process=False)
 
     # --- Bottom face ---
-    # Earcut on 2D XY of bottom points
+    # Earcut on CCW polygon → CCW triangles → normal +Z → flip to -Z (down)
     bottom_2d = bottom[:, :2].copy()
     rings = np.array([n])
     tri_indices = triangulate_float64(bottom_2d, rings)
     bottom_faces = tri_indices.reshape(-1, 3)
-
-    # Flip winding so normal points down (negative Z)
     bottom_faces = bottom_faces[:, ::-1]
 
     bottom_mesh = trimesh.Trimesh(vertices=bottom, faces=bottom_faces, process=False)
