@@ -248,6 +248,119 @@ def smooth_boundary_result(
     return smoothed
 
 
+# ---------- Apply Smoothed Boundary to Mesh ----------
+
+def _build_vertex_adjacency(mesh: trimesh.Trimesh) -> dict[int, set[int]]:
+    """Build vertex-to-vertex adjacency from mesh edges."""
+    adj: dict[int, set[int]] = {}
+    for v0, v1 in mesh.edges_unique:
+        adj.setdefault(v0, set()).add(v1)
+        adj.setdefault(v1, set()).add(v0)
+    return adj
+
+
+def _find_n_ring_neighbors(
+    adjacency: dict[int, set[int]],
+    seed_vertices: set[int],
+    n_rings: int,
+) -> dict[int, int]:
+    """
+    Find vertices within N edge-rings of seed vertices.
+
+    Returns:
+        Dict mapping vertex_index -> ring_distance (1 to n_rings).
+        Seed vertices themselves are NOT included.
+    """
+    ring_map: dict[int, int] = {}
+    current_front = seed_vertices.copy()
+
+    for ring in range(1, n_rings + 1):
+        next_front: set[int] = set()
+        for v in current_front:
+            for neighbor in adjacency.get(v, set()):
+                if neighbor not in seed_vertices and neighbor not in ring_map:
+                    ring_map[neighbor] = ring
+                    next_front.add(neighbor)
+        current_front = next_front
+        if not current_front:
+            break
+
+    return ring_map
+
+
+def apply_boundary_to_mesh(
+    mesh_path: str | Path,
+    original_points: list[list[float]],
+    smoothed_points: list[list[float]],
+    falloff_rings: int = 3,
+) -> bytes:
+    """
+    Apply smoothed boundary positions to mesh vertices with gradual falloff.
+
+    1. Load mesh, find boundary vertices matching original_points
+    2. Compute displacement = smoothed - original for each boundary vertex
+    3. Apply full displacement to boundary vertices
+    4. Apply falloff displacement to N-ring neighbors
+
+    Args:
+        mesh_path: Path to STL file.
+        original_points: Original boundary points [[x,y,z], ...].
+        smoothed_points: Smoothed boundary points [[x,y,z], ...].
+        falloff_rings: Number of neighbor rings for gradual falloff.
+
+    Returns:
+        Modified STL as bytes.
+    """
+    mesh = load_mesh(mesh_path)
+    mesh = clean_mesh(mesh)
+
+    orig = np.array(original_points, dtype=np.float64)
+    smooth = np.array(smoothed_points, dtype=np.float64)
+
+    if len(orig) != len(smooth):
+        raise ValueError(f"Point count mismatch: {len(orig)} vs {len(smooth)}")
+
+    # Match original points to mesh vertices by nearest distance
+    from scipy.spatial import cKDTree
+    tree = cKDTree(mesh.vertices)
+    distances, vertex_ids = tree.query(orig)
+
+    # Compute displacements
+    displacements = smooth - orig  # (N, 3)
+
+    # Build per-vertex displacement map (boundary vertices get full displacement)
+    boundary_set = set(int(v) for v in vertex_ids)
+    vertex_displacement = {}
+    for i, vid in enumerate(vertex_ids):
+        vid = int(vid)
+        vertex_displacement[vid] = displacements[i]
+
+    # Find N-ring neighbors and apply falloff
+    if falloff_rings > 0:
+        adjacency = _build_vertex_adjacency(mesh)
+        ring_map = _find_n_ring_neighbors(adjacency, boundary_set, falloff_rings)
+
+        # For each neighbor vertex, compute weighted average displacement
+        # from nearby boundary vertices
+        neighbor_tree = cKDTree(orig)
+        for vid, ring_dist in ring_map.items():
+            # Weight: linear falloff based on ring distance
+            weight = 1.0 - ring_dist / (falloff_rings + 1)
+            # Find nearest boundary point to determine displacement direction
+            _, nearest_idx = neighbor_tree.query(mesh.vertices[vid])
+            vertex_displacement[vid] = displacements[nearest_idx] * weight
+
+    # Apply displacements
+    new_vertices = mesh.vertices.copy()
+    for vid, disp in vertex_displacement.items():
+        new_vertices[vid] += disp
+
+    mesh.vertices = new_vertices
+
+    # Export as binary STL
+    return mesh.export(file_type='stl')
+
+
 # ---------- Main Boundary Selection ----------
 
 def select_main_boundary(loops: list[BoundaryLoop]) -> int:

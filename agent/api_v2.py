@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import trimesh
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from .jobs import (
@@ -967,6 +967,50 @@ async def smooth_boundary_endpoint(request: Request):
         })
 
     return V2Response(success=True, data={"loops": smoothed_loops})
+
+
+@router.post("/apply-boundary")
+async def apply_boundary_endpoint(
+    file: UploadFile = File(...),
+    data: str = Form(...),
+):
+    """
+    Apply smoothed boundary to mesh vertices with gradual falloff.
+
+    Accepts STL file + JSON data with original/smoothed points.
+    Returns modified STL file.
+    """
+    import asyncio
+    import json
+    import tempfile
+    from .boundary_detection import apply_boundary_to_mesh
+
+    params = json.loads(data)
+    original_points = params["original_points"]
+    smoothed_points = params["smoothed_points"]
+    falloff_rings = params.get("falloff_rings", 3)
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            apply_boundary_to_mesh,
+            tmp_path,
+            original_points,
+            smoothed_points,
+            falloff_rings,
+        )
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model.stl"},
+    )
 
 
 @router.get("/slices/{job_id}", response_model=V2Response)
