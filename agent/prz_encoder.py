@@ -256,8 +256,8 @@ def _rle_encode_layer(gray_pixels: np.ndarray) -> bytes:
                 out[pos + 2] = s & 0xFF
                 pos += 3
 
-    # Checksum
-    checksum = (~sum(out[:pos])) & 0xFF
+    # Checksum — excludes the 0x55 header byte (matches C++ encoder)
+    checksum = (~sum(out[1:pos])) & 0xFF
     out[pos] = checksum
     pos += 1
 
@@ -488,7 +488,7 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
     buf.write(struct.pack(">H", 0))
 
     # PausePositionZ (4B float BE) — same as layer Z position
-    z_pos = layer_height * (layer_idx + 1)
+    z_pos = layer_height * layer_idx
     buf.write(struct.pack(">f", z_pos))
 
     # LayerPositionZ (4B float BE)
