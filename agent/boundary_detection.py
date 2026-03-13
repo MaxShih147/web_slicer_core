@@ -443,18 +443,21 @@ def auto_orient_mesh(
 
 def generate_base(
     mesh_path: str | Path,
+    elevation: float = 0.0,
 ) -> bytes:
     """
     Generate a base for a dental mesh.
 
     1. Load mesh, detect boundary, auto-orient so opening faces down
-    2. Re-detect boundary after orientation
-    3. Create wall mesh: triangulate between boundary loop and its Z-projection
-    4. Create bottom face: earcut triangulate the projected 2D polygon
-    5. Merge original + wall + bottom into one mesh
+    2. Lift mesh by elevation (gap between model bottom and platform)
+    3. Re-detect boundary after orientation
+    4. Create wall mesh: triangulate between boundary loop and its Z-projection
+    5. Create bottom face: earcut triangulate the projected 2D polygon
+    6. Merge original + wall + bottom into one mesh
 
     Args:
         mesh_path: Path to STL file.
+        elevation: Distance (mm) between model bottom and platform (min 0.1).
 
     Returns:
         Combined mesh as STL bytes.
@@ -473,6 +476,10 @@ def generate_base(
 
     # Auto-orient using main boundary loop
     mesh = auto_orient_mesh(mesh, loops[0].points)
+
+    # Lift mesh by elevation so boundary points are above Z=0
+    effective_elevation = max(elevation, 0.1)
+    mesh.vertices[:, 2] += effective_elevation
 
     # Re-detect boundary on the oriented mesh to get updated points
     boundary_edges = extract_boundary_edges(mesh)

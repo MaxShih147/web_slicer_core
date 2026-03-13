@@ -1016,22 +1016,18 @@ async def apply_boundary_endpoint(
 @router.post("/generate-base")
 async def generate_base_endpoint(
     file: UploadFile = File(...),
-    data: str = Form(...),
+    elevation: float = Form(0.1),
 ):
     """
-    Generate base for dental mesh: wall + bottom from boundary projection.
+    Generate base for dental mesh: auto-orient + wall + bottom.
 
-    Accepts STL file + JSON with boundary_points and optional base_z.
+    Accepts STL file only. Backend auto-detects boundary, orients mesh,
+    and generates wall + bottom face.
     Returns combined STL (original + wall + bottom).
     """
     import asyncio
-    import json
     import tempfile
     from .boundary_detection import generate_base
-
-    params = json.loads(data)
-    boundary_points = params["boundary_points"]
-    base_z = params.get("base_z", 0.0)
 
     with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
         tmp.write(await file.read())
@@ -1041,8 +1037,7 @@ async def generate_base_endpoint(
         stl_bytes = await asyncio.to_thread(
             generate_base,
             tmp_path,
-            boundary_points,
-            base_z,
+            elevation=elevation,
         )
     finally:
         import os
