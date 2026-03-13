@@ -1017,6 +1017,7 @@ async def apply_boundary_endpoint(
 async def generate_base_endpoint(
     file: UploadFile = File(...),
     elevation: float = Form(0.1),
+    chamfer: bool = Form(False),
 ):
     """
     Generate base for dental mesh: auto-orient + wall + bottom.
@@ -1038,6 +1039,7 @@ async def generate_base_endpoint(
             generate_base,
             tmp_path,
             elevation=elevation,
+            chamfer=chamfer,
         )
     finally:
         import os

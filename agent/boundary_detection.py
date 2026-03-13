@@ -444,6 +444,7 @@ def auto_orient_mesh(
 def generate_base(
     mesh_path: str | Path,
     elevation: float = 0.0,
+    chamfer: bool = False,
 ) -> bytes:
     """
     Generate a base for a dental mesh.
@@ -478,7 +479,8 @@ def generate_base(
     mesh = auto_orient_mesh(mesh, loops[0].points)
 
     # Lift mesh by elevation so boundary points are above Z=0
-    effective_elevation = max(elevation, 0.1)
+    min_elevation = 1.0 if chamfer else 0.1
+    effective_elevation = max(elevation, min_elevation)
     mesh.vertices[:, 2] += effective_elevation
 
     # Re-detect boundary on the oriented mesh to get updated points
@@ -499,33 +501,81 @@ def generate_base(
     if signed_area < 0:
         boundary = boundary[::-1]
 
-    # Project boundary down to Z=0 (mesh was shifted so bottom sits on Z=0)
-    bottom = boundary.copy()
-    bottom[:, 2] = 0.0
+    use_chamfer = False
+    if chamfer:
+        # --- Chamfer wall: 3 rings (top → mid → bot) ---
+        # Use shapely polygon offset for correct inset geometry
+        from shapely.geometry import MultiPolygon as ShapelyMultiPolygon
+        from shapely.geometry import Point as ShapelyPoint
+        from shapely.geometry import Polygon as ShapelyPolygon
 
-    # --- Wall mesh ---
-    # Vertices: boundary (top) + bottom, total 2*n
-    wall_verts = np.vstack([boundary, bottom])  # [0..n-1] = top, [n..2n-1] = bottom
+        CHAMFER_HEIGHT = 0.9  # mm
+        inward_offset = CHAMFER_HEIGHT  # tan(45°) = 1, so offset = height
 
-    # CCW loop: [i, n+i, j] produces outward-pointing wall normals
-    wall_faces = []
-    for i in range(n):
-        j = (i + 1) % n
-        wall_faces.append([i, n + i, j])
-        wall_faces.append([j, n + i, n + j])
-    wall_faces = np.array(wall_faces, dtype=np.int64)
+        boundary_2d = boundary[:, :2]
+        poly = ShapelyPolygon(boundary_2d)
+        offset_poly = poly.buffer(-inward_offset, join_style=2, mitre_limit=5.0)
 
-    wall_mesh = trimesh.Trimesh(vertices=wall_verts, faces=wall_faces, process=False)
+        if not offset_poly.is_empty and offset_poly.area > 1e-6:
+            if isinstance(offset_poly, ShapelyMultiPolygon):
+                offset_poly = max(offset_poly.geoms, key=lambda g: g.area)
 
-    # --- Bottom face ---
-    # Earcut on CCW polygon → CCW triangles → normal +Z → flip to -Z (down)
-    bottom_2d = bottom[:, :2].copy()
-    rings = np.array([n])
-    tri_indices = triangulate_float64(bottom_2d, rings)
-    bottom_faces = tri_indices.reshape(-1, 3)
-    bottom_faces = bottom_faces[:, ::-1]
+            # Mid ring: boundary XY at Z = CHAMFER_HEIGHT
+            mid = boundary.copy()
+            mid[:, 2] = CHAMFER_HEIGHT
 
-    bottom_mesh = trimesh.Trimesh(vertices=bottom, faces=bottom_faces, process=False)
+            # For each boundary point, find closest point on offset polygon
+            offset_exterior = offset_poly.exterior
+            bottom_xy = np.empty((n, 2))
+            for i in range(n):
+                pt = ShapelyPoint(boundary_2d[i])
+                nearest = offset_exterior.interpolate(offset_exterior.project(pt))
+                bottom_xy[i] = [nearest.x, nearest.y]
+
+            bottom = np.column_stack([bottom_xy, np.zeros(n)])
+            use_chamfer = True
+
+    if use_chamfer:
+        # Wall vertices: [0..n-1]=top, [n..2n-1]=mid, [2n..3n-1]=bot
+        wall_verts = np.vstack([boundary, mid, bottom])
+        wall_faces = []
+        for i in range(n):
+            j = (i + 1) % n
+            # Upper segment: top ↔ mid
+            wall_faces.append([i, n + i, j])
+            wall_faces.append([j, n + i, n + j])
+            # Lower segment (chamfer): mid ↔ bot
+            wall_faces.append([n + i, 2 * n + i, n + j])
+            wall_faces.append([n + j, 2 * n + i, 2 * n + j])
+        wall_faces = np.array(wall_faces, dtype=np.int64)
+        wall_mesh = trimesh.Trimesh(vertices=wall_verts, faces=wall_faces, process=False)
+
+        # Bottom plate: earcut on the inset bottom ring
+        bottom_2d = bottom[:, :2].copy()
+        rings = np.array([n])
+        tri_indices = triangulate_float64(bottom_2d, rings)
+        bottom_faces = tri_indices.reshape(-1, 3)[:, ::-1]
+        bottom_mesh = trimesh.Trimesh(vertices=bottom, faces=bottom_faces, process=False)
+    else:
+        # --- Standard wall: 2 rings (top → bot) ---
+        bottom = boundary.copy()
+        bottom[:, 2] = 0.0
+
+        wall_verts = np.vstack([boundary, bottom])  # [0..n-1] = top, [n..2n-1] = bottom
+        wall_faces = []
+        for i in range(n):
+            j = (i + 1) % n
+            wall_faces.append([i, n + i, j])
+            wall_faces.append([j, n + i, n + j])
+        wall_faces = np.array(wall_faces, dtype=np.int64)
+        wall_mesh = trimesh.Trimesh(vertices=wall_verts, faces=wall_faces, process=False)
+
+        # Bottom face: earcut on boundary XY projected to Z=0
+        bottom_2d = bottom[:, :2].copy()
+        rings = np.array([n])
+        tri_indices = triangulate_float64(bottom_2d, rings)
+        bottom_faces = tri_indices.reshape(-1, 3)[:, ::-1]
+        bottom_mesh = trimesh.Trimesh(vertices=bottom, faces=bottom_faces, process=False)
 
     # --- Merge all ---
     combined = trimesh.util.concatenate([mesh, wall_mesh, bottom_mesh])
