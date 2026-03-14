@@ -948,6 +948,27 @@ async def get_cut_lower_mesh(job_id: str):
     )
 
 
+@app.get("/api/jobs/{job_id}/fdm-part/{filename}")
+async def get_fdm_part(job_id: str, filename: str):
+    """Download a single FDM split part STL file."""
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Path traversal protection
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    part_path = get_job_dir(job_id) / "output" / filename
+    if not part_path.exists():
+        raise HTTPException(status_code=404, detail="Part file not found")
+
+    return FileResponse(
+        part_path,
+        media_type="application/octet-stream",
+        filename=filename,
+    )
+
+
 @app.get("/api/jobs/{job_id}/boolean.stl")
 async def get_boolean_mesh(job_id: str):
     """
