@@ -1018,6 +1018,7 @@ async def generate_base_endpoint(
     file: UploadFile = File(...),
     elevation: float = Form(0.1),
     chamfer: bool = Form(False),
+    skip_orient: bool = Form(False),
 ):
     """
     Generate base for dental mesh: auto-orient + wall + bottom.
@@ -1040,6 +1041,7 @@ async def generate_base_endpoint(
             tmp_path,
             elevation=elevation,
             chamfer=chamfer,
+            skip_orient=skip_orient,
         )
     finally:
         import os

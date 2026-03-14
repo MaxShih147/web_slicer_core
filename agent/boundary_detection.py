@@ -104,8 +104,9 @@ def build_boundary_loops(
     """
     Chain boundary edges into ordered closed loops.
 
-    Each loop is returned as an ordered sequence of vertex indices
-    with computed geometric properties.
+    Handles junction vertices (degree > 2) by choosing the direction
+    most aligned with the current heading — enables tracing through
+    mesh boundaries that have branch points (e.g. after trimming).
     """
     if len(boundary_edges) == 0:
         return []
@@ -135,21 +136,42 @@ def build_boundary_loops(
 
             while current != start_v:
                 chain.append(current)
-                # Find next vertex (not the one we came from)
                 neighbors = adjacency.get(current, set())
-                next_candidates = [n for n in neighbors if n != prev]
+
+                # Filter: not prev, and edge not yet visited
+                next_candidates = []
+                for n in neighbors:
+                    if n == prev:
+                        continue
+                    ek = (min(current, n), max(current, n))
+                    if ek in visited_edges:
+                        continue
+                    next_candidates.append(n)
 
                 if not next_candidates:
-                    # Dead end — not a closed loop
                     break
 
-                next_v = next_candidates[0]
+                # At junction (degree > 2): pick direction most aligned with heading
+                if len(next_candidates) > 1:
+                    prev_dir = vertices[current] - vertices[prev]
+                    prev_norm = np.linalg.norm(prev_dir)
+                    if prev_norm > 1e-12:
+                        prev_dir = prev_dir / prev_norm
+                    best_dot = -2.0
+                    next_v = next_candidates[0]
+                    for cand in next_candidates:
+                        cand_dir = vertices[cand] - vertices[current]
+                        cand_norm = np.linalg.norm(cand_dir)
+                        if cand_norm > 1e-12:
+                            cand_dir = cand_dir / cand_norm
+                        d = float(np.dot(cand_dir, prev_dir))
+                        if d > best_dot:
+                            best_dot = d
+                            next_v = cand
+                else:
+                    next_v = next_candidates[0]
+
                 edge_key = (min(current, next_v), max(current, next_v))
-
-                if edge_key in visited_edges:
-                    # Already visited — might have hit another loop
-                    break
-
                 visited_edges.add(edge_key)
                 prev = current
                 current = next_v
@@ -445,6 +467,7 @@ def generate_base(
     mesh_path: str | Path,
     elevation: float = 0.0,
     chamfer: bool = False,
+    skip_orient: bool = False,
 ) -> bytes:
     """
     Generate a base for a dental mesh.
@@ -475,8 +498,13 @@ def generate_base(
         raise ValueError("No boundary loops found on mesh")
     loops.sort(key=lambda l: l.perimeter, reverse=True)
 
-    # Auto-orient using main boundary loop
-    mesh = auto_orient_mesh(mesh, loops[0].points)
+    # Auto-orient using main boundary loop (skip if frontend already oriented)
+    if not skip_orient:
+        mesh = auto_orient_mesh(mesh, loops[0].points)
+
+    # Ensure bottom sits at Z=0
+    z_min = mesh.vertices[:, 2].min()
+    mesh.vertices[:, 2] -= z_min
 
     # Lift mesh by elevation so boundary points are above Z=0
     min_elevation = 1.0 if chamfer else 0.1
@@ -484,12 +512,17 @@ def generate_base(
     mesh.vertices[:, 2] += effective_elevation
 
     # Re-detect boundary on the oriented mesh to get updated points
+    # Use aggressive vertex merge to handle trimmed meshes (split vertices may differ slightly)
+    mesh.merge_vertices(digits_vertex=4)
     boundary_edges = extract_boundary_edges(mesh)
+    print(f"[generate_base] vertices: {len(mesh.vertices)}, faces: {len(mesh.faces)}, boundary_edges: {len(boundary_edges)}")
     loops = build_boundary_loops(mesh, boundary_edges)
+    print(f"[generate_base] loops: {len(loops)}, sizes: {[len(l.vertex_indices) for l in loops]}")
     if not loops:
         raise ValueError("No boundary loops found after orientation")
     loops.sort(key=lambda l: l.perimeter, reverse=True)
     boundary = loops[0].points
+    print(f"[generate_base] main loop: {len(boundary)} points, perimeter: {loops[0].perimeter:.2f}")
 
     n = len(boundary)
 
