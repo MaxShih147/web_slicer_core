@@ -14,14 +14,61 @@ Web-based SLA slicing application powered by PrusaSlicer CLI (headless). Feature
 
 ## Prerequisites
 
-- macOS (tested on macOS 15.x)
+- macOS (tested on macOS 15.x) or Windows (see [Windows setup](#windows-setup) for TBB)
 - Python 3.9+
 - Node.js 18+
 - PrusaSlicer Fork (with `--export-support-stl` feature)
 
+### Windows setup
+
+**Recommended (easiest):** Use **Python 3.11 or 3.12** and follow [Quick Start (Windows)](#quick-start) (submodule init → build PrusaSlicer → create `.venv312` → `scripts\run_agent.bat`). `manifold3d` has prebuilt wheels for 3.11/3.12, so no TBB or compilation is needed.
+
+```bat
+py -3.12 -m venv .venv312
+scripts\run_agent.bat
+```
+
+You must [build PrusaSlicer](#1-build-prusaslicer-fork-macos--linux) first (use `scripts\build_prusaslicer_fork_windows.bat` on Windows). The script prefers `.venv312` if it exists and will install all dependencies from wheels.
+
+**Alternative (Python 3.14 or other):** If you use the default `.venv` (e.g. Python 3.14), `manifold3d` builds from source and requires **TBB**. Use [vcpkg](https://vcpkg.io/en/docs/README.html):
+
+1. `vcpkg install tbb:x64-windows`
+2. Set `VCPKG_ROOT` and add `%VCPKG_ROOT%\installed\x64-windows\bin` to your PATH.
+3. Run `scripts\run_agent.bat`
+
+See Troubleshooting below if you see "tbb was not found" or "DLL load failed".
+
 ## Quick Start
 
-### 1. Build PrusaSlicer Fork
+<a name="after-clone-init-submodules"></a>**After clone:** init submodules so the PrusaSlicer fork source is available:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Quick Start (Windows)
+
+After cloning (and [initializing submodules](#after-clone-init-submodules)), run in order:
+
+```bat
+:: 1. Init submodules (get PrusaSlicer fork source)
+git submodule update --init --recursive
+
+:: 2. Build PrusaSlicer CLI (requires CMake, Visual Studio; 16GB RAM use default, 32GB+ use full)
+scripts\build_prusaslicer_fork_windows.bat
+
+:: 3. Python 3.12 venv (recommended so manifold3d installs from wheel)
+py -3.12 -m venv .venv312
+
+:: 4. Start backend (installs deps and runs agent)
+scripts\run_agent.bat
+```
+
+Backend runs at `http://127.0.0.1:5179`. Then start the frontend (see step 3 below).
+
+**Prerequisites for Windows:** Python 3.12 (or 3.11), Node.js 18+, CMake, Visual Studio 2017+ (2019/2022/2026). Low RAM (16GB): use default; 32GB+: run `scripts\build_prusaslicer_fork_windows.bat full`.
+
+### 1. Build PrusaSlicer Fork (macOS / Linux)
 
 The project uses a custom PrusaSlicer fork with support mesh STL export capability.
 
@@ -454,6 +501,14 @@ If you need to modify the PrusaSlicer fork:
    ```
 
 ## Troubleshooting
+
+### "PrusaSlicer CLI not found" (Windows)
+
+Build the fork first: `scripts\build_prusaslicer_fork_windows.bat`. Ensure you ran `git submodule update --init --recursive` after clone. The binary will be at `third_party\prusaslicer_build\src\Release\prusa-slicer.exe`.
+
+### "tbb was not found" when installing dependencies (Windows)
+
+The `manifold3d` package needs TBB to build. Follow [Windows setup](#windows-setup): install TBB via vcpkg, set `VCPKG_ROOT` or `CMAKE_PREFIX_PATH`, then run `scripts\run_agent.bat` again.
 
 ### "CLI not available"
 

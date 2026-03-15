@@ -69,9 +69,10 @@ echo [PrusaSlicer] Using CMake: %CMAKE_BIN%
 echo [PrusaSlicer] Using generator: %VS_GENERATOR%
 echo [PrusaSlicer] Build flags: %BUILD_FLAGS%
 
-:: Clone or update fork
+:: Clone or update fork (if repo uses submodules, run first: git submodule update --init --recursive)
 if not exist "%SRC_DIR%\.git" (
-    echo [PrusaSlicer] Cloning fork...
+    echo [PrusaSlicer] Fork source not found. Cloning...
+    echo If this repo uses submodules, run: git submodule update --init --recursive
     if not exist "%ROOT_DIR%\third_party" mkdir "%ROOT_DIR%\third_party"
     git clone "%FORK_URL%" "%SRC_DIR%"
     if !errorlevel! neq 0 (
