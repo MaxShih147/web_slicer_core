@@ -12,7 +12,6 @@ import shutil
 import traceback as tb
 from typing import Any, Dict, List, Optional
 
-import trimesh
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel

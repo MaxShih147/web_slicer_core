@@ -3,6 +3,8 @@
 import asyncio
 import json
 import os
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -32,10 +34,30 @@ from .jobs import (
 )
 from .api_v2 import router as v2_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: preload heavy modules in a background thread so first mesh request is fast."""
+
+    def _preload_heavy_modules() -> None:
+        import numpy  # noqa: F401
+        import trimesh  # noqa: F401
+        try:
+            import manifold3d  # noqa: F401
+        except ImportError:
+            pass
+
+    t = threading.Thread(target=_preload_heavy_modules, daemon=True)
+    t.start()
+    yield
+    # Shutdown: nothing to do for preload
+
+
 app = FastAPI(
     title="web_slicer_core Agent",
     description="Local agent for SLA slicing using PrusaSlicer CLI. Supports multiple frontends via versioned APIs.",
     version="0.2.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration:

@@ -24,14 +24,13 @@ from typing import Optional, Dict, Any, List
 
 import struct
 
-import trimesh
-
 from .config import PRUSA_SLICER_CLI
 from .models import BooleanOperation, CutConfig, CutMode, SLAConfig
 
 
-def load_trimesh(path) -> trimesh.Trimesh:
+def load_trimesh(path) -> "trimesh.Trimesh":
     """Load an STL file as a single trimesh.Trimesh."""
+    import trimesh
     mesh = trimesh.load(str(path))
     if isinstance(mesh, trimesh.Scene):
         mesh = trimesh.util.concatenate(mesh.dump())
