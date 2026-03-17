@@ -672,20 +672,17 @@ def run_fdm_auto_split(
     max_parts: int = 8,
 ) -> AutoSplitResult:
     """
-    Auto split via direct manifold3d plane sweep.
-
-    Instead of predicting bottlenecks via SDF (noisy on models with hair/clothing),
-    directly tests cuts at multiple positions along each axis, decomposes results,
-    and picks the cut that creates the most balanced components.
+    Auto split via segmentation-guided candidate planes + manifold3d cutting.
 
     Algorithm:
-      1. For the largest component in the pool, sweep N positions × 3 axes
-      2. At each position: split_by_plane → decompose → measure component volumes
-      3. Score: minimize(largest_component_fraction) + bonus(n_significant) - penalty(fragments)
-      4. Apply the best cut, add decomposed components to pool
-      5. Repeat until max_parts reached or no useful cut found
+      1. Run mesh segmentation (BSP over-segmentation + feature-aware region fusion)
+      2. Extract candidate cut planes from segment boundaries (PCA-fitted)
+      3. Also add sweep-based fallback candidates
+      4. Iteratively pick the best plane that reduces oversized parts
+      5. Split via manifold3d, decompose into connected components
     """
     import manifold3d
+    from .mesh_segmentation import generate_cut_planes_from_segmentation
 
     t_total = time.time()
     _preprocess_mesh(mesh)
@@ -699,53 +696,147 @@ def run_fdm_auto_split(
     logger.info(f"FDM auto split: build_vol={build_volume}, "
                 f"faces={len(mesh.faces)}, vol={original_volume:.0f}")
 
+    # Phase 1: Generate candidate planes from mesh segmentation
+    t_seg = time.time()
+    seg_planes = generate_cut_planes_from_segmentation(
+        mesh,
+        target_superfacets=max(100, len(mesh.faces) // 500),
+        tau=0.20,
+        min_boundary_edges=5,
+    )
+    logger.info(f"  Segmentation candidates: {len(seg_planes)} planes "
+                f"in {time.time() - t_seg:.2f}s")
+
+    # Convert segmentation planes to CandidatePlane format
+    candidates: list[CandidatePlane] = []
+    for sp in seg_planes:
+        candidates.append(CandidatePlane(
+            normal=sp.normal,
+            offset=sp.offset,
+            score=sp.score,
+            source="segmentation",
+        ))
+
+    # Phase 2: Add SDF + cross-section + uniform fallback candidates
+    planning_mesh, sdf = compute_vertex_sdf(mesh)
+    fallback_candidates = generate_candidate_planes(
+        planning_mesh, sdf, build_volume, original_mesh=mesh,
+    )
+    candidates.extend(fallback_candidates)
+
+    # Dedup all candidates
+    bmin, bmax = mesh.bounds
+    max_extent = np.max(bmax - bmin)
+    dedup_dist = max(8.0, max_extent * 0.08)
+    candidates = _dedup_planes(candidates, dist_thresh=dedup_dist, angle_thresh=20.0)
+    candidates.sort(key=lambda c: c.score)
+
+    logger.info(f"  Total candidates after dedup: {len(candidates)}")
+
+    # Phase 3: Iterative greedy split using candidate planes
     man_original = _trimesh_to_manifold(mesh)
     pool = [(man_original, mesh)]
     planes_used = []
     original_vol = max(original_volume, 1.0)
 
-    n_positions = 8
-
     for cut_round in range(max_parts - 1):
         if len(pool) >= max_parts:
             break
 
-        # Rank pool by volume descending, skip tiny components
-        vol_ranked = []
+        # Find oversized parts
+        oversized = []
         for i, (man, tm) in enumerate(pool):
-            try:
-                vol = abs(tm.volume)
-            except Exception:
-                vol = 0.0
-            if vol / original_vol > 0.05 and len(tm.faces) >= 100:
-                vol_ranked.append((i, vol, man))
-        vol_ranked.sort(key=lambda x: -x[1])
+            if _part_exceeds_build_volume(tm, build_x, build_y, build_z):
+                try:
+                    vol = abs(tm.volume)
+                except Exception:
+                    vol = 0.0
+                if vol / original_vol > 0.03 and len(tm.faces) >= 50:
+                    oversized.append((i, vol, man, tm))
+        oversized.sort(key=lambda x: -x[1])
 
-        if not vol_ranked:
+        if not oversized:
+            logger.info(f"  Round {cut_round+1}: all parts fit build volume")
             break
 
-        # Try the largest, then 2nd largest
         cut_made = False
-        for target_idx, target_vol, target_man in vol_ranked[:2]:
-            t_sweep = time.time()
-            best = _sweep_best_cut(
-                target_man, target_vol,
-                min_frag_vol=original_vol * 0.01,
-                n_positions=n_positions,
-            )
-            dt_sweep = time.time() - t_sweep
 
-            if best is None:
+        # Try candidate planes first
+        for target_idx, target_vol, target_man, target_tm in oversized[:2]:
+            target_bmin, target_bmax = target_tm.bounds
+
+            best_result = None
+            best_score = float('inf')
+
+            for cand in candidates:
+                # Check if plane intersects this part
+                if not _plane_intersects_bbox(cand, target_bmin, target_bmax):
+                    continue
+
+                pos_man, neg_man = _split_manifold_by_plane(
+                    target_man, cand.normal, cand.offset)
+                if pos_man is None:
+                    continue
+
+                # Decompose into connected components
+                components = []
+                for half in (pos_man, neg_man):
+                    try:
+                        decomposed = half.decompose()
+                    except Exception:
+                        decomposed = [half]
+                    for comp in decomposed:
+                        try:
+                            vol = abs(comp.volume())
+                        except Exception:
+                            vol = 0.0
+                        if vol >= original_vol * 0.01 and comp.num_tri() >= 4:
+                            components.append((comp, vol))
+
+                if len(components) < 2:
+                    continue
+
+                total = sum(v for _, v in components)
+                if total < 1.0:
+                    continue
+
+                vols = sorted([v for _, v in components], reverse=True)
+                largest_frac = vols[0] / total
+                if largest_frac > 0.95:
+                    continue
+
+                # Score: prefer balanced cuts from segmentation
+                source_bonus = 0.0 if cand.source == "segmentation" else 0.1
+                score = largest_frac + source_bonus + cand.score * 0.1
+
+                if score < best_score:
+                    best_score = score
+                    best_result = (cand, components)
+
+            # Fallback: sweep if no candidate worked
+            if best_result is None:
+                sweep = _sweep_best_cut(
+                    target_man, target_vol,
+                    min_frag_vol=original_vol * 0.01,
+                    n_positions=8,
+                )
+                if sweep is not None:
+                    score, axis_idx, position, components = sweep
+                    total_comp_vol = sum(v for _, v in components)
+                    largest_frac = max(v for _, v in components) / total_comp_vol
+                    if largest_frac <= 0.95:
+                        normal = np.zeros(3)
+                        normal[axis_idx] = 1.0
+                        fallback_cand = CandidatePlane(
+                            normal=normal, offset=position,
+                            score=score, source="sweep_fallback",
+                        )
+                        best_result = (fallback_cand, components)
+
+            if best_result is None:
                 continue
 
-            score, axis_idx, position, components = best
-
-            # Reject if cut is almost useless (> 95% in one piece)
-            total_comp_vol = sum(v for _, v in components)
-            largest_frac = max(v for _, v in components) / total_comp_vol
-            if largest_frac > 0.95:
-                logger.info(f"  Round {cut_round+1}: skip (largest={largest_frac:.1%})")
-                continue
+            cand_used, components = best_result
 
             # Apply: remove target, add components
             new_pool = [(m, t) for j, (m, t) in enumerate(pool) if j != target_idx]
@@ -755,26 +846,52 @@ def run_fdm_auto_split(
                     new_pool.append((comp_man, comp_tm))
             pool = new_pool
 
-            axis_name = ['x', 'y', 'z'][axis_idx]
-            normal = [0.0, 0.0, 0.0]
-            normal[axis_idx] = 1.0
             planes_used.append({
-                "normal": normal,
-                "offset": float(position),
-                "score": round(score, 4),
-                "source": "sweep",
+                "normal": cand_used.normal.tolist(),
+                "offset": float(cand_used.offset),
+                "score": round(cand_used.score, 4),
+                "source": cand_used.source,
             })
 
             vols = sorted([v for _, v in components], reverse=True)
             vol_pcts = [f"{v/original_vol:.1%}" for v in vols]
-            logger.info(f"  Round {cut_round+1}: {axis_name}={position:.1f} "
-                        f"score={score:.3f} → {len(components)} comps "
-                        f"[{', '.join(vol_pcts)}] ({dt_sweep:.2f}s)")
+            logger.info(f"  Round {cut_round+1}: {cand_used.source} "
+                        f"n=[{cand_used.normal[0]:.2f},{cand_used.normal[1]:.2f},{cand_used.normal[2]:.2f}] "
+                        f"off={cand_used.offset:.1f} → {len(components)} comps "
+                        f"[{', '.join(vol_pcts)}]")
             cut_made = True
             break
 
         if not cut_made:
-            break
+            # Last resort: sweep on largest part
+            if oversized:
+                target_idx, target_vol, target_man, _ = oversized[0]
+                sweep = _sweep_best_cut(
+                    target_man, target_vol,
+                    min_frag_vol=original_vol * 0.01,
+                )
+                if sweep is not None:
+                    score, axis_idx, position, components = sweep
+                    new_pool = [(m, t) for j, (m, t) in enumerate(pool) if j != target_idx]
+                    for comp_man, comp_vol in components:
+                        comp_tm = _manifold_to_trimesh(comp_man)
+                        if comp_tm is not None:
+                            new_pool.append((comp_man, comp_tm))
+                    pool = new_pool
+                    normal = [0.0, 0.0, 0.0]
+                    normal[axis_idx] = 1.0
+                    planes_used.append({
+                        "normal": normal,
+                        "offset": float(position),
+                        "score": round(score, 4),
+                        "source": "sweep_fallback",
+                    })
+                    logger.info(f"  Round {cut_round+1}: sweep fallback "
+                                f"axis={['x','y','z'][axis_idx]} pos={position:.1f}")
+                else:
+                    break
+            else:
+                break
 
     # Export parts
     parts = []
