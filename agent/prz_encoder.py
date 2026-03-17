@@ -488,7 +488,8 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
     buf.write(struct.pack(">H", 0))
 
     # PausePositionZ (4B float BE) — same as layer Z position
-    z_pos = layer_height * layer_idx
+    # Layer 0 starts at layer_height (1-based Z), matching C++ PrzLayerContent
+    z_pos = layer_height * (layer_idx + 1)
     buf.write(struct.pack(">f", z_pos))
 
     # LayerPositionZ (4B float BE)
