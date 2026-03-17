@@ -1194,6 +1194,72 @@ async def fdm_grid_split_endpoint(
     )
 
 
+@router.post("/fdm-auto-split", response_model=V2Response)
+async def fdm_auto_split_endpoint(
+    file: UploadFile = File(..., description="STL model to split"),
+    build_x: float = Form(default=220.0),
+    build_y: float = Form(default=220.0),
+    build_z: float = Form(default=250.0),
+    max_parts: int = Form(default=8),
+):
+    """
+    SDF-guided intelligent auto split.
+
+    Finds optimal cut planes at narrow regions (necks, wrists, ankles)
+    and iteratively splits the model to fit the build volume.
+    """
+    if not file.filename or not file.filename.lower().endswith(".stl"):
+        raise HTTPException(status_code=400, detail="Only .stl files are supported")
+
+    from .fdm_split import run_fdm_auto_split
+
+    job_id = create_job_id()
+    job_dir = create_job(job_id)
+    input_path = job_dir / "input" / "model.stl"
+    output_dir = job_dir / "output"
+
+    try:
+        content = await file.read()
+        with open(input_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+
+    mesh = trimesh.load(str(input_path))
+    if isinstance(mesh, trimesh.Scene):
+        mesh = trimesh.util.concatenate(mesh.dump())
+
+    try:
+        result = run_fdm_auto_split(mesh, build_x, build_y, build_z, output_dir, max_parts)
+    except Exception as e:
+        logger.exception("FDM auto split failed")
+        raise HTTPException(status_code=500, detail=f"FDM auto split failed: {e}")
+
+    parts_data = []
+    for part in result.parts:
+        parts_data.append({
+            "partId": part.part_id,
+            "filename": part.mesh_path,
+            "bboxMm": list(part.bbox_mm),
+            "volumeMm3": part.volume_mm3,
+            "side": part.side,
+            "downloadUrl": f"/api/jobs/{job_id}/fdm-part/{part.mesh_path}",
+        })
+
+    return V2Response(
+        success=True,
+        message=f"Auto split into {len(result.parts)} part(s) with {result.n_cuts} cut(s)",
+        data={
+            "jobId": job_id,
+            "partCount": len(result.parts),
+            "nCuts": result.n_cuts,
+            "planesUsed": result.planes_used,
+            "originalVolume": round(result.original_volume, 2),
+            "parts": parts_data,
+        },
+    )
+
+
 # ============================================================================
 # Helper Functions
 # ============================================================================
