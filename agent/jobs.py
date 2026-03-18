@@ -54,6 +54,7 @@ def write_job_status(
     job_id: str,
     status: JobStatus,
     error: Optional[str] = None,
+    error_code: Optional[str] = None,
     layer_count: Optional[int] = None,
     estimated_print_time: Optional[float] = None,
     resin_volume_ml: Optional[float] = None,
@@ -66,6 +67,7 @@ def write_job_status(
     data = {
         "status": status.value,
         "error": error,
+        "error_code": error_code,
         "layer_count": layer_count,
         "estimated_print_time": estimated_print_time,
         "resin_volume_ml": resin_volume_ml,

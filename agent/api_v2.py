@@ -5,6 +5,7 @@ This module provides API endpoints that match the DS-Online frontend's expected 
 Both v1 (/api/jobs) and v2 (/api/v2/slices) share the same underlying job manager.
 """
 
+import io
 import json
 import logging
 import math
@@ -17,6 +18,23 @@ from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Uploa
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
+from .errors import (
+    APIError,
+    boolean_failed,
+    file_not_found,
+    hollow_generation_failed,
+    internal_error,
+    invalid_model,
+    job_already_executed,
+    job_failed,
+    job_not_found,
+    job_still_processing,
+    missing_body,
+    model_not_found,
+    no_drain_holes,
+    no_hex_grid_cells,
+    validation_error,
+)
 from .jobs import (
     create_job,
     create_job_id,
@@ -124,6 +142,76 @@ _pending_jobs: Dict[str, Dict[str, Any]] = {}
 
 
 # ============================================================================
+# Helpers
+# ============================================================================
+
+def _require_pending(job_id: str) -> dict:
+    """Return pending job dict, or raise JOB_NOT_FOUND / JOB_ALREADY_EXECUTED."""
+    if job_id in _pending_jobs:
+        return _pending_jobs[job_id]
+    if job_exists(job_id):
+        raise job_already_executed(job_id)
+    raise job_not_found(job_id)
+
+
+def _validate_stl_bytes(content: bytes, field: str = "model") -> None:
+    """Raise invalid_model if *content* is not a valid STL."""
+    try:
+        mesh = trimesh.load(io.BytesIO(content), file_type="stl")
+        if isinstance(mesh, trimesh.Scene):
+            mesh = mesh.dump(concatenate=True)
+        if not isinstance(mesh, trimesh.Trimesh) or len(mesh.faces) == 0:
+            raise ValueError("empty mesh")
+    except APIError:
+        raise
+    except Exception as exc:
+        raise invalid_model(f"{field} STL content is corrupted or format is invalid: {exc}")
+
+
+def _save_model_to_job(model_data: dict, input_path) -> None:
+    """Write model bytes to *input_path*, raising INVALID_MODEL / VALIDATION_ERROR as needed."""
+    if "stl_data" in model_data:
+        content = model_data["stl_data"]
+        _validate_stl_bytes(content, "model")
+        with open(input_path, "wb") as f:
+            f.write(content)
+    elif "vertices" in model_data:
+        raise validation_error("Direct vertex data is not yet supported; please use file upload")
+    else:
+        raise missing_body("Model must contain stl_data; please use file upload")
+
+
+_ERROR_CODE_FACTORIES = {
+    "HOLLOW_GENERATION_FAILED": hollow_generation_failed,
+}
+
+
+def _error_from_status(status_data: dict) -> APIError:
+    """Return the most specific APIError for a failed job based on its stored error_code."""
+    code = status_data.get("error_code")
+    factory = _ERROR_CODE_FACTORIES.get(code) if code else None
+    if factory:
+        return factory(status_data.get("error"))
+    return job_failed(status_data.get("error"))
+
+
+def _job_status_or_raise(job_id: str) -> dict:
+    """Read job status, raising JOB_NOT_FOUND if the job doesn't exist."""
+    if not job_exists(job_id):
+        raise job_not_found(job_id)
+    return read_job_status(job_id)
+
+
+def _require_completed(status_data: dict, job_id: str) -> None:
+    """Raise the appropriate error if the job is not completed."""
+    status = status_data["status"]
+    if status == JobStatus.FAILED.value:
+        raise job_failed(status_data.get("error"))
+    if status != JobStatus.COMPLETED.value:
+        raise job_still_processing()
+
+
+# ============================================================================
 # V2 Router
 # ============================================================================
 
@@ -138,20 +226,18 @@ async def create_slice_job(request: V2SliceCreateRequest):
     Unlike v1, this just creates a job ID and stores initial config.
     Models are added separately, and slicing starts on execute.
     """
-    job_id = create_job_id()
-
-    # Store in pending jobs (not yet on disk)
-    _pending_jobs[job_id] = {
-        "config": request.config or {},
-        "models": [],
-        "status": "created",
-    }
-
-    return V2Response(
-        success=True,
-        message="Slice job created",
-        data={"jobId": job_id}
-    )
+    try:
+        job_id = create_job_id()
+        _pending_jobs[job_id] = {
+            "config": request.config or {},
+            "models": [],
+            "status": "created",
+        }
+        return V2Response(success=True, message="Slice job created", data={"jobId": job_id})
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
 
 
 @router.put("/slices/{job_id}/config", response_model=V2Response)
@@ -159,20 +245,14 @@ async def update_slice_job_config(job_id: str, request: V2ConfigUpdateRequest):
     """
     Update the config for a slice job.
     """
-    if job_id not in _pending_jobs:
-        raise HTTPException(status_code=404, detail="Job not found or already executed")
+    pending = _require_pending(job_id)
 
     if request.isAppend:
-        # Merge config
-        _pending_jobs[job_id]["config"].update(request.config)
+        pending["config"].update(request.config)
     else:
-        # Replace config
-        _pending_jobs[job_id]["config"] = request.config
+        pending["config"] = request.config
 
-    return V2Response(
-        success=True,
-        message="Config updated"
-    )
+    return V2Response(success=True, message="Config updated")
 
 
 @router.post("/slices/{job_id}/models", response_model=V2Response)
@@ -182,22 +262,21 @@ async def add_models_to_slice_job(job_id: str, request: V2ModelsAddRequest):
 
     Each model should contain vertex data or a reference to an uploaded file.
     """
-    if job_id not in _pending_jobs:
-        raise HTTPException(status_code=404, detail="Job not found or already executed")
+    pending = _require_pending(job_id)
+
+    if not request.models:
+        raise missing_body("models list is empty")
 
     model_ids = []
     for i, model in enumerate(request.models):
-        model_id = f"model_{i}_{len(_pending_jobs[job_id]['models'])}"
-        _pending_jobs[job_id]["models"].append({
-            "id": model_id,
-            **model
-        })
+        model_id = f"model_{i}_{len(pending['models'])}"
+        pending["models"].append({"id": model_id, **model})
         model_ids.append(model_id)
 
     return V2Response(
         success=True,
         message=f"Added {len(model_ids)} model(s)",
-        data={"modelIds": model_ids}
+        data={"modelIds": model_ids},
     )
 
 
@@ -209,22 +288,28 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
     This is the recommended way to add models - upload the file directly.
     The file will be stored and used when execute is called.
     """
-    if job_id not in _pending_jobs:
-        raise HTTPException(status_code=404, detail="Job not found or already executed")
+    pending = _require_pending(job_id)
 
-    # Validate file extension
-    if not file.filename or not file.filename.lower().endswith(".stl"):
-        raise HTTPException(status_code=400, detail="Only .stl files are supported")
+    if not file or not file.filename:
+        raise missing_body("No file provided")
 
-    # Read file content
+    if not file.filename.lower().endswith(".stl"):
+        raise validation_error("Only .stl files are supported")
+
     try:
         content = await file.read()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to read file: {e}")
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded file: {exc}")
 
-    # Store file content in pending job
-    model_id = f"file_{len(_pending_jobs[job_id]['models'])}"
-    _pending_jobs[job_id]["models"].append({
+    if not content:
+        raise missing_body("Uploaded file is empty")
+
+    _validate_stl_bytes(content, file.filename)
+
+    model_id = f"file_{len(pending['models'])}"
+    pending["models"].append({
         "id": model_id,
         "filename": file.filename,
         "stl_data": content,
@@ -234,7 +319,7 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
     return V2Response(
         success=True,
         message=f"File '{file.filename}' uploaded",
-        data={"modelId": model_id, "filename": file.filename}
+        data={"modelId": model_id, "filename": file.filename},
     )
 
 
@@ -245,19 +330,20 @@ async def use_model_from_job(job_id: str, source_job_id: str, source_file: str =
     Avoids re-uploading large files that are already on the server.
     """
     if job_id not in _pending_jobs:
-        raise HTTPException(status_code=404, detail="Job not found or already executed")
+        raise job_not_found(job_id)
 
-    # Find the source file on disk
     source_dir = get_job_dir(source_job_id)
     source_path = source_dir / "output" / source_file
     if not source_path.exists():
-        # Also check input dir
         source_path = source_dir / "input" / source_file
     if not source_path.exists():
-        raise HTTPException(status_code=404, detail=f"Source file '{source_file}' not found in job {source_job_id}")
+        raise model_not_found(f"Source file '{source_file}' not found in job {source_job_id}")
 
-    # Read the file content and add to pending job
-    content = source_path.read_bytes()
+    try:
+        content = source_path.read_bytes()
+    except Exception as exc:
+        raise internal_error(f"Failed to read source file: {exc}")
+
     model_id = f"ref_{source_job_id}_{len(_pending_jobs[job_id]['models'])}"
     _pending_jobs[job_id]["models"].append({
         "id": model_id,
@@ -269,7 +355,7 @@ async def use_model_from_job(job_id: str, source_job_id: str, source_file: str =
     return V2Response(
         success=True,
         message=f"Model referenced from job {source_job_id}/{source_file}",
-        data={"modelId": model_id, "sourceJobId": source_job_id}
+        data={"modelId": model_id, "sourceJobId": source_job_id},
     )
 
 
@@ -281,59 +367,28 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
     This triggers the actual PrusaSlicer process.
     """
     if job_id not in _pending_jobs:
-        # Check if it's already on disk (v1 style job)
         if job_exists(job_id):
-            status = read_job_status(job_id)
-            return V2Response(
-                success=True,
-                message="Job already exists",
-                data={"currentConfig": status}
-            )
-        raise HTTPException(status_code=404, detail="Job not found")
+            raise job_already_executed(job_id)
+        raise job_not_found(job_id)
 
     pending = _pending_jobs[job_id]
 
-    # Check if models were added
     if not pending["models"]:
-        raise HTTPException(status_code=400, detail="No models added to job")
+        raise model_not_found("No models have been added to this job")
 
-    # Create job directory structure
-    job_dir = create_job(job_id)
-
-    # Save model data (first model for now)
-    # In a full implementation, this would handle multiple models
-    model_data = pending["models"][0]
-    input_path = job_dir / "input" / "model.stl"
-
-    if "vertices" in model_data:
-        # Model data provided as vertices - would need to convert to STL
-        # For now, raise an error as this needs more implementation
-        raise HTTPException(
-            status_code=501,
-            detail="Direct vertex data not yet supported. Please use file upload."
-        )
-    elif "stl_data" in model_data:
-        # Binary STL data provided
-        with open(input_path, "wb") as f:
-            f.write(model_data["stl_data"])
-    else:
-        raise HTTPException(status_code=400, detail="Model must contain vertices or stl_data")
-
-    # Convert v2 config to SLAConfig
-    config = pending["config"]
-    sla_config = _convert_v2_config_to_sla(config)
-
-    # Remove from pending
-    del _pending_jobs[job_id]
-
-    # Start slicing in background
-    background_tasks.add_task(run_slicing, job_id, sla_config)
-
-    return V2Response(
-        success=True,
-        message="Slicing started",
-        data={"currentConfig": config}
-    )
+    try:
+        job_dir = create_job(job_id)
+        input_path = job_dir / "input" / "model.stl"
+        _save_model_to_job(pending["models"][0], input_path)
+        config = pending["config"]
+        sla_config = _convert_v2_config_to_sla(config)
+        del _pending_jobs[job_id]
+        background_tasks.add_task(run_slicing, job_id, sla_config)
+        return V2Response(success=True, message="Slicing started", data={"currentConfig": config})
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
 
 
 @router.post("/slices/{job_id}/generate-supports", response_model=V2Response)
@@ -345,59 +400,32 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
     The support mesh can be fetched via GET /api/jobs/{job_id}/support.stl
     """
     if job_id not in _pending_jobs:
-        # Check if it's already on disk
         if job_exists(job_id):
             status = read_job_status(job_id)
             if status.get("has_support_mesh"):
-                return V2Response(
-                    success=True,
-                    message="Supports already generated",
-                    data={"hasSupportMesh": True}
-                )
-        raise HTTPException(status_code=404, detail="Job not found")
+                return V2Response(success=True, message="Supports already generated", data={"hasSupportMesh": True})
+        raise job_not_found(job_id)
 
     pending = _pending_jobs[job_id]
 
-    # Check if models were added
     if not pending["models"]:
-        raise HTTPException(status_code=400, detail="No models added to job")
+        raise model_not_found("No models have been added to this job")
 
-    # Create job directory structure
-    job_dir = create_job(job_id)
-
-    # Save model data
-    model_data = pending["models"][0]
-    input_path = job_dir / "input" / "model.stl"
-
-    if "vertices" in model_data:
-        raise HTTPException(
-            status_code=501,
-            detail="Direct vertex data not yet supported. Please use file upload."
-        )
-    elif "stl_data" in model_data:
-        with open(input_path, "wb") as f:
-            f.write(model_data["stl_data"])
-    else:
-        raise HTTPException(status_code=400, detail="Model must contain vertices or stl_data")
-
-    # Convert v2 config to SLAConfig (ensure supports_enable is True)
-    config = pending["config"]
-    config["supports_enable"] = True
-    sla_config = _convert_v2_config_to_sla(config)
-
-    # Keep job in pending so it can still be sliced later
-    # But mark that we've saved the model
-    pending["model_saved"] = True
-    pending["job_dir"] = str(job_dir)
-
-    # Start support generation in background
-    background_tasks.add_task(run_support_generation, job_id, sla_config)
-
-    return V2Response(
-        success=True,
-        message="Support generation started",
-        data={"currentConfig": config}
-    )
+    try:
+        job_dir = create_job(job_id)
+        input_path = job_dir / "input" / "model.stl"
+        _save_model_to_job(pending["models"][0], input_path)
+        config = pending["config"]
+        config["supports_enable"] = True
+        sla_config = _convert_v2_config_to_sla(config)
+        pending["model_saved"] = True
+        pending["job_dir"] = str(job_dir)
+        background_tasks.add_task(run_support_generation, job_id, sla_config)
+        return V2Response(success=True, message="Support generation started", data={"currentConfig": config})
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
 
 
 @router.post("/slices/{job_id}/generate-hollow", response_model=V2Response)
@@ -409,59 +437,32 @@ async def generate_hollow_only(job_id: str, background_tasks: BackgroundTasks):
     The hollow mesh can be fetched via GET /api/jobs/{job_id}/hollow.stl
     """
     if job_id not in _pending_jobs:
-        # Check if it's already on disk
         if job_exists(job_id):
             status = read_job_status(job_id)
             if status.get("has_hollow_mesh"):
-                return V2Response(
-                    success=True,
-                    message="Hollow already generated",
-                    data={"hasHollowMesh": True}
-                )
-        raise HTTPException(status_code=404, detail="Job not found")
+                return V2Response(success=True, message="Hollow already generated", data={"hasHollowMesh": True})
+        raise job_not_found(job_id)
 
     pending = _pending_jobs[job_id]
 
-    # Check if models were added
     if not pending["models"]:
-        raise HTTPException(status_code=400, detail="No models added to job")
+        raise model_not_found("No models have been added to this job")
 
-    # Create job directory structure
-    job_dir = create_job(job_id)
-
-    # Save model data
-    model_data = pending["models"][0]
-    input_path = job_dir / "input" / "model.stl"
-
-    if "vertices" in model_data:
-        raise HTTPException(
-            status_code=501,
-            detail="Direct vertex data not yet supported. Please use file upload."
-        )
-    elif "stl_data" in model_data:
-        with open(input_path, "wb") as f:
-            f.write(model_data["stl_data"])
-    else:
-        raise HTTPException(status_code=400, detail="Model must contain vertices or stl_data")
-
-    # Convert v2 config to SLAConfig (ensure hollowing_enable is True)
-    config = pending["config"]
-    config["hollowing_enable"] = True
-    sla_config = _convert_v2_config_to_sla(config)
-
-    # Keep job in pending so it can still be sliced later
-    # But mark that we've saved the model
-    pending["model_saved"] = True
-    pending["job_dir"] = str(job_dir)
-
-    # Start hollow generation in background
-    background_tasks.add_task(run_hollow_generation, job_id, sla_config)
-
-    return V2Response(
-        success=True,
-        message="Hollow generation started",
-        data={"currentConfig": config}
-    )
+    try:
+        job_dir = create_job(job_id)
+        input_path = job_dir / "input" / "model.stl"
+        _save_model_to_job(pending["models"][0], input_path)
+        config = pending["config"]
+        config["hollowing_enable"] = True
+        sla_config = _convert_v2_config_to_sla(config)
+        pending["model_saved"] = True
+        pending["job_dir"] = str(job_dir)
+        background_tasks.add_task(run_hollow_generation, job_id, sla_config)
+        return V2Response(success=True, message="Hollow generation started", data={"currentConfig": config})
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
 
 
 @router.post("/slices/{job_id}/cut", response_model=V2Response)
@@ -472,54 +473,39 @@ async def cut_model(job_id: str, request: V2CutRequest, background_tasks: Backgr
     This uses PrusaSlicer's --cut option to split the model into upper and lower parts.
     The upper part can be fetched via GET /api/jobs/{job_id}/cut.stl
     """
+    if request.keep_mode not in ("both", "upper", "lower"):
+        raise validation_error(
+            f"keep_mode must be 'both', 'upper', or 'lower'; got '{request.keep_mode}'"
+        )
+
     if job_id not in _pending_jobs:
-        # Check if it's already on disk
         if job_exists(job_id):
             status = read_job_status(job_id)
             if status.get("has_cut_mesh"):
-                return V2Response(
-                    success=True,
-                    message="Cut already performed",
-                    data={"hasCutMesh": True}
-                )
-        raise HTTPException(status_code=404, detail="Job not found")
+                return V2Response(success=True, message="Cut already performed", data={"hasCutMesh": True})
+        raise job_not_found(job_id)
 
     pending = _pending_jobs[job_id]
 
-    # Check if models were added
     if not pending["models"]:
-        raise HTTPException(status_code=400, detail="No models added to job")
+        raise model_not_found("No models have been added to this job")
 
-    # Create job directory structure
-    job_dir = create_job(job_id)
-
-    # Save model data
-    model_data = pending["models"][0]
-    input_path = job_dir / "input" / "model.stl"
-
-    if "vertices" in model_data:
-        raise HTTPException(
-            status_code=501,
-            detail="Direct vertex data not yet supported. Please use file upload."
+    try:
+        job_dir = create_job(job_id)
+        input_path = job_dir / "input" / "model.stl"
+        _save_model_to_job(pending["models"][0], input_path)
+        pending["model_saved"] = True
+        pending["job_dir"] = str(job_dir)
+        background_tasks.add_task(run_cut_operation, job_id, request.cut_height, request.keep_mode)
+        return V2Response(
+            success=True,
+            message="Cut operation started",
+            data={"cutHeight": request.cut_height, "keepMode": request.keep_mode},
         )
-    elif "stl_data" in model_data:
-        with open(input_path, "wb") as f:
-            f.write(model_data["stl_data"])
-    else:
-        raise HTTPException(status_code=400, detail="Model must contain vertices or stl_data")
-
-    # Keep job in pending so it can be used for other operations
-    pending["model_saved"] = True
-    pending["job_dir"] = str(job_dir)
-
-    # Start cut operation in background
-    background_tasks.add_task(run_cut_operation, job_id, request.cut_height, request.keep_mode)
-
-    return V2Response(
-        success=True,
-        message="Cut operation started",
-        data={"cutHeight": request.cut_height, "keepMode": request.keep_mode}
-    )
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
 
 
 @router.post("/slices/{job_id}/extend-bottom", response_model=V2Response)
@@ -530,14 +516,25 @@ async def extend_bottom(job_id: str, request: V2ExtendBottomRequest):
     Synchronous operation — reads hollow.stl, moves bottom vertices down,
     recomputes normals, and overwrites the file.
     """
+    if not job_exists(job_id):
+        raise job_not_found(job_id)
+
+    if request.bottom_z_threshold < 0:
+        raise validation_error("bottom_z_threshold must be >= 0")
+    if request.extension_distance < 0:
+        raise validation_error("extension_distance must be >= 0")
+
     hollow_path = get_hollow_mesh_path(job_id)
     if hollow_path is None:
-        raise HTTPException(status_code=404, detail="Hollow mesh not found for this job")
+        raise model_not_found("Hollow mesh not found for this job")
 
-    # Read the hollow mesh
-    triangles = parse_binary_stl(hollow_path)
+    try:
+        triangles = parse_binary_stl(hollow_path)
+    except Exception as exc:
+        raise invalid_model(f"Hollow mesh could not be parsed: {exc}")
+
     if not triangles:
-        raise HTTPException(status_code=400, detail="Hollow mesh is empty")
+        raise invalid_model("Hollow mesh is empty or invalid")
 
     # Find mesh min Z
     min_z = float("inf")
@@ -575,8 +572,11 @@ async def extend_bottom(job_id: str, request: V2ExtendBottomRequest):
 
         new_triangles.append((normal, verts[0], verts[1], verts[2]))
 
-    # Overwrite hollow.stl
-    write_binary_stl(hollow_path, new_triangles, "hollow extended")
+    try:
+        # Overwrite hollow.stl
+        write_binary_stl(hollow_path, new_triangles, "hollow extended")
+    except Exception as exc:
+        raise internal_error(f"Failed to write extended hollow mesh: {exc}")
 
     return V2Response(
         success=True,
@@ -595,29 +595,40 @@ async def generate_drain_holes_endpoint(job_id: str, request: V2GenerateDrainHol
     The STL can be fetched via GET /api/jobs/{job_id}/drain_holes.stl
     """
     if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise job_not_found(job_id)
 
-    job_dir = get_job_dir(job_id)
-    output_dir = job_dir / "output"
-    output_dir.mkdir(exist_ok=True)
+    if request.drain_radius < 0:
+        raise validation_error("drain_radius must be >= 0")
+    if request.hex_cell_radius <= 0:
+        raise validation_error("hex_cell_radius must be > 0")
+    if request.wall_thickness < 0:
+        raise validation_error("wall_thickness must be >= 0")
 
-    mesh = generate_drain_holes(
-        hex_cell_radius=request.hex_cell_radius,
-        wall_thickness=request.wall_thickness,
-        grid_count=request.grid_count,
-        drain_radius=request.drain_radius,
-        bottom_z=request.bottom_z,
-    )
+    try:
+        job_dir = get_job_dir(job_id)
+        output_dir = job_dir / "output"
+        output_dir.mkdir(exist_ok=True)
+
+        mesh = generate_drain_holes(
+            hex_cell_radius=request.hex_cell_radius,
+            wall_thickness=request.wall_thickness,
+            grid_count=request.grid_count,
+            drain_radius=request.drain_radius,
+            bottom_z=request.bottom_z,
+        )
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
 
     if mesh is None:
-        return V2Response(
-            success=True,
-            message="No drain holes generated (no wall edges found)",
-            data={"cylinderCount": 0},
-        )
+        raise no_drain_holes()
 
-    output_path = output_dir / "model_drain_holes.stl"
-    mesh.export(str(output_path))
+    try:
+        output_path = output_dir / "model_drain_holes.stl"
+        mesh.export(str(output_path))
+    except Exception as exc:
+        raise internal_error(f"Failed to save drain holes mesh: {exc}")
 
     return V2Response(
         success=True,
@@ -639,61 +650,76 @@ async def generate_hex_grid_endpoint(job_id: str, request: V2GenerateHexGridRequ
     The STL can be fetched via GET /api/jobs/{job_id}/hex_grid.stl
     """
     if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise job_not_found(job_id)
 
-    # Reset boolean debug counter and prepare debug folder
-    global _boolean_step_counter
-    _boolean_step_counter = 0
-    job_dir = get_job_dir(job_id)
-    debug_dir = job_dir / "debug"
-    if debug_dir.exists():
-        shutil.rmtree(debug_dir)
-    debug_dir.mkdir(exist_ok=True)
+    if request.hex_cell_radius <= 0:
+        raise validation_error("hex_cell_radius must be > 0")
+    if request.wall_thickness < 0:
+        raise validation_error("wall_thickness must be >= 0")
 
-    # Load hollow mesh
     hollow_path = get_hollow_mesh_path(job_id)
     if hollow_path is None:
-        raise HTTPException(status_code=404, detail="Hollow mesh not found for this job")
+        raise model_not_found("Hollow mesh not found for this job")
 
-    hollow_mesh = load_trimesh(hollow_path)
+    try:
+        # Reset boolean debug counter and prepare debug folder
+        global _boolean_step_counter
+        _boolean_step_counter = 0
+        job_dir = get_job_dir(job_id)
+        debug_dir = job_dir / "debug"
+        if debug_dir.exists():
+            shutil.rmtree(debug_dir)
+        debug_dir.mkdir(exist_ok=True)
 
-    # PrusaSlicer centers the model's bounding box at origin before hollowing.
-    # Undo this by translating the hollow mesh by the input model's bbox center.
-    input_model_path = get_input_model_path(job_id)
-    if input_model_path is not None:
-        input_mesh = load_trimesh(input_model_path)
-        input_center = (input_mesh.bounds[0] + input_mesh.bounds[1]) / 2
-        hollow_mesh.apply_translation(input_center)
-        shutil.copy2(input_model_path, debug_dir / "input_model_outer.stl")
+        hollow_mesh = load_trimesh(hollow_path)
+    except APIError:
+        raise
+    except Exception as exc:
+        raise invalid_model(f"Failed to load hollow mesh: {exc}")
 
-    logger.info(f"generate-hex-grid: hollow bounds={hollow_mesh.bounds.tolist()}, "
-                f"bottom_z={request.bottom_z}")
+    try:
+        # PrusaSlicer centers the model's bounding box at origin before hollowing.
+        # Undo this by translating the hollow mesh by the input model's bbox center.
+        input_model_path = get_input_model_path(job_id)
+        if input_model_path is not None:
+            input_mesh = load_trimesh(input_model_path)
+            input_center = (input_mesh.bounds[0] + input_mesh.bounds[1]) / 2
+            hollow_mesh.apply_translation(input_center)
+            shutil.copy2(input_model_path, debug_dir / "input_model_outer.stl")
 
-    # Save aligned hollow for frontend use and debug
-    output_dir = job_dir / "output"
-    hollow_mesh.export(str(output_dir / "model_hollow_aligned.stl"))
-    hollow_mesh.export(str(debug_dir / "hollow_for_raycasting.stl"))
-
-    mesh = generate_hex_grid(
-        radius=request.hex_cell_radius,
-        fallback_height=request.fallback_height,
-        pyramid_height=request.pyramid_height,
-        wall_thickness=request.wall_thickness,
-        grid_count=request.grid_count,
-        bottom_z=request.bottom_z,
-        hollow_mesh=hollow_mesh,
-    )
-
-    if mesh is None:
-        return V2Response(
-            success=True,
-            message="No hex grid cells built",
-            data={"cellsBuilt": 0},
+        logger.info(
+            f"generate-hex-grid: hollow bounds={hollow_mesh.bounds.tolist()}, "
+            f"bottom_z={request.bottom_z}"
         )
 
-    output_dir = job_dir / "output"
-    output_dir.mkdir(exist_ok=True)
-    mesh.export(str(output_dir / "model_hex_grid.stl"))
+        # Save aligned hollow for frontend use and debug
+        output_dir = job_dir / "output"
+        hollow_mesh.export(str(output_dir / "model_hollow_aligned.stl"))
+        hollow_mesh.export(str(debug_dir / "hollow_for_raycasting.stl"))
+
+        mesh = generate_hex_grid(
+            radius=request.hex_cell_radius,
+            fallback_height=request.fallback_height,
+            pyramid_height=request.pyramid_height,
+            wall_thickness=request.wall_thickness,
+            grid_count=request.grid_count,
+            bottom_z=request.bottom_z,
+            hollow_mesh=hollow_mesh,
+        )
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
+
+    if mesh is None:
+        raise no_hex_grid_cells()
+
+    try:
+        output_dir = job_dir / "output"
+        output_dir.mkdir(exist_ok=True)
+        mesh.export(str(output_dir / "model_hex_grid.stl"))
+    except Exception as exc:
+        raise internal_error(f"Failed to save hex grid mesh: {exc}")
 
     return V2Response(
         success=True,
@@ -717,11 +743,11 @@ async def boolean_operation_endpoint(
     """
     try:
         return await _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id or None)
-    except HTTPException:
+    except APIError:
         raise
-    except Exception as e:
+    except Exception as exc:
         logger.exception(f"Boolean {operation} failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(exc))
 
 
 _boolean_step_counter = 0
@@ -735,39 +761,53 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
     try:
         bool_op = BooleanOperation(operation)
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid operation: {operation}. Must be 'union', 'difference', or 'intersection'"
+        raise validation_error(
+            f"Invalid operation '{operation}'; must be 'union', 'difference', or 'intersection'"
         )
 
     for f, name in [(mesh_a, "mesh_a"), (mesh_b, "mesh_b")]:
-        if not f.filename or not f.filename.lower().endswith(".stl"):
-            raise HTTPException(status_code=400, detail=f"{name} must be an STL file")
+        if not f or not f.filename:
+            raise missing_body(f"{name} file is required")
+        if not f.filename.lower().endswith(".stl"):
+            raise validation_error(f"{name} must be an STL file")
 
-    job_id = create_job_id()
-    job_dir = create_job(job_id)
-    input_dir = job_dir / "input"
-    mesh_a_path = input_dir / "mesh_a.stl"
-    mesh_b_path = input_dir / "mesh_b.stl"
+    try:
+        mesh_a_content = await mesh_a.read()
+        mesh_b_content = await mesh_b.read()
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded files: {exc}")
 
-    mesh_a_content = await mesh_a.read()
-    mesh_b_content = await mesh_b.read()
-    with open(mesh_a_path, "wb") as f:
-        f.write(mesh_a_content)
-    with open(mesh_b_path, "wb") as f:
-        f.write(mesh_b_content)
+    _validate_stl_bytes(mesh_a_content, "mesh_a")
+    _validate_stl_bytes(mesh_b_content, "mesh_b")
 
-    # Debug: save inputs/output to parent job's debug/ folder
-    debug_dir = None
-    if parent_job_id and job_exists(parent_job_id):
-        debug_dir = get_job_dir(parent_job_id) / "debug"
-        debug_dir.mkdir(exist_ok=True)
-        shutil.copy2(mesh_a_path, debug_dir / f"step{step}_{operation}_inputA.stl")
-        shutil.copy2(mesh_b_path, debug_dir / f"step{step}_{operation}_inputB.stl")
+    try:
+        job_id = create_job_id()
+        job_dir = create_job(job_id)
+        input_dir = job_dir / "input"
+        mesh_a_path = input_dir / "mesh_a.stl"
+        mesh_b_path = input_dir / "mesh_b.stl"
 
-    result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
+        with open(mesh_a_path, "wb") as f:
+            f.write(mesh_a_content)
+        with open(mesh_b_path, "wb") as f:
+            f.write(mesh_b_content)
+
+        # Debug: save inputs/output to parent job's debug/ folder
+        debug_dir = None
+        if parent_job_id and job_exists(parent_job_id):
+            debug_dir = get_job_dir(parent_job_id) / "debug"
+            debug_dir.mkdir(exist_ok=True)
+            shutil.copy2(mesh_a_path, debug_dir / f"step{step}_{operation}_inputA.stl")
+            shutil.copy2(mesh_b_path, debug_dir / f"step{step}_{operation}_inputB.stl")
+
+        result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
+
     if not result.success:
-        raise HTTPException(status_code=500, detail=result.error)
+        raise boolean_failed(result.error)
 
     if debug_dir and result.boolean_mesh_path and result.boolean_mesh_path.exists():
         shutil.copy2(result.boolean_mesh_path, debug_dir / f"step{step}_{operation}_output.stl")
@@ -779,7 +819,7 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
             "jobId": job_id,
             "operation": operation,
             "resultPath": f"/api/jobs/{job_id}/boolean.stl",
-        }
+        },
     )
 
 
@@ -789,15 +829,8 @@ async def get_preview_zip_v2(job_id: str):
     Get a ZIP of downscaled WebP preview images for layer display.
     Pre-generated in background after slicing; generated on-demand if not ready.
     """
-    if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    status_data = read_job_status(job_id)
-    if status_data["status"] != "completed":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job is not completed (status: {status_data['status']})"
-        )
+    status_data = _job_status_or_raise(job_id)
+    _require_completed(status_data, job_id)
 
     job_dir = get_job_dir(job_id)
     sl1_path = job_dir / "output" / "model.sl1"
@@ -805,28 +838,21 @@ async def get_preview_zip_v2(job_id: str):
     preview_path = job_dir / "output" / "preview.zip"
 
     if not sl1_path.exists():
-        raise HTTPException(status_code=404, detail=".sl1 archive not found")
+        raise file_not_found(".sl1 archive not found")
 
     # Prefer PrusaSlicer-generated preview ZIP (much faster)
     if prusa_preview_path.exists():
-        return FileResponse(
-            prusa_preview_path,
-            media_type="application/zip",
-            filename="preview.zip",
-        )
+        return FileResponse(prusa_preview_path, media_type="application/zip", filename="preview.zip")
 
     # Fallback: Python-generated preview
     import asyncio
     from .preview_service import generate_preview_zip
-    await asyncio.get_event_loop().run_in_executor(
-        None, generate_preview_zip, sl1_path, preview_path
-    )
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, generate_preview_zip, sl1_path, preview_path)
+    except Exception as exc:
+        raise internal_error(f"Failed to generate preview: {exc}")
 
-    return FileResponse(
-        preview_path,
-        media_type="application/zip",
-        filename="preview.zip",
-    )
+    return FileResponse(preview_path, media_type="application/zip", filename="preview.zip")
 
 
 @router.get("/slices/{job_id}/layers.zip")
@@ -835,27 +861,14 @@ async def get_layers_zip_v2(job_id: str):
     Get layer PNGs as a ZIP. Serves the .sl1 directly (it IS a ZIP of PNGs).
     Zero processing time — no resize/re-encode needed.
     """
-    if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+    status_data = _job_status_or_raise(job_id)
+    _require_completed(status_data, job_id)
 
-    status_data = read_job_status(job_id)
-    if status_data["status"] != "completed":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job is not completed (status: {status_data['status']})"
-        )
-
-    job_dir = get_job_dir(job_id)
-    sl1_path = job_dir / "output" / "model.sl1"
-
+    sl1_path = get_job_dir(job_id) / "output" / "model.sl1"
     if not sl1_path.exists():
-        raise HTTPException(status_code=404, detail=".sl1 archive not found")
+        raise file_not_found(".sl1 archive not found")
 
-    return FileResponse(
-        sl1_path,
-        media_type="application/zip",
-        filename="layers.zip",
-    )
+    return FileResponse(sl1_path, media_type="application/zip", filename="layers.zip")
 
 
 @router.post("/slices/{job_id}/download.prz")
@@ -864,23 +877,17 @@ async def download_prz_v2(job_id: str, request: Request):
     Generate and stream a PRZ file from the .sl1 layers + posted config.
     The POST body is the Mechado config JSON (same structure as default profile).
     """
-    if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+    status_data = _job_status_or_raise(job_id)
+    _require_completed(status_data, job_id)
 
-    status_data = read_job_status(job_id)
-    if status_data["status"] != "completed":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job is not completed (status: {status_data['status']})"
-        )
-
-    job_dir = get_job_dir(job_id)
-    sl1_path = job_dir / "output" / "model.sl1"
-
+    sl1_path = get_job_dir(job_id) / "output" / "model.sl1"
     if not sl1_path.exists():
-        raise HTTPException(status_code=404, detail=".sl1 archive not found")
+        raise file_not_found(".sl1 archive not found")
 
-    config = await request.json()
+    try:
+        config = await request.json()
+    except Exception:
+        raise validation_error("Request body must be valid JSON")
 
     from .prz_encoder import encode_prz_streaming
 
@@ -904,19 +911,33 @@ async def get_slice_job_status(job_id: str):
     # Check disk status first (for jobs that have been executed/generated)
     if job_exists(job_id):
         status_data = read_job_status(job_id)
-        # If job is on disk and not pending, return disk status
         if status_data["status"] != "pending":
+            if status_data["status"] == JobStatus.FAILED.value:
+                # Return 200 with structured failure info so polling clients can
+                # distinguish "still running" (success:true) from "failed" (success:false)
+                # without interpreting a 409 as a client-side error.
+                err = _error_from_status(status_data)
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": False,
+                        "code": err.code,
+                        "message": err.message,
+                        "data": {"retryable": err.retryable, "traceId": err.trace_id},
+                    },
+                )
             response_data = {
-                    "jobId": job_id,
-                    "status": status_data["status"],
-                    "layerCount": status_data.get("layer_count"),
-                    "estimatedPrintTime": status_data.get("estimated_print_time"),
-                    "resinVolumeMl": status_data.get("resin_volume_ml"),
-                    "error": status_data.get("error"),
-                    "hasSupportMesh": status_data.get("has_support_mesh", False),
-                    "hasHollowMesh": status_data.get("has_hollow_mesh", False),
-                    "hasCutMesh": status_data.get("has_cut_mesh", False),
-                    "hasOrthoResult": status_data.get("has_ortho_result", False),
+                "jobId": job_id,
+                "status": status_data["status"],
+                "layerCount": status_data.get("layer_count"),
+                "estimatedPrintTime": status_data.get("estimated_print_time"),
+                "resinVolumeMl": status_data.get("resin_volume_ml"),
+                "error": status_data.get("error"),
+                "hasSupportMesh": status_data.get("has_support_mesh", False),
+                "hasHollowMesh": status_data.get("has_hollow_mesh", False),
+                "hasCutMesh": status_data.get("has_cut_mesh", False),
+                "hasOrthoResult": status_data.get("has_ortho_result", False),
             }
             if "ortho_progress" in status_data:
                 response_data["orthoProgress"] = status_data["ortho_progress"]
@@ -931,11 +952,10 @@ async def get_slice_job_status(job_id: str):
                 "status": _pending_jobs[job_id]["status"],
                 "config": _pending_jobs[job_id]["config"],
                 "modelCount": len(_pending_jobs[job_id]["models"]),
-            }
+            },
         )
 
-    # Job not found anywhere
-    raise HTTPException(status_code=404, detail="Job not found")
+    raise job_not_found(job_id)
 
 
 @router.get("/slices/{job_id}/uchars", response_model=V2Response)
@@ -946,15 +966,8 @@ async def get_slice_uchars(job_id: str):
     Note: This returns layer count and paths. Actual pixel data would need
     to be fetched separately due to size.
     """
-    if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    status_data = read_job_status(job_id)
-    if status_data["status"] != JobStatus.COMPLETED.value:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job not completed (status: {status_data['status']})"
-        )
+    status_data = _job_status_or_raise(job_id)
+    _require_completed(status_data, job_id)
 
     layer_count = status_data.get("layer_count", 0)
 
@@ -964,9 +977,9 @@ async def get_slice_uchars(job_id: str):
         data={
             "uchars": {
                 "layerCount": layer_count,
-                "layerEndpoint": f"/api/v2/slices/{job_id}/layers/{{idx}}.png"
+                "layerEndpoint": f"/api/v2/slices/{job_id}/layers/{{idx}}.png",
             }
-        }
+        },
     )
 
 
@@ -978,15 +991,8 @@ async def get_slice_gcode(job_id: str):
     Note: PrusaSlicer SLA output is .sl1 (images), not G-code.
     This endpoint returns metadata about the slicing result.
     """
-    if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    status_data = read_job_status(job_id)
-    if status_data["status"] != JobStatus.COMPLETED.value:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job not completed (status: {status_data['status']})"
-        )
+    status_data = _job_status_or_raise(job_id)
+    _require_completed(status_data, job_id)
 
     # SLA doesn't produce G-code in the traditional sense
     # Return slicing metadata instead
@@ -1014,53 +1020,38 @@ async def ortho_process(job_id: str, request: V2OrthoProcessRequest, background_
     The final result can be downloaded via GET /api/jobs/{job_id}/ortho_result.stl
     Poll GET /api/v2/slices/{job_id} for progress updates in orthoProgress field.
     """
-    if job_id not in _pending_jobs:
-        raise HTTPException(status_code=404, detail="Job not found or already executed")
-
-    pending = _pending_jobs[job_id]
+    pending = _require_pending(job_id)
 
     if not pending["models"]:
-        raise HTTPException(status_code=400, detail="No models added to job")
+        raise model_not_found("No models have been added to this job")
 
-    # Create job directory structure
-    job_dir = create_job(job_id)
+    try:
+        job_dir = create_job(job_id)
+        input_path = job_dir / "input" / "model.stl"
+        _save_model_to_job(pending["models"][0], input_path)
+        del _pending_jobs[job_id]
 
-    # Save model data
-    model_data = pending["models"][0]
-    input_path = job_dir / "input" / "model.stl"
+        from .ortho_pipeline import run_ortho_pipeline
 
-    if "stl_data" in model_data:
-        with open(input_path, "wb") as f:
-            f.write(model_data["stl_data"])
-    else:
-        raise HTTPException(status_code=400, detail="Model must contain stl_data (use file upload)")
-
-    # Remove from pending
-    del _pending_jobs[job_id]
-
-    # Start ortho pipeline in background
-    from .ortho_pipeline import run_ortho_pipeline
-
-    background_tasks.add_task(
-        run_ortho_pipeline,
-        job_id,
-        hollowing_min_thickness=request.hollowing_min_thickness,
-        hollowing_quality=request.hollowing_quality,
-        hollowing_closing_distance=request.hollowing_closing_distance,
-        bottom_z_threshold=request.bottom_z_threshold,
-        extension_distance=request.extension_distance,
-        hex_cell_radius=request.hex_cell_radius,
-        hex_wall_thickness=request.hex_wall_thickness,
-        hex_grid_count=request.hex_grid_count,
-        hex_pyramid_height=request.hex_pyramid_height,
-        drain_hole_radius=request.drain_hole_radius,
-    )
-
-    return V2Response(
-        success=True,
-        message="Ortho processing pipeline started",
-        data={"jobId": job_id}
-    )
+        background_tasks.add_task(
+            run_ortho_pipeline,
+            job_id,
+            hollowing_min_thickness=request.hollowing_min_thickness,
+            hollowing_quality=request.hollowing_quality,
+            hollowing_closing_distance=request.hollowing_closing_distance,
+            bottom_z_threshold=request.bottom_z_threshold,
+            extension_distance=request.extension_distance,
+            hex_cell_radius=request.hex_cell_radius,
+            hex_wall_thickness=request.hex_wall_thickness,
+            hex_grid_count=request.hex_grid_count,
+            hex_pyramid_height=request.hex_pyramid_height,
+            drain_hole_radius=request.drain_hole_radius,
+        )
+        return V2Response(success=True, message="Ortho processing pipeline started", data={"jobId": job_id})
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
 
 
 # ============================================================================
