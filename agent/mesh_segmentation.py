@@ -134,19 +134,57 @@ def _assign_faces_to_cells(
     return result
 
 
+def _split_into_connected_components(
+    face_indices: np.ndarray,
+    face_adjacency_map: dict[int, set[int]],
+) -> list[np.ndarray]:
+    """
+    Split a set of face indices into connected components on the mesh.
+
+    Uses BFS over mesh face adjacency to ensure each returned group
+    is topologically connected.
+    """
+    face_set = set(face_indices)
+    remaining = face_set.copy()
+    components = []
+
+    while remaining:
+        start = next(iter(remaining))
+        component = set()
+        queue = [start]
+        component.add(start)
+
+        while queue:
+            f = queue.pop()
+            for neighbor in face_adjacency_map.get(f, set()):
+                if neighbor in remaining and neighbor not in component:
+                    component.add(neighbor)
+                    queue.append(neighbor)
+
+        remaining -= component
+        components.append(np.array(sorted(component)))
+
+    return components
+
+
 def compute_over_segmentation(
     mesh: trimesh.Trimesh,
     target_superfacet_count: int = 300,
 ) -> list[np.ndarray]:
     """
-    Partition mesh faces into superfacets via adaptive BSP.
+    Partition mesh faces into connected superfacets via adaptive BSP.
+
+    After spatial BSP partitioning, each cell is further split into
+    connected components on the mesh surface to ensure every superfacet
+    is topologically connected (critical for correct feature computation
+    and region fusion).
 
     Args:
         mesh: Input mesh.
         target_superfacet_count: Approximate number of superfacets.
 
     Returns:
-        List of face index arrays (one per superfacet).
+        List of face index arrays (one per connected superfacet).
     """
     n_faces = len(mesh.faces)
     max_faces_per_cell = max(3, n_faces // target_superfacet_count)
@@ -167,7 +205,24 @@ def compute_over_segmentation(
     # Filter out empty cells
     cells = [c for c in cells if len(c) > 0]
 
-    return cells
+    # Build face adjacency map for connectivity check
+    face_adj_map: dict[int, set[int]] = {}
+    for f0, f1 in mesh.face_adjacency:
+        face_adj_map.setdefault(f0, set()).add(f1)
+        face_adj_map.setdefault(f1, set()).add(f0)
+
+    # Split disconnected cells into connected components
+    connected_cells = []
+    for cell in cells:
+        if len(cell) <= 1:
+            connected_cells.append(cell)
+            continue
+        components = _split_into_connected_components(cell, face_adj_map)
+        connected_cells.extend(components)
+
+    logger.debug(f"  BSP cells: {len(cells)} → {len(connected_cells)} after connectivity split")
+
+    return connected_cells
 
 
 # ============================================================================
