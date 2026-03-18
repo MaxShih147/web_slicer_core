@@ -84,7 +84,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 import traceback as _tb
 
-from .errors import APIError, internal_error, missing_body, validation_error
+from .errors import APIError, file_not_found, internal_error, job_not_found, job_still_processing, job_failed, missing_body, validation_error
 
 
 def _cors_headers(request: Request) -> dict:
@@ -1002,11 +1002,18 @@ async def get_ortho_result(job_id: str):
     Get the consolidated ortho processing result as STL file.
     """
     if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise job_not_found(job_id)
+
+    status_data = read_job_status(job_id)
+    status = status_data.get("status")
+    if status == JobStatus.FAILED.value:
+        raise job_failed(status_data.get("error"))
+    if status != JobStatus.COMPLETED.value:
+        raise job_still_processing()
 
     ortho_path = get_job_dir(job_id) / "output" / "ortho_result.stl"
     if not ortho_path.exists():
-        raise HTTPException(status_code=404, detail="Ortho result not available")
+        raise file_not_found("Ortho result file not found")
 
     return FileResponse(
         ortho_path,

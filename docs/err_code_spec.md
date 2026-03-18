@@ -23,7 +23,7 @@
 | `MISSING_BODY` | 400 | false | 必要欄位或檔案缺失 |
 | `JOB_NOT_FOUND` | 404 | false | 指定的 job_id 不存在 |
 | `JOB_ALREADY_EXECUTED` | 409 | false | Job 已執行，不再接受修改 |
-| `JOB_STILL_PROCESSING` | 409 | true | Job 尚未完成，無法下載結果 |
+| `JOB_STILL_PROCESSING` | 200 | true | Job 尚未完成，無法下載結果 |
 | `JOB_FAILED` | 409 | false | Job 執行失敗，無法下載結果 |
 | `MODEL_NOT_FOUND` | 404 | false | Job 上沒有模型，或指定的 source 檔案不存在 |
 | `INVALID_MODEL` | 422 | false | STL 內容損壞、格式無效、或幾何載入失敗 |

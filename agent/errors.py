@@ -62,7 +62,7 @@ def job_still_processing() -> APIError:
     return APIError(
         "JOB_STILL_PROCESSING",
         "Job is still processing; result not yet available",
-        409,
+        200,
         retryable=True,
     )
 
