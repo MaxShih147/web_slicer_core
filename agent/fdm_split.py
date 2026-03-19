@@ -701,7 +701,7 @@ def run_fdm_auto_split(
     seg_planes = generate_cut_planes_from_segmentation(
         mesh,
         target_superfacets=max(100, len(mesh.faces) // 500),
-        tau=0.20,
+        m=200.0,
         min_boundary_edges=5,
     )
     logger.info(f"  Segmentation candidates: {len(seg_planes)} planes "

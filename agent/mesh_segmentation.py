@@ -1,16 +1,21 @@
 """
 Mesh Segmentation via Feature-Aware Region Fusion
 
-Based on: Wu et al. 2023 — "Robust Mesh Segmentation Using Feature-Aware Region Fusion"
+Faithful implementation of:
+  Wu et al. 2023 — "Robust Mesh Segmentation Using Feature-Aware Region Fusion"
+  Sensors 2023, 23, 416. https://doi.org/10.3390/s23010416
 
 Two-stage algorithm:
-  Stage 1: Adaptive BSP over-segmentation → superfacets
+  Stage 1: Adaptive space partition (PCA-based BSP) → connected superfacets
   Stage 2: Feature-aware iterative region fusion
-
-Shape features used:
-  - Face normal
-  - Gaussian curvature (discrete, per-vertex → averaged per superfacet)
-  - SDF (shape diameter function, local thickness)
+    - Feature vector T(Fi) = [normal, curvature, SDF] (normalized, concatenated)
+    - d(Fi, Fj) = ||T(Fi) - T(Fj)||_2  (Eq. 1)
+    - D(R) = Average{d(Fi, Fj)} for adjacent Fi, Fj in R  (Eq. 2)
+    - Dis(R1, R2) = Average{d(Fi, Fj)} for boundary pairs  (Eq. 3)
+    - Fusion condition: Dis(R1,R2) <= Min{D(R1)+t(R1), D(R2)+t(R2)}  (Eq. 4)
+    - Threshold: t(R) = m / (1 + e^|R|)  (Eq. 5)
+    - Fusion order: sort all inter-region diffs ascending, fuse in order
+  Post-processing: small region merging
 
 Output: list of segments, each containing face indices.
 For FDM splitting: segment boundaries → PCA-fitted candidate cut planes.
@@ -19,8 +24,9 @@ For FDM splitting: segment boundaries → PCA-fitted candidate cut planes.
 from __future__ import annotations
 
 import logging
+import math
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 import trimesh
@@ -36,9 +42,7 @@ logger = logging.getLogger(__name__)
 class Superfacet:
     """A group of contiguous mesh faces from BSP partitioning."""
     face_indices: np.ndarray  # indices into mesh.faces
-    normal: np.ndarray  # average face normal (3,)
-    curvature: float  # average Gaussian curvature
-    sdf: float  # average local thickness
+    feature_vector: np.ndarray  # normalized, concatenated features T(Fi)
     centroid: np.ndarray  # geometric centroid (3,)
     area: float  # total surface area
 
@@ -48,7 +52,6 @@ class Segment:
     """A merged region of superfacets."""
     superfacet_ids: list[int]
     face_indices: np.ndarray  # all face indices in this segment
-    neighbors: set[int]  # neighboring segment IDs
 
 
 @dataclass
@@ -71,32 +74,79 @@ class CandidateCutPlane:
 
 
 # ============================================================================
-# Stage 1: Adaptive BSP Over-segmentation
+# Stage 1: Adaptive Space Partition (PCA-based BSP)
 # ============================================================================
 
-def _assign_faces_to_cells(
+def _pca_bsp_partition(
+    vertices: np.ndarray,
+    face_indices: np.ndarray,
+    faces: np.ndarray,
     face_centroids: np.ndarray,
-    bmin: np.ndarray,
-    bmax: np.ndarray,
-    max_faces_per_cell: int,
+    q_max: int,
+    sigma_max: float,
     depth: int = 0,
-    max_depth: int = 12,
+    max_depth: int = 14,
 ) -> list[np.ndarray]:
     """
-    Recursively partition faces via BSP along longest axis.
+    Recursively partition faces via PCA-based BSP (Section 3.1 of Wu et al.).
 
-    Returns list of face index arrays (one per leaf cell).
+    The partition plane passes through the centroid of vertices in the current
+    subspace, oriented along the eigenvector of greatest variation (largest
+    eigenvalue). Recursion stops when:
+      - face count <= q_max, AND
+      - surface variation σ = λ0/(λ0+λ1+λ2) <= sigma_max
+      - or max depth reached
+
+    Args:
+        vertices: Full mesh vertex array (n_verts, 3).
+        face_indices: Indices into the global face array for this partition.
+        faces: Full mesh face array (n_faces, 3).
+        face_centroids: Centroids of all faces (n_faces, 3).
+        q_max: Max faces per superfacet.
+        sigma_max: Max surface variation per superfacet.
     """
-    n = len(face_centroids)
-    if n <= max_faces_per_cell or depth >= max_depth:
-        return [np.arange(n)]
+    n = len(face_indices)
+    if n <= 1 or depth >= max_depth:
+        return [face_indices]
 
-    # Split along longest axis
-    extents = bmax - bmin
-    axis = int(np.argmax(extents))
-    mid = (bmin[axis] + bmax[axis]) / 2.0
+    # Collect unique vertices in this partition
+    local_faces = faces[face_indices]
+    unique_vert_ids = np.unique(local_faces.ravel())
+    pts = vertices[unique_vert_ids]
 
-    left_mask = face_centroids[:, axis] <= mid
+    if len(pts) < 4:
+        return [face_indices]
+
+    # Compute covariance matrix of vertex positions (Eq. in Section 3.1)
+    centroid = pts.mean(axis=0)
+    centered = pts - centroid
+    cov = centered.T @ centered / len(pts)
+
+    eigenvalues, eigenvectors = np.linalg.eigh(cov)
+    # eigenvalues sorted ascending: λ0 <= λ1 <= λ2
+
+    # Surface variation σ = λ0 / (λ0 + λ1 + λ2)
+    total_lambda = eigenvalues.sum()
+    if total_lambda > 1e-12:
+        sigma = eigenvalues[0] / total_lambda
+    else:
+        sigma = 0.0
+
+    # Stop if both conditions met: small enough AND flat enough
+    if n <= q_max and sigma <= sigma_max:
+        return [face_indices]
+
+    # Partition plane: through centroid, normal = v0 (eigenvector of smallest eigenvalue)
+    # Split along direction of GREATEST variation = v2 (largest eigenvalue)
+    split_dir = eigenvectors[:, 2]  # direction of greatest variation
+
+    # Project face centroids onto split direction
+    local_centroids = face_centroids[face_indices]
+    projections = (local_centroids - centroid) @ split_dir
+
+    # Split at median projection (balanced split)
+    median_proj = np.median(projections)
+    left_mask = projections <= median_proj
     right_mask = ~left_mask
 
     left_count = np.sum(left_mask)
@@ -104,47 +154,30 @@ def _assign_faces_to_cells(
 
     # Avoid degenerate splits
     if left_count < 2 or right_count < 2:
-        return [np.arange(n)]
+        return [face_indices]
 
-    left_indices = np.where(left_mask)[0]
-    right_indices = np.where(right_mask)[0]
+    left_indices = face_indices[left_mask]
+    right_indices = face_indices[right_mask]
 
     # Recurse on each half
-    left_bmax = bmax.copy()
-    left_bmax[axis] = mid
-    right_bmin = bmin.copy()
-    right_bmin[axis] = mid
-
-    left_cells = _assign_faces_to_cells(
-        face_centroids[left_indices], bmin, left_bmax,
-        max_faces_per_cell, depth + 1, max_depth,
+    left_cells = _pca_bsp_partition(
+        vertices, left_indices, faces, face_centroids,
+        q_max, sigma_max, depth + 1, max_depth,
     )
-    right_cells = _assign_faces_to_cells(
-        face_centroids[right_indices], right_bmin, bmax,
-        max_faces_per_cell, depth + 1, max_depth,
+    right_cells = _pca_bsp_partition(
+        vertices, right_indices, faces, face_centroids,
+        q_max, sigma_max, depth + 1, max_depth,
     )
 
-    # Map local indices back to parent indices
-    result = []
-    for cell in left_cells:
-        result.append(left_indices[cell])
-    for cell in right_cells:
-        result.append(right_indices[cell])
-
-    return result
+    return left_cells + right_cells
 
 
 def _split_into_connected_components(
     face_indices: np.ndarray,
     face_adjacency_map: dict[int, set[int]],
 ) -> list[np.ndarray]:
-    """
-    Split a set of face indices into connected components on the mesh.
-
-    Uses BFS over mesh face adjacency to ensure each returned group
-    is topologically connected.
-    """
-    face_set = set(face_indices)
+    """Split a set of face indices into connected components via BFS."""
+    face_set = set(face_indices.tolist())
     remaining = face_set.copy()
     components = []
 
@@ -156,7 +189,7 @@ def _split_into_connected_components(
 
         while queue:
             f = queue.pop()
-            for neighbor in face_adjacency_map.get(f, set()):
+            for neighbor in face_adjacency_map.get(f, ()):
                 if neighbor in remaining and neighbor not in component:
                     component.add(neighbor)
                     queue.append(neighbor)
@@ -170,39 +203,33 @@ def _split_into_connected_components(
 def compute_over_segmentation(
     mesh: trimesh.Trimesh,
     target_superfacet_count: int = 300,
+    sigma_max: float = 0.05,
 ) -> list[np.ndarray]:
     """
-    Partition mesh faces into connected superfacets via adaptive BSP.
+    PCA-based adaptive space partition (Section 3.1).
 
-    After spatial BSP partitioning, each cell is further split into
-    connected components on the mesh surface to ensure every superfacet
-    is topologically connected (critical for correct feature computation
-    and region fusion).
+    Each cell is further split into connected components to ensure
+    topological connectivity (paper assumes contiguous superfacets).
 
     Args:
         mesh: Input mesh.
         target_superfacet_count: Approximate number of superfacets.
+        sigma_max: Surface variation threshold for stopping recursion.
 
     Returns:
         List of face index arrays (one per connected superfacet).
     """
     n_faces = len(mesh.faces)
-    max_faces_per_cell = max(3, n_faces // target_superfacet_count)
+    q_max = max(3, n_faces // target_superfacet_count)
 
-    face_centroids = mesh.triangles_center
+    all_face_indices = np.arange(n_faces)
 
-    bmin = face_centroids.min(axis=0)
-    bmax = face_centroids.max(axis=0)
-    # Small padding to avoid boundary issues
-    pad = (bmax - bmin) * 0.001 + 1e-6
-    bmin -= pad
-    bmax += pad
-
-    cells = _assign_faces_to_cells(
-        face_centroids, bmin, bmax, max_faces_per_cell,
+    cells = _pca_bsp_partition(
+        mesh.vertices, all_face_indices, mesh.faces, mesh.triangles_center,
+        q_max, sigma_max,
     )
 
-    # Filter out empty cells
+    # Filter empty cells
     cells = [c for c in cells if len(c) > 0]
 
     # Build face adjacency map for connectivity check
@@ -211,7 +238,7 @@ def compute_over_segmentation(
         face_adj_map.setdefault(f0, set()).add(f1)
         face_adj_map.setdefault(f1, set()).add(f0)
 
-    # Split disconnected cells into connected components
+    # Ensure each superfacet is topologically connected
     connected_cells = []
     for cell in cells:
         if len(cell) <= 1:
@@ -220,65 +247,70 @@ def compute_over_segmentation(
         components = _split_into_connected_components(cell, face_adj_map)
         connected_cells.extend(components)
 
-    logger.debug(f"  BSP cells: {len(cells)} → {len(connected_cells)} after connectivity split")
+    logger.debug(f"  PCA-BSP: {len(cells)} cells → "
+                 f"{len(connected_cells)} connected superfacets")
 
     return connected_cells
 
 
 # ============================================================================
-# Feature Computation
+# Feature Computation (Section 3.2.1)
 # ============================================================================
 
-def _compute_face_sdf(
-    mesh: trimesh.Trimesh,
-    n_samples: int = 2000,
-) -> np.ndarray:
+def _compute_face_sdf(mesh: trimesh.Trimesh, n_samples: int = 2000) -> np.ndarray:
     """
-    Compute per-face SDF (local thickness) via ray casting.
+    Compute per-face SDF (shape diameter function) via ray casting.
 
-    Shoots rays inward from face centroids along -normal direction,
-    returns distance to opposite surface.
+    Samples n_samples faces, shoots rays inward (vectorized),
+    then interpolates to all faces via nearest-neighbor.
     """
     n_faces = len(mesh.faces)
     face_normals = mesh.face_normals
     face_centroids = mesh.triangles_center
 
-    # Subsample for speed
+    rng = np.random.RandomState(42)
+
+    # Sample faces
     if n_faces > n_samples:
-        rng = np.random.RandomState(42)
         sample_idx = rng.choice(n_faces, n_samples, replace=False)
     else:
         sample_idx = np.arange(n_faces)
 
-    origins = face_centroids[sample_idx]
-    # Offset slightly inward to avoid self-intersection
-    directions = -face_normals[sample_idx]
-    origins = origins + directions * 0.01
+    n_s = len(sample_idx)
 
-    # Ray cast
+    # Build rays vectorized: 1 ray per sample (inward along -normal)
+    normals = face_normals[sample_idx]
+    centers = face_centroids[sample_idx]
+    all_dirs = -normals
+    all_origins = centers + all_dirs * 0.01
+    ray_to_sample = np.arange(n_s)
+
+    # Single ray cast
     locations, index_ray, _ = mesh.ray.intersects_location(
-        ray_origins=origins,
-        ray_directions=directions,
+        ray_origins=all_origins,
+        ray_directions=all_dirs,
     )
 
-    # Compute distances for hits
-    sdf_sampled = np.full(len(sample_idx), np.nan)
-    if len(locations) > 0:
-        hit_distances = np.linalg.norm(locations - origins[index_ray], axis=1)
-        # For each ray, take the first hit (closest)
-        for i in range(len(sample_idx)):
-            hits = hit_distances[index_ray == i]
-            if len(hits) > 0:
-                sdf_sampled[i] = hits.min()
+    sdf_sampled = np.full(n_s, np.nan)
 
-    # Fill NaN with median
+    if len(locations) > 0:
+        hit_distances = np.linalg.norm(locations - all_origins[index_ray], axis=1)
+        hit_samples = ray_to_sample[index_ray]
+
+        # For each sample, take median of all hit distances
+        for i in range(n_s):
+            mask = hit_samples == i
+            if mask.any():
+                sdf_sampled[i] = np.median(hit_distances[mask])
+
+    # Fill NaN with global median
     nan_mask = np.isnan(sdf_sampled)
     if nan_mask.any() and not nan_mask.all():
         sdf_sampled[nan_mask] = np.nanmedian(sdf_sampled)
     elif nan_mask.all():
         sdf_sampled[:] = 1.0
 
-    # Expand back to all faces (nearest sample)
+    # Interpolate to all faces via nearest-neighbor
     if n_faces > n_samples:
         from scipy.spatial import cKDTree
         tree = cKDTree(face_centroids[sample_idx])
@@ -292,50 +324,34 @@ def _compute_face_sdf(
 
 def _compute_vertex_curvature(mesh: trimesh.Trimesh) -> np.ndarray:
     """
-    Compute discrete Gaussian curvature per vertex.
-
-    Uses the angle defect method: K(v) = 2π - Σ(angles at v).
+    Compute discrete Gaussian curvature per vertex via angle defect.
+    K(v) = 2π - Σ(angles at v)
     """
     n_verts = len(mesh.vertices)
     angle_sum = np.zeros(n_verts)
 
-    # Compute angles at each vertex of each face
     v0 = mesh.vertices[mesh.faces[:, 0]]
     v1 = mesh.vertices[mesh.faces[:, 1]]
     v2 = mesh.vertices[mesh.faces[:, 2]]
 
-    # Angles at vertex 0
-    e01 = v1 - v0
-    e02 = v2 - v0
-    cos0 = np.einsum('ij,ij->i', e01, e02) / (
-        np.linalg.norm(e01, axis=1) * np.linalg.norm(e02, axis=1) + 1e-10)
-    cos0 = np.clip(cos0, -1, 1)
-    angles0 = np.arccos(cos0)
+    for va, vb, vc, col in [(v0, v1, v2, 0), (v1, v0, v2, 1), (v2, v0, v1, 2)]:
+        e1 = vb - va
+        e2 = vc - va
+        cos_a = np.einsum('ij,ij->i', e1, e2) / (
+            np.linalg.norm(e1, axis=1) * np.linalg.norm(e2, axis=1) + 1e-10)
+        cos_a = np.clip(cos_a, -1, 1)
+        np.add.at(angle_sum, mesh.faces[:, col], np.arccos(cos_a))
 
-    # Angles at vertex 1
-    e10 = v0 - v1
-    e12 = v2 - v1
-    cos1 = np.einsum('ij,ij->i', e10, e12) / (
-        np.linalg.norm(e10, axis=1) * np.linalg.norm(e12, axis=1) + 1e-10)
-    cos1 = np.clip(cos1, -1, 1)
-    angles1 = np.arccos(cos1)
+    return 2.0 * np.pi - angle_sum
 
-    # Angles at vertex 2
-    e20 = v0 - v2
-    e21 = v1 - v2
-    cos2 = np.einsum('ij,ij->i', e20, e21) / (
-        np.linalg.norm(e20, axis=1) * np.linalg.norm(e21, axis=1) + 1e-10)
-    cos2 = np.clip(cos2, -1, 1)
-    angles2 = np.arccos(cos2)
 
-    np.add.at(angle_sum, mesh.faces[:, 0], angles0)
-    np.add.at(angle_sum, mesh.faces[:, 1], angles1)
-    np.add.at(angle_sum, mesh.faces[:, 2], angles2)
-
-    # Gaussian curvature = 2π - angle sum (for interior vertices)
-    curvature = 2.0 * np.pi - angle_sum
-
-    return curvature
+def _normalize_feature(values: np.ndarray) -> np.ndarray:
+    """Normalize feature to [0, 1] range."""
+    vmin, vmax = values.min(), values.max()
+    span = vmax - vmin
+    if span < 1e-12:
+        return np.zeros_like(values)
+    return (values - vmin) / span
 
 
 def build_superfacets(
@@ -345,42 +361,57 @@ def build_superfacets(
     vertex_curvature: np.ndarray,
 ) -> list[Superfacet]:
     """
-    Build Superfacet objects with computed features.
+    Build Superfacet objects with feature vectors T(Fi) (Section 3.2.1).
+
+    Feature vector = concatenation of normalized [normal(3), curvature(1), SDF(1)].
     """
     face_normals = mesh.face_normals
     face_centroids = mesh.triangles_center
     face_areas = mesh.area_faces
 
+    # Pre-normalize features globally
+    all_curvatures = np.zeros(len(cell_indices))
+    all_sdfs = np.zeros(len(cell_indices))
+    for i, cell in enumerate(cell_indices):
+        if len(cell) == 0:
+            continue
+        face_verts = mesh.faces[cell].ravel()
+        all_curvatures[i] = float(np.mean(vertex_curvature[face_verts]))
+        all_sdfs[i] = float(np.mean(face_sdf[cell]))
+
+    norm_curvatures = _normalize_feature(all_curvatures)
+    norm_sdfs = _normalize_feature(all_sdfs)
+
     superfacets = []
-    for cell in cell_indices:
+    for i, cell in enumerate(cell_indices):
         if len(cell) == 0:
             continue
 
-        # Average normal
-        normals = face_normals[cell]
-        avg_normal = normals.mean(axis=0)
+        # Average normal (already unit-ish, normalize to ensure)
+        avg_normal = face_normals[cell].mean(axis=0)
         norm = np.linalg.norm(avg_normal)
         if norm > 1e-10:
             avg_normal /= norm
         else:
-            avg_normal = np.array([0, 0, 1.0])
+            avg_normal = np.array([0.0, 0.0, 1.0])
 
-        # Average curvature (from vertices of faces in this cell)
-        face_verts = mesh.faces[cell].ravel()
-        avg_curvature = float(np.mean(vertex_curvature[face_verts]))
+        # Normal is already in [-1, 1] range. Map to [0, 1] for consistent scale.
+        norm_normal = (avg_normal + 1.0) / 2.0  # [0, 1]^3
 
-        # Average SDF
-        avg_sdf = float(np.mean(face_sdf[cell]))
+        # Concatenate into feature vector T(Fi)
+        # Paper: "concatenate them to form a feature vector T(Fi)"
+        feature_vector = np.concatenate([
+            norm_normal,               # 3 dims
+            [norm_curvatures[i]],      # 1 dim
+            [norm_sdfs[i]],            # 1 dim
+        ])
 
-        # Centroid and area
         centroid = face_centroids[cell].mean(axis=0)
         area = float(face_areas[cell].sum())
 
         superfacets.append(Superfacet(
             face_indices=cell,
-            normal=avg_normal,
-            curvature=avg_curvature,
-            sdf=avg_sdf,
+            feature_vector=feature_vector,
             centroid=centroid,
             area=area,
         ))
@@ -396,25 +427,15 @@ def build_superfacet_adjacency(
     mesh: trimesh.Trimesh,
     cell_indices: list[np.ndarray],
 ) -> dict[int, set[int]]:
-    """
-    Build adjacency between superfacets using shared edges.
-
-    Two superfacets are adjacent if they share at least one mesh edge
-    (i.e., they have faces that share an edge).
-    """
+    """Build adjacency between superfacets using shared mesh edges."""
     n_faces = len(mesh.faces)
-
-    # Map each face → superfacet id
     face_to_sf = np.full(n_faces, -1, dtype=np.int32)
     for sf_id, cell in enumerate(cell_indices):
         face_to_sf[cell] = sf_id
 
-    # Use mesh face adjacency (trimesh provides this)
     adjacency: dict[int, set[int]] = {i: set() for i in range(len(cell_indices))}
 
-    # trimesh.graph.face_adjacency gives pairs of adjacent faces
-    face_adj = mesh.face_adjacency
-    for f0, f1 in face_adj:
+    for f0, f1 in mesh.face_adjacency:
         sf0 = face_to_sf[f0]
         sf1 = face_to_sf[f1]
         if sf0 != sf1 and sf0 >= 0 and sf1 >= 0:
@@ -425,228 +446,276 @@ def build_superfacet_adjacency(
 
 
 # ============================================================================
-# Stage 2: Feature-Aware Region Fusion
+# Stage 2: Feature-Aware Region Fusion (Section 3.2.2)
 # ============================================================================
 
-def _feature_distance(sf1: Superfacet, sf2: Superfacet, feature_ranges: dict) -> float:
+def _feature_distance(sf1: Superfacet, sf2: Superfacet) -> float:
     """
-    Compute weighted feature distance between two superfacets.
-
-    Features are normalized by their global range, then weighted and summed.
+    d(Fi, Fj) = ||T(Fi) - T(Fj)||_2  (Eq. 1)
     """
-    # Normal difference: angle between normals (0 to π, normalized to 0..1)
-    cos_angle = np.clip(np.dot(sf1.normal, sf2.normal), -1, 1)
-    normal_diff = np.arccos(cos_angle) / np.pi
-
-    # Curvature difference (normalized)
-    curv_range = feature_ranges.get('curvature', 1.0)
-    curv_diff = abs(sf1.curvature - sf2.curvature) / max(curv_range, 1e-10)
-
-    # SDF difference (normalized)
-    sdf_range = feature_ranges.get('sdf', 1.0)
-    sdf_diff = abs(sf1.sdf - sf2.sdf) / max(sdf_range, 1e-10)
-
-    # Weighted combination
-    # Normal gets highest weight (most reliable for segmentation)
-    w_normal = 0.50
-    w_curvature = 0.20
-    w_sdf = 0.30
-
-    return w_normal * normal_diff + w_curvature * curv_diff + w_sdf * sdf_diff
+    return float(np.linalg.norm(sf1.feature_vector - sf2.feature_vector))
 
 
-def _compute_feature_ranges(superfacets: list[Superfacet]) -> dict:
-    """Compute global range of each feature for normalization."""
-    curvatures = [sf.curvature for sf in superfacets]
-    sdfs = [sf.sdf for sf in superfacets]
-
-    return {
-        'curvature': max(np.ptp(curvatures), 1e-10),
-        'sdf': max(np.ptp(sdfs), 1e-10),
-    }
-
-
-def _compute_intra_region_diff(
-    segment: Segment,
+def _intra_region_diff(
+    seg_sf_ids: list[int],
     superfacets: list[Superfacet],
     sf_adjacency: dict[int, set[int]],
-    feature_ranges: dict,
-    tau: float = 0.05,
 ) -> float:
     """
-    Compute intra-region difference for a segment.
-
-    This is the average feature distance between adjacent superfacets
-    within the same segment, plus a regularization term τ/|R| that
-    prevents trivially small regions from having zero difference.
+    D(R) = Average{d(Fi, Fj)} for adjacent Fi, Fj in R  (Eq. 2)
     """
-    sf_set = set(segment.superfacet_ids)
+    sf_set = set(seg_sf_ids)
     diffs = []
 
-    for sf_id in segment.superfacet_ids:
-        for neighbor_id in sf_adjacency.get(sf_id, set()):
+    for sf_id in seg_sf_ids:
+        for neighbor_id in sf_adjacency.get(sf_id, ()):
             if neighbor_id in sf_set and neighbor_id > sf_id:
-                d = _feature_distance(
-                    superfacets[sf_id], superfacets[neighbor_id], feature_ranges)
+                d = _feature_distance(superfacets[sf_id], superfacets[neighbor_id])
                 diffs.append(d)
 
     if not diffs:
-        return tau / max(len(segment.superfacet_ids), 1)
+        return 0.0  # single superfacet → D(R) = 0
 
-    return np.mean(diffs) + tau / len(segment.superfacet_ids)
+    return float(np.mean(diffs))
 
 
-def _compute_inter_region_diff(
-    seg1: Segment,
-    seg2: Segment,
+def _inter_region_diff(
+    seg1_sf_ids: list[int],
+    seg2_sf_ids: list[int],
     superfacets: list[Superfacet],
     sf_adjacency: dict[int, set[int]],
-    feature_ranges: dict,
 ) -> float:
     """
-    Compute inter-region difference between two adjacent segments.
-
-    Average feature distance across all boundary superfacet pairs.
+    Dis(R1, R2) = Average{d(Fi, Fj)} for boundary pairs  (Eq. 3)
     """
-    sf_set1 = set(seg1.superfacet_ids)
-    sf_set2 = set(seg2.superfacet_ids)
+    sf_set2 = set(seg2_sf_ids)
     diffs = []
 
-    for sf_id in seg1.superfacet_ids:
-        for neighbor_id in sf_adjacency.get(sf_id, set()):
+    for sf_id in seg1_sf_ids:
+        for neighbor_id in sf_adjacency.get(sf_id, ()):
             if neighbor_id in sf_set2:
-                d = _feature_distance(
-                    superfacets[sf_id], superfacets[neighbor_id], feature_ranges)
+                d = _feature_distance(superfacets[sf_id], superfacets[neighbor_id])
                 diffs.append(d)
 
     if not diffs:
         return float('inf')
 
-    return np.mean(diffs)
+    return float(np.mean(diffs))
+
+
+def _threshold_function(n_superfacets: int, m: float) -> float:
+    """
+    t(R) = m / (1 + e^|R|)  (Eq. 5)
+
+    Where |R| is the number of superfacets in region R.
+    """
+    return m / (1.0 + math.exp(n_superfacets))
 
 
 def region_fusion(
     superfacets: list[Superfacet],
     sf_adjacency: dict[int, set[int]],
-    tau: float = 0.20,
+    m: float = 0.5,
+    min_superfacets_per_segment: int = 3,
 ) -> list[Segment]:
     """
-    Iterative feature-aware region fusion.
+    Feature-aware region fusion (Section 3.2.2).
 
-    Fusion condition: two adjacent regions R1, R2 are merged if
-        inter(R1, R2) < min(intra(R1), intra(R2))
+    Algorithm:
+      1. Initialize: each superfacet = one region
+      2. Compute inter-region diff for all adjacent pairs
+      3. Sort ascending
+      4. For each pair (in order), check fusion condition (Eq. 4):
+         Dis(R1,R2) <= Min{D(R1)+t(R1), D(R2)+t(R2)}
+      5. If met, fuse. Update diffs with affected neighbors.
+      6. Repeat until no more fusions possible.
+      7. Post-process: merge small regions into nearest neighbor.
 
-    Uses Union-Find for correct segment tracking.
-    Iterates until no more fusions are possible.
+    Args:
+        superfacets: List of superfacets with feature vectors.
+        sf_adjacency: Adjacency between superfacets.
+        m: Threshold parameter (Eq. 5). Higher = more aggressive fusion.
+        min_superfacets_per_segment: Post-fusion small region threshold.
     """
     n_sf = len(superfacets)
-    feature_ranges = _compute_feature_ranges(superfacets)
 
-    # Union-Find with path compression
+    # Union-Find for tracking segment membership
     parent = list(range(n_sf))
+    rank = [0] * n_sf
 
     def find(x: int) -> int:
         while parent[x] != x:
-            parent[x] = parent[parent[x]]
+            parent[x] = parent[parent[x]]  # path compression
             x = parent[x]
         return x
 
     def union(a: int, b: int) -> int:
-        """Merge b into a, return a."""
+        """Merge b's tree into a's tree. Return new root."""
         ra, rb = find(a), find(b)
         if ra == rb:
             return ra
+        # Union by rank
+        if rank[ra] < rank[rb]:
+            ra, rb = rb, ra
         parent[rb] = ra
+        if rank[ra] == rank[rb]:
+            rank[ra] += 1
         return ra
 
-    # Segment data keyed by root superfacet ID
-    seg_data: dict[int, Segment] = {}
-    for i in range(n_sf):
-        seg_data[i] = Segment(
-            superfacet_ids=[i],
-            face_indices=superfacets[i].face_indices.copy(),
-            neighbors=set(),  # will be rebuilt each iteration
+    # Segment data: keyed by root sf_id
+    seg_sf_ids: dict[int, list[int]] = {i: [i] for i in range(n_sf)}
+    seg_face_indices: dict[int, np.ndarray] = {
+        i: superfacets[i].face_indices.copy() for i in range(n_sf)
+    }
+
+    # Pre-compute all pairwise inter-region diffs for adjacent pairs
+    # and maintain in a sorted structure
+    import heapq
+
+    def _compute_pair_diff(r1: int, r2: int) -> float:
+        return _inter_region_diff(
+            seg_sf_ids[r1], seg_sf_ids[r2],
+            superfacets, sf_adjacency,
         )
 
-    def _rebuild_seg_adjacency() -> dict[int, set[int]]:
-        """Rebuild segment-level adjacency from superfacet adjacency."""
-        adj: dict[int, set[int]] = {root: set() for root in seg_data}
-        for sf_id in range(n_sf):
-            seg_root = find(sf_id)
-            for neighbor_sf in sf_adjacency.get(sf_id, set()):
-                neighbor_root = find(neighbor_sf)
-                if neighbor_root != seg_root:
-                    adj[seg_root].add(neighbor_root)
-                    adj[neighbor_root].add(seg_root)
-        return adj
+    # Build initial priority queue: (inter_diff, seg_a, seg_b)
+    seen_pairs = set()
+    heap = []
 
-    iteration = 0
-    max_iterations = n_sf
+    for sf_id in range(n_sf):
+        for neighbor_sf in sf_adjacency.get(sf_id, ()):
+            ra, rb = find(sf_id), find(neighbor_sf)
+            if ra != rb:
+                pair = (min(ra, rb), max(ra, rb))
+                if pair not in seen_pairs:
+                    seen_pairs.add(pair)
+                    diff = _compute_pair_diff(pair[0], pair[1])
+                    heapq.heappush(heap, (diff, pair[0], pair[1]))
 
-    while iteration < max_iterations:
-        iteration += 1
+    # Version counter to invalidate stale heap entries
+    seg_version: dict[int, int] = {i: 0 for i in range(n_sf)}
 
-        # Rebuild adjacency from scratch each iteration (correct, O(n_sf) cost)
-        seg_adj = _rebuild_seg_adjacency()
+    fusions = 0
 
-        # Collect all adjacent segment pairs
-        pairs = set()
-        for seg_id, neighbors in seg_adj.items():
-            for neighbor_id in neighbors:
-                pair = (min(seg_id, neighbor_id), max(seg_id, neighbor_id))
-                pairs.add(pair)
+    while heap:
+        inter_diff, s1_id, s2_id = heapq.heappop(heap)
 
-        if not pairs:
-            break
+        # Check if this entry is stale
+        r1, r2 = find(s1_id), find(s2_id)
+        if r1 == r2:
+            continue  # already merged
+        if r1 not in seg_sf_ids or r2 not in seg_sf_ids:
+            continue  # stale
 
-        # Find best fusible pair
-        best_pair = None
-        best_ratio = float('inf')
+        # Recompute inter_diff if either segment changed since this entry
+        # was pushed (lazy deletion approach)
+        current_diff = _compute_pair_diff(r1, r2)
+        if abs(current_diff - inter_diff) > 1e-8:
+            # Re-push with correct diff
+            heapq.heappush(heap, (current_diff, r1, r2))
+            continue
 
-        for s1_id, s2_id in pairs:
-            if s1_id not in seg_data or s2_id not in seg_data:
+        # Fusion condition (Eq. 4):
+        # Dis(R1, R2) <= Min{D(R1) + t(R1), D(R2) + t(R2)}
+        d_r1 = _intra_region_diff(seg_sf_ids[r1], superfacets, sf_adjacency)
+        d_r2 = _intra_region_diff(seg_sf_ids[r2], superfacets, sf_adjacency)
+        t_r1 = _threshold_function(len(seg_sf_ids[r1]), m)
+        t_r2 = _threshold_function(len(seg_sf_ids[r2]), m)
+
+        threshold = min(d_r1 + t_r1, d_r2 + t_r2)
+
+        if inter_diff > threshold:
+            continue  # fusion condition not met
+
+        # Fuse: merge r2 into r1
+        new_root = union(r1, r2)
+        other = r2 if new_root == r1 else r1
+
+        seg_sf_ids[new_root] = seg_sf_ids[new_root] + seg_sf_ids[other]
+        seg_face_indices[new_root] = np.concatenate([
+            seg_face_indices[new_root], seg_face_indices[other]
+        ])
+
+        # Collect neighbors of the removed segment
+        neighbor_roots = set()
+        for sf_id in seg_sf_ids[other]:
+            for neighbor_sf in sf_adjacency.get(sf_id, ()):
+                nr = find(neighbor_sf)
+                if nr != new_root and nr in seg_sf_ids:
+                    neighbor_roots.add(nr)
+
+        del seg_sf_ids[other]
+        del seg_face_indices[other]
+
+        # Push updated diffs for new_root's neighbors
+        for nr in neighbor_roots:
+            diff = _compute_pair_diff(new_root, nr)
+            heapq.heappush(heap, (diff, new_root, nr))
+
+        fusions += 1
+        if fusions % 50 == 0:
+            logger.debug(f"  Fusion step {fusions}: {len(seg_sf_ids)} segments")
+
+    # Post-processing: merge small regions (paper Section 3.2.2, last paragraph)
+    small_threshold = min_superfacets_per_segment
+    merged_small = True
+    while merged_small:
+        merged_small = False
+        small_segs = [
+            sid for sid, sf_ids in seg_sf_ids.items()
+            if len(sf_ids) < small_threshold
+        ]
+
+        for sid in small_segs:
+            if sid not in seg_sf_ids:
                 continue
 
-            inter_diff = _compute_inter_region_diff(
-                seg_data[s1_id], seg_data[s2_id],
-                superfacets, sf_adjacency, feature_ranges,
-            )
-            intra1 = _compute_intra_region_diff(
-                seg_data[s1_id], superfacets, sf_adjacency, feature_ranges, tau,
-            )
-            intra2 = _compute_intra_region_diff(
-                seg_data[s2_id], superfacets, sf_adjacency, feature_ranges, tau,
-            )
+            # Find adjacent segment with smallest inter-region diff
+            neighbor_roots = set()
+            for sf_id in seg_sf_ids[sid]:
+                for neighbor_sf in sf_adjacency.get(sf_id, ()):
+                    nr = find(neighbor_sf)
+                    if nr != sid and nr in seg_sf_ids:
+                        neighbor_roots.add(nr)
 
-            min_intra = min(intra1, intra2)
-            if min_intra <= 0:
+            if not neighbor_roots:
                 continue
 
-            ratio = inter_diff / min_intra
+            best_neighbor = None
+            best_diff = float('inf')
+            for nr in neighbor_roots:
+                diff = _inter_region_diff(
+                    seg_sf_ids[sid], seg_sf_ids[nr],
+                    superfacets, sf_adjacency,
+                )
+                if diff < best_diff:
+                    best_diff = diff
+                    best_neighbor = nr
 
-            if ratio < 1.0 and ratio < best_ratio:
-                best_ratio = ratio
-                best_pair = (s1_id, s2_id)
+            if best_neighbor is None:
+                continue
 
-        if best_pair is None:
-            break
+            # Merge small segment into best neighbor
+            new_root = union(best_neighbor, sid)
+            other = sid if new_root == best_neighbor else best_neighbor
 
-        # Merge s2 into s1
-        s1_id, s2_id = best_pair
-        s1 = seg_data[s1_id]
-        s2 = seg_data[s2_id]
+            seg_sf_ids[new_root] = seg_sf_ids[new_root] + seg_sf_ids[other]
+            seg_face_indices[new_root] = np.concatenate([
+                seg_face_indices[new_root], seg_face_indices[other]
+            ])
+            del seg_sf_ids[other]
+            del seg_face_indices[other]
+            merged_small = True
 
-        union(s1_id, s2_id)  # s2 → s1
+    # Build final segments
+    result = []
+    for sid, sf_ids in seg_sf_ids.items():
+        result.append(Segment(
+            superfacet_ids=sf_ids,
+            face_indices=seg_face_indices[sid],
+        ))
 
-        s1.superfacet_ids.extend(s2.superfacet_ids)
-        s1.face_indices = np.concatenate([s1.face_indices, s2.face_indices])
-
-        del seg_data[s2_id]
-
-        if iteration % 50 == 0:
-            logger.debug(f"  Fusion iteration {iteration}: {len(seg_data)} segments")
-
-    return list(seg_data.values())
+    return result
 
 
 # ============================================================================
@@ -662,7 +731,7 @@ def extract_boundary_planes(
     Extract candidate cut planes by fitting planes to segment boundaries.
 
     For each pair of adjacent segments, collect boundary edge midpoints
-    and fit a plane via PCA.  Filters out degenerate/short boundaries.
+    and fit a plane via PCA. Filters out degenerate/short boundaries.
     """
     n_faces = len(mesh.faces)
     mesh_extent = np.linalg.norm(mesh.extents) + 1e-10
@@ -686,9 +755,8 @@ def extract_boundary_planes(
             mid = (mesh.triangles_center[f0] + mesh.triangles_center[f1]) / 2.0
             boundary_points[pair].append(mid)
 
-    # Segment sizes (face counts) for filtering
     seg_sizes = [len(seg.face_indices) for seg in segments]
-    min_seg_size = n_faces * 0.01  # ignore tiny segments (< 1% of mesh)
+    min_seg_size = n_faces * 0.01
 
     planes = []
     for (s0, s1), points in boundary_points.items():
@@ -706,7 +774,7 @@ def extract_boundary_planes(
         # PCA: smallest eigenvector = plane normal
         cov = centered.T @ centered
         eigenvalues, eigenvectors = np.linalg.eigh(cov)
-        normal = eigenvectors[:, 0]  # smallest eigenvalue
+        normal = eigenvectors[:, 0]
 
         # Ensure consistent normal direction
         if normal[np.argmax(np.abs(normal))] < 0:
@@ -714,22 +782,18 @@ def extract_boundary_planes(
 
         offset = float(np.dot(normal, centroid))
 
-        # Planarity: how well the boundary points fit a plane
+        # Planarity: residual distance from fitted plane
         residuals = np.abs(centered @ normal)
         planarity = float(np.mean(residuals))
         boundary_length = len(points)
 
-        # Skip boundaries that are not sufficiently planar
-        # (residual > 10% of mesh extent = not a clean cut)
+        # Skip non-planar boundaries
         if planarity > 0.10 * mesh_extent:
             continue
 
-        # Score: combine planarity (lower=better) with boundary extent
-        # Prefer: long, planar boundaries between large segments
+        # Score: planarity-normalized-by-span
         boundary_span = float(np.linalg.norm(pts.max(axis=0) - pts.min(axis=0)))
-        span_ratio = boundary_span / mesh_extent  # 0..1
-
-        # Bigger span + lower planarity residual = better
+        span_ratio = boundary_span / mesh_extent
         score = (planarity / mesh_extent) / (span_ratio + 0.1)
 
         planes.append(CandidateCutPlane(
@@ -740,7 +804,6 @@ def extract_boundary_planes(
             seg_pair=(s0, s1),
         ))
 
-    # Sort by score (lower = better)
     planes.sort(key=lambda p: p.score)
 
     # Deduplicate near-identical planes (within 5° normal and 2% offset)
@@ -750,7 +813,7 @@ def extract_boundary_planes(
         for existing in filtered:
             cos_sim = abs(np.dot(plane.normal, existing.normal))
             offset_diff = abs(plane.offset - existing.offset) / mesh_extent
-            if cos_sim > 0.996 and offset_diff < 0.02:  # ~5° and 2%
+            if cos_sim > 0.996 and offset_diff < 0.02:
                 is_dup = True
                 break
         if not is_dup:
@@ -767,42 +830,44 @@ def extract_boundary_planes(
 def segment_mesh(
     mesh: trimesh.Trimesh,
     target_superfacets: int = 300,
-    tau: float = 0.20,
+    m: float = 200.0,
+    sigma_max: float = 0.20,
 ) -> SegmentationResult:
     """
-    Full segmentation pipeline: BSP over-segmentation → feature computation → region fusion.
+    Full segmentation pipeline per Wu et al. 2023.
 
     Args:
         mesh: Input mesh.
-        target_superfacets: Approximate number of superfacets for over-segmentation.
-        tau: Regularization parameter for fusion condition.
+        target_superfacets: Approximate superfacet count for BSP.
+        m: Threshold parameter for fusion (Eq. 5). Higher = more merging.
+        sigma_max: Surface variation threshold for BSP stopping.
 
     Returns:
         SegmentationResult with segments and metadata.
     """
     t0 = time.time()
 
-    # Stage 1: Over-segmentation
+    # Stage 1: Over-segmentation (Section 3.1)
     logger.info(f"Segmentation: {len(mesh.faces)} faces, "
                 f"target {target_superfacets} superfacets")
-    cells = compute_over_segmentation(mesh, target_superfacets)
+    cells = compute_over_segmentation(mesh, target_superfacets, sigma_max)
     logger.info(f"  BSP: {len(cells)} superfacets")
 
-    # Feature computation
+    # Feature computation (Section 3.2.1)
     t_feat = time.time()
     face_sdf = _compute_face_sdf(mesh)
     vertex_curvature = _compute_vertex_curvature(mesh)
     logger.info(f"  Features computed in {time.time() - t_feat:.2f}s")
 
-    # Build superfacets with features
+    # Build superfacets with feature vectors T(Fi)
     superfacets = build_superfacets(mesh, cells, face_sdf, vertex_curvature)
 
     # Build adjacency
     sf_adjacency = build_superfacet_adjacency(mesh, cells)
 
-    # Stage 2: Region fusion
+    # Stage 2: Region fusion (Section 3.2.2)
     t_fuse = time.time()
-    segments = region_fusion(superfacets, sf_adjacency, tau)
+    segments = region_fusion(superfacets, sf_adjacency, m)
     logger.info(f"  Fusion: {len(superfacets)} → {len(segments)} segments "
                 f"in {time.time() - t_fuse:.2f}s")
 
@@ -820,7 +885,8 @@ def segment_mesh(
 def generate_cut_planes_from_segmentation(
     mesh: trimesh.Trimesh,
     target_superfacets: int = 300,
-    tau: float = 0.20,
+    m: float = 200.0,
+    sigma_max: float = 0.20,
     min_boundary_edges: int = 10,
 ) -> list[CandidateCutPlane]:
     """
@@ -828,7 +894,7 @@ def generate_cut_planes_from_segmentation(
 
     Returns candidate cut planes sorted by score (lower = better).
     """
-    result = segment_mesh(mesh, target_superfacets, tau)
+    result = segment_mesh(mesh, target_superfacets, m, sigma_max)
     planes = extract_boundary_planes(mesh, result.segments, min_boundary_edges)
 
     logger.info(f"Generated {len(planes)} candidate cut planes from "
