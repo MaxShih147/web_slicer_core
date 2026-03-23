@@ -67,6 +67,7 @@ app = FastAPI(
 _cors_origins = {
     "https://dentalslice.onrender.com",
     "https://dental-testing.onrender.com",
+    "https://ya-ke-nei-bu-ce-shi.onrender.com",
     "http://localhost:5173",   # DS-Online (default Vite port)
     "http://127.0.0.1:5173",
     "http://localhost:5174",   # web_slicer_core React UI (alternate port)
