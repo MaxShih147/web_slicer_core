@@ -29,6 +29,7 @@ from .jobs import (
     run_support_generation,
     run_hollow_generation,
     run_cut_operation,
+    write_job_status,
 )
 from .models import BooleanOperation, JobStatus, SLAConfig
 from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
@@ -745,6 +746,7 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
 
     job_id = create_job_id()
     job_dir = create_job(job_id)
+    write_job_status(job_id, JobStatus.PROCESSING)
     input_dir = job_dir / "input"
     mesh_a_path = input_dir / "mesh_a.stl"
     mesh_b_path = input_dir / "mesh_b.stl"
@@ -766,10 +768,13 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
 
     result = await perform_boolean(job_dir, mesh_a_path, mesh_b_path, bool_op)
     if not result.success:
+        write_job_status(job_id, JobStatus.FAILED, error=result.error)
         raise HTTPException(status_code=500, detail=result.error)
 
     if debug_dir and result.boolean_mesh_path and result.boolean_mesh_path.exists():
         shutil.copy2(result.boolean_mesh_path, debug_dir / f"step{step}_{operation}_output.stl")
+
+    write_job_status(job_id, JobStatus.COMPLETED)
 
     return V2Response(
         success=True,
