@@ -1068,6 +1068,53 @@ async def ortho_process(job_id: str, request: V2OrthoProcessRequest, background_
 
 
 # ============================================================================
+# PRZ Parser Endpoint
+# ============================================================================
+
+_PRZ_MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB
+
+
+@router.post("/prz/parse")
+async def parse_prz_endpoint(file: UploadFile = File(..., description="PRZ V3.0 binary file")):
+    """
+    Parse a PRZ V3.0 file and return its header fields plus base64 preview images.
+
+    Accepts multipart/form-data with a 'file' field containing a .prz binary.
+    Returns JSON: header fields, preview_small_b64 (PNG base64), preview_large_b64 (PNG base64),
+    and layer_count.
+    """
+    import base64
+    import dataclasses
+    from io import BytesIO
+
+    from PIL import Image
+
+    from .prz_decoder import parse_prz
+
+    file_data = await file.read()
+    if len(file_data) > _PRZ_MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 500 MB)")
+
+    try:
+        prz = parse_prz(file_data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    def _ndarray_to_png_b64(arr) -> str:
+        img = Image.fromarray(arr)
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode()
+
+    return {
+        "header": dataclasses.asdict(prz.header),
+        "preview_small_b64": _ndarray_to_png_b64(prz.preview_small),
+        "preview_large_b64": _ndarray_to_png_b64(prz.preview_large),
+        "layer_count": prz.header.total_layers,
+    }
+
+
+# ============================================================================
 # Helper Functions
 # ============================================================================
 
