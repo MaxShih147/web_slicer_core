@@ -32,7 +32,7 @@ from .jobs import (
     read_job_status,
     run_slicing,
 )
-from .api_v2 import router as v2_router
+from .api_v2 import router as v2_router, prz_session_cleanup_loop
 
 
 @asynccontextmanager
@@ -49,8 +49,9 @@ async def lifespan(app: FastAPI):
 
     t = threading.Thread(target=_preload_heavy_modules, daemon=True)
     t.start()
+    cleanup_task = asyncio.create_task(prz_session_cleanup_loop())
     yield
-    # Shutdown: nothing to do for preload
+    cleanup_task.cancel()
 
 
 app = FastAPI(

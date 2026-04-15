@@ -5,15 +5,21 @@ This module provides API endpoints that match the DS-Online frontend's expected 
 Both v1 (/api/jobs) and v2 (/api/v2/slices) share the same underlying job manager.
 """
 
+import asyncio
 import json
 import logging
 import math
 import shutil
+import time
 import traceback as tb
-from typing import Any, Dict, List, Optional
+import uuid
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from .prz_decoder import PrzFile
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from .jobs import (
@@ -122,12 +128,37 @@ class V2OrthoProcessRequest(BaseModel):
 # Key: job_id, Value: {config: dict, models: list, status: str}
 _pending_jobs: Dict[str, Dict[str, Any]] = {}
 
+# Store for parsed PRZ file sessions
+# Key: session_id (UUID v4 str)
+# Value: (PrzFile, last_access_timestamp)  — PrzFile holds a memoryview into the raw bytes
+_prz_sessions: Dict[str, Tuple["PrzFile", float]] = {}
+
 
 # ============================================================================
 # V2 Router
 # ============================================================================
 
 router = APIRouter(prefix="/api/v2", tags=["v2-slices"])
+
+
+def _evict_expired_sessions() -> None:
+    """Evict PRZ sessions whose last_access timestamp is older than 1800 seconds."""
+    now = time.time()
+    expired = [sid for sid, (_, ts) in list(_prz_sessions.items()) if now - ts > 1800]
+    for sid in expired:
+        _prz_sessions.pop(sid, None)
+        logger.debug("PRZ session evicted (TTL): %s", sid)
+
+
+async def prz_session_cleanup_loop() -> None:
+    """Background task: evict PRZ sessions idle for > 30 minutes.
+
+    Scans every 5 minutes; removes sessions whose last_access timestamp is
+    older than 1800 seconds.  Call via asyncio.create_task() at app startup.
+    """
+    while True:
+        await asyncio.sleep(300)
+        _evict_expired_sessions()
 
 
 @router.post("/slices", response_model=V2Response)
@@ -1074,6 +1105,15 @@ async def ortho_process(job_id: str, request: V2OrthoProcessRequest, background_
 _PRZ_MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB
 
 
+def _ndarray_to_png_bytes(arr) -> bytes:
+    """Encode a uint8 numpy ndarray as PNG bytes (grayscale or RGB)."""
+    from io import BytesIO
+    from PIL import Image
+    buf = BytesIO()
+    Image.fromarray(arr).save(buf, format="PNG")
+    return buf.getvalue()
+
+
 @router.post("/prz/parse")
 async def parse_prz_endpoint(file: UploadFile = File(..., description="PRZ V3.0 binary file")):
     """
@@ -1081,13 +1121,10 @@ async def parse_prz_endpoint(file: UploadFile = File(..., description="PRZ V3.0 
 
     Accepts multipart/form-data with a 'file' field containing a .prz binary.
     Returns JSON: header fields, preview_small_b64 (PNG base64), preview_large_b64 (PNG base64),
-    and layer_count.
+    layer_count, and session_id for subsequent layer image requests.
     """
     import base64
     import dataclasses
-    from io import BytesIO
-
-    from PIL import Image
 
     from .prz_decoder import parse_prz
 
@@ -1100,18 +1137,56 @@ async def parse_prz_endpoint(file: UploadFile = File(..., description="PRZ V3.0 
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    def _ndarray_to_png_b64(arr) -> str:
-        img = Image.fromarray(arr)
-        buf = BytesIO()
-        img.save(buf, format="PNG")
-        return base64.b64encode(buf.getvalue()).decode()
+    session_id = str(uuid.uuid4())
+    _prz_sessions[session_id] = (prz, time.time())
 
     return {
         "header": dataclasses.asdict(prz.header),
-        "preview_small_b64": _ndarray_to_png_b64(prz.preview_small),
-        "preview_large_b64": _ndarray_to_png_b64(prz.preview_large),
+        "preview_small_b64": base64.b64encode(_ndarray_to_png_bytes(prz.preview_small)).decode(),
+        "preview_large_b64": base64.b64encode(_ndarray_to_png_bytes(prz.preview_large)).decode(),
         "layer_count": prz.header.total_layers,
+        "session_id": session_id,
     }
+
+
+@router.get("/prz/{session_id}/layer/{index}")
+async def get_prz_layer(session_id: str, index: int):
+    """
+    Return a single decoded PRZ layer as a grayscale PNG.
+
+    Requires a session_id obtained from POST /prz/parse.
+    Each successful call resets the session TTL (30 minutes).
+    """
+    entry = _prz_sessions.get(session_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"PRZ session not found: {session_id}")
+
+    prz, _ = entry
+    layer_count = prz.header.total_layers
+    if index < 0 or index >= layer_count:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Layer index {index} out of range [0, {layer_count})",
+        )
+
+    arr = prz.decode_layer_image(index)
+    _prz_sessions[session_id] = (prz, time.time())  # reset TTL
+
+    return Response(content=_ndarray_to_png_bytes(arr), media_type="image/png")
+
+
+@router.delete("/prz/{session_id}", status_code=204)
+async def delete_prz_session(session_id: str):
+    """
+    Release a PRZ session from server memory.
+
+    Call this when the viewer is closed to free the cached PRZ file immediately
+    rather than waiting for the TTL to expire.
+    """
+    if session_id not in _prz_sessions:
+        raise HTTPException(status_code=404, detail=f"PRZ session not found: {session_id}")
+    _prz_sessions.pop(session_id)
+    return Response(status_code=204)
 
 
 # ============================================================================
