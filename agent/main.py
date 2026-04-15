@@ -104,22 +104,51 @@ if _enable_cors:
     )
 
 # Global exception handler to catch unhandled errors
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 import traceback as _tb
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    err = _tb.format_exc()
-    with open("/tmp/boolean_error.log", "a") as f:
-        f.write(f"\n=== GLOBAL {request.url.path} ===\n{err}\n")
+from .errors import APIError, file_not_found, internal_error, job_not_found, job_still_processing, job_failed, missing_body, validation_error
+
+
+def _cors_headers(request: Request) -> dict:
+    """Return CORS headers for the given request's origin, if allowed."""
     headers = {}
     if _enable_cors:
         origin = request.headers.get("origin", "")
         if origin in _cors_origins:
             headers["access-control-allow-origin"] = origin
             headers["access-control-allow-credentials"] = "true"
-    return JSONResponse(status_code=500, content={"detail": str(exc)}, headers=headers)
+    return headers
+
+
+@app.exception_handler(APIError)
+async def api_error_handler(request: Request, exc: APIError):
+    return exc.to_response(_cors_headers(request))
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    has_missing = any(e.get("type") in ("missing", "value_error.missing") for e in errors)
+    if has_missing:
+        err = missing_body("Required field or file is missing")
+    else:
+        detail = "; ".join(
+            f"{'.'.join(str(l) for l in e['loc'])}: {e['msg']}" for e in errors
+        )
+        err = validation_error(detail)
+    return err.to_response(_cors_headers(request))
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    err_text = _tb.format_exc()
+    with open("/tmp/boolean_error.log", "a") as f:
+        f.write(f"\n=== GLOBAL {request.url.path} ===\n{err_text}\n")
+    err = internal_error(str(exc))
+    return err.to_response(_cors_headers(request))
 
 # Include v2 API router (DS-Online compatible)
 app.include_router(v2_router)
@@ -998,11 +1027,18 @@ async def get_ortho_result(job_id: str):
     Get the consolidated ortho processing result as STL file.
     """
     if not job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise job_not_found(job_id)
+
+    status_data = read_job_status(job_id)
+    status = status_data.get("status")
+    if status == JobStatus.FAILED.value:
+        raise job_failed(status_data.get("error"))
+    if status != JobStatus.COMPLETED.value:
+        raise job_still_processing()
 
     ortho_path = get_job_dir(job_id) / "output" / "ortho_result.stl"
     if not ortho_path.exists():
-        raise HTTPException(status_code=404, detail="Ortho result not available")
+        raise file_not_found("Ortho result file not found")
 
     return FileResponse(
         ortho_path,

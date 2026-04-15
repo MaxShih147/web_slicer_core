@@ -26,7 +26,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import trimesh
 
-from .jobs import get_job_dir
+from .jobs import get_job_dir, write_job_status
 from .models import BooleanOperation, JobStatus, SLAConfig
 from .sla_operations import (
     boolean_meshes,
@@ -578,7 +578,10 @@ async def run_ortho_pipeline(
         )
         result = await generate_hollow(job_dir, config, input_file=input_path)
         if not result.success:
-            raise RuntimeError(f"Step 1: Hollow generation failed: {result.error}")
+            exc = RuntimeError(f"Hollow interior mesh could not be generated: {result.error}")
+            exc.__cause__ = None
+            exc._api_error_code = "HOLLOW_GENERATION_FAILED"
+            raise exc
 
         hollow_mesh = load_trimesh(result.hollow_mesh_path)
 
@@ -704,6 +707,7 @@ async def run_ortho_pipeline(
         logger.exception(f"[ortho_pipeline:{job_id}] Pipeline failed")
         status_data["status"] = "failed"
         status_data["error"] = str(e)
+        status_data["error_code"] = getattr(e, "_api_error_code", None)
         status_file = get_job_dir(job_id) / "status.json"
         with open(status_file, "w") as f:
             json.dump(status_data, f)
