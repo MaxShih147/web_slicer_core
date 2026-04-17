@@ -13,6 +13,7 @@ Design principles:
 3. Consistent error handling and status reporting
 4. Easy to extend with new operations
 """
+from __future__ import annotations
 
 import asyncio
 import json

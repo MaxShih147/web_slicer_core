@@ -53,15 +53,15 @@ if defined AGENT_TLS_CERTFILE (
     set CERT_PATH=%AGENT_TLS_CERTFILE%
 ) else (
     set CERT_PATH=%REPO_ROOT%\agent\tls\localhost.crt
-    if not exist "%CERT_PATH%" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.crt
-    if not exist "%CERT_PATH%" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.crt
+    if not exist "!CERT_PATH!" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.crt
+    if not exist "!CERT_PATH!" set CERT_PATH=%tlsREPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.crt
 )
 if defined AGENT_TLS_KEYFILE (
     set KEY_PATH=%AGENT_TLS_KEYFILE%
 ) else (
     set KEY_PATH=%REPO_ROOT%\agent\tls\localhost.key
-    if not exist "%KEY_PATH%" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.key
-    if not exist "%KEY_PATH%" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.key
+    if not exist "!KEY_PATH!" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.key
+    if not exist "!KEY_PATH!" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.key
 )
 if not exist "%CERT_PATH%" (
     echo [ERROR] TLS cert not found: %CERT_PATH%
