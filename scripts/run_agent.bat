@@ -48,13 +48,41 @@ if not exist "%CLI_PATH%" (
 )
 set PRUSA_SLICER_BIN=%CLI_PATH%
 
-echo Starting web_slicer_core agent on http://127.0.0.1:5179
+:: TLS resolution order matches agent\config.py: env, then agent\tls\, then Bundle-Launcher (mac, win).
+if defined AGENT_TLS_CERTFILE (
+    set CERT_PATH=%AGENT_TLS_CERTFILE%
+) else (
+    set CERT_PATH=%REPO_ROOT%\agent\tls\localhost.crt
+    if not exist "%CERT_PATH%" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.crt
+    if not exist "%CERT_PATH%" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.crt
+)
+if defined AGENT_TLS_KEYFILE (
+    set KEY_PATH=%AGENT_TLS_KEYFILE%
+) else (
+    set KEY_PATH=%REPO_ROOT%\agent\tls\localhost.key
+    if not exist "%KEY_PATH%" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.key
+    if not exist "%KEY_PATH%" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.key
+)
+if not exist "%CERT_PATH%" (
+    echo [ERROR] TLS cert not found: %CERT_PATH%
+    echo Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or prepare agent\tls\localhost.crt^|key
+    exit /b 1
+)
+if not exist "%KEY_PATH%" (
+    echo [ERROR] TLS key not found: %KEY_PATH%
+    echo Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or prepare agent\tls\localhost.crt^|key
+    exit /b 1
+)
+set AGENT_TLS_CERTFILE=%CERT_PATH%
+set AGENT_TLS_KEYFILE=%KEY_PATH%
+
+echo Starting web_slicer_core agent on https://127.0.0.1:5179
 echo Press Ctrl+C to stop
 echo.
 
 :: Run the agent
 ::python -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --reload
 :: Run uvicorn directly with .venv python
-"%REPO_ROOT%\.venv\Scripts\python.exe" -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --app-dir "%REPO_ROOT%"
+"%REPO_ROOT%\.venv\Scripts\python.exe" -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --app-dir "%REPO_ROOT%" --ssl-certfile "%AGENT_TLS_CERTFILE%" --ssl-keyfile "%AGENT_TLS_KEYFILE%"
 
 endlocal

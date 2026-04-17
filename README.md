@@ -426,8 +426,9 @@ Frontend config          generate_config_ini()         PrusaSlicer CLI
 # Install dependencies
 pip install -r requirements.txt
 
-# Run with auto-reload
-cd agent && uvicorn main:app --reload --port 5179
+# Run with auto-reload (HTTPS)
+cd ..
+./scripts/run_agent.sh
 ```
 
 ### Frontend Development

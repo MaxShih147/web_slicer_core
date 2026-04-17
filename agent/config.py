@@ -21,6 +21,29 @@ PRUSA_SLICER_CLI = Path(os.getenv("PRUSA_SLICER_BIN", str(_default_cli)))
 # Server config
 HOST = "127.0.0.1"
 PORT = 5179
+TLS_DIR = AGENT_DIR / "tls"
+
+
+def _resolve_tls_path(env_name: str, default_filename: str) -> Path:
+    env_value = os.getenv(env_name, "").strip()
+    if env_value:
+        return Path(env_value)
+
+    candidates = [
+        TLS_DIR / default_filename,
+        # Cross-repo dev fallback: reuse Bundle-Launcher prepared certs.
+        REPO_ROOT.parent / "Bundle-Launcher" / "bundle-mac" / "agent" / "tls" / default_filename,
+        REPO_ROOT.parent / "Bundle-Launcher" / "bundle-win" / "agent" / "tls" / default_filename,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    # Keep primary default for clearer error message on startup.
+    return TLS_DIR / default_filename
+
+
+TLS_CERT_PATH = _resolve_tls_path("AGENT_TLS_CERTFILE", "localhost.crt")
+TLS_KEY_PATH = _resolve_tls_path("AGENT_TLS_KEYFILE", "localhost.key")
 
 # Experimental: Export 3MF project file alongside SLA layers
 # DISABLED: Testing confirmed that PrusaSlicer CLI --export-3mf exports only

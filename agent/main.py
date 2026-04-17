@@ -10,7 +10,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTa
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
-from .config import HOST, PORT, PRUSA_SLICER_CLI
+from .config import HOST, PORT, PRUSA_SLICER_CLI, TLS_CERT_PATH, TLS_KEY_PATH
 from .models import JobCreateResponse, JobStatus, JobStatusResponse, SLAConfig
 from .jobs import (
     create_job,
@@ -46,9 +46,26 @@ _cors_origins = {
     "https://dentalslice.onrender.com",
     "https://dental-testing.onrender.com",
     "https://ya-ke-nei-bu-ce-shi.onrender.com",
-    "http://localhost:5173",   # DS-Online (default Vite port)
+    # DS-Online branch: cloud HTTPS UI -> local HTTPS agent (Safari mixed-content test)
+    "https://safari-mixed-content-local-https.onrender.com",
+    "https://localhost:5173",   # DS-Online (default Vite port)
+    "https://127.0.0.1:5173",
+    "https://localhost:5174",   # web_slicer_core React UI (alternate port)
+    "https://127.0.0.1:5174",
+    "https://localhost:5175",
+    "https://127.0.0.1:5175",
+    "https://localhost:5176",
+    "https://127.0.0.1:5176",
+    "https://localhost:5177",
+    "https://127.0.0.1:5177",
+    "https://localhost:5178",   # DS-Online (when other ports in use)
+    "https://127.0.0.1:5178",
+    "https://localhost:3000",   # Common dev port
+    "https://127.0.0.1:3000",
+    # Local dev fallback while frontend dev server still runs on HTTP.
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:5174",   # web_slicer_core React UI (alternate port)
+    "http://localhost:5174",
     "http://127.0.0.1:5174",
     "http://localhost:5175",
     "http://127.0.0.1:5175",
@@ -56,9 +73,9 @@ _cors_origins = {
     "http://127.0.0.1:5176",
     "http://localhost:5177",
     "http://127.0.0.1:5177",
-    "http://localhost:5178",   # DS-Online (when other ports in use)
+    "http://localhost:5178",
     "http://127.0.0.1:5178",
-    "http://localhost:3000",   # Common dev port
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
 }
 _extra_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
@@ -1027,7 +1044,19 @@ async def get_ortho_result(job_id: str):
 def main():
     """Run the server."""
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT)
+    if not TLS_CERT_PATH.is_file() or not TLS_KEY_PATH.is_file():
+        raise RuntimeError(
+            "TLS cert/key not found. "
+            f"cert={TLS_CERT_PATH}, key={TLS_KEY_PATH}. "
+            "Provide AGENT_TLS_CERTFILE/AGENT_TLS_KEYFILE or prepare agent/tls/localhost.crt|key."
+        )
+    uvicorn.run(
+        app,
+        host=HOST,
+        port=PORT,
+        ssl_certfile=str(TLS_CERT_PATH),
+        ssl_keyfile=str(TLS_KEY_PATH),
+    )
 
 
 if __name__ == "__main__":
