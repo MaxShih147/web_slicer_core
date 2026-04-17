@@ -64,7 +64,7 @@ py -3.12 -m venv .venv312
 scripts\run_agent.bat
 ```
 
-Backend runs at `http://127.0.0.1:5179`. Then start the frontend (see step 3 below).
+Backend runs at `https://127.0.0.1:5179`. Then start the frontend (see step 3 below).
 
 **Prerequisites for Windows:** Python 3.12 (or 3.11), Node.js 18+, CMake, Visual Studio 2017+ (2019/2022/2026). Low RAM (16GB): use default; 32GB+: run `scripts\build_prusaslicer_fork_windows.bat full`.
 
@@ -89,7 +89,7 @@ export PRUSA_SLICER_BIN=$(pwd)/third_party/prusaslicer_build/src/prusa-slicer
 ./scripts/run_agent.sh
 ```
 
-Backend runs at `http://127.0.0.1:5179`
+Backend runs at `https://127.0.0.1:5179`
 
 ### 3. Start the Frontend
 
@@ -469,12 +469,20 @@ Frontend config          generate_config_ini()         PrusaSlicer CLI
 
 ### Backend Development
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+From the **repository root** (the scripts run the agent with **HTTPS** on `https://127.0.0.1:5179` and require TLS cert/key; see `agent/tls/` or `scripts/trust_dev_tls_*.sh` / `scripts/trust_dev_tls_windows.ps1`).
 
-# Run with auto-reload
-cd agent && uvicorn main:app --reload --port 5179
+**macOS / Linux**
+
+```bash
+pip install -r requirements.txt
+./scripts/run_agent.sh
+```
+
+**Windows** (Command Prompt or PowerShell)
+
+```bat
+pip install -r requirements.txt
+scripts\run_agent.bat
 ```
 
 ### Frontend Development

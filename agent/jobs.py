@@ -1,4 +1,5 @@
 """Job management for the web_slicer_core agent."""
+from __future__ import annotations
 
 import asyncio
 import json
