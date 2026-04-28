@@ -939,6 +939,164 @@ async def download_prz_v2(job_id: str, request: Request):
     )
 
 
+@router.post("/detect-boundary", response_model=V2Response)
+async def detect_boundary_endpoint(file: UploadFile = File(...)):
+    """Detect boundary edges on an uploaded STL mesh and return boundary loop points."""
+    import asyncio
+    import tempfile
+    from .boundary_detection import detect_boundary
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        result = await asyncio.to_thread(detect_boundary, tmp_path)
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    if not result.loops:
+        return V2Response(success=True, message="No boundary loops found", data={"loops": []})
+
+    loops_data = []
+    for i, loop in enumerate(result.loops):
+        loops_data.append({
+            "index": i,
+            "vertex_count": len(loop.vertex_indices),
+            "perimeter": round(loop.perimeter, 2),
+            "centroid": loop.centroid.tolist(),
+            "points": loop.points.tolist(),
+            "is_main": i == result.main_loop_index,
+        })
+
+    return V2Response(
+        success=True,
+        data={
+            "total_boundary_edges": result.total_boundary_edges,
+            "loop_count": len(result.loops),
+            "main_loop_index": result.main_loop_index,
+            "loops": loops_data,
+        },
+    )
+
+
+@router.post("/smooth-boundary", response_model=V2Response)
+async def smooth_boundary_endpoint(request: Request):
+    """
+    Smooth boundary loop points using Taubin smoothing.
+
+    Accepts raw points and smoothing parameters, returns smoothed points.
+    No STL upload needed — works purely on point data.
+    """
+    import numpy as np
+    from .boundary_detection import smooth_boundary_loop
+
+    body = await request.json()
+    loops = body.get("loops", [])
+    iterations = body.get("iterations", 20)
+    lam = body.get("lambda", 0.5)
+    mu = body.get("mu", -0.53)
+
+    smoothed_loops = []
+    for loop in loops:
+        points = np.array(loop["points"], dtype=np.float64)
+        smoothed = smooth_boundary_loop(points, iterations=iterations, lam=lam, mu=mu)
+        smoothed_loops.append({
+            "points": smoothed.tolist(),
+            "perimeter": round(float(np.sum(np.linalg.norm(
+                np.diff(smoothed, axis=0, append=smoothed[:1]), axis=1
+            ))), 2),
+        })
+
+    return V2Response(success=True, data={"loops": smoothed_loops})
+
+
+@router.post("/apply-boundary")
+async def apply_boundary_endpoint(
+    file: UploadFile = File(...),
+    data: str = Form(...),
+):
+    """
+    Apply smoothed boundary to mesh vertices with gradual falloff.
+
+    Accepts STL file + JSON data with original/smoothed points.
+    Returns modified STL file.
+    """
+    import asyncio
+    import json
+    import tempfile
+    from .boundary_detection import apply_boundary_to_mesh
+
+    params = json.loads(data)
+    original_points = params["original_points"]
+    smoothed_points = params["smoothed_points"]
+    falloff_rings = params.get("falloff_rings", 3)
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            apply_boundary_to_mesh,
+            tmp_path,
+            original_points,
+            smoothed_points,
+            falloff_rings,
+        )
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model.stl"},
+    )
+
+
+@router.post("/generate-base")
+async def generate_base_endpoint(
+    file: UploadFile = File(...),
+    elevation: float = Form(0.1),
+    chamfer: bool = Form(False),
+    skip_orient: bool = Form(False),
+):
+    """
+    Generate base for dental mesh: auto-orient + wall + bottom.
+
+    Accepts STL file only. Backend auto-detects boundary, orients mesh,
+    and generates wall + bottom face.
+    Returns combined STL (original + wall + bottom).
+    """
+    import asyncio
+    import tempfile
+    from .boundary_detection import generate_base
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            generate_base,
+            tmp_path,
+            elevation=elevation,
+            chamfer=chamfer,
+            skip_orient=skip_orient,
+        )
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model_with_base.stl"},
+    )
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
