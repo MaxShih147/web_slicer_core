@@ -10,12 +10,296 @@ V2: Detection + boundary smoothing (line-only, does not modify mesh).
 
 from __future__ import annotations
 
+import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union
 
 import numpy as np
 import trimesh
+
+
+_PRE_WALL_DUMP_DIR = Path(os.environ.get("BASE_GEN_DEBUG_DUMP_DIR", "/tmp/dental_base_debug"))
+
+
+def _ts_tag() -> str:
+    return time.strftime("%Y%m%d_%H%M%S") + f"_{int((time.time() % 1) * 1000):03d}"
+
+
+def _dump_snapshot(mesh: trimesh.Trimesh, boundary: np.ndarray | None, tag: str) -> None:
+    """Write mesh + (optional) boundary polyline to the debug dir."""
+    try:
+        _PRE_WALL_DUMP_DIR.mkdir(parents=True, exist_ok=True)
+        stl_path = _PRE_WALL_DUMP_DIR / f"{tag}.stl"
+        mesh.export(stl_path)
+        print(f"[generate_base] dumped {stl_path}")
+        if boundary is not None and len(boundary) > 0:
+            obj_path = _PRE_WALL_DUMP_DIR / f"{tag}_boundary.obj"
+            n = len(boundary)
+            lines = [f"v {p[0]:.6f} {p[1]:.6f} {p[2]:.6f}\n" for p in boundary]
+            lines.append("l " + " ".join(str(i + 1) for i in range(n)) + " 1\n")
+            obj_path.write_text("".join(lines))
+            print(f"[generate_base] dumped {obj_path}")
+    except Exception as exc:
+        print(f"[generate_base] snapshot dump failed ({tag}): {exc}")
+
+
+def _dump_pre_wall_snapshot(mesh: trimesh.Trimesh, boundary: np.ndarray) -> None:
+    """Snapshot right before wall generation."""
+    _dump_snapshot(mesh, boundary, _ts_tag() + "_pre_wall")
+
+
+def remove_degenerate_boundary_ears(
+    mesh: trimesh.Trimesh,
+    max_tip_angle_deg: float = 30.0,
+    max_passes: int = 10,
+) -> tuple[trimesh.Trimesh, dict]:
+    """
+    Remove "spike ear" triangles on the open boundary.
+
+    Target shape: a triangle with exactly TWO boundary edges sharing a
+    common "tip" vertex and ONE interior chord. When the angle between the
+    two boundary edges at the tip is small (< ``max_tip_angle_deg``), the
+    boundary makes a near-180° U-turn at the tip — wall extrusion of those
+    two edges produces back-to-back overlapping quads.
+
+    Removing the face:
+      - Boundary loses the tip vertex (and its two short edges).
+      - The interior chord becomes the new boundary edge.
+      - Boundary's visual shape is preserved as long as the spike was thin
+        relative to the local boundary curvature.
+
+    Triangles with 1 or 3 boundary edges are ignored.
+
+    Also drops orphan / tiny face-count connected components (fewer than
+    ``min_component_faces`` faces).
+    """
+    verts = mesh.vertices.astype(np.float64).copy()
+    faces = mesh.faces.astype(np.int64).copy()
+    stats = {
+        "passes": 0,
+        "removed_ears": 0,
+        "remaining_ears": 0,
+        "orphan_faces_removed": 0,
+    }
+
+    cos_thresh = float(np.cos(np.deg2rad(max_tip_angle_deg)))
+
+    def _scan_ears(verts_arr, faces_arr):
+        work = trimesh.Trimesh(vertices=verts_arr, faces=faces_arr, process=False)
+        b_edges = extract_boundary_edges(work)
+        if len(b_edges) == 0:
+            return []
+        b_set = set()
+        for e in b_edges:
+            u, v = int(e[0]), int(e[1])
+            b_set.add((u, v) if u < v else (v, u))
+
+        ears = []
+        for fi in range(len(faces_arr)):
+            f = faces_arr[fi]
+            tri_edges = [(int(f[0]), int(f[1])),
+                         (int(f[1]), int(f[2])),
+                         (int(f[2]), int(f[0]))]
+            on_bdy = [
+                (min(u, v), max(u, v)) in b_set for (u, v) in tri_edges
+            ]
+            if sum(on_bdy) != 2:
+                continue
+            # tip = vertex shared by the two boundary edges = opposite the chord
+            chord_local = on_bdy.index(False)
+            chord_a = int(f[chord_local])
+            chord_b = int(f[(chord_local + 1) % 3])
+            tip = int(f[(chord_local + 2) % 3])
+
+            # Angle at the tip between (tip→chord_a) and (tip→chord_b).
+            # Small angle ⇒ two boundary edges nearly coincide ⇒ spike.
+            e1 = verts_arr[chord_a] - verts_arr[tip]
+            e2 = verts_arr[chord_b] - verts_arr[tip]
+            n1 = float(np.linalg.norm(e1))
+            n2 = float(np.linalg.norm(e2))
+            if n1 < 1e-12 or n2 < 1e-12:
+                continue
+            cos_tip = float(np.dot(e1, e2) / (n1 * n2))
+            cos_tip = max(-1.0, min(1.0, cos_tip))
+            if cos_tip > cos_thresh:  # angle < threshold ⇒ spike
+                tip_deg = float(np.degrees(np.arccos(cos_tip)))
+                ears.append((tip_deg, fi))
+        return ears
+
+    for _ in range(max_passes):
+        ears = _scan_ears(verts, faces)
+        if not ears:
+            break
+
+        face_alive = np.ones(len(faces), dtype=bool)
+        for _ang, fi in ears:
+            face_alive[fi] = False
+
+        faces = faces[face_alive]
+        used = np.unique(faces)
+        new_idx = -np.ones(len(verts), dtype=np.int64)
+        new_idx[used] = np.arange(len(used))
+        verts = verts[used]
+        faces = new_idx[faces]
+
+        stats["removed_ears"] += len(ears)
+        stats["passes"] += 1
+
+    # Drop tiny disconnected components (orphan triangles produced by trim).
+    work = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
+    if len(faces) > 0:
+        adj = trimesh.graph.face_adjacency(mesh=work)
+        comps = trimesh.graph.connected_components(adj, nodes=np.arange(len(faces)))
+        keep_faces_idx = []
+        min_component_faces = 10
+        for comp in comps:
+            if len(comp) >= min_component_faces:
+                keep_faces_idx.extend(comp.tolist())
+        keep_faces_idx = sorted(keep_faces_idx)
+        if len(keep_faces_idx) < len(faces):
+            stats["orphan_faces_removed"] = len(faces) - len(keep_faces_idx)
+            faces = faces[keep_faces_idx]
+            used = np.unique(faces)
+            new_idx = -np.ones(len(verts), dtype=np.int64)
+            new_idx[used] = np.arange(len(used))
+            verts = verts[used]
+            faces = new_idx[faces]
+
+    cleaned = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
+    stats["remaining_ears"] = len(_scan_ears(cleaned.vertices, cleaned.faces))
+    return cleaned, stats
+
+
+def diagnose_boundary_xy(boundary: np.ndarray, tag: str = "") -> dict:
+    """
+    Project the boundary loop onto XY and check whether it is a simple
+    closed polygon. Reports:
+      - Shapely LinearRing.is_simple / Polygon.is_valid
+      - Self-intersection locations (segment index pairs + XY points)
+      - Sub-loops produced by self-intersection (after Shapely union/buffer)
+      - Sharp turns (turn angle > 120°): potential doubling-back
+
+    Also writes an OBJ in z=0 with the XY polyline + marker verts at
+    intersections / sharp turns for visual inspection.
+    """
+    info: dict = {}
+    pts = np.asarray(boundary)[:, :2]
+    n = len(pts)
+    info["n_segments"] = n
+
+    # 1. Self-intersection via Shapely (optional)
+    try:
+        from shapely.geometry import LineString
+        ring_pts = np.vstack([pts, pts[:1]])
+        info["is_simple"] = bool(LineString(ring_pts.tolist()).is_simple)
+    except Exception:
+        info["is_simple"] = None
+
+    # 2. Brute-force vectorized self-intersection — find ALL crossings
+    a = pts
+    b = np.roll(pts, -1, axis=0)
+    n_pairs = 0
+    crossings = []  # (i, j, x, y)
+    for i in range(n):
+        ax, ay = a[i]
+        bx, by = b[i]
+        d1x, d1y = bx - ax, by - ay
+        # Test against all later, non-adjacent segments
+        js = np.arange(i + 2, n if i > 0 else n - 1)
+        if len(js) == 0:
+            continue
+        cx, cy = a[js, 0], a[js, 1]
+        dx, dy = b[js, 0], b[js, 1]
+        d2x, d2y = dx - cx, dy - cy
+        denom = d1x * d2y - d1y * d2x
+        with np.errstate(invalid="ignore", divide="ignore"):
+            s = ((cx - ax) * d2y - (cy - ay) * d2x) / denom
+            t = ((cx - ax) * d1y - (cy - ay) * d1x) / denom
+        eps = 1e-9
+        hits = (np.abs(denom) > 1e-18) & (s > eps) & (s < 1 - eps) & (t > eps) & (t < 1 - eps)
+        for k_local in np.where(hits)[0]:
+            j = int(js[k_local])
+            xi = float(ax + s[k_local] * d1x)
+            yi = float(ay + s[k_local] * d1y)
+            crossings.append((i, j, xi, yi))
+            n_pairs += 1
+    info["self_intersections"] = n_pairs
+    info["first_crossings"] = crossings[:10]
+
+    # 3. Sharp turns (> 120°) — local doubling-back
+    turn_deg = np.zeros(n)
+    for i in range(n):
+        prev = pts[(i - 1) % n]
+        cur = pts[i]
+        nxt = pts[(i + 1) % n]
+        e_in = cur - prev
+        e_out = nxt - cur
+        n1 = float(np.linalg.norm(e_in))
+        n2 = float(np.linalg.norm(e_out))
+        if n1 < 1e-12 or n2 < 1e-12:
+            continue
+        c = float(np.dot(e_in, e_out) / (n1 * n2))
+        c = max(-1.0, min(1.0, c))
+        turn_deg[i] = float(np.degrees(np.arccos(c)))
+    sharp_idx = np.where(turn_deg > 120.0)[0].tolist()
+    info["sharp_turns_gt_120"] = len(sharp_idx)
+    info["sharp_turn_indices"] = sharp_idx[:20]
+
+    # 4. Validity reason via Shapely (optional)
+    try:
+        from shapely.geometry import Polygon
+        from shapely.validation import explain_validity
+        info["validity"] = explain_validity(Polygon(pts.tolist()))
+    except Exception:
+        info["validity"] = "(shapely unavailable)"
+
+    # 5. Dump OBJ in z=0: polyline + marker verts at crossings / sharp turns
+    try:
+        _PRE_WALL_DUMP_DIR.mkdir(parents=True, exist_ok=True)
+        prefix = (tag + "_") if tag else _ts_tag() + "_"
+        obj_path = _PRE_WALL_DUMP_DIR / f"{prefix}boundary_xy.obj"
+        lines = []
+        for p in pts:
+            lines.append(f"v {p[0]:.6f} {p[1]:.6f} 0.000000\n")
+        # Crossing markers (offset Z so they're visible)
+        for (_, _, xi, yi) in crossings:
+            lines.append(f"v {xi:.6f} {yi:.6f} 0.500000\n")
+        # Sharp turn markers
+        for idx in sharp_idx:
+            p = pts[idx]
+            lines.append(f"v {p[0]:.6f} {p[1]:.6f} 1.000000\n")
+        # Polyline (boundary)
+        lines.append("o boundary\nl " + " ".join(str(i + 1) for i in range(n)) + " 1\n")
+        # Crossing markers as points (separate group)
+        if crossings:
+            lines.append("o crossings\n")
+            base = n
+            for k in range(len(crossings)):
+                lines.append(f"p {base + k + 1}\n")
+        if sharp_idx:
+            lines.append("o sharp_turns\n")
+            base = n + len(crossings)
+            for k in range(len(sharp_idx)):
+                lines.append(f"p {base + k + 1}\n")
+        obj_path.write_text("".join(lines))
+        print(f"[diagnose] dumped {obj_path}")
+    except Exception as exc:
+        print(f"[diagnose] dump failed: {exc}")
+
+    print(
+        f"[diagnose] n={n} simple={info['is_simple']} "
+        f"crossings={n_pairs} sharp(>120°)={len(sharp_idx)} "
+        f"validity={info['validity']}"
+    )
+    if crossings:
+        print(f"[diagnose] first crossings (i,j, x, y):")
+        for c in crossings[:5]:
+            print(f"           {c}")
+    if sharp_idx:
+        print(f"[diagnose] sharp-turn vertex indices (first 20): {sharp_idx[:20]}")
+    return info
 
 
 # ---------- Data Structures ----------
@@ -514,6 +798,18 @@ def generate_base(
     # Re-detect boundary on the oriented mesh to get updated points
     # Use aggressive vertex merge to handle trimmed meshes (split vertices may differ slightly)
     mesh.merge_vertices(digits_vertex=4)
+
+    # Strip "spike ear" triangles on the boundary (2 boundary edges + 1
+    # interior chord, with sharp angle at the tip — boundary doubles back).
+    # Threshold in degrees via env; set to 0 to disable.
+    try:
+        ear_max_tip_deg = float(os.environ.get("BASE_GEN_EAR_MAX_TIP_DEG", "30"))
+    except ValueError:
+        ear_max_tip_deg = 30.0
+    if ear_max_tip_deg > 0:
+        mesh, _ear_stats = remove_degenerate_boundary_ears(mesh, max_tip_angle_deg=ear_max_tip_deg)
+        # print(f"[generate_base] ear removal (tip<{ear_max_tip_deg}°): {_ear_stats}")
+
     boundary_edges = extract_boundary_edges(mesh)
     print(f"[generate_base] vertices: {len(mesh.vertices)}, faces: {len(mesh.faces)}, boundary_edges: {len(boundary_edges)}")
     loops = build_boundary_loops(mesh, boundary_edges)
@@ -533,6 +829,9 @@ def generate_base(
         signed_area += boundary[i, 0] * boundary[j, 1] - boundary[j, 0] * boundary[i, 1]
     if signed_area < 0:
         boundary = boundary[::-1]
+
+    # _debug_tag = _ts_tag()
+    # _dump_snapshot(mesh, None, _debug_tag + "_upper_mesh")
 
     use_chamfer = False
     if chamfer:
@@ -612,6 +911,8 @@ def generate_base(
 
     # --- Merge all ---
     combined = trimesh.util.concatenate([mesh, wall_mesh, bottom_mesh])
+
+    # _dump_snapshot(wall_mesh, None, _debug_tag + "_wall_only")
 
     return combined.export(file_type='stl')
 
