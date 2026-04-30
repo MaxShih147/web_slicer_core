@@ -907,11 +907,39 @@ async def get_layers_zip_v2(job_id: str):
     return FileResponse(sl1_path, media_type="application/zip", filename="layers.zip")
 
 
+def _decode_preview_rgb(field: Optional[dict]) -> Optional["np.ndarray"]:
+    """Decode a preview field { width, height, rgb_b64 } into (H, W, 3) uint8.
+    Returns None if missing/invalid; encoder will fall back to a black preview."""
+    if not isinstance(field, dict):
+        return None
+    width = field.get("width")
+    height = field.get("height")
+    b64 = field.get("rgb_b64")
+    if not (isinstance(width, int) and isinstance(height, int) and isinstance(b64, str)):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    import base64
+    import numpy as np
+    try:
+        raw = base64.b64decode(b64, validate=False)
+    except Exception:
+        return None
+    if len(raw) != width * height * 3:
+        return None
+    return np.frombuffer(raw, dtype=np.uint8).reshape(height, width, 3)
+
+
 @router.post("/slices/{job_id}/download.prz")
 async def download_prz_v2(job_id: str, request: Request):
     """
     Generate and stream a PRZ file from the .sl1 layers + posted config.
-    The POST body is the Mechado config JSON (same structure as default profile).
+
+    POST body is JSON:
+      - Mechado config fields (same structure as default profile), AND
+      - optional `preview_small`: { width, height, rgb_b64 } (raw RGB Uint8Array, base64)
+      - optional `preview_large`: { width, height, rgb_b64 }
+    The encoder will Lanczos-resize previews to PRZ's 116×116 / 290×290 slots.
     """
     status_data = _job_status_or_raise(job_id)
     _require_completed(status_data, job_id)
@@ -921,9 +949,15 @@ async def download_prz_v2(job_id: str, request: Request):
         raise file_not_found(".sl1 archive not found")
 
     try:
-        config = await request.json()
+        body = await request.json()
     except Exception:
         raise validation_error("Request body must be valid JSON")
+    if not isinstance(body, dict):
+        raise validation_error("Request body must be a JSON object")
+
+    preview_small_rgb = _decode_preview_rgb(body.pop("preview_small", None))
+    preview_large_rgb = _decode_preview_rgb(body.pop("preview_large", None))
+    config = body
 
     from .prz_encoder import encode_prz_streaming
 
@@ -933,6 +967,8 @@ async def download_prz_v2(job_id: str, request: Request):
             sl1_path=sl1_path,
             estimated_print_time=status_data.get("estimated_print_time") or 0,
             resin_volume_ml=status_data.get("resin_volume_ml") or 0,
+            preview_small_rgb=preview_small_rgb,
+            preview_large_rgb=preview_large_rgb,
         ),
         media_type="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=model.prz"},

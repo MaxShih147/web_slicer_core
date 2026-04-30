@@ -125,6 +125,19 @@ def _resize_preview(img: Image.Image, size: int) -> np.ndarray:
     return np.array(img, dtype=np.uint8)
 
 
+def _preview_rgb_to_rgb565_be(rgb: np.ndarray, target_size: int) -> Optional[bytes]:
+    """Convert an arbitrary-size (H, W, 3) uint8 RGB array to RGB565 BE bytes
+    sized for the given PRZ preview slot, resizing via PIL Lanczos when needed.
+    Returns None on invalid shape/dtype."""
+    if rgb is None:
+        return None
+    if rgb.dtype != np.uint8 or rgb.ndim != 3 or rgb.shape[2] != 3:
+        return None
+    if rgb.shape[0] != target_size or rgb.shape[1] != target_size:
+        rgb = _resize_preview(Image.fromarray(rgb, mode="RGB"), target_size)
+    return _rgb_to_rgb565_be(rgb)
+
+
 # ---------- RLE Encoding ----------
 
 def _encode_run(value: int, run_len: int) -> bytes:
@@ -574,6 +587,8 @@ def encode_prz(
     sl1_path: Path,
     estimated_print_time: float = 0,
     resin_volume_ml: float = 0,
+    preview_small_rgb: Optional[np.ndarray] = None,
+    preview_large_rgb: Optional[np.ndarray] = None,
 ) -> bytes:
     """
     Encode a PRZ V3.0 binary from a config dict and .sl1 layer archive.
@@ -598,6 +613,8 @@ def encode_prz(
         config, total_layers,
         estimated_print_time=estimated_print_time,
         resin_volume_ml=resin_volume_ml,
+        preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
+        preview_large=_preview_rgb_to_rgb565_be(preview_large_rgb, PREVIEW_LARGE_SIZE),
     )
 
     output = BytesIO()
@@ -644,6 +661,8 @@ def encode_prz_streaming(
     sl1_path: Path,
     estimated_print_time: float = 0,
     resin_volume_ml: float = 0,
+    preview_small_rgb: Optional[np.ndarray] = None,
+    preview_large_rgb: Optional[np.ndarray] = None,
 ):
     """
     Generator that yields PRZ chunks for streaming response.
@@ -663,6 +682,8 @@ def encode_prz_streaming(
         config, total_layers,
         estimated_print_time=estimated_print_time,
         resin_volume_ml=resin_volume_ml,
+        preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
+        preview_large=_preview_rgb_to_rgb565_be(preview_large_rgb, PREVIEW_LARGE_SIZE),
     )
 
     # Read all PNGs from ZIP first (ZIP is sequential I/O, fast)
