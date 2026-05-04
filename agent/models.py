@@ -88,6 +88,21 @@ class SLAConfig(BaseModel):
     center_x: Optional[float] = None
     center_y: Optional[float] = None
 
+    # Shrinkage compensation
+    shrinkage_compensation: bool = False
+    shrinkage_compensation_x: float = 100.0
+    shrinkage_compensation_y: float = 100.0
+    shrinkage_compensation_z: float = 100.0
+
+    # Tolerance compensation
+    tolerance_compensation: bool = False
+    tolerance_compensation_a: float = 0.0
+    tolerance_compensation_b: float = 0.0
+    bottom_tolerance_compensation: bool = False
+    bottom_tolerance_compensation_a: float = 0.0
+    bottom_tolerance_compensation_b: float = 0.0
+    bottom_layer_count: int = 6
+
     @model_validator(mode='after')
     def set_center_defaults(self) -> 'SLAConfig':
         if self.center_x is None or self.center_x < 0:

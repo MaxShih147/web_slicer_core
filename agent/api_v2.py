@@ -1400,6 +1400,17 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         "Anti-aliasing Level": "anti_aliasing_level",
         "Grey Level": "gray_level",
         "Image Blur Pixel": "blur",
+        "Shrinkage Compensation": "shrinkage_compensation",
+        "Shrinkage Compensation X": "shrinkage_compensation_x",
+        "Shrinkage Compensation Y": "shrinkage_compensation_y",
+        "Shrinkage Compensation Z": "shrinkage_compensation_z",
+        "Tolerance Compensation": "tolerance_compensation",
+        "Tolerance Compensation A": "tolerance_compensation_a",
+        "Tolerance Compensation B": "tolerance_compensation_b",
+        "Bottom Tolerance Compensation": "bottom_tolerance_compensation",
+        "Bottom Tolerance Compensation A": "bottom_tolerance_compensation_a",
+        "Bottom Tolerance Compensation B": "bottom_tolerance_compensation_b",
+        "Bottom Layer Count": "bottom_layer_count",
     }
 
     sla_dict = {}
