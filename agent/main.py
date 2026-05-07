@@ -33,6 +33,7 @@ from .jobs import (
     run_slicing,
 )
 from .api_v2 import router as v2_router, prz_session_cleanup_loop
+from .api_v2_fdm import router as v2_fdm_router
 
 
 @asynccontextmanager
@@ -169,6 +170,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include v2 API router (DS-Online compatible)
 app.include_router(v2_router)
+
+# Include FDM v2 router (epic/fdm)
+app.include_router(v2_fdm_router)
 
 
 @app.get("/")
