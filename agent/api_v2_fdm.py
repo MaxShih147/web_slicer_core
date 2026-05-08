@@ -6,7 +6,9 @@ slice → poll → download) but with FDM-specific output (`.gcode`).
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, File, UploadFile
+from typing import Any, Optional
+
+from fastapi import APIRouter, BackgroundTasks, Body, File, UploadFile
 from fastapi.responses import FileResponse
 
 from .fdm_slicing import run_fdm_slicing
@@ -64,8 +66,19 @@ async def upload_fdm_model(job_id: str, file: UploadFile = File(...)):
 
 
 @router.post("/jobs/{job_id}/slice")
-async def start_fdm_slice(job_id: str, background_tasks: BackgroundTasks):
-    """Kick off slicing in the background."""
+async def start_fdm_slice(
+    job_id: str,
+    background_tasks: BackgroundTasks,
+    body: Optional[dict[str, Any]] = Body(default=None),
+):
+    """Kick off slicing in the background.
+
+    Optional body shape: ``{"params": {"layer_height": 0.2, ...}}`` —
+    snake_case keys map 1:1 to PrusaSlicer ini option names. The values
+    are written into ``<job>/config.ini`` and PrusaSlicer is invoked
+    with ``--load <ini>``. CLI flags from the body override anything in
+    a default profile.
+    """
     if not fdm_job_exists(job_id):
         return {
             "success": False,
@@ -78,7 +91,8 @@ async def start_fdm_slice(job_id: str, background_tasks: BackgroundTasks):
             "code": "NO_INPUT",
             "message": "Upload an STL first",
         }
-    background_tasks.add_task(run_fdm_slicing, job_id)
+    params = (body or {}).get("params") if isinstance(body, dict) else None
+    background_tasks.add_task(run_fdm_slicing, job_id, params)
     return {
         "success": True,
         "message": "FDM slicing started",
