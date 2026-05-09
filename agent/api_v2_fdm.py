@@ -11,6 +11,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, BackgroundTasks, Body, File, UploadFile
 from fastapi.responses import FileResponse
 
+from . import orca_profile
 from .fdm_slicing import run_fdm_slicing
 from .jobs_fdm import (
     FDMJobStatus,
@@ -73,11 +74,18 @@ async def start_fdm_slice(
 ):
     """Kick off slicing in the background.
 
-    Optional body shape: ``{"params": {"layer_height": 0.2, ...}}`` —
-    snake_case keys map 1:1 to PrusaSlicer ini option names. The values
-    are written into ``<job>/config.ini`` and PrusaSlicer is invoked
-    with ``--load <ini>``. CLI flags from the body override anything in
-    a default profile.
+    Body shape (all fields optional):
+      ``{"machine": "Phrozen Arco 0.4 nozzle",
+         "filament": "Phrozen PLA Basic @Phrozen Arco 0.4 nozzle",
+         "process":  "0.20mm Standard @Phrozen Arco 0.4 nozzle",
+         "params":   {"layer_height": 0.16, ...}}``
+
+    Profiles are resolved (inheritance walked, Orca→Prusa keys remapped),
+    merged in order machine → filament → process, then user ``params``
+    are applied last as overrides. The result becomes ``<job>/config.ini``
+    and PrusaSlicer is invoked with ``--load <ini>``. Without any of the
+    profile fields, the request still works using only ``params`` (the
+    legacy shape).
     """
     if not fdm_job_exists(job_id):
         return {
@@ -91,12 +99,74 @@ async def start_fdm_slice(
             "code": "NO_INPUT",
             "message": "Upload an STL first",
         }
-    params = (body or {}).get("params") if isinstance(body, dict) else None
-    background_tasks.add_task(run_fdm_slicing, job_id, params)
+    body = body or {}
+    machine = body.get("machine") if isinstance(body, dict) else None
+    filament = body.get("filament") if isinstance(body, dict) else None
+    process = body.get("process") if isinstance(body, dict) else None
+    overrides = body.get("params") if isinstance(body, dict) else None
+
+    if machine or filament or process:
+        merged = orca_profile.merge_profiles(
+            machine=machine, filament=filament, process=process,
+            overrides=overrides,
+        )
+    else:
+        merged = overrides or None
+
+    background_tasks.add_task(run_fdm_slicing, job_id, merged)
     return {
         "success": True,
         "message": "FDM slicing started",
         "data": {"jobId": job_id},
+    }
+
+
+# ──────────────────────── profile catalogue ────────────────────────
+
+@router.get("/profiles")
+async def get_fdm_profiles():
+    """Catalogue used by the right-panel dropdowns.
+
+    Returns the bundled machines / filaments / processes with their already
+    resolved + Prusa-remapped params so the frontend can show effective
+    values without a per-selection round trip.
+    """
+    return {
+        "success": True,
+        "data": {
+            "version": orca_profile.get_bundle_version(),
+            "machines": orca_profile.list_machines(),
+            "filaments": orca_profile.list_filaments(),
+            "processes": orca_profile.list_processes(),
+        },
+    }
+
+
+@router.get("/profiles/version")
+async def get_fdm_profiles_version():
+    """Lightweight check used by the OTA UI."""
+    return {
+        "success": True,
+        "data": {"version": orca_profile.get_bundle_version()},
+    }
+
+
+@router.post("/profiles/sync")
+async def sync_fdm_profiles():
+    """OTA stub — wired but does nothing for now.
+
+    The real implementation will fetch a manifest from the Phrozen cloud
+    (mirroring Orca's preset_updater flow), download a new bundle ZIP,
+    unpack into the profiles dir, then call ``orca_profile.reset_cache()``.
+    Until that is in place we just report "no update available".
+    """
+    return {
+        "success": True,
+        "data": {
+            "version": orca_profile.get_bundle_version(),
+            "updateAvailable": False,
+            "message": "OTA not yet implemented — bundled profile is current",
+        },
     }
 
 
