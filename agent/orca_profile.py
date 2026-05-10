@@ -213,8 +213,15 @@ def _build_index() -> dict[str, dict]:
         name = data["name"]
         index[name] = data
         # Track which vendor the file lives under so we can group later.
-        rel = path.relative_to(root)
-        vendor = rel.parts[0] if len(rel.parts) > 1 else ""
+        # The library is laid out two ways:
+        #   <Vendor>/<type>/<file>            → vendor = <Vendor>
+        #   OrcaFilamentLibrary/<type>/<sub-vendor>/<file> → vendor = <sub-vendor>
+        #   OrcaFilamentLibrary/<type>/<file> → vendor = "Generic" (e.g. "Generic PLA @System")
+        parts = path.relative_to(root).parts
+        if parts and parts[0] == "OrcaFilamentLibrary":
+            vendor = parts[2] if len(parts) >= 4 else "Generic"
+        else:
+            vendor = parts[0] if len(parts) > 1 else ""
         data.setdefault("_vendor", vendor)
         data.setdefault("_path", str(path))
     return index
