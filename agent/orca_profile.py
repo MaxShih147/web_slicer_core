@@ -326,26 +326,41 @@ def list_machines() -> list[dict[str, Any]]:
     """User-facing machine list (only ``instantiation: true`` profiles)."""
     out = []
     for name, p in _build_index().items():
-        if p.get("type") != "machine_model" and p.get("printer_technology") != "FFF":
-            # The .machine_model JSONs don't have printer_technology, but
-            # they have type=="machine_model"; the actual printer profiles
-            # use printer_technology FFF and instantiation true.
-            pass
         # We want the per-nozzle printer profiles (e.g. "Phrozen Arco 0.4 nozzle").
         if p.get("printer_technology") != "FFF":
             continue
         if p.get("instantiation") != "true":
             continue
         resolved = resolve(name)
+        vendor = p.get("_vendor", "")
+        model = resolved.get("printer_model", "")
+        cover_url = None
+        if model and vendor:
+            # Cover convention: ``<vendor>/<model>_cover.png`` lives next
+            # to the vendor manifest. We just expose a URL here; the
+            # /api/v2/fdm/profiles/cover endpoint serves the bytes.
+            cover_path = get_profiles_dir() / vendor / f"{model}_cover.png"
+            if cover_path.exists():
+                from urllib.parse import quote
+                cover_url = f"/api/v2/fdm/profiles/cover/{quote(vendor)}/{quote(model)}"
         out.append({
             "name": name,
-            "vendor": p.get("_vendor", ""),
-            "model": resolved.get("printer_model", ""),
+            "vendor": vendor,
+            "model": model,
             "nozzle": _flatten(resolved.get("nozzle_diameter", "")),
+            "coverUrl": cover_url,
             "params": to_prusa_ini(resolved),
         })
     out.sort(key=lambda x: (x["vendor"], x["name"]))
     return out
+
+
+def get_cover_path(vendor: str, model: str) -> Optional[Path]:
+    """Return the on-disk path to a machine's cover image, or None."""
+    if not vendor or not model:
+        return None
+    p = get_profiles_dir() / vendor / f"{model}_cover.png"
+    return p if p.exists() else None
 
 
 def list_filaments() -> list[dict[str, Any]]:

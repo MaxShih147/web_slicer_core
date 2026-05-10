@@ -142,6 +142,16 @@ async def get_fdm_profiles():
     }
 
 
+@router.get("/profiles/cover/{vendor}/{model}")
+async def get_machine_cover(vendor: str, model: str):
+    """Serve the ``<vendor>/<model>_cover.png`` if present."""
+    path = orca_profile.get_cover_path(vendor, model)
+    if path is None:
+        return {"success": False, "code": "COVER_NOT_FOUND",
+                "message": f"No cover for {vendor}/{model}"}
+    return FileResponse(path, media_type="image/png")
+
+
 @router.get("/profiles/version")
 async def get_fdm_profiles_version():
     """Lightweight check used by the OTA UI."""
