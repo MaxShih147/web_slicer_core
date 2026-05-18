@@ -528,6 +528,87 @@ def _update_progress(job_id: str, step: int, total_steps: int, description: str,
         json.dump(status_data, f)
 
 
+def clean_input_for_manifold(in_path: Path, out_path: Path, weld_tol: float = 0.5) -> dict:
+    """
+    Pre-clean an input STL so manifold3d's CSG accepts it. No-op when input
+    is already clean. Writes result to out_path.
+
+    Why: legacy base-gen produced shells where bottom-face triangulation did
+    not share vertex IDs with the wall ring. After STL roundtrip this becomes
+    a watertight-looking but non-manifold mesh (3 zero-area slivers per
+    perimeter vertex + 6 faces sharing the wall edge), which manifold3d
+    silently turns into an empty Manifold and every downstream boolean
+    collapses to empty.
+
+    Three-step repair, all of which are no-ops on a healthy input:
+      1) drop zero-area triangles (earcut slivers);
+      2) merge near-coincident vertices at 1e-3 mm (float roundtrip noise);
+      3) weld remaining boundary verts whose distance ≤ weld_tol mm
+         (closes the residual seam between bottom face and wall ring).
+    """
+    from collections import defaultdict
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import connected_components
+    from scipy.spatial import cKDTree
+
+    mesh = trimesh.load(str(in_path))
+    if isinstance(mesh, trimesh.Scene):
+        mesh = trimesh.util.concatenate(mesh.dump())
+
+    stats = {"zero_area_dropped": 0, "merged_verts": 0, "boundary_welded": 0}
+
+    keep = mesh.area_faces > 1e-9
+    if not keep.all():
+        stats["zero_area_dropped"] = int((~keep).sum())
+        mesh.update_faces(keep)
+        mesh.remove_unreferenced_vertices()
+
+    before = len(mesh.vertices)
+    mesh.merge_vertices(digits_vertex=3)
+    stats["merged_verts"] = before - len(mesh.vertices)
+
+    edges_sorted = mesh.edges_sorted
+    ue, c = np.unique(edges_sorted, axis=0, return_counts=True)
+    bd_verts = np.unique(ue[c == 1])
+    if len(bd_verts) > 0:
+        pos = mesh.vertices[bd_verts]
+        pairs = cKDTree(pos).query_pairs(r=weld_tol)
+        if pairs:
+            i = np.array([p[0] for p in pairs])
+            j = np.array([p[1] for p in pairs])
+            n_bd = len(bd_verts)
+            g = csr_matrix(
+                (np.ones(len(i) * 2), (np.r_[i, j], np.r_[j, i])),
+                shape=(n_bd, n_bd),
+            )
+            _, lab = connected_components(g, directed=False)
+            groups = defaultdict(list)
+            for idx, l in enumerate(lab):
+                groups[l].append(idx)
+            remap = np.arange(len(mesh.vertices))
+            welded = 0
+            for members in groups.values():
+                if len(members) < 2:
+                    continue
+                rep = bd_verts[members[0]]
+                for m in members[1:]:
+                    remap[bd_verts[m]] = rep
+                    welded += 1
+            new_faces = remap[mesh.faces]
+            valid = (
+                (new_faces[:, 0] != new_faces[:, 1])
+                & (new_faces[:, 1] != new_faces[:, 2])
+                & (new_faces[:, 0] != new_faces[:, 2])
+            )
+            new_faces = new_faces[valid]
+            mesh = trimesh.Trimesh(vertices=mesh.vertices, faces=new_faces, process=True)
+            mesh.remove_unreferenced_vertices()
+            stats["boundary_welded"] = welded
+
+    mesh.export(str(out_path))
+    return stats
+
+
 async def run_ortho_pipeline(
     job_id: str,
     hollowing_min_thickness: float = 3.0,
@@ -566,6 +647,14 @@ async def run_ortho_pipeline(
     status_data: dict = {}
 
     try:
+        # ===== Pre-clean input for manifold3d =====
+        # Repairs legacy base-gen output where the bottom face and wall ring
+        # didn't share vertices. No-op on healthy meshes.
+        cleaned_path = job_dir / "input" / "model_clean.stl"
+        clean_stats = clean_input_for_manifold(input_path, cleaned_path)
+        logger.info(f"[ortho_pipeline:{job_id}] Pre-clean: {clean_stats}")
+        input_path = cleaned_path
+
         # ===== Step 1: Generate hollow =====
         _update_progress(job_id, 1, total_steps, "Generating hollow mesh...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 1: Generating hollow")

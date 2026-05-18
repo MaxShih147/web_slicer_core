@@ -821,6 +821,7 @@ def generate_base(
     print(f"[generate_base] main loop: {len(boundary)} points, perimeter: {loops[0].perimeter:.2f}")
 
     n = len(boundary)
+    top_idx = np.asarray(loops[0].vertex_indices, dtype=np.int64)
 
     # Ensure boundary is CCW in XY so we can use a single winding convention
     signed_area = 0.0
@@ -829,9 +830,7 @@ def generate_base(
         signed_area += boundary[i, 0] * boundary[j, 1] - boundary[j, 0] * boundary[i, 1]
     if signed_area < 0:
         boundary = boundary[::-1]
-
-    # _debug_tag = _ts_tag()
-    # _dump_snapshot(mesh, None, _debug_tag + "_upper_mesh")
+        top_idx = top_idx[::-1]
 
     use_chamfer = False
     if chamfer:
@@ -867,52 +866,63 @@ def generate_base(
             bottom = np.column_stack([bottom_xy, np.zeros(n)])
             use_chamfer = True
 
+    # Build wall + bottom into the SAME vertex array as the upper shell `mesh`,
+    # so wall ↔ bottom and wall ↔ mesh share vertices (no concatenate seams).
+    N_orig = len(mesh.vertices)
+
     if use_chamfer:
-        # Wall vertices: [0..n-1]=top, [n..2n-1]=mid, [2n..3n-1]=bot
-        wall_verts = np.vstack([boundary, mid, bottom])
+        # Append [mid (n), bot (n)] to mesh verts. Top ring reuses mesh boundary verts via top_idx.
+        new_verts = np.vstack([mesh.vertices, mid, bottom])
+        mid_base = N_orig
+        bot_base = N_orig + n
+
         wall_faces = []
         for i in range(n):
             j = (i + 1) % n
+            ti, tj = int(top_idx[i]), int(top_idx[j])
+            mi, mj = mid_base + i, mid_base + j
+            bi, bj = bot_base + i, bot_base + j
             # Upper segment: top ↔ mid
-            wall_faces.append([i, n + i, j])
-            wall_faces.append([j, n + i, n + j])
+            wall_faces.append([ti, mi, tj])
+            wall_faces.append([tj, mi, mj])
             # Lower segment (chamfer): mid ↔ bot
-            wall_faces.append([n + i, 2 * n + i, n + j])
-            wall_faces.append([n + j, 2 * n + i, 2 * n + j])
+            wall_faces.append([mi, bi, mj])
+            wall_faces.append([mj, bi, bj])
         wall_faces = np.array(wall_faces, dtype=np.int64)
-        wall_mesh = trimesh.Trimesh(vertices=wall_verts, faces=wall_faces, process=False)
 
-        # Bottom plate: earcut on the inset bottom ring
         bottom_2d = bottom[:, :2].copy()
-        rings = np.array([n])
-        tri_indices = triangulate_float64(bottom_2d, rings)
-        bottom_faces = tri_indices.reshape(-1, 3)[:, ::-1]
-        bottom_mesh = trimesh.Trimesh(vertices=bottom, faces=bottom_faces, process=False)
+        tri_indices = triangulate_float64(bottom_2d, np.array([n]))
+        bottom_faces = tri_indices.reshape(-1, 3)[:, ::-1] + bot_base
     else:
         # --- Standard wall: 2 rings (top → bot) ---
         bottom = boundary.copy()
         bottom[:, 2] = 0.0
 
-        wall_verts = np.vstack([boundary, bottom])  # [0..n-1] = top, [n..2n-1] = bottom
+        new_verts = np.vstack([mesh.vertices, bottom])
+        bot_base = N_orig
+
         wall_faces = []
         for i in range(n):
             j = (i + 1) % n
-            wall_faces.append([i, n + i, j])
-            wall_faces.append([j, n + i, n + j])
+            ti, tj = int(top_idx[i]), int(top_idx[j])
+            bi, bj = bot_base + i, bot_base + j
+            wall_faces.append([ti, bi, tj])
+            wall_faces.append([tj, bi, bj])
         wall_faces = np.array(wall_faces, dtype=np.int64)
-        wall_mesh = trimesh.Trimesh(vertices=wall_verts, faces=wall_faces, process=False)
 
-        # Bottom face: earcut on boundary XY projected to Z=0
         bottom_2d = bottom[:, :2].copy()
-        rings = np.array([n])
-        tri_indices = triangulate_float64(bottom_2d, rings)
-        bottom_faces = tri_indices.reshape(-1, 3)[:, ::-1]
-        bottom_mesh = trimesh.Trimesh(vertices=bottom, faces=bottom_faces, process=False)
+        tri_indices = triangulate_float64(bottom_2d, np.array([n]))
+        bottom_faces = tri_indices.reshape(-1, 3)[:, ::-1] + bot_base
 
-    # --- Merge all ---
-    combined = trimesh.util.concatenate([mesh, wall_mesh, bottom_mesh])
+    all_faces = np.vstack([mesh.faces.astype(np.int64), wall_faces, bottom_faces])
+    combined = trimesh.Trimesh(vertices=new_verts, faces=all_faces, process=False)
 
-    # _dump_snapshot(wall_mesh, None, _debug_tag + "_wall_only")
+    # earcut can emit zero-area triangles on near-collinear segments; drop them
+    # so we don't introduce NotManifold edges downstream.
+    keep = combined.area_faces > 1e-9
+    if not keep.all():
+        combined.update_faces(keep)
+        combined.remove_unreferenced_vertices()
 
     return combined.export(file_type='stl')
 
