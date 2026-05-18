@@ -453,12 +453,8 @@ def _write_header(
     normal_drop2 = _get_float(config, "Print.Retract Second Distance")
 
     # RetractDist = lift_height + lift_second_height - drop_second_height (from C++ Slicer.cpp)
-    bottom_retract = bottom_lift + bottom_lift2 - bottom_drop2
-    if bottom_retract <= 0.0:
-        bottom_retract = bottom_lift + bottom_lift2
-    normal_retract = normal_lift + normal_lift2 - normal_drop2
-    if normal_retract <= 0.0:
-        normal_retract = normal_lift + normal_lift2
+    bottom_retract = max(0.0, bottom_lift + bottom_lift2 - bottom_drop2)
+    normal_retract = max(0.0, normal_lift + normal_lift2 - normal_drop2)
 
     buf.write(struct.pack(">f", bottom_lift))
     buf.write(struct.pack(">f", _get_float(config, "Print.Bottom Lifting Speed", default=50.0)))
