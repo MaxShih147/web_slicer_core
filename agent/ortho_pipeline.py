@@ -20,6 +20,7 @@ with a single upload (~2MB) and download (~3.7MB).
 import json
 import logging
 import math
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -609,6 +610,18 @@ def clean_input_for_manifold(in_path: Path, out_path: Path, weld_tol: float = 0.
     return stats
 
 
+def _cleanup_hollow_intermediates(job_dir: Path, output_dir: Path, job_id: str) -> None:
+    """Remove PrusaSlicer hollow intermediate files produced during ortho pipeline."""
+    for p in [
+        output_dir / "model_hollow.stl",
+        job_dir / "stderr_hollow.log",
+        job_dir / "config_hollow.json",
+    ]:
+        if p.exists():
+            p.unlink()
+    logger.info(f"[ortho_pipeline:{job_id}] Cleaned up intermediate files")
+
+
 async def run_ortho_pipeline(
     job_id: str,
     hollowing_min_thickness: float = 3.0,
@@ -673,6 +686,103 @@ async def run_ortho_pipeline(
             raise exc
 
         hollow_mesh = load_trimesh(result.hollow_mesh_path)
+
+        # ===== Decide whether the hollow interior is usable =====
+        # This is a product decision, not a generation failure. The hollow STL was
+        # produced successfully; we now test whether it is wide enough for hex-grid
+        # infill processing.
+        #
+        # Why per-component (not total bbox):
+        #   A hollow may consist of several disconnected narrow spaces whose union
+        #   bbox looks adequate, but no individual space can accommodate a hex cell.
+        #
+        # Why XY minimum width via rotating calipers (not AABB):
+        #   Oblique strip-shaped hollows inflate their AABB in both X and Y even
+        #   though the actual narrow dimension is smaller than one hex diameter.
+        #
+        # Threshold — 1.5× hex diameter — is deliberately conservative.
+        #   U-arch models often produce marginal hollows; skipping hollow on those
+        #   is preferable to producing degenerate boolean results downstream.
+        _hex_diameter = 2.0 * hex_cell_radius
+        _required_min_width = 1.5 * _hex_diameter  # 15.0 mm at r=5
+
+        _total_bb = hollow_mesh.bounds
+        _total_xy_w = float(_total_bb[1][0] - _total_bb[0][0])
+        _total_xy_h = float(_total_bb[1][1] - _total_bb[0][1])
+
+        def _min_width_xy(_comp):
+            """XY minimum width of a mesh component via rotating calipers on its
+            convex hull. Falls back to min(AABB_X, AABB_Y) on failure."""
+            try:
+                from scipy.spatial import ConvexHull
+                _vxy = _comp.vertices[:, :2]
+                _hull = ConvexHull(_vxy)
+                _hpts = _vxy[_hull.vertices]
+                _n = len(_hpts)
+                _mw = float('inf')
+                for _j in range(_n):
+                    _e = _hpts[(_j + 1) % _n] - _hpts[_j]
+                    _elen = float(np.linalg.norm(_e))
+                    if _elen < 1e-9:
+                        continue
+                    _perp = np.array([-_e[1], _e[0]]) / _elen
+                    _proj = _hpts @ _perp
+                    _mw = min(_mw, float(_proj.max() - _proj.min()))
+                return _mw
+            except Exception as _hull_exc:
+                logger.warning(
+                    f"[ortho_pipeline:{job_id}] ConvexHull/calipers failed "
+                    f"({_hull_exc}); falling back to AABB min for this component."
+                )
+                _cbb = _comp.bounds
+                return min(
+                    float(_cbb[1][0] - _cbb[0][0]),
+                    float(_cbb[1][1] - _cbb[0][1]),
+                )
+
+        _hollow_fits = False
+        try:
+            _components = hollow_mesh.split(only_watertight=False)
+            _significant = [c for c in _components if len(c.faces) >= 100]
+            if not _significant:
+                logger.warning(
+                    f"[ortho_pipeline:{job_id}] Hollow split: all components < 100 faces; "
+                    f"using whole mesh as single component."
+                )
+                _significant = [hollow_mesh]
+
+            for _c in _significant:
+                if _min_width_xy(_c) >= _required_min_width:
+                    _hollow_fits = True
+                    break
+
+        except Exception as _split_exc:
+            logger.warning(
+                f"[ortho_pipeline:{job_id}] Hollow split failed ({_split_exc}); "
+                f"falling back to total AABB min check."
+            )
+            _hollow_fits = min(_total_xy_w, _total_xy_h) >= _required_min_width
+
+        if not _hollow_fits:
+            logger.info(
+                f"[ortho_pipeline:{job_id}] Hollow interior too narrow; "
+                f"skipping hollow processing, outputting cleaned input mesh."
+            )
+            ortho_result_path = output_dir / "ortho_result.stl"
+            shutil.copyfile(str(input_path), str(ortho_result_path))
+            _cleanup_hollow_intermediates(job_dir, output_dir, job_id)
+            status_data["status"] = "completed"
+            status_data["ortho_progress"] = {
+                "step": total_steps,
+                "total_steps": total_steps,
+                "description": "Complete",
+            }
+            status_data["has_ortho_result"] = True
+            status_data["output_path"] = str(ortho_result_path)
+            status_file = get_job_dir(job_id) / "status.json"
+            with open(status_file, "w") as f:
+                json.dump(status_data, f)
+            return
 
         # ===== Step 2: Extend bottom vertices =====
         _update_progress(job_id, 2, total_steps, "Extending bottom vertices...", status_data)
@@ -769,14 +879,7 @@ async def run_ortho_pipeline(
         result_mesh.export(str(ortho_result_path))
 
         # ===== Cleanup PrusaSlicer intermediate outputs =====
-        for p in [
-            output_dir / "model_hollow.stl",
-            job_dir / "stderr_hollow.log",
-            job_dir / "config_hollow.json",
-        ]:
-            if p.exists():
-                p.unlink()
-        logger.info(f"[ortho_pipeline:{job_id}] Cleaned up intermediate files")
+        _cleanup_hollow_intermediates(job_dir, output_dir, job_id)
 
         # ===== Done =====
         logger.info(f"[ortho_pipeline:{job_id}] Pipeline completed successfully")
