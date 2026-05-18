@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 import trimesh
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from .errors import (
     APIError,
@@ -56,7 +56,7 @@ from .jobs import (
     run_cut_operation,
     write_job_status,
 )
-from .models import BooleanOperation, JobStatus, SLAConfig
+from .models import BooleanOperation, JobStatus, PrzPrintTimingConfig, SLAConfig
 from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
 
 logger = logging.getLogger(__name__)
@@ -959,12 +959,18 @@ async def download_prz_v2(job_id: str, request: Request):
     preview_large_rgb = _decode_preview_rgb(body.pop("preview_large", None))
     config = body
 
+    try:
+        timing = _extract_prz_timing_config(config)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors())
+
     from .prz_encoder import encode_prz_streaming
 
     return StreamingResponse(
         encode_prz_streaming(
             config=config,
             sl1_path=sl1_path,
+            timing=timing,
             estimated_print_time=status_data.get("estimated_print_time") or 0,
             resin_volume_ml=status_data.get("resin_volume_ml") or 0,
             preview_small_rgb=preview_small_rgb,
@@ -1378,6 +1384,36 @@ async def delete_prz_session(session_id: str):
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
+# DS-Online Title Case key → PrzPrintTimingConfig field name
+# Keys live under the "Print" section of the DS-Online config dict.
+_DS_TO_PRZ_TIMING: Dict[str, str] = {
+    "Exposure Delay Mode":       "exposure_delay_mode",
+    "Light-off Delay":           "light_off_delay",
+    "Rest Before Lift":          "rest_before_lift",
+    "Rest After Lift":           "rest_after_lift",
+    "Rest After Retract":        "rest_after_retract",
+    "Bottom Rest Before Lift":   "bottom_rest_before_lift",
+    "Bottom Rest After Lift":    "bottom_rest_after_lift",
+    "Bottom Rest After Retract": "bottom_rest_after_retract",
+}
+
+
+def _extract_prz_timing_config(config: Dict[str, Any]) -> PrzPrintTimingConfig:
+    """
+    Extract PRZ print timing parameters from a DS-Online config dict.
+
+    Supports both nested {"Print": {...}} and flat formats (consistent with
+    _convert_v2_config_to_sla). Keys absent from the frontend payload use
+    PrzPrintTimingConfig defaults.
+    """
+    print_config = config.get("Print", config)
+    timing_dict: Dict[str, Any] = {}
+    for ds_key, field_name in _DS_TO_PRZ_TIMING.items():
+        if ds_key in print_config:
+            timing_dict[field_name] = print_config[ds_key]
+    return PrzPrintTimingConfig(**timing_dict)
+
 
 def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     """

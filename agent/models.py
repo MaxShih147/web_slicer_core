@@ -126,6 +126,67 @@ class CutConfig(BaseModel):
     keep_mode: CutMode = CutMode.BOTH  # Which parts to keep
 
 
+class PrzPrintTimingConfig(BaseModel):
+    """PRZ print motion timing configuration."""
+
+    # delay_mode: 0=lightOff, 1=waitTime
+    exposure_delay_mode: int = 1
+
+    # lightOff mode parameter, 0–120s
+    light_off_delay: float = 1.0
+
+    # waitTime mode parameters, 0–60s
+    rest_before_lift: float = 0.0
+    rest_after_lift: float = 0.0
+    rest_after_retract: float = 1.0
+
+    # bottom layer overrides; None falls back to normal layer values via model_validator
+    bottom_rest_before_lift: Optional[float] = None
+    bottom_rest_after_lift: Optional[float] = None
+    bottom_rest_after_retract: Optional[float] = None
+
+    @field_validator('exposure_delay_mode')
+    @classmethod
+    def validate_delay_mode(cls, v: int) -> int:
+        if v not in (0, 1):
+            raise ValueError('exposure_delay_mode must be 0 or 1')
+        return v
+
+    @field_validator('light_off_delay')
+    @classmethod
+    def validate_light_off_delay(cls, v: float) -> float:
+        if not 0.0 <= v <= 120.0:
+            raise ValueError('light_off_delay must be in range 0–120 s')
+        return v
+
+    @field_validator('rest_before_lift', 'rest_after_lift', 'rest_after_retract')
+    @classmethod
+    def validate_rest(cls, v: float) -> float:
+        if not 0.0 <= v <= 60.0:
+            raise ValueError('rest parameters must be in range 0–60 s')
+        return v
+
+    @field_validator(
+        'bottom_rest_before_lift', 'bottom_rest_after_lift', 'bottom_rest_after_retract',
+        mode='before',
+    )
+    @classmethod
+    def validate_bottom_rest(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and not 0.0 <= v <= 60.0:
+            raise ValueError('bottom rest parameters must be in range 0–60 s')
+        return v
+
+    @model_validator(mode='after')
+    def apply_bottom_fallbacks(self) -> 'PrzPrintTimingConfig':
+        if self.bottom_rest_before_lift is None:
+            self.bottom_rest_before_lift = self.rest_before_lift
+        if self.bottom_rest_after_lift is None:
+            self.bottom_rest_after_lift = self.rest_after_lift
+        if self.bottom_rest_after_retract is None:
+            self.bottom_rest_after_retract = self.rest_after_retract
+        return self
+
+
 class BooleanOperation(str, Enum):
     """Boolean operation type."""
     UNION = "union"

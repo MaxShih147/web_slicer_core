@@ -15,6 +15,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
+from .models import PrzPrintTimingConfig
+
 import numpy as np
 from PIL import Image
 
@@ -277,11 +279,41 @@ def _rle_encode_layer(gray_pixels: np.ndarray) -> bytes:
     return bytes(out[:pos])
 
 
+# ---------- Timing Resolution ----------
+
+def _resolve_timing_values(
+    timing: PrzPrintTimingConfig, is_bottom: bool
+) -> tuple:
+    """Return (light_off_time, before_lift_time, after_lift_time, after_retract_time).
+
+    Enforces delay_mode exclusivity:
+      mode 0 (lightOff)  — light_off_delay written, all rest times forced to 0.0
+      mode 1 (waitTime)  — light_off_time forced to 0.0, rest times written
+    """
+    if timing.exposure_delay_mode == 0:
+        return (timing.light_off_delay, 0.0, 0.0, 0.0)
+    # mode == 1 (waitTime)
+    if is_bottom:
+        return (
+            0.0,
+            timing.bottom_rest_before_lift,
+            timing.bottom_rest_after_lift,
+            timing.bottom_rest_after_retract,
+        )
+    return (
+        0.0,
+        timing.rest_before_lift,
+        timing.rest_after_lift,
+        timing.rest_after_retract,
+    )
+
+
 # ---------- Header ----------
 
 def _write_header(
     config: dict,
     total_layers: int,
+    timing: PrzPrintTimingConfig,
     estimated_print_time: float = 0,
     resin_volume_ml: float = 0,
     preview_small: Optional[bytes] = None,
@@ -376,30 +408,32 @@ def _write_header(
     # Exposure Time (4B float BE)
     buf.write(struct.pack(">f", _get_float(config, "Print.Exposure Time", default=2.5)))
 
-    # Delay Mode (1B) = 1
-    buf.write(struct.pack("B", 1))
+    bottom = _resolve_timing_values(timing, is_bottom=True)
+    normal = _resolve_timing_values(timing, is_bottom=False)
 
-    # Turn Off Time (4B float BE)
-    buf.write(struct.pack(">f", _get_float(config, "Print.Light-off Delay", default=1.0)))
+    # Delay Mode (1B)
+    buf.write(struct.pack("B", timing.exposure_delay_mode))
+
+    # Turn Off Time (4B float BE) — bottom[0] == normal[0] by design
+    buf.write(struct.pack(">f", bottom[0]))
 
     # Bottom Before Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", bottom[1]))
 
     # Bottom After Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", bottom[2]))
 
     # Bottom After Retract Time (4B float BE)
-    rest_time = _get_float(config, "Print.Rest Time After Retract", default=1.0)
-    buf.write(struct.pack(">f", rest_time))
+    buf.write(struct.pack(">f", bottom[3]))
 
     # Before Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", normal[1]))
 
     # After Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", normal[2]))
 
     # After Retract Time (4B float BE)
-    buf.write(struct.pack(">f", rest_time))
+    buf.write(struct.pack(">f", normal[3]))
 
     # Bottom Exposure Time (4B float BE)
     buf.write(struct.pack(">f", _get_float(config, "Print.Bottom Exposure Time", default=35.0)))
@@ -489,7 +523,9 @@ def _write_header(
 
 # ---------- Per-Layer Definition ----------
 
-def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> bytes:
+def _write_layer_definition(
+    config: dict, layer_idx: int, total_layers: int, timing: PrzPrintTimingConfig
+) -> bytes:
     """Write per-layer definition block (matches C++ PrzLayerContent exactly)."""
     buf = BytesIO()
 
@@ -523,18 +559,11 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
             exposure = _get_float(config, "Print.Exposure Time", default=2.5)
     buf.write(struct.pack(">f", exposure))
 
-    # Light-off time (4B float BE) — C++ uses same light_off_time for all layers
-    off_time = _get_float(config, "Print.Light-off Delay", default=1.0)
-    buf.write(struct.pack(">f", off_time))
-
-    # Before Lift Time (4B float BE) — always 0 in C++
-    buf.write(struct.pack(">f", 0.0))
-
-    # After Lift Time (4B float BE) — always 0 in C++
-    buf.write(struct.pack(">f", 0.0))
-
-    # After Retract Time (4B float BE) — rest_time in C++
-    buf.write(struct.pack(">f", _get_float(config, "Print.Rest Time After Retract", default=1.0)))
+    vals = _resolve_timing_values(timing, is_bottom=is_bottom)
+    buf.write(struct.pack(">f", vals[0]))  # light_off_time
+    buf.write(struct.pack(">f", vals[1]))  # before_lift_time
+    buf.write(struct.pack(">f", vals[2]))  # after_lift_time
+    buf.write(struct.pack(">f", vals[3]))  # after_retract_time
 
     # 8 lift/retract params (matches C++ PrzLayerContent order):
     # LiftDist, LiftSpeed, LiftSecondDist, LiftSecondSpeed,
@@ -585,6 +614,7 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
 def encode_prz(
     config: dict,
     sl1_path: Path,
+    timing: PrzPrintTimingConfig,
     estimated_print_time: float = 0,
     resin_volume_ml: float = 0,
     preview_small_rgb: Optional[np.ndarray] = None,
@@ -610,7 +640,7 @@ def encode_prz(
 
     # Write header
     header = _write_header(
-        config, total_layers,
+        config, total_layers, timing,
         estimated_print_time=estimated_print_time,
         resin_volume_ml=resin_volume_ml,
         preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
@@ -624,7 +654,7 @@ def encode_prz(
     with zipfile.ZipFile(sl1_path, "r") as zf:
         for layer_idx, png_name in enumerate(png_names):
             # Layer definition
-            output.write(_write_layer_definition(config, layer_idx, total_layers))
+            output.write(_write_layer_definition(config, layer_idx, total_layers, timing))
             output.write(PRZ_CRLF)
 
             # Read PNG and RLE encode
@@ -659,6 +689,7 @@ def _decode_and_rle(png_bytes: bytes) -> bytes:
 def encode_prz_streaming(
     config: dict,
     sl1_path: Path,
+    timing: PrzPrintTimingConfig,
     estimated_print_time: float = 0,
     resin_volume_ml: float = 0,
     preview_small_rgb: Optional[np.ndarray] = None,
@@ -679,7 +710,7 @@ def encode_prz_streaming(
 
     # Yield header
     yield _write_header(
-        config, total_layers,
+        config, total_layers, timing,
         estimated_print_time=estimated_print_time,
         resin_volume_ml=resin_volume_ml,
         preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
@@ -703,7 +734,7 @@ def encode_prz_streaming(
     for layer_idx, rle_data in enumerate(rle_futures):
         layer_buf = BytesIO()
 
-        layer_buf.write(_write_layer_definition(config, layer_idx, total_layers))
+        layer_buf.write(_write_layer_definition(config, layer_idx, total_layers, timing))
         layer_buf.write(PRZ_CRLF)
 
         layer_buf.write(struct.pack(">I", len(rle_data)))

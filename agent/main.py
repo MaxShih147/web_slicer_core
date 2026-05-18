@@ -792,11 +792,19 @@ async def download_prz(job_id: str, request: Request):
     config = await request.json()
 
     from .prz_encoder import encode_prz_streaming
+    from .api_v2 import _extract_prz_timing_config
+    from pydantic import ValidationError
+
+    try:
+        timing = _extract_prz_timing_config(config)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors())
 
     return StreamingResponse(
         encode_prz_streaming(
             config=config,
             sl1_path=sl1_path,
+            timing=timing,
             estimated_print_time=status_data.get("estimated_print_time") or 0,
             resin_volume_ml=status_data.get("resin_volume_ml") or 0,
         ),
