@@ -479,8 +479,8 @@ def _write_header(
     # Normal Light PWM (2B short BE)
     buf.write(struct.pack(">H", _get_int(config, "Advanced.Light PWM", default=255)))
 
-    # Advance Mode (1B) = 0
-    buf.write(struct.pack("B", 0))
+    # Advance Mode (1B) = 1
+    buf.write(struct.pack("B", 1))
 
     # Print Times (4B int BE)
     print_time = estimated_print_time or _get_float(config, "Other.estimated_print_time")
