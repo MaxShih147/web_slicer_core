@@ -700,11 +700,30 @@ async def run_ortho_pipeline(
         #   Oblique strip-shaped hollows inflate their AABB in both X and Y even
         #   though the actual narrow dimension is smaller than one hex diameter.
         #
-        # Threshold — 1.5× hex diameter — is deliberately conservative.
-        #   U-arch models often produce marginal hollows; skipping hollow on those
-        #   is preferable to producing degenerate boolean results downstream.
-        _hex_diameter = 2.0 * hex_cell_radius
-        _required_min_width = 1.5 * _hex_diameter  # 15.0 mm at r=5
+        # Fixed geometric threshold: hollow must be at least this wide to be
+        # worth processing.  Not tied to hex_cell_radius so the skip decision
+        # does not shift when hex parameters change.
+        # A radial center-opening check (see helper below) supplements the
+        # width gate for large components: it detects the characteristic
+        # "open center + narrow outer band" of U-arch hollows that ConvexHull
+        # min_width overestimates by filling the concave interior.
+        _MIN_HOLLOW_WIDTH_MM    = 18.0
+        _RADIAL_SIZE_GATE_MM    = 45.0  # radial check only on large components
+        _RADIAL_RAY_COUNT       = 72    # rays from bbox center (one per 5°)
+        _RADIAL_BAND_MM         = 2.0   # perpendicular half-band width per ray
+        _RADIAL_GAP_MM          = 4.0   # t-gap threshold to split ray segments
+        _RADIAL_MIN_PTS_RAY     = 5     # skip ray if fewer valid points
+        _RADIAL_MIN_PTS_SEG     = 3     # skip segment if fewer points
+        _RADIAL_CENTER_CLEAR_MM = 8.0   # first segment must start beyond this
+        _RADIAL_NARROW_RATIO    = 0.25  # min fraction of narrow+clear rays
+        _RADIAL_MIN_VALID_RAYS  = 20    # require at least this many valid rays
+        _RADIAL_MIN_NARROW_RAYS = 6     # and at least this many narrow+clear rays
+        _legacy_threshold = 1.5 * 2.0 * hex_cell_radius  # log comparison only
+        logger.info(
+            f"[ortho_pipeline:{job_id}] Hollow fit check: "
+            f"fixed={_MIN_HOLLOW_WIDTH_MM}mm, "
+            f"legacy_hex={_legacy_threshold:.1f}mm (r={hex_cell_radius})"
+        )
 
         _total_bb = hollow_mesh.bounds
         _total_xy_w = float(_total_bb[1][0] - _total_bb[0][0])
@@ -740,7 +759,84 @@ async def run_ortho_pipeline(
                     float(_cbb[1][1] - _cbb[0][1]),
                 )
 
+        def _radial_center_opening_stats_xy(_comp):
+            """Detect 'center-opening + narrow outer band' in XY projection.
+
+            Fires _RADIAL_RAY_COUNT rays from the XY bbox center.  For each
+            ray, XY vertices within _RADIAL_BAND_MM of the ray line (and
+            strictly ahead of the center) are sorted by radial distance, then
+            split into segments at gaps > _RADIAL_GAP_MM.
+
+            A ray is 'narrow-and-clear' when:
+              - its first valid segment starts beyond _RADIAL_CENTER_CLEAR_MM
+                (center region is empty → U opening), AND
+              - the minimum segment span is < _MIN_HOLLOW_WIDTH_MM
+                (outer band is a narrow hollow channel → U arm).
+
+            Full-base hollows are distinguished by their large flat top/bottom
+            cavity faces: those faces project many XY vertices near the bbox
+            center, so first_start ≈ 0 and the center-clear condition fails.
+            """
+            _vxy = _comp.vertices[:, :2]
+            _cbb = _comp.bounds
+            _cx = float(_cbb[0][0] + _cbb[1][0]) / 2.0
+            _cy = float(_cbb[0][1] + _cbb[1][1]) / 2.0
+            _ctr = np.array([_cx, _cy])
+
+            _valid = 0
+            _narrow = 0
+            _all_spans: list[float] = []
+            _no_pts_rays = 0
+            _no_seg_rays = 0
+
+            for _i in range(_RADIAL_RAY_COUNT):
+                _theta = 2.0 * np.pi * _i / _RADIAL_RAY_COUNT
+                _dir = np.array([np.cos(_theta), np.sin(_theta)])
+                _nrm = np.array([-_dir[1], _dir[0]])
+
+                _rel = _vxy - _ctr
+                _t   = _rel @ _dir
+                _d   = np.abs(_rel @ _nrm)
+
+                _mask = (_t > 0.0) & (_d <= _RADIAL_BAND_MM)
+                if int(_mask.sum()) < _RADIAL_MIN_PTS_RAY:
+                    _no_pts_rays += 1
+                    continue
+
+                _ts = np.sort(_t[_mask])
+                _gaps = np.diff(_ts)
+                _splits = np.where(_gaps > _RADIAL_GAP_MM)[0] + 1
+                _segs = [
+                    _s for _s in np.split(_ts, _splits)
+                    if len(_s) >= _RADIAL_MIN_PTS_SEG
+                ]
+                if not _segs:
+                    _no_seg_rays += 1
+                    continue
+
+                _valid += 1
+                _first_start = float(_segs[0][0])
+                _center_clear = _first_start > _RADIAL_CENTER_CLEAR_MM
+                _spans = [float(_s[-1] - _s[0]) for _s in _segs]
+                _min_span = min(_spans)
+                _all_spans.append(_min_span)
+
+                if _center_clear and _min_span < _MIN_HOLLOW_WIDTH_MM:
+                    _narrow += 1
+
+            _ratio = _narrow / _valid if _valid > 0 else 0.0
+            return {
+                "valid_ray_count":     _valid,
+                "narrow_ray_count":    _narrow,
+                "narrow_ray_ratio":    _ratio,
+                "no_pts_rays":         _no_pts_rays,
+                "no_seg_rays":         _no_seg_rays,
+                "min_segment_span":    float(min(_all_spans)) if _all_spans else float("inf"),
+                "median_segment_span": float(np.median(_all_spans)) if _all_spans else float("inf"),
+            }
+
         _hollow_fits = False
+        _skip_reasons: list[str] = []
         try:
             _components = hollow_mesh.split(only_watertight=False)
             _significant = [c for c in _components if len(c.faces) >= 100]
@@ -752,21 +848,66 @@ async def run_ortho_pipeline(
                 _significant = [hollow_mesh]
 
             for _c in _significant:
-                if _min_width_xy(_c) >= _required_min_width:
-                    _hollow_fits = True
-                    break
+                _mw = _min_width_xy(_c)
+                _cbb = _c.bounds
+                _cmax = max(
+                    float(_cbb[1][0] - _cbb[0][0]),
+                    float(_cbb[1][1] - _cbb[0][1]),
+                )
+
+                if _mw < _MIN_HOLLOW_WIDTH_MM:
+                    _skip_reasons.append(
+                        f"min_w={_mw:.1f} < {_MIN_HOLLOW_WIDTH_MM}"
+                    )
+                    continue
+
+                # Component passed the width gate.  For large components, run
+                # the radial center-opening check.  ConvexHull min_width
+                # overestimates for U-arch hollows because the hull fills the
+                # concave interior; radial rays from the XY bbox center detect
+                # the characteristic "open center + narrow outer hollow band".
+                if _cmax >= _RADIAL_SIZE_GATE_MM:
+                    _rstats = _radial_center_opening_stats_xy(_c)
+                    if (
+                        _rstats["valid_ray_count"] >= _RADIAL_MIN_VALID_RAYS
+                        and _rstats["narrow_ray_count"] >= _RADIAL_MIN_NARROW_RAYS
+                        and _rstats["narrow_ray_ratio"] >= _RADIAL_NARROW_RATIO
+                        and _rstats["min_segment_span"] < _MIN_HOLLOW_WIDTH_MM
+                    ):
+                        logger.info(
+                            f"[ortho_pipeline:{job_id}] Center-opening U-arch detected "
+                            f"(narrow_ratio={_rstats['narrow_ray_ratio']:.2f} "
+                            f"narrow={_rstats['narrow_ray_count']} "
+                            f"min_span={_rstats['min_segment_span']:.1f}mm); "
+                            f"component excluded from fits."
+                        )
+                        _skip_reasons.append(
+                            f"center-opening: narrow_ratio={_rstats['narrow_ray_ratio']:.2f} "
+                            f"narrow={_rstats['narrow_ray_count']} "
+                            f"min_span={_rstats['min_segment_span']:.1f}"
+                        )
+                        continue
+
+                _hollow_fits = True
+                break
 
         except Exception as _split_exc:
             logger.warning(
                 f"[ortho_pipeline:{job_id}] Hollow split failed ({_split_exc}); "
                 f"falling back to total AABB min check."
             )
-            _hollow_fits = min(_total_xy_w, _total_xy_h) >= _required_min_width
+            _hollow_fits = min(_total_xy_w, _total_xy_h) >= _MIN_HOLLOW_WIDTH_MM
 
         if not _hollow_fits:
+            _reason_str = (
+                "; ".join(_skip_reasons)
+                if _skip_reasons
+                else "no significant component passed the hollow fit check"
+            )
             logger.info(
-                f"[ortho_pipeline:{job_id}] Hollow interior too narrow; "
-                f"skipping hollow processing, outputting cleaned input mesh."
+                f"[ortho_pipeline:{job_id}] Hollow interior did not pass fit check "
+                f"({_reason_str}); skipping hollow processing, "
+                f"outputting cleaned input mesh."
             )
             ortho_result_path = output_dir / "ortho_result.stl"
             shutil.copyfile(str(input_path), str(ortho_result_path))
