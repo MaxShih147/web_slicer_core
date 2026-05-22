@@ -25,7 +25,7 @@ import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from .models import PrzPrintTimingConfig
 
@@ -58,21 +58,46 @@ def _pack_str(s: str, size: int) -> bytes:
     return encoded.ljust(size, b"\x00")
 
 
+def _traverse_dotpath(config: dict, dotpath: str) -> tuple[bool, Any]:
+    """Traverse a dotted path through a nested dict.
+
+    Returns (True, value) if the path exists; (False, None) if any segment
+    is missing or a non-dict node is encountered mid-path.
+    """
+    parts = dotpath.split(".")
+    val: Any = config
+    for part in parts:
+        if not isinstance(val, dict) or part not in val:
+            return False, None
+        val = val[part]
+    return True, val
+
+
 def _get_float(config: dict, dotpath: str, default: float = 0.0) -> float:
     """Get a float from a dotted config path (e.g. 'Print.Exposure Time')."""
-    parts = dotpath.split(".")
-    val = config
-    for part in parts:
-        if isinstance(val, dict):
-            val = val.get(part)
-        else:
-            return default
-    if val is None:
+    found, val = _traverse_dotpath(config, dotpath)
+    if not found or val is None:
         return default
     try:
         return float(val)
     except (ValueError, TypeError):
         return default
+
+
+def _get_float_opt(config: dict, dotpath: str) -> Optional[float]:
+    """Get a float from a dotted config path, returning None when absent.
+
+    Unlike _get_float, a value of 0.0 is returned as 0.0 (not treated as
+    falsy/missing). Returns None only when the key is genuinely absent or
+    the stored value is None. TypeError/ValueError also yield None.
+    """
+    found, val = _traverse_dotpath(config, dotpath)
+    if not found or val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
 
 
 def _get_int(config: dict, dotpath: str, default: int = 0) -> int:
@@ -330,19 +355,22 @@ def _resolve_retract_pair(
 ) -> tuple[float, float]:
     """Return (retract_distance, retract_second_distance).
 
-    falsy（None/0/0.0/""）視為未傳入。4-case override 邏輯（詳見 design.md D2 真值表）：
+    key 存在（含 0.0）視為已傳入；key 缺席或值為 None 視為未傳入。
+    4-case override 邏輯（詳見 design.md D2 真值表）：
       Case 1 (只傳 drop2)  : (max(0, lift+lift2-drop2), drop2)
-      Case 2 (只傳 dist)   : (dist, max(0, lift+lift2-dist))
-      Case 3 (兩者皆傳)    : (dist, max(0, lift+lift2-dist))  — drop2 被重算
+      Case 2 (只傳 dist)   : (dist, 0.0)
+      Case 3 (兩者皆傳)    : (dist, drop2)  — 兩值原樣保留
       Case 4 (兩者皆未傳) : (0.0, lift+lift2)                 — 單段下降
     """
-    dist  = _get_float(config, dist_key)
-    drop2 = _get_float(config, drop2_key)
-    if dist:                                    # Case 2 + Case 3
-        return dist, max(0.0, lift + lift2 - dist)
-    if drop2:                                   # Case 1
+    dist  = _get_float_opt(config, dist_key)
+    drop2 = _get_float_opt(config, drop2_key)
+    if dist is not None and drop2 is not None:  # Case 3
+        return dist, drop2
+    if dist is not None:                        # Case 2
+        return dist, 0.0
+    if drop2 is not None:                       # Case 1
         return max(0.0, lift + lift2 - drop2), drop2
-    return 0.0, lift + lift2                    # Case 4（新版）
+    return 0.0, lift + lift2                    # Case 4
 
 
 def _to_mm_per_sec(v_mm_per_min: float) -> float:

@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from agent.prz_encoder import _resolve_retract_pair, encode_prz
+from agent.prz_encoder import _resolve_retract_pair, _traverse_dotpath, _get_float_opt, encode_prz
 from agent.prz_decoder import parse_prz
 from agent.models import PrzPrintTimingConfig
 
@@ -109,16 +109,16 @@ class TestResolveRetractPair:
         assert drop2 == pytest.approx(3.0)
 
     def test_case2_only_dist(self):
-        """3.4 Case 2：只傳 dist=2 → retract=2, drop2 = max(0, lift+lift2-2)。"""
+        """3.4 Case 2：只傳 dist=2 → retract=2, drop2=0.0（新行為：不重算）。"""
         retract, drop2 = self._call(dist=2.0)
         assert retract == pytest.approx(2.0)
-        assert drop2 == pytest.approx(max(0.0, self.LIFT + self.LIFT2 - 2.0))
+        assert drop2 == pytest.approx(0.0)
 
-    def test_case3_both_dist_wins(self):
-        """3.5 Case 3：dist=2, drop2=99 → 與 Case 2 行為相同（drop2 被重算）。"""
+    def test_case3_both_values_preserved(self):
+        """3.5 Case 3：dist=2, drop2=99 → 兩值原樣保留（新行為：不重算 drop2）。"""
         retract, drop2 = self._call(dist=2.0, drop2=99.0)
         assert retract == pytest.approx(2.0)
-        assert drop2 == pytest.approx(max(0.0, self.LIFT + self.LIFT2 - 2.0))
+        assert drop2 == pytest.approx(99.0)
 
     def test_case4_neither(self):
         """3.6 Case 4：兩者皆未傳 → retract=0.0, drop2=lift+lift2。"""
@@ -137,6 +137,30 @@ class TestResolveRetractPair:
         """3.8 Case 4 邊界：lift=0, lift2=0 → (0.0, 0.0)。"""
         result = _resolve_retract_pair({"Print": {}}, "Print.a", "Print.b", 0.0, 0.0)
         assert result == (0.0, 0.0)
+
+    def test_case2b_dist_zero_boundary(self):
+        """13.2-C2b KI-1 翻案：dist=0.0 → Case 2 (0.0, 0.0)，舊版此 case 錯落 Case 4。"""
+        retract, drop2 = self._call(dist=0.0)
+        assert retract == pytest.approx(0.0)
+        assert drop2 == pytest.approx(0.0)
+
+    def test_case3b_drop2_zero_boundary(self):
+        """13.2-C3b：dist=2.0, drop2=0.0 → Case 3 (2.0, 0.0)，drop2 保留原值非重算。"""
+        retract, drop2 = self._call(dist=2.0, drop2=0.0)
+        assert retract == pytest.approx(2.0)
+        assert drop2 == pytest.approx(0.0)
+
+    def test_case1b_drop2_zero_boundary(self):
+        """13.2-C1b KI-1 翻案：drop2=0.0 → Case 1 (LIFT+LIFT2, 0.0)，舊版此 case 錯落 Case 4。"""
+        retract, drop2 = self._call(drop2=0.0)
+        assert retract == pytest.approx(self.LIFT + self.LIFT2)
+        assert drop2 == pytest.approx(0.0)
+
+    def test_case3a_both_values_nonzero(self):
+        """13.2-C3a：dist=2.0, drop2=4.0 → Case 3 (2.0, 4.0)，兩值均原樣保留。"""
+        retract, drop2 = self._call(dist=2.0, drop2=4.0)
+        assert retract == pytest.approx(2.0)
+        assert drop2 == pytest.approx(4.0)
 
 
 # ---------------------------------------------------------------------------
@@ -164,9 +188,8 @@ def test_header_case4_no_retract_keys():
 
 
 def test_header_case2_normal_dist_only():
-    """11.3 config 傳 Retract Distance=2.0 → normal retract=2.0, drop2=max(0, lift+lift2-2)。"""
+    """11.3 config 傳 Retract Distance=2.0 → normal retract=2.0, drop2=0.0（Case 2 新行為）。"""
     sl1 = _make_sl1(num_layers=3)
-    lift = 7.0
     config = _base_config(**{"Retract Distance": 2.0})
 
     timing = PrzPrintTimingConfig()
@@ -174,7 +197,7 @@ def test_header_case2_normal_dist_only():
     prz = parse_prz(data)
 
     assert prz.header.normal_retract_distance == pytest.approx(2.0)
-    assert prz.header.normal_drop2_distance == pytest.approx(max(0.0, lift - 2.0))
+    assert prz.header.normal_drop2_distance == pytest.approx(0.0)
 
     sl1.unlink(missing_ok=True)
 
@@ -205,3 +228,96 @@ def test_layer_retract_matches_header_case4():
     assert l2.drop2_distance == pytest.approx(hdr.normal_drop2_distance)
 
     sl1.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# 3.8 / 3.9  整合驗證 — Case 2 dist=0.0 場景
+# ---------------------------------------------------------------------------
+
+def test_header_case2_dist_zero():
+    """3.8 config 傳 Retract Distance=0.0（無 drop2 key）→ header retract=0.0, drop2=0.0。"""
+    sl1 = _make_sl1(num_layers=3)
+    config = _base_config(**{"Retract Distance": 0.0})
+
+    timing = PrzPrintTimingConfig()
+    data = encode_prz(config=config, sl1_path=sl1, timing=timing)
+    prz = parse_prz(data)
+
+    assert prz.header.normal_retract_distance == pytest.approx(0.0)
+    assert prz.header.normal_drop2_distance == pytest.approx(0.0)
+
+    sl1.unlink(missing_ok=True)
+
+
+def test_layer_retract_matches_header_case2_zero():
+    """3.9 per-layer retract/drop2 應與 header 一致（Case 2 dist=0.0 場景）。"""
+    sl1 = _make_sl1(num_layers=3)
+    config = _base_config(**{"Retract Distance": 0.0})
+
+    timing = PrzPrintTimingConfig()
+    data = encode_prz(config=config, sl1_path=sl1, timing=timing)
+    prz = parse_prz(data)
+
+    hdr = prz.header
+    # Layer 2 is a normal layer (bottom_layers=2)
+    l2 = prz.layers[2]
+    assert l2.retract_distance == pytest.approx(hdr.normal_retract_distance)
+    assert l2.drop2_distance == pytest.approx(hdr.normal_drop2_distance)
+
+    sl1.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# 1.4  _traverse_dotpath() unit tests
+# ---------------------------------------------------------------------------
+
+class TestTraverseDotpath:
+    """1.4 驗證 _traverse_dotpath 三種情境。"""
+
+    def test_key_exists_returns_value(self):
+        """深層 key 存在且有值 → (True, value)。"""
+        config = {"Print": {"Retract Distance": 2.5}}
+        found, val = _traverse_dotpath(config, "Print.Retract Distance")
+        assert found is True
+        assert val == 2.5
+
+    def test_key_missing_returns_false(self):
+        """深層 key 不存在 → (False, None)。"""
+        config = {"Print": {}}
+        found, val = _traverse_dotpath(config, "Print.Retract Distance")
+        assert found is False
+        assert val is None
+
+    def test_intermediate_non_dict_returns_false(self):
+        """中間節點非 dict（例如遇到字串）→ (False, None)。"""
+        config = {"Print": "not-a-dict"}
+        found, val = _traverse_dotpath(config, "Print.Retract Distance")
+        assert found is False
+        assert val is None
+
+
+# ---------------------------------------------------------------------------
+# 1.5  _get_float_opt() unit tests
+# ---------------------------------------------------------------------------
+
+class TestGetFloatOpt:
+    """1.5 驗證 _get_float_opt 三種情境。"""
+
+    def test_zero_returns_zero_not_none(self):
+        """key 存在且值為 0.0 → 回傳 0.0（核心翻案驗證點，非 None）。"""
+        config = {"Print": {"Retract Distance": 0.0}}
+        result = _get_float_opt(config, "Print.Retract Distance")
+        assert result == pytest.approx(0.0)
+        assert result is not None
+
+    def test_key_missing_returns_none(self):
+        """key 不存在 → 回傳 None。"""
+        config = {"Print": {}}
+        result = _get_float_opt(config, "Print.Retract Distance")
+        assert result is None
+
+    def test_value_none_returns_none(self):
+        """key 存在但值為 None → 回傳 None。"""
+        config = {"Print": {"Retract Distance": None}}
+        result = _get_float_opt(config, "Print.Retract Distance")
+        assert result is None
