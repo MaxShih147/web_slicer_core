@@ -4,6 +4,9 @@ Mirrors the encoding logic in prz_encoder.py — all offsets and field order
 are derived from prz_encoder.py's _write_header() and _write_layer_definition().
 
 All multi-byte integers are big-endian.
+
+Unit note (since 2026-05-21): volume / weight / price fields decoded here are
+in mm³. PRZ files encoded before this date stored mL values (~1000× smaller).
 """
 
 import struct
@@ -104,9 +107,9 @@ class PrzHeader:
     # Misc
     advance_mode: int               # always 0
     print_time: int                 # seconds (uint32 BE)
-    volume: float                   # resin ml
-    weight: float                   # same as volume in encoder
-    price: float                    # same as volume in encoder
+    volume: float                   # resin mm³ (mm³ since 2026-05-21, was mL before)
+    weight: float                   # same as volume in encoder (mm³ since 2026-05-21)
+    price: float                    # same as volume in encoder (mm³ since 2026-05-21)
     layer_content_offset: int       # always 195477 (uint32 BE)
     grayscale_level: int            # always 1
     transition_layers: int          # Print.Transition Layer Count (uint16 BE)

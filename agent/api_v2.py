@@ -958,6 +958,7 @@ async def download_prz_v2(job_id: str, request: Request):
     preview_small_rgb = _decode_preview_rgb(body.pop("preview_small", None))
     preview_large_rgb = _decode_preview_rgb(body.pop("preview_large", None))
     config = body
+    _inject_retract_overrides(config)
 
     try:
         timing = _extract_prz_timing_config(config)
@@ -971,8 +972,7 @@ async def download_prz_v2(job_id: str, request: Request):
             config=config,
             sl1_path=sl1_path,
             timing=timing,
-            estimated_print_time=status_data.get("estimated_print_time") or 0,
-            resin_volume_ml=status_data.get("resin_volume_ml") or 0,
+            resin_volume_mm3=(status_data.get("resin_volume_ml") or 0) * 1000,
             preview_small_rgb=preview_small_rgb,
             preview_large_rgb=preview_large_rgb,
         ),
@@ -1415,6 +1415,52 @@ def _extract_prz_timing_config(config: Dict[str, Any]) -> PrzPrintTimingConfig:
     return PrzPrintTimingConfig(**timing_dict)
 
 
+# SLAConfig snake_case key → Mechado "Print.*" Title Case key
+_SLA_RETRACT_TO_MECHADO = {
+    "retract_distance":               "Retract Distance",
+    "bottom_retract_distance":        "Bottom Retract Distance",
+    "retract_second_distance":        "Retract Second Distance",
+    "bottom_retract_second_distance": "Bottom Retract Second Distance",
+}
+
+
+def _inject_retract_overrides(config: Dict[str, Any]) -> None:
+    """Guarantee retract keys land in the nested Mechado `Print` section.
+
+    The PRZ encoder reads via `_get_float(config, "Print.Retract Distance")`,
+    which splits on `.` and requires NESTED dict structure:
+        config["Print"]["Retract Distance"]
+
+    Frontend may send any of these source formats; this function normalises
+    them all into the nested form expected by the encoder (priority order):
+
+      1. Nested Mechado:     config["Print"]["Retract Distance"]   ← canonical
+      2. Top-level Mechado:  config["Retract Distance"]
+      3. Dotted-flat:        config["Print.Retract Distance"]
+      4. SLAConfig snake:    config["retract_distance"]
+
+    Mutates `config` in-place: ensures `config["Print"]` is a dict and contains
+    every available retract key under its Mechado Title Case name.
+    """
+    print_section = config.get("Print")
+    if not isinstance(print_section, dict):
+        print_section = {}
+        config["Print"] = print_section
+
+    for sla_key, mechado_key in _SLA_RETRACT_TO_MECHADO.items():
+        if mechado_key in print_section:
+            continue  # canonical nested form already present
+        if mechado_key in config:
+            print_section[mechado_key] = config[mechado_key]
+            continue
+        dotted = f"Print.{mechado_key}"
+        if dotted in config:
+            print_section[mechado_key] = config[dotted]
+            continue
+        if sla_key in config:
+            print_section[mechado_key] = config[sla_key]
+
+
 def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     """
     Convert DS-Online config format to SLAConfig.
@@ -1447,6 +1493,10 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         "Bottom Tolerance Compensation A": "bottom_tolerance_compensation_a",
         "Bottom Tolerance Compensation B": "bottom_tolerance_compensation_b",
         "Bottom Layer Count": "bottom_layer_count",
+        "Retract Distance": "retract_distance",
+        "Bottom Retract Distance": "bottom_retract_distance",
+        "Retract Second Distance": "retract_second_distance",
+        "Bottom Retract Second Distance": "bottom_retract_second_distance",
     }
 
     sla_dict = {}

@@ -6,6 +6,18 @@ PrzLayerContent, LM_SVGRenderer.cpp WritePRZFormat).
 All multi-byte integers are big-endian.
 Config dict uses the same structure as Mechado default profile JSON
 (e.g. sonic_ls_plus.json: Machine, Print, Advanced, Resin, Other sections).
+
+Unit changes (since 2026-05-21):
+  - volume / weight / price header fields are written in mm³ (previously mL).
+    Downstream readers (frontend / firmware) must be updated accordingly.
+
+Accepted config keys added in fix-prz-output-correctness (2026-05-21):
+  Print.Retract Distance              — first-stage retract distance (mm); falsy = Case 4
+  Print.Retract Second Distance       — second-stage retract distance (mm); falsy = Case 4
+  Print.Bottom Retract Distance       — bottom first-stage retract (mm); falsy = Case 4
+  Print.Bottom Retract Second Distance — bottom second-stage retract (mm); falsy = Case 4
+  All four keys are read directly by _get_float() and are NOT part of PrzPrintTimingConfig.
+  See _resolve_retract_pair() for the 4-case override logic (design.md D2).
 """
 
 import struct
@@ -13,7 +25,7 @@ import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from .models import PrzPrintTimingConfig
 
@@ -46,21 +58,46 @@ def _pack_str(s: str, size: int) -> bytes:
     return encoded.ljust(size, b"\x00")
 
 
+def _traverse_dotpath(config: dict, dotpath: str) -> tuple[bool, Any]:
+    """Traverse a dotted path through a nested dict.
+
+    Returns (True, value) if the path exists; (False, None) if any segment
+    is missing or a non-dict node is encountered mid-path.
+    """
+    parts = dotpath.split(".")
+    val: Any = config
+    for part in parts:
+        if not isinstance(val, dict) or part not in val:
+            return False, None
+        val = val[part]
+    return True, val
+
+
 def _get_float(config: dict, dotpath: str, default: float = 0.0) -> float:
     """Get a float from a dotted config path (e.g. 'Print.Exposure Time')."""
-    parts = dotpath.split(".")
-    val = config
-    for part in parts:
-        if isinstance(val, dict):
-            val = val.get(part)
-        else:
-            return default
-    if val is None:
+    found, val = _traverse_dotpath(config, dotpath)
+    if not found or val is None:
         return default
     try:
         return float(val)
     except (ValueError, TypeError):
         return default
+
+
+def _get_float_opt(config: dict, dotpath: str) -> Optional[float]:
+    """Get a float from a dotted config path, returning None when absent.
+
+    Unlike _get_float, a value of 0.0 is returned as 0.0 (not treated as
+    falsy/missing). Returns None only when the key is genuinely absent or
+    the stored value is None. TypeError/ValueError also yield None.
+    """
+    found, val = _traverse_dotpath(config, dotpath)
+    if not found or val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
 
 
 def _get_int(config: dict, dotpath: str, default: int = 0) -> int:
@@ -308,14 +345,119 @@ def _resolve_timing_values(
     )
 
 
+
+def _resolve_retract_pair(
+    config: dict,
+    dist_key: str,
+    drop2_key: str,
+    lift: float,
+    lift2: float,
+) -> tuple[float, float]:
+    """Return (retract_distance, retract_second_distance).
+
+    key 存在（含 0.0）視為已傳入；key 缺席或值為 None 視為未傳入。
+    4-case override 邏輯（詳見 design.md D2 真值表）：
+      Case 1 (只傳 drop2)  : (max(0, lift+lift2-drop2), drop2)
+      Case 2 (只傳 dist)   : (dist, 0.0)
+      Case 3 (兩者皆傳)    : (dist, drop2)  — 兩值原樣保留
+      Case 4 (兩者皆未傳) : (0.0, lift+lift2)                 — 單段下降
+    """
+    dist  = _get_float_opt(config, dist_key)
+    drop2 = _get_float_opt(config, drop2_key)
+    if dist is not None and drop2 is not None:  # Case 3
+        return dist, drop2
+    if dist is not None:                        # Case 2
+        return dist, 0.0
+    if drop2 is not None:                       # Case 1
+        return max(0.0, lift + lift2 - drop2), drop2
+    return 0.0, lift + lift2                    # Case 4
+
+
+def _to_mm_per_sec(v_mm_per_min: float) -> float:
+    """Convert mm/min speed (UI/config convention) to mm/s for physics formulas (D5 unit fix)."""
+    return v_mm_per_min / 60.0 if v_mm_per_min else 0.0
+
+
+def _compute_print_time(
+    config: dict,
+    total_layers: int,
+    timing: PrzPrintTimingConfig,
+) -> float:
+    """Compute total print time in seconds from PRZ-aware parameters.
+
+    Phase 1: constant-speed model (÷60 unit conversion mandatory — see design.md D5).
+    """
+    bottom_count = _get_int(config, "Print.Bottom Layer Count", default=5)
+    transition_count = _get_int(config, "Print.Transition Layer Count", default=5)
+    bottom_exp = _get_float(config, "Print.Bottom Exposure Time", default=35.0)
+    normal_exp = _get_float(config, "Print.Exposure Time", default=2.5)
+
+    def motion_time(d: float, v_mm_per_min: float) -> float:
+        """d in mm, v in mm/min. Converts to mm/s internally. Returns seconds."""
+        v = _to_mm_per_sec(v_mm_per_min)
+        return d / v if d > 0 and v > 0 else 0.0
+
+    total = 0.0
+    for layer_idx in range(total_layers):
+        is_bottom = layer_idx < bottom_count
+        vals = _resolve_timing_values(timing, is_bottom=is_bottom)
+
+        # exposure with transition ramp (mirrors _write_layer_definition logic)
+        if is_bottom:
+            exposure = bottom_exp
+        else:
+            transition_idx = layer_idx - bottom_count
+            if 0 <= transition_idx < transition_count:
+                exposure = bottom_exp + (normal_exp - bottom_exp) / (1.0 + transition_count) * (transition_idx + 1.0)
+            else:
+                exposure = normal_exp
+
+        if is_bottom:
+            lift  = _get_float(config, "Print.Bottom Lifting Distance", default=8.0)
+            lift2 = _get_float(config, "Print.Bottom Lifting Second Distance")
+            lift_v  = _get_float(config, "Print.Bottom Lifting Speed", default=50.0)
+            lift2_v = _get_float(config, "Print.Bottom Lifting Second Speed")
+            retract, drop2 = _resolve_retract_pair(
+                config, "Print.Bottom Retract Distance",
+                "Print.Bottom Retract Second Distance", lift, lift2,
+            )
+            retract_v = _get_float(config, "Print.Bottom Retract Speed", default=100.0)
+            drop2_v   = _get_float(config, "Print.Bottom Retract Second Speed")
+        else:
+            lift  = _get_float(config, "Print.Lifting Distance", default=7.0)
+            lift2 = _get_float(config, "Print.Lifting Second Distance")
+            lift_v  = _get_float(config, "Print.Lifting Speed", default=50.0)
+            lift2_v = _get_float(config, "Print.Lifting Second Speed")
+            retract, drop2 = _resolve_retract_pair(
+                config, "Print.Retract Distance",
+                "Print.Retract Second Distance", lift, lift2,
+            )
+            retract_v = _get_float(config, "Print.Normal Retract Speed", default=100.0)
+            drop2_v   = _get_float(config, "Print.Normal Retract Second Speed")
+
+        total += (
+            exposure
+            + vals[0]                           # light_off_time
+            + vals[1]                           # before_lift_time
+            + motion_time(lift,    lift_v)
+            + motion_time(lift2,   lift2_v)
+            + vals[2]                           # after_lift_time
+            + motion_time(retract, retract_v)
+            + motion_time(drop2,   drop2_v)
+            + vals[3]                           # after_retract_time
+        )
+
+    return total
+
+
 # ---------- Header ----------
 
 def _write_header(
     config: dict,
     total_layers: int,
     timing: PrzPrintTimingConfig,
-    estimated_print_time: float = 0,
-    resin_volume_ml: float = 0,
+    estimated_print_time: float = 0,  # deprecated: ignored; time is computed via _compute_print_time()
+    resin_volume_mm3: float = 0,
     preview_small: Optional[bytes] = None,
     preview_large: Optional[bytes] = None,
 ) -> bytes:
@@ -447,18 +589,17 @@ def _write_header(
     # then all second-stage fields in same order.
     bottom_lift = _get_float(config, "Print.Bottom Lifting Distance", default=8.0)
     bottom_lift2 = _get_float(config, "Print.Bottom Lifting Second Distance")
-    bottom_drop2 = _get_float(config, "Print.Bottom Retract Second Distance")
     normal_lift = _get_float(config, "Print.Lifting Distance", default=7.0)
     normal_lift2 = _get_float(config, "Print.Lifting Second Distance")
-    normal_drop2 = _get_float(config, "Print.Retract Second Distance")
 
-    # RetractDist = lift_height + lift_second_height - drop_second_height (from C++ Slicer.cpp)
-    bottom_retract = bottom_lift + bottom_lift2 - bottom_drop2
-    if bottom_retract <= 0.0:
-        bottom_retract = bottom_lift + bottom_lift2
-    normal_retract = normal_lift + normal_lift2 - normal_drop2
-    if normal_retract <= 0.0:
-        normal_retract = normal_lift + normal_lift2
+    bottom_retract, bottom_drop2 = _resolve_retract_pair(
+        config, "Print.Bottom Retract Distance", "Print.Bottom Retract Second Distance",
+        bottom_lift, bottom_lift2,
+    )
+    normal_retract, normal_drop2 = _resolve_retract_pair(
+        config, "Print.Retract Distance", "Print.Retract Second Distance",
+        normal_lift, normal_lift2,
+    )
 
     buf.write(struct.pack(">f", bottom_lift))
     buf.write(struct.pack(">f", _get_float(config, "Print.Bottom Lifting Speed", default=50.0)))
@@ -483,15 +624,15 @@ def _write_header(
     # Normal Light PWM (2B short BE)
     buf.write(struct.pack(">H", _get_int(config, "Advanced.Light PWM", default=255)))
 
-    # Advance Mode (1B) = 0
-    buf.write(struct.pack("B", 0))
+    # Advance Mode (1B) = 1
+    buf.write(struct.pack("B", 1))
 
     # Print Times (4B int BE)
-    print_time = estimated_print_time or _get_float(config, "Other.estimated_print_time")
+    print_time = _compute_print_time(config, total_layers, timing)
     buf.write(struct.pack(">I", int(print_time)))
 
-    # Volume (4B float BE)
-    volume = resin_volume_ml or _get_float(config, "Other.volume")
+    # Volume (4B float BE) — unit: mm³ (since 2026-05-21; formerly mL)
+    volume = resin_volume_mm3 or _get_float(config, "Other.volume")
     buf.write(struct.pack(">f", volume))
 
     # Weight (4B float BE) — C++ writes volume for weight too
@@ -571,10 +712,10 @@ def _write_layer_definition(
     if is_bottom:
         lift = _get_float(config, "Print.Bottom Lifting Distance", default=8.0)
         lift2 = _get_float(config, "Print.Bottom Lifting Second Distance")
-        drop2 = _get_float(config, "Print.Bottom Retract Second Distance")
-        retract = lift + lift2 - drop2
-        if retract <= 0.0:
-            retract = lift + lift2
+        retract, drop2 = _resolve_retract_pair(
+            config, "Print.Bottom Retract Distance", "Print.Bottom Retract Second Distance",
+            lift, lift2,
+        )
         buf.write(struct.pack(">f", lift))
         buf.write(struct.pack(">f", _get_float(config, "Print.Bottom Lifting Speed", default=50.0)))
         buf.write(struct.pack(">f", lift2))
@@ -586,10 +727,10 @@ def _write_layer_definition(
     else:
         lift = _get_float(config, "Print.Lifting Distance", default=7.0)
         lift2 = _get_float(config, "Print.Lifting Second Distance")
-        drop2 = _get_float(config, "Print.Retract Second Distance")
-        retract = lift + lift2 - drop2
-        if retract <= 0.0:
-            retract = lift + lift2
+        retract, drop2 = _resolve_retract_pair(
+            config, "Print.Retract Distance", "Print.Retract Second Distance",
+            lift, lift2,
+        )
         buf.write(struct.pack(">f", lift))
         buf.write(struct.pack(">f", _get_float(config, "Print.Lifting Speed", default=50.0)))
         buf.write(struct.pack(">f", lift2))
@@ -615,8 +756,8 @@ def encode_prz(
     config: dict,
     sl1_path: Path,
     timing: PrzPrintTimingConfig,
-    estimated_print_time: float = 0,
-    resin_volume_ml: float = 0,
+    estimated_print_time: float = 0,  # deprecated: ignored; time is computed via _compute_print_time()
+    resin_volume_mm3: float = 0,
     preview_small_rgb: Optional[np.ndarray] = None,
     preview_large_rgb: Optional[np.ndarray] = None,
 ) -> bytes:
@@ -626,8 +767,8 @@ def encode_prz(
     Args:
         config: Mechado-format config dict (same structure as default profile JSON).
         sl1_path: Path to the .sl1 ZIP file containing PNG layers.
-        estimated_print_time: Print time in seconds (from slicing metadata).
-        resin_volume_ml: Resin volume in ml (from slicing metadata).
+        estimated_print_time: Deprecated. Ignored; print time is computed via _compute_print_time().
+        resin_volume_mm3: Resin volume in mm³ (from slicing metadata; callers must convert mL × 1000).
 
     Returns:
         Complete PRZ binary data as bytes.
@@ -641,8 +782,7 @@ def encode_prz(
     # Write header
     header = _write_header(
         config, total_layers, timing,
-        estimated_print_time=estimated_print_time,
-        resin_volume_ml=resin_volume_ml,
+        resin_volume_mm3=resin_volume_mm3,
         preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
         preview_large=_preview_rgb_to_rgb565_be(preview_large_rgb, PREVIEW_LARGE_SIZE),
     )
@@ -690,8 +830,8 @@ def encode_prz_streaming(
     config: dict,
     sl1_path: Path,
     timing: PrzPrintTimingConfig,
-    estimated_print_time: float = 0,
-    resin_volume_ml: float = 0,
+    estimated_print_time: float = 0,  # deprecated: ignored; time is computed via _compute_print_time()
+    resin_volume_mm3: float = 0,
     preview_small_rgb: Optional[np.ndarray] = None,
     preview_large_rgb: Optional[np.ndarray] = None,
 ):
@@ -711,8 +851,7 @@ def encode_prz_streaming(
     # Yield header
     yield _write_header(
         config, total_layers, timing,
-        estimated_print_time=estimated_print_time,
-        resin_volume_ml=resin_volume_ml,
+        resin_volume_mm3=resin_volume_mm3,
         preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
         preview_large=_preview_rgb_to_rgb565_be(preview_large_rgb, PREVIEW_LARGE_SIZE),
     )

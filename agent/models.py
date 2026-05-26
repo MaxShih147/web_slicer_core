@@ -34,6 +34,7 @@ class SLAConfig(BaseModel):
 
     # Layer settings
     layer_height: float = 0.05
+    initial_layer_height: Optional[float] = None  # fallback 至 layer_height（未設定時）
 
     # Exposure settings
     exposure_time: float = 10.0
@@ -102,6 +103,19 @@ class SLAConfig(BaseModel):
     bottom_tolerance_compensation_a: float = 0.0
     bottom_tolerance_compensation_b: float = 0.0
     bottom_layer_count: int = 6
+
+    # Retract motion (PRZ-specific). Maps to Mechado "Print.*" keys.
+    # None means "not set by caller" — encoder's Case 4 fallback applies.
+    retract_distance: Optional[float] = None                  # Print.Retract Distance
+    bottom_retract_distance: Optional[float] = None           # Print.Bottom Retract Distance
+    retract_second_distance: Optional[float] = None           # Print.Retract Second Distance
+    bottom_retract_second_distance: Optional[float] = None    # Print.Bottom Retract Second Distance
+
+    @model_validator(mode='after')
+    def fallback_initial_layer_height(self) -> 'SLAConfig':
+        if self.initial_layer_height is None:
+            self.initial_layer_height = self.layer_height
+        return self
 
     @model_validator(mode='after')
     def set_center_defaults(self) -> 'SLAConfig':

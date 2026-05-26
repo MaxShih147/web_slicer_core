@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import tempfile
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -162,7 +163,8 @@ async def request_validation_handler(request: Request, exc: RequestValidationErr
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     err_text = _tb.format_exc()
-    with open("/tmp/boolean_error.log", "a") as f:
+    log_path = Path(tempfile.gettempdir()) / "boolean_error.log"
+    with open(log_path, "a") as f:
         f.write(f"\n=== GLOBAL {request.url.path} ===\n{err_text}\n")
     err = internal_error(str(exc))
     return err.to_response(_cors_headers(request))
@@ -792,8 +794,10 @@ async def download_prz(job_id: str, request: Request):
     config = await request.json()
 
     from .prz_encoder import encode_prz_streaming
-    from .api_v2 import _extract_prz_timing_config
+    from .api_v2 import _extract_prz_timing_config, _inject_retract_overrides
     from pydantic import ValidationError
+
+    _inject_retract_overrides(config)
 
     try:
         timing = _extract_prz_timing_config(config)
@@ -805,8 +809,7 @@ async def download_prz(job_id: str, request: Request):
             config=config,
             sl1_path=sl1_path,
             timing=timing,
-            estimated_print_time=status_data.get("estimated_print_time") or 0,
-            resin_volume_ml=status_data.get("resin_volume_ml") or 0,
+            resin_volume_mm3=(status_data.get("resin_volume_ml") or 0) * 1000,
         ),
         media_type="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=model.prz"},
