@@ -794,7 +794,8 @@ async def download_prz(job_id: str, request: Request):
     config = await request.json()
 
     from .prz_encoder import encode_prz_streaming
-    from .api_v2 import _extract_prz_timing_config, _inject_retract_overrides
+    from .api_v2 import _inject_retract_overrides
+    from .models import _extract_prz_timing_config
     from pydantic import ValidationError
 
     _inject_retract_overrides(config)

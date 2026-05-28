@@ -1,0 +1,167 @@
+"""
+Tests for the print-time-sync pure helpers in jobs.py (TDD — written before
+implementation, expected RED until `resolve_estimated_print_time` and
+`_load_prz_config` exist).
+
+Covers spec `print-time-sync`:
+  - 正常同步：resolve == _compute_print_time(config, N, _extract_prz_timing_config(config))
+  - Fallback 降級：prz_config 為 None / 觸發萃取·計算例外 → 回傳 fallback
+  - 極端邊界：total_layers 為 0 / None、prz_config == {} → 回傳 fallback，不拋例外、不為 NaN
+  - _load_prz_config：缺檔 / 壞 JSON → None（吞 OSError / ValueError）
+
+No mocks: all assertions exercise the real pure functions against real dicts /
+real files under tmp_path.
+"""
+
+import json
+import math
+from pathlib import Path
+
+import pytest
+
+# Under test (NOT yet implemented — import is expected to fail until Section 3).
+from agent.jobs import resolve_estimated_print_time, _load_prz_config
+
+# Real collaborators reused as the single source of truth for the expected value.
+from agent.prz_encoder import _compute_print_time
+from agent.models import _extract_prz_timing_config
+
+
+# ---------------------------------------------------------------------------
+# Fixtures / config builders (no mocks)
+# ---------------------------------------------------------------------------
+
+def _valid_prz_config() -> dict:
+    """A full frontend-style config (Mechado `Print.*` Title Case keys) whose
+    physical print time is non-trivial and clearly distinguishable from any
+    fork SL1 fallback value we pass in."""
+    return {
+        "Machine": {
+            "Machine Name": "TestPrinter",
+            "machine_type": "msla",
+        },
+        "Print": {
+            "Layer Height": 0.05,
+            "Bottom Layer Count": 2,
+            "Transition Layer Count": 0,
+            "Exposure Time": 3.0,
+            "Bottom Exposure Time": 30.0,
+            "Lifting Distance": 6.0,
+            "Lifting Speed": 60.0,
+            "Bottom Lifting Distance": 6.0,
+            "Bottom Lifting Speed": 60.0,
+            "Retract Distance": 6.0,
+            "Normal Retract Speed": 120.0,
+            "Bottom Retract Distance": 6.0,
+            "Bottom Retract Speed": 120.0,
+            "Light-off Delay": 1.0,
+            "Rest After Retract": 1.0,
+        },
+        "Advanced": {"Light PWM": 255, "Bottom Light PWM": 255},
+        "Other": {},
+    }
+
+
+# ---------------------------------------------------------------------------
+# 2.2  正常同步 — resolve == _compute_print_time(...) via same config
+# ---------------------------------------------------------------------------
+
+class TestNormalSync:
+    def test_resolve_equals_compute_print_time(self):
+        config = _valid_prz_config()
+        total_layers = 10
+
+        expected = _compute_print_time(
+            config, total_layers, _extract_prz_timing_config(config)
+        )
+        # fallback deliberately differs from the physical value (fork SL1 estimate).
+        fallback = expected + 9999.0
+
+        result = resolve_estimated_print_time(config, total_layers, fallback)
+
+        assert result == pytest.approx(expected)
+
+    def test_normal_sync_does_not_use_fallback(self):
+        """正常情況 SHALL NOT 沿用 fork 估值。"""
+        config = _valid_prz_config()
+        total_layers = 10
+        fallback = 1.0  # an obviously wrong / different fork value
+
+        result = resolve_estimated_print_time(config, total_layers, fallback)
+
+        assert result != pytest.approx(fallback)
+        assert result > 0.0
+
+
+# ---------------------------------------------------------------------------
+# 2.3  Fallback 降級 — None config / 萃取·計算例外 → fallback
+# ---------------------------------------------------------------------------
+
+class TestFallbackDegrade:
+    def test_none_config_returns_fallback(self):
+        assert resolve_estimated_print_time(None, 10, 1234.0) == 1234.0
+
+    def test_none_config_with_none_fallback_stays_none(self):
+        """fork 估值亦為 None → 維持 None（不退化、不報錯）。"""
+        assert resolve_estimated_print_time(None, 10, None) is None
+
+    def test_extract_or_compute_exception_returns_fallback(self):
+        """內容使 _extract_prz_timing_config / _compute_print_time 拋例外時退回 fallback。
+
+        `Exposure Delay Mode` 必須為 0 或 1；給 99 會在 _extract_prz_timing_config
+        建構 PrzPrintTimingConfig 時觸發 pydantic ValidationError（落在 D3 的單一
+        try 內），SHALL 退回 fallback 而非向上拋出。
+        """
+        bad_config = {"Print": {"Exposure Delay Mode": 99}}
+        # 先證明此 config 確實會讓萃取拋例外（不被測函式吞例外的前提）。
+        with pytest.raises(Exception):
+            _extract_prz_timing_config(bad_config)
+
+        result = resolve_estimated_print_time(bad_config, 10, 4321.0)
+
+        assert result == 4321.0
+
+
+# ---------------------------------------------------------------------------
+# 2.4  極端邊界 — 0 / None layers、{} config → fallback，無例外、非 NaN
+# ---------------------------------------------------------------------------
+
+class TestBoundaryInputs:
+    def test_total_layers_zero_returns_fallback(self):
+        result = resolve_estimated_print_time(_valid_prz_config(), 0, 555.0)
+        assert result == 555.0
+        assert not math.isnan(result)
+
+    def test_total_layers_none_returns_fallback(self):
+        result = resolve_estimated_print_time(_valid_prz_config(), None, 555.0)
+        assert result == 555.0
+        assert not math.isnan(result)
+
+    def test_empty_dict_config_returns_fallback(self):
+        result = resolve_estimated_print_time({}, 10, 777.0)
+        assert result == 777.0
+        assert not math.isnan(result)
+
+    def test_boundary_does_not_raise(self):
+        # 任一邊界組合皆不得拋例外。
+        for cfg, n in [({}, 10), (None, 0), (_valid_prz_config(), None)]:
+            resolve_estimated_print_time(cfg, n, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# 2.5  _load_prz_config — 缺檔 / 壞 JSON → None（吞 OSError / ValueError）
+# ---------------------------------------------------------------------------
+
+class TestLoadPrzConfig:
+    def test_missing_file_returns_none(self, tmp_path: Path):
+        # tmp_path 下沒有 prz_config.json
+        assert _load_prz_config(tmp_path) is None
+
+    def test_corrupt_json_returns_none(self, tmp_path: Path):
+        (tmp_path / "prz_config.json").write_text("{ this is not valid json ", encoding="utf-8")
+        assert _load_prz_config(tmp_path) is None
+
+    def test_valid_json_roundtrips(self, tmp_path: Path):
+        config = _valid_prz_config()
+        (tmp_path / "prz_config.json").write_text(json.dumps(config), encoding="utf-8")
+        assert _load_prz_config(tmp_path) == config

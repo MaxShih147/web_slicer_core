@@ -1,7 +1,7 @@
 """Pydantic models for the web_slicer_core agent API."""
 
 from enum import Enum
-from typing import Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel, field_validator, model_validator
 
 
@@ -199,6 +199,36 @@ class PrzPrintTimingConfig(BaseModel):
         if self.bottom_rest_after_retract is None:
             self.bottom_rest_after_retract = self.rest_after_retract
         return self
+
+
+# DS-Online Title Case key → PrzPrintTimingConfig field name
+# Keys live under the "Print" section of the DS-Online config dict.
+_DS_TO_PRZ_TIMING: Dict[str, str] = {
+    "Exposure Delay Mode":       "exposure_delay_mode",
+    "Light-off Delay":           "light_off_delay",
+    "Rest Before Lift":          "rest_before_lift",
+    "Rest After Lift":           "rest_after_lift",
+    "Rest After Retract":        "rest_after_retract",
+    "Bottom Rest Before Lift":   "bottom_rest_before_lift",
+    "Bottom Rest After Lift":    "bottom_rest_after_lift",
+    "Bottom Rest After Retract": "bottom_rest_after_retract",
+}
+
+
+def _extract_prz_timing_config(config: Dict[str, Any]) -> PrzPrintTimingConfig:
+    """
+    Extract PRZ print timing parameters from a DS-Online config dict.
+
+    Supports both nested {"Print": {...}} and flat formats (consistent with
+    _convert_v2_config_to_sla). Keys absent from the frontend payload use
+    PrzPrintTimingConfig defaults.
+    """
+    print_config = config.get("Print", config)
+    timing_dict: Dict[str, Any] = {}
+    for ds_key, field_name in _DS_TO_PRZ_TIMING.items():
+        if ds_key in print_config:
+            timing_dict[field_name] = print_config[ds_key]
+    return PrzPrintTimingConfig(**timing_dict)
 
 
 class BooleanOperation(str, Enum):
