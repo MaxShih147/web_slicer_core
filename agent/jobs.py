@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import shutil
 import subprocess
 import uuid
@@ -11,8 +12,11 @@ from pathlib import Path
 from typing import Optional
 
 from .config import JOBS_DIR, PRUSA_SLICER_CLI, EXPORT_PROJECT_3MF
-from .models import JobStatus, SLAConfig
+from .models import JobStatus, SLAConfig, _extract_prz_timing_config
+from .prz_encoder import _compute_print_time
 from .sla_operations import generate_config_ini
+
+logger = logging.getLogger(__name__)
 
 
 def create_job_id() -> str:
@@ -89,6 +93,40 @@ def create_job(job_id: str) -> Path:
     return job_dir
 
 
+def _load_prz_config(job_dir: Path) -> Optional[dict]:
+    """Load the persisted frontend config from jobs/{id}/prz_config.json.
+
+    IO boundary (design D3, boundary 1): swallows file-missing / malformed-JSON
+    errors and returns None so the caller can fall back to the fork estimate.
+    """
+    path = job_dir / "prz_config.json"
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except (OSError, ValueError):  # file absent / JSON corrupt
+        return None
+
+
+def resolve_estimated_print_time(
+    prz_config: Optional[dict],
+    total_layers: Optional[int],
+    fallback: Optional[float],
+) -> Optional[float]:
+    """Resolve the PRZ physical print time, degrading to ``fallback`` on any failure.
+
+    Pure function (design D3, boundary 2): no IO, no side effects. Null-guards
+    sit outside the try (no exception-driven control flow); extraction and
+    computation share a single try whose any failure returns ``fallback``.
+    """
+    if not prz_config or not total_layers:
+        return fallback  # no config / no layers → use fork estimate
+    try:
+        timing = _extract_prz_timing_config(prz_config)
+        return _compute_print_time(prz_config, total_layers, timing)
+    except Exception:
+        return fallback  # extraction / computation failure → use fork estimate
+
+
 async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     """Run PrusaSlicer in the background."""
     job_dir = get_job_dir(job_id)
@@ -153,7 +191,19 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
 
         # Parse metadata from .sl1 (layers served directly from .sl1 on demand)
         if output_file.exists():
-            layer_count, estimated_print_time, resin_volume_ml = parse_sl1_metadata(output_file)
+            layer_count, fork_print_time, resin_volume_ml = parse_sl1_metadata(output_file)
+
+            # Sync estimated_print_time to the PRZ physical formula (single source
+            # of truth, identical to the PRZ download path). Any failure degrades
+            # to the fork SL1 estimate without affecting the COMPLETED status.
+            prz_config = _load_prz_config(job_dir)
+            if prz_config is None:
+                logger.info(
+                    "prz_config missing, falling back to fork time (job=%s)", job_id
+                )
+            estimated_print_time = resolve_estimated_print_time(
+                prz_config, layer_count, fork_print_time
+            )
 
             # Check if support mesh was generated
             has_support_mesh = support_stl_file.exists()

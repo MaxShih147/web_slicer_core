@@ -56,7 +56,7 @@ from .jobs import (
     run_cut_operation,
     write_job_status,
 )
-from .models import BooleanOperation, JobStatus, PrzPrintTimingConfig, SLAConfig
+from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config
 from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
 
 logger = logging.getLogger(__name__)
@@ -76,12 +76,18 @@ class V2Response(BaseModel):
 class V2SliceCreateRequest(BaseModel):
     """Request to create a new slice job."""
     config: Optional[Dict[str, Any]] = None
+    # Full Mechado config (Title Case "Print.*") for PRZ physical print-time sync;
+    # kept separate from the snake_case slicing `config`. Optional / backward-compatible.
+    prz_config: Optional[Dict[str, Any]] = None
 
 
 class V2ConfigUpdateRequest(BaseModel):
     """Request to update slice job config."""
     config: Dict[str, Any]
     isAppend: bool = True
+    # Full Mechado config (Title Case "Print.*") for PRZ physical print-time sync;
+    # kept separate from the snake_case slicing `config`. Optional / backward-compatible.
+    prz_config: Optional[Dict[str, Any]] = None
 
 
 class V2ModelsAddRequest(BaseModel):
@@ -265,6 +271,8 @@ async def create_slice_job(request: V2SliceCreateRequest):
             "models": [],
             "status": "created",
         }
+        if request.prz_config is not None:
+            _pending_jobs[job_id]["prz_config"] = request.prz_config
         return V2Response(success=True, message="Slice job created", data={"jobId": job_id})
     except APIError:
         raise
@@ -283,6 +291,9 @@ async def update_slice_job_config(job_id: str, request: V2ConfigUpdateRequest):
         pending["config"].update(request.config)
     else:
         pending["config"] = request.config
+
+    if request.prz_config is not None:
+        pending["prz_config"] = request.prz_config
 
     return V2Response(success=True, message="Config updated")
 
@@ -413,6 +424,15 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
         input_path = job_dir / "input" / "model.stl"
         _save_model_to_job(pending["models"][0], input_path)
         config = pending["config"]
+        # Persist the Mechado prz_config (NOT the snake_case slicing config) so
+        # run_slicing computes the PRZ physical print time from the same source
+        # as the PRZ download path. Apply the same _inject_retract_overrides
+        # pre-process as the download path for bit-wise consistency (design D5).
+        prz_cfg = pending.get("prz_config")
+        if prz_cfg is not None:
+            _inject_retract_overrides(prz_cfg)
+            with open(job_dir / "prz_config.json", "w") as f:
+                json.dump(prz_cfg, f)
         sla_config = _convert_v2_config_to_sla(config)
         del _pending_jobs[job_id]
         background_tasks.add_task(run_slicing, job_id, sla_config)
@@ -1384,36 +1404,6 @@ async def delete_prz_session(session_id: str):
 # ============================================================================
 # Helper Functions
 # ============================================================================
-
-# DS-Online Title Case key → PrzPrintTimingConfig field name
-# Keys live under the "Print" section of the DS-Online config dict.
-_DS_TO_PRZ_TIMING: Dict[str, str] = {
-    "Exposure Delay Mode":       "exposure_delay_mode",
-    "Light-off Delay":           "light_off_delay",
-    "Rest Before Lift":          "rest_before_lift",
-    "Rest After Lift":           "rest_after_lift",
-    "Rest After Retract":        "rest_after_retract",
-    "Bottom Rest Before Lift":   "bottom_rest_before_lift",
-    "Bottom Rest After Lift":    "bottom_rest_after_lift",
-    "Bottom Rest After Retract": "bottom_rest_after_retract",
-}
-
-
-def _extract_prz_timing_config(config: Dict[str, Any]) -> PrzPrintTimingConfig:
-    """
-    Extract PRZ print timing parameters from a DS-Online config dict.
-
-    Supports both nested {"Print": {...}} and flat formats (consistent with
-    _convert_v2_config_to_sla). Keys absent from the frontend payload use
-    PrzPrintTimingConfig defaults.
-    """
-    print_config = config.get("Print", config)
-    timing_dict: Dict[str, Any] = {}
-    for ds_key, field_name in _DS_TO_PRZ_TIMING.items():
-        if ds_key in print_config:
-            timing_dict[field_name] = print_config[ds_key]
-    return PrzPrintTimingConfig(**timing_dict)
-
 
 # SLAConfig snake_case key → Mechado "Print.*" Title Case key
 _SLA_RETRACT_TO_MECHADO = {

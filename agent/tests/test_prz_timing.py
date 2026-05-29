@@ -23,7 +23,7 @@ from agent.prz_encoder import (
     _resolve_timing_values,
     encode_prz,
 )
-from agent.api_v2 import _extract_prz_timing_config
+from agent.models import _extract_prz_timing_config
 
 
 # ---------------------------------------------------------------------------
