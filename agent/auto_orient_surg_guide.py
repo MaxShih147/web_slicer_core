@@ -25,6 +25,16 @@ from dataclasses import dataclass, field
 import numpy as np
 
 # --------------------------------------------------------------------------- #
+#  Drill-hole shape standards (a real end-face is a ring / C-shape)            #
+#  Outer-diameter range measured (PCA major-axis extent) over 60 good guide    #
+#  models: 110 rings, min 6.6 / median 9.4 / max 12.8 mm. Aspect ratio of a    #
+#  true ring is ≈1; elongated slabs (mis-detections) are far higher.           #
+# --------------------------------------------------------------------------- #
+RING_OUTER_DIAM_MIN = 5.5    # mm
+RING_OUTER_DIAM_MAX = 14.0   # mm
+RING_MAX_ASPECT = 1.5        # PCA long/short
+
+# --------------------------------------------------------------------------- #
 #  小工具 / vector helpers (port of dao_math)                                  #
 # --------------------------------------------------------------------------- #
 
@@ -182,8 +192,9 @@ class _GuideResult:
     found: bool = False
     dir: np.ndarray = field(default_factory=lambda: np.array([0, 0, 1], np.float32))
     # debug/visualization: triangle indices (into the input faces array)
-    decision_faces: list = field(default_factory=list)  # chosen drill end-face patch
-    step_faces: list = field(default_factory=list)       # internal step faces used for tiebreak
+    decision_faces: list = field(default_factory=list)   # chosen drill end-face patch
+    step_faces: list = field(default_factory=list)        # internal step faces used for tiebreak
+    candidate_faces: list = field(default_factory=list)   # other (non-chosen) drill candidates
 
 
 # --------------------------------------------------------------------------- #
@@ -509,25 +520,32 @@ def _is_drill_patch_by_edges(mesh: _Mesh, P: _Patch) -> bool:
         vv = qx * float(ey[0]) + qy * float(ey[1]) + qz * float(ey[2])
         return u, vv
 
-    # overall patch 2D bbox size filter
-    uminP = vminP = 1e30
-    umaxP = vmaxP = -1e30
-    for fidx in P.faces:
-        for k in range(3):
-            u, vv = project_to_plane(int(fi[fidx, k]))
-            uminP = min(uminP, u); umaxP = max(umaxP, u)
-            vminP = min(vminP, vv); vmaxP = max(vmaxP, vv)
-    width = umaxP - uminP
-    height = vmaxP - vminP
-    if not (width > 0.0 and height > 0.0):
+    # overall patch extent filter, measured along the patch's PRINCIPAL AXES
+    # (PCA) rather than a fixed-axis bbox — otherwise a tilted long strip gets
+    # framed as nearly square and slips past the long/short-ratio check below.
+    vids2d = np.unique(fi[np.asarray(P.faces, dtype=np.int64)].reshape(-1).astype(np.int64))
+    if vids2d.shape[0] < 3:
         return False
-    long_edge = width if width > height else height
-    short_edge = height if width > height else width
-    if long_edge < 6.5 or long_edge > 35.0:
+    pts2d = np.empty((vids2d.shape[0], 2), dtype=np.float64)
+    for i in range(vids2d.shape[0]):
+        u, vv = project_to_plane(int(vids2d[i]))
+        pts2d[i, 0] = u
+        pts2d[i, 1] = vv
+    centered = pts2d - pts2d.mean(axis=0)
+    # principal axes of the projected point cloud
+    cov = np.cov(centered.T)
+    _eigvals, eigvecs = np.linalg.eigh(cov)
+    proj = centered @ eigvecs            # coords along the two principal axes
+    extents = proj.max(axis=0) - proj.min(axis=0)
+    long_edge = float(extents.max())   # PCA major-axis extent ≈ ring outer diameter
+    short_edge = float(extents.min())
+    if not (long_edge > 0.0 and short_edge > 0.0):
         return False
-    if short_edge < 4.0 or short_edge > 35.0:
+    # stage 2: outer diameter must match the standard drill-hole size
+    if long_edge < RING_OUTER_DIAM_MIN or long_edge > RING_OUTER_DIAM_MAX:
         return False
-    if long_edge > 4.0 * short_edge:
+    # stage 1: a true ring / C-shape is ~circular (aspect ≈ 1); reject slabs
+    if long_edge > RING_MAX_ASPECT * short_edge:
         return False
 
     if not _patch_has_hole_by_scanlines(mesh, P, ex, ey):
@@ -806,6 +824,12 @@ def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
 
     res.found = True
     res.decision_faces = list(best.faces)
+    # other drill candidates (not chosen) — for debug highlighting
+    other_faces: list = []
+    for P in drill_patches:
+        if P is not best:
+            other_faces.extend(P.faces)
+    res.candidate_faces = other_faces
     axis = _normalize(best.avg_normal)
     res.dir = axis
 
@@ -889,6 +913,7 @@ def compute_auto_orientation_surg_guide_detail(vertices: np.ndarray,
         "rotation_rad": [float(out[0]), float(out[1]), float(out[2])],
         "decision_faces": [int(x) for x in r.decision_faces],
         "step_faces": [int(x) for x in r.step_faces],
+        "candidate_faces": [int(x) for x in r.candidate_faces],
     }
 
 

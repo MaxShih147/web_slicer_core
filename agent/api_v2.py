@@ -1205,6 +1205,7 @@ async def auto_orient_endpoint(
         "rotation_rad": detail["rotation_rad"],
         "decision_faces": detail["decision_faces"],
         "step_faces": detail["step_faces"],
+        "candidate_faces": detail["candidate_faces"],
     })
 
 
