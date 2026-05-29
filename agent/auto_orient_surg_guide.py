@@ -181,6 +181,9 @@ class _Patch:
 class _GuideResult:
     found: bool = False
     dir: np.ndarray = field(default_factory=lambda: np.array([0, 0, 1], np.float32))
+    # debug/visualization: triangle indices (into the input faces array)
+    decision_faces: list = field(default_factory=list)  # chosen drill end-face patch
+    step_faces: list = field(default_factory=list)       # internal step faces used for tiebreak
 
 
 # --------------------------------------------------------------------------- #
@@ -756,7 +759,8 @@ def _choose_entrance_direction(mesh: _Mesh, drill_patches: list, best: _Patch):
 
     # 踏面朝向多的那一側 = 入口
     entrance = axis if plus >= minus else (-axis).astype(np.float32)
-    return entrance, plus, minus
+    step_faces = np.where(sel)[0].tolist()
+    return entrance, plus, minus, step_faces
 
 
 def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
@@ -801,6 +805,7 @@ def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
         return res
 
     res.found = True
+    res.decision_faces = list(best.faces)
     axis = _normalize(best.avg_normal)
     res.dir = axis
 
@@ -813,8 +818,9 @@ def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
         for P in drill_patches if P is not best
     )
     if has_opposite_end:
-        entrance, plus, minus = _choose_entrance_direction(mesh, drill_patches, best)
+        entrance, plus, minus, step_faces = _choose_entrance_direction(mesh, drill_patches, best)
         res.dir = _normalize(entrance)
+        res.step_faces = step_faces
         if debug:
             print(f"[surg] ambiguous ends -> entrance vote "
                   f"+axis={plus:.3f} -axis={minus:.3f}")
@@ -848,6 +854,24 @@ def compute_auto_orientation_surg_guide(vertices: np.ndarray,
     order 'ZYX'. Returns [0,0,0] when no drill end face is found (no rotation),
     mirroring the C++ fallback.
     """
+    return compute_auto_orientation_surg_guide_detail(vertices, faces, debug)["rotation_rad"]
+
+
+def compute_auto_orientation_surg_guide_detail(vertices: np.ndarray,
+                                               faces: np.ndarray,
+                                               debug: bool = False) -> dict:
+    """Same as :func:`compute_auto_orientation_surg_guide` but also returns the
+    triangle indices used for debug visualization.
+
+    Returns
+    -------
+    {
+        "rotation_rad": [rx, ry, rz],     # radians, apply with Euler order 'ZYX'
+        "decision_faces": [int, ...],      # chosen drill end-face patch triangles
+        "step_faces": [int, ...],          # internal step faces (tiebreak only)
+    }
+    Triangle indices are into the input ``faces`` array.
+    """
     v = np.ascontiguousarray(vertices, dtype=np.float32)
     f = np.ascontiguousarray(faces, dtype=np.uint32)
     if v.ndim != 2 or v.shape[1] != 3:
@@ -857,11 +881,15 @@ def compute_auto_orientation_surg_guide(vertices: np.ndarray,
 
     r = _find_guide_direction(v, f, debug=debug)
     if not r.found:
-        return [0.0, 0.0, 0.0]
+        return {"rotation_rad": [0.0, 0.0, 0.0], "decision_faces": [], "step_faces": []}
 
     # drill direction aligned to -Z (entrance facing down)
     out = _normal_to_euler_xyz_align_to_minus_z(r.dir)
-    return [float(out[0]), float(out[1]), float(out[2])]
+    return {
+        "rotation_rad": [float(out[0]), float(out[1]), float(out[2])],
+        "decision_faces": [int(x) for x in r.decision_faces],
+        "step_faces": [int(x) for x in r.step_faces],
+    }
 
 
 # --------------------------------------------------------------------------- #

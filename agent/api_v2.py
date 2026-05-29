@@ -1193,15 +1193,19 @@ async def auto_orient_endpoint(
         vertices = np.asarray(mesh.vertices, dtype=np.float32)
         faces = np.asarray(mesh.faces, dtype=np.uint32)
 
-        from .auto_orient_surg_guide import compute_auto_orientation_surg_guide
+        from .auto_orient_surg_guide import compute_auto_orientation_surg_guide_detail
 
-        rotation_rad = await asyncio.to_thread(
-            compute_auto_orientation_surg_guide, vertices, faces
+        detail = await asyncio.to_thread(
+            compute_auto_orientation_surg_guide_detail, vertices, faces
         )
     finally:
         os.unlink(tmp_path)
 
-    return V2Response(success=True, data={"rotation_rad": rotation_rad})
+    return V2Response(success=True, data={
+        "rotation_rad": detail["rotation_rad"],
+        "decision_faces": detail["decision_faces"],
+        "step_faces": detail["step_faces"],
+    })
 
 
 @router.get("/slices/{job_id}", response_model=V2Response)
