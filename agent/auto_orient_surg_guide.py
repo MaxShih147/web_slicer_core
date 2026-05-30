@@ -195,6 +195,8 @@ class _GuideResult:
     decision_faces: list = field(default_factory=list)   # chosen drill end-face patch
     step_faces: list = field(default_factory=list)        # internal step faces used for tiebreak
     candidate_faces: list = field(default_factory=list)   # other (non-chosen) drill candidates
+    cylinders: list = field(default_factory=list)         # per-candidate drill cylinder {center,axis,radius}
+    mesh: object = None                                   # welded mesh (reused for concave debug)
 
 
 # --------------------------------------------------------------------------- #
@@ -497,7 +499,7 @@ def _patch_has_hole_by_scanlines(mesh: _Mesh, P: _Patch,
     return has_hole(True) or has_hole(False)
 
 
-def _is_drill_patch_by_edges(mesh: _Mesh, P: _Patch) -> bool:
+def _is_drill_patch_by_edges(mesh: _Mesh, P: _Patch, ignore_angle: bool = False) -> bool:
     """Port of isDrillPatchByEdges (stage 2)."""
     if len(P.faces) < 5 or P.area <= 0.0:
         return False
@@ -604,6 +606,9 @@ def _is_drill_patch_by_edges(mesh: _Mesh, P: _Patch) -> bool:
     maxD = max(dx, dy)
     if minD < min_diameter or maxD > max_diameter:
         return False
+
+    if ignore_angle:
+        return True  # quasi-candidate: passed shape/size/hole/wall, skip 220° gate
 
     # walk edge chains; accumulate turning angle; >= 220° → drill end face
     angle_threshold = 220.0 * 3.14159265 / 180.0
@@ -791,6 +796,7 @@ def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
     mesh = _weld_and_build(vertices, faces)
     if mesh.fi.shape[0] == 0:
         return res
+    res.mesh = mesh
 
     patches = _grow_patches(mesh)
     if not patches:
@@ -806,6 +812,9 @@ def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
             continue
         drill_patches.append(P)
 
+    # one cylinder per through-hole (pair the two detected end faces)
+    res.cylinders = _build_drill_cylinders(mesh, drill_patches)
+
     if debug:
         print(f"[surg] patches={len(patches)} drill_candidates={len(drill_patches)}")
         for P in drill_patches:
@@ -816,6 +825,18 @@ def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
                   f"center=({c[0]:.2f},{c[1]:.2f},{c[2]:.2f})")
 
     if not drill_patches:
+        # Last resort: no drill hole detected. Orient so the tooth-fitting
+        # (concave) side faces up — entrance(down) = opposite of that.
+        up = _concave_up_direction(mesh)
+        if up is not None:
+            refined = _refine_up_with_quasi_candidates(mesh, patches, up)
+            res.found = True
+            res.dir = _normalize(-refined)   # entrance(down) = opposite of up
+            if debug:
+                snapped = not np.allclose(refined, up)
+                print(f"[surg] FALLBACK: concave-up=({up[0]:.3f},{up[1]:.3f},{up[2]:.3f}) "
+                      f"{'snapped to quasi-candidate ' if snapped else ''}"
+                      f"-> up=({refined[0]:.3f},{refined[1]:.3f},{refined[2]:.3f})")
         return res
 
     best = _pick_best_drill_patch_stage3(drill_patches)
@@ -830,30 +851,173 @@ def _find_guide_direction(vertices: np.ndarray, faces: np.ndarray,
         if P is not best:
             other_faces.extend(P.faces)
     res.candidate_faces = other_faces
-    axis = _normalize(best.avg_normal)
-    res.dir = axis
 
-    # Tiebreaker: only when the SAME hole's two ends are both detected (i.e. a
-    # drill candidate exists whose normal is nearly opposite to best) is the end
-    # ambiguous. Only then do we use the internal step faces to decide which end
-    # is the entrance (faces down). Otherwise the patch normal is trusted as-is.
-    has_opposite_end = any(
-        _dot(axis, _normalize(P.avg_normal)) < -0.7
-        for P in drill_patches if P is not best
-    )
-    if has_opposite_end:
-        entrance, plus, minus, step_faces = _choose_entrance_direction(mesh, drill_patches, best)
-        res.dir = _normalize(entrance)
-        res.step_faces = step_faces
-        if debug:
-            print(f"[surg] ambiguous ends -> entrance vote "
-                  f"+axis={plus:.3f} -axis={minus:.3f}")
+    # Decide which end faces DOWN by voting the tooth-fitting-side concave-face
+    # normals along the drill axis (bore-internal concavities excluded via the
+    # cylinders). Tooth-fitting concavities point out toward the teeth = the
+    # up-facing end; the entrance (down) is the opposite end.
+    res.dir = _normalize(_entrance_dir_by_concave(mesh, best, res.cylinders, debug))
 
     if debug:
         n = res.dir
         print(f"[surg] chosen drill patch id={best.id} "
               f"dir=({n[0]:.4f},{n[1]:.4f},{n[2]:.4f})")
     return res
+
+
+# --------------------------------------------------------------------------- #
+#  Concave-face detection (debug: tooth-fitting side has many local concavities) #
+# --------------------------------------------------------------------------- #
+
+
+def _patch_outer_diam(mesh: _Mesh, P: _Patch) -> float:
+    """Outer diameter of a patch = PCA major-axis extent of its projected points."""
+    axis = _normalize(P.avg_normal)
+    ex, ey = _build_orthonormal_basis(axis)
+    fi = mesh.fi
+    c = P.center.astype(np.float64)
+    vids = np.unique(fi[np.asarray(P.faces, dtype=np.int64)].reshape(-1).astype(np.int64))
+    pts = mesh.v[vids].astype(np.float64) - c
+    p2 = np.stack([pts @ ex.astype(np.float64), pts @ ey.astype(np.float64)], axis=1)
+    p2 -= p2.mean(axis=0)
+    _ev, vec = np.linalg.eigh(np.cov(p2.T))
+    pr = p2 @ vec
+    ext = pr.max(axis=0) - pr.min(axis=0)
+    return float(ext.max())
+
+
+def _build_drill_cylinders(mesh: _Mesh, drill_patches: list) -> list:
+    """One cylinder per detected candidate end face (no pairing).
+
+    axis = end-face normal, radius = outer Ø / 2, center = face center. The
+    frontend extends each cylinder both ways along the axis to envelop the bore;
+    overlapping cylinders (e.g. from the two ends of the same hole) are fine."""
+    out = []
+    for P in drill_patches:
+        ax = _normalize(P.avg_normal)
+        r = _patch_outer_diam(mesh, P) / 2.0
+        out.append({
+            "center": [float(x) for x in P.center],
+            "axis": [float(ax[0]), float(ax[1]), float(ax[2])],
+            "radius": float(r),
+            "length": float(max(r * 10.0, 40.0)),  # both-ways extent (envelops bore)
+        })
+    return out
+
+
+def detect_concave_faces(mesh: _Mesh, cylinders: list = None,
+                         ratio_thresh: float = 0.55) -> list:
+    """Faces sitting in a local concavity: most neighbours lie on the front
+    (+normal) side of the face. These cluster on the tooth-fitting side of a
+    surgical guide (the side that hugs the teeth).
+
+    If ``cylinders`` is given, faces whose center falls inside any drill-hole
+    cylinder are excluded — bore-wall step concavities must not pollute the
+    tooth-fitting-side signal. Returns triangle indices."""
+    fc = mesh.face_c.astype(np.float64)
+    fn = mesh.face_n.astype(np.float64)
+    m = mesh.fi.shape[0]
+    votes = np.zeros(m, dtype=np.float64)
+    total = np.zeros(m, dtype=np.float64)
+    for (f0, f1) in mesh.edge_faces.values():
+        if f1 < 0:
+            continue
+        d = fc[f1] - fc[f0]
+        if float(d @ fn[f0]) > 1e-6:
+            votes[f0] += 1.0
+        total[f0] += 1.0
+        if float((-d) @ fn[f1]) > 1e-6:
+            votes[f1] += 1.0
+        total[f1] += 1.0
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ratio = np.where(total > 0, votes / total, 0.0)
+    concave = np.where(ratio >= ratio_thresh)[0]
+
+    if cylinders:
+        cc = fc[concave]
+        inside = np.zeros(concave.shape[0], dtype=bool)
+        for cyl in cylinders:
+            c = np.asarray(cyl["center"], dtype=np.float64)
+            a = np.asarray(cyl["axis"], dtype=np.float64)
+            r = float(cyl["radius"])
+            half = float(cyl.get("length", r * 10.0)) / 2.0
+            d = cc - c
+            along = d @ a
+            radial = np.linalg.norm(d - along[:, None] * a, axis=1)
+            inside |= (np.abs(along) <= half) & (radial <= r)
+        concave = concave[~inside]
+
+    return concave.tolist()
+
+
+def _entrance_dir_by_concave(mesh: _Mesh, best: _Patch, cylinders: list,
+                            debug: bool = False) -> np.ndarray:
+    """Decide which end of the drill axis faces DOWN, by voting the
+    tooth-fitting-side concave-face normals along the axis.
+
+    Tooth-fitting concavities (bore-internal ones excluded via ``cylinders``)
+    point out toward the teeth = the up-facing end. The area-weighted sum of
+    (concave normal · axis) tells which end the teeth are on; the entrance
+    (down) is the opposite end. Returns the direction to align to -Z (down)."""
+    axis = _normalize(best.avg_normal)
+    concave = detect_concave_faces(mesh, cylinders)
+    if not concave:
+        return axis
+    idx = np.asarray(concave, dtype=np.int64)
+    n = mesh.face_n[idx].astype(np.float64)
+    area = mesh.face_area[idx].astype(np.float64)
+    a = axis.astype(np.float64)
+    vote = float(np.sum((n @ a) * area))
+    if debug:
+        end = "-axis" if vote > 0 else "+axis"
+        print(f"[surg] concave normal vote along axis = {vote:.2f} -> entrance(down) = {end}")
+    # vote>0: concave normals lean toward +axis → teeth up at +axis → entrance
+    #         (down) = -axis. vote<0 → entrance = +axis.
+    return (-axis).astype(np.float32) if vote > 0 else axis
+
+
+def _concave_up_direction(mesh: _Mesh) -> "np.ndarray | None":
+    """Last-resort orientation when no drill hole is found: the area-weighted
+    average of ALL concave-face normals points toward the tooth-fitting side
+    (the up-facing side). Returns that up direction, or None if no concavities.
+    No cylinder exclusion here (there is no detected hole to exclude)."""
+    concave = detect_concave_faces(mesh)
+    if not concave:
+        return None
+    idx = np.asarray(concave, dtype=np.int64)
+    n = mesh.face_n[idx].astype(np.float64)
+    area = mesh.face_area[idx].astype(np.float64)
+    s = (n * area[:, None]).sum(axis=0)
+    nn = float(np.linalg.norm(s))
+    if nn < 1e-9:
+        return None
+    return (s / nn).astype(np.float32)
+
+
+def _refine_up_with_quasi_candidates(mesh: _Mesh, patches: list,
+                                     up: np.ndarray) -> np.ndarray:
+    """Snap the fallback up-direction to the nearest *quasi-candidate* plane.
+
+    Quasi-candidates pass the drill shape/size/hole/wall gates but were rejected
+    only by the 220° turning-angle test (e.g. holes whose rim mesh is broken).
+    If one's normal is within 30° of the concave-vote ``up``, use that plane's
+    normal (it's a real hole rim → more precise than the rough concave average).
+    Otherwise keep ``up``."""
+    cos30 = math.cos(30.0 * math.pi / 180.0)
+    up64 = up.astype(np.float64)
+    best_n = None
+    best_abs = cos30
+    for P in patches:
+        if len(P.faces) < 5 or P.area <= 0.0:
+            continue
+        if not _is_drill_patch_by_edges(mesh, P, ignore_angle=True):
+            continue
+        n = _normalize(P.avg_normal).astype(np.float64)
+        d = float(n @ up64)
+        if abs(d) > best_abs:
+            best_abs = abs(d)
+            best_n = n if d > 0 else -n   # take the side facing up
+    return best_n.astype(np.float32) if best_n is not None else up
 
 
 # --------------------------------------------------------------------------- #
@@ -883,7 +1047,8 @@ def compute_auto_orientation_surg_guide(vertices: np.ndarray,
 
 def compute_auto_orientation_surg_guide_detail(vertices: np.ndarray,
                                                faces: np.ndarray,
-                                               debug: bool = False) -> dict:
+                                               debug: bool = False,
+                                               with_concave: bool = False) -> dict:
     """Same as :func:`compute_auto_orientation_surg_guide` but also returns the
     triangle indices used for debug visualization.
 
@@ -904,8 +1069,12 @@ def compute_auto_orientation_surg_guide_detail(vertices: np.ndarray,
         raise ValueError("faces must be (M,3)")
 
     r = _find_guide_direction(v, f, debug=debug)
+    concave = (detect_concave_faces(r.mesh, r.cylinders)
+               if with_concave and r.mesh is not None else [])
     if not r.found:
-        return {"rotation_rad": [0.0, 0.0, 0.0], "decision_faces": [], "step_faces": []}
+        return {"rotation_rad": [0.0, 0.0, 0.0], "decision_faces": [],
+                "step_faces": [], "candidate_faces": [], "concave_faces": concave,
+                "cylinders": r.cylinders}
 
     # drill direction aligned to -Z (entrance facing down)
     out = _normal_to_euler_xyz_align_to_minus_z(r.dir)
@@ -914,6 +1083,8 @@ def compute_auto_orientation_surg_guide_detail(vertices: np.ndarray,
         "decision_faces": [int(x) for x in r.decision_faces],
         "step_faces": [int(x) for x in r.step_faces],
         "candidate_faces": [int(x) for x in r.candidate_faces],
+        "concave_faces": concave,
+        "cylinders": r.cylinders,
     }
 
 

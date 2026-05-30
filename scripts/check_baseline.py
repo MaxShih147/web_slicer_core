@@ -50,10 +50,15 @@ def analyze(path):
     drill = [P for P in patches
              if len(P.faces) >= 5 and P.area > 0 and ao._is_drill_patch_by_edges(mesh, P)]
     best = ao._pick_best_drill_patch_stage3(drill)
-    if best is None:
-        return None
+    detail = ao.compute_auto_orientation_surg_guide_detail(v, f)
+    deg = [round(x * 180.0 / math.pi, 2) for x in detail["rotation_rad"]]
 
-    # PCA outer diameter of the chosen face
+    if best is None:
+        # fallback model (no drill hole): baseline on the resulting orientation,
+        # since there is no decision face to compare a normal against.
+        return {"type": "fallback", "rotation_deg": deg, "candidates": 0}
+
+    # normal model: baseline on the chosen drill-face normal (PCA outer diameter too)
     axis = ao._normalize(best.avg_normal)
     ex, ey = ao._build_orthonormal_basis(axis)
     vids = np.unique(mesh.fi[np.asarray(best.faces, np.int64)].reshape(-1).astype(np.int64))
@@ -63,13 +68,12 @@ def analyze(path):
     _ev, vec = np.linalg.eigh(np.cov(p2.T))
     pr = p2 @ vec
     ext = pr.max(axis=0) - pr.min(axis=0)
-
-    detail = ao.compute_auto_orientation_surg_guide_detail(v, f)
     return {
+        "type": "normal",
         "normal": [float(x) for x in best.avg_normal],
         "center": [round(float(x), 3) for x in best.center],
         "outer_diam": round(float(ext.max()), 2),
-        "rotation_deg": [round(x * 180.0 / math.pi, 2) for x in detail["rotation_rad"]],
+        "rotation_deg": deg,
         "candidates": len(drill),
     }
 
@@ -79,12 +83,12 @@ def cmd_update(files, json_path):
     for path in files:
         name = os.path.basename(path)
         r = analyze(path)
-        if r is None:
-            print(f"  {name}: NO drill candidate — cannot baseline this model")
-            return 1
         base[name] = r
-        n = r["normal"]
-        print(f"  {name}: n=({n[0]:+.3f},{n[1]:+.3f},{n[2]:+.3f}) Ø={r['outer_diam']}")
+        if r["type"] == "fallback":
+            print(f"  {name}: [FALLBACK] rot={r['rotation_deg']}")
+        else:
+            n = r["normal"]
+            print(f"  {name}: n=({n[0]:+.3f},{n[1]:+.3f},{n[2]:+.3f}) Ø={r['outer_diam']}")
     with open(json_path, "w") as fp:
         json.dump(base, fp, indent=2, ensure_ascii=False)
     print(f"\n✅ wrote baseline for {len(base)} models -> {json_path}")
@@ -106,9 +110,21 @@ def cmd_check(files, json_path, good):
             continue
         b = base[name]
         r = analyze(path)
-        if r is None:
-            fails.append(name)
-            print(f"[FAIL] {name}: no drill candidate detected now")
+        bt = b.get("type", "normal")
+        rt = r["type"]
+        if bt == "fallback" or rt == "fallback":
+            if bt != rt:
+                fails.append(name)
+                print(f"[FAIL ] {name}: type changed {bt} -> {rt}")
+                continue
+            rot_ok = all(abs(a - bb) < ROT_TOL
+                         for a, bb in zip(r["rotation_deg"], b["rotation_deg"]))
+            if rot_ok:
+                print(f"[PASS ] {name}: [fallback] rotation match {r['rotation_deg']}")
+            else:
+                fails.append(name)
+                print(f"[FAIL ] {name}: [fallback] rotation changed "
+                      f"{b['rotation_deg']} -> {r['rotation_deg']}")
             continue
         dot = float(np.dot(r["normal"], b["normal"]))
         if dot >= DOT_PASS:
