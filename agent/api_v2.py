@@ -1159,6 +1159,65 @@ async def generate_base_endpoint(
     )
 
 
+@router.post("/auto-orient", response_model=V2Response)
+async def auto_orient_endpoint(
+    file: UploadFile = File(...),
+    mode: int = Form(2),
+    debug: bool = Form(False),
+):
+    """
+    Compute dental auto-orientation Euler angles for an uploaded model.
+
+    Accepts a local-space STL. Returns ``data.rotation_rad = [rx, ry, rz]``
+    (radians) to be applied with Euler order 'ZYX' on the frontend.
+
+    When ``debug`` is true, also returns the debug mesh info (decision/candidate/
+    concave face indices + drill cylinders) for visualization. Default is off —
+    those arrays are large, so they are only computed/sent on demand.
+
+    Currently only surgical-guide mode (2) is ported to the backend; other
+    modes still run in the frontend WASM module.
+    """
+    import os
+    import tempfile
+
+    import numpy as np
+
+    if mode != 2:
+        return V2Response(
+            success=False,
+            message=f"auto-orient mode {mode} is not supported on the backend yet",
+        )
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        mesh = load_trimesh(tmp_path)
+        vertices = np.asarray(mesh.vertices, dtype=np.float32)
+        faces = np.asarray(mesh.faces, dtype=np.uint32)
+
+        from .auto_orient_surg_guide import compute_auto_orientation_surg_guide_detail
+
+        detail = await asyncio.to_thread(
+            compute_auto_orientation_surg_guide_detail, vertices, faces, False, debug
+        )
+    finally:
+        os.unlink(tmp_path)
+
+    data = {"rotation_rad": detail["rotation_rad"]}
+    if debug:
+        data.update({
+            "decision_faces": detail["decision_faces"],
+            "step_faces": detail["step_faces"],
+            "candidate_faces": detail["candidate_faces"],
+            "concave_faces": detail.get("concave_faces", []),
+            "cylinders": detail.get("cylinders", []),
+        })
+    return V2Response(success=True, data=data)
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
