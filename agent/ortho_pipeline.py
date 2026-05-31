@@ -622,6 +622,108 @@ def _cleanup_hollow_intermediates(job_dir: Path, output_dir: Path, job_id: str) 
     logger.info(f"[ortho_pipeline:{job_id}] Cleaned up intermediate files")
 
 
+# ---------------------------------------------------------------------------
+# Pre-hollow model type classification
+# ---------------------------------------------------------------------------
+
+_U_ARCH_FILL_RATIO_THRESHOLD = 0.80
+_U_ARCH_SECTION_Z_FRACS = (0.05, 0.075, 0.10)
+_U_ARCH_MIN_VALID_SECTIONS = 2
+_U_ARCH_MIN_MATCHING_SECTIONS = 2
+
+
+def _is_u_arch_from_low_sections(input_path: Path) -> bool:
+    """Return True if the mesh appears to be a U-arch dental model.
+
+    Slices at three low normalised Z heights and computes
+    fill_ratio = section_area / convex_hull_area for each valid slice.
+    U-arch models have a large central opening that reduces fill_ratio well
+    below the threshold; full-base models have nearly solid cross-sections.
+
+    Fails safe: any exception returns False so the pipeline continues to the
+    normal hollow path.
+    """
+    try:
+        from scipy.spatial import ConvexHull as _ConvexHull
+
+        m = load_trimesh(input_path)
+        bb = m.bounds
+        z_min = float(bb[0][2])
+        height = float(bb[1][2]) - z_min
+        if height < 1.0:
+            return False
+
+        valid_count = 0
+        matching_count = 0
+
+        for z_frac in _U_ARCH_SECTION_Z_FRACS:
+            try:
+                z_act = z_min + z_frac * height
+                section = m.section(plane_origin=[0, 0, z_act], plane_normal=[0, 0, 1])
+                if section is None or len(section.entities) == 0:
+                    continue
+                path2d, _ = section.to_2D()
+
+                all_pts = []
+                total_area = 0.0
+                for ent in path2d.entities:
+                    pts = path2d.vertices[ent.points]
+                    if len(pts) < 3:
+                        continue
+                    all_pts.extend(pts.tolist())
+                    total_area += abs(poly_area_2d(pts))
+
+                if len(all_pts) < 3 or total_area < 1.0:
+                    continue
+
+                hull_area = float(_ConvexHull(np.array(all_pts)).volume)
+                if hull_area < 1.0:
+                    continue
+
+                valid_count += 1
+                if total_area / hull_area < _U_ARCH_FILL_RATIO_THRESHOLD:
+                    matching_count += 1
+
+            except Exception:
+                continue
+
+        return (
+            valid_count >= _U_ARCH_MIN_VALID_SECTIONS
+            and matching_count >= _U_ARCH_MIN_MATCHING_SECTIONS
+        )
+
+    except Exception:
+        return False
+
+
+def _complete_as_no_hollow(
+    job_id: str,
+    job_dir: Path,
+    input_path: Path,
+    output_dir: Path,
+    status_data: dict,
+    total_steps: int,
+    reason: str = "",
+) -> None:
+    """Copy input as ortho_result.stl and write completed status (no-hollow path)."""
+    if reason:
+        logger.info(f"[ortho_pipeline:{job_id}] {reason}; outputting cleaned input mesh.")
+    ortho_result_path = output_dir / "ortho_result.stl"
+    shutil.copyfile(str(input_path), str(ortho_result_path))
+    _cleanup_hollow_intermediates(job_dir, output_dir, job_id)
+    status_data["status"] = "completed"
+    status_data["ortho_progress"] = {
+        "step": total_steps,
+        "total_steps": total_steps,
+        "description": "Complete",
+    }
+    status_data["has_ortho_result"] = True
+    status_data["output_path"] = str(ortho_result_path)
+    status_file = get_job_dir(job_id) / "status.json"
+    with open(status_file, "w") as f:
+        json.dump(status_data, f)
+
+
 async def run_ortho_pipeline(
     job_id: str,
     hollowing_min_thickness: float = 3.0,
@@ -667,6 +769,14 @@ async def run_ortho_pipeline(
         clean_stats = clean_input_for_manifold(input_path, cleaned_path)
         logger.info(f"[ortho_pipeline:{job_id}] Pre-clean: {clean_stats}")
         input_path = cleaned_path
+
+        # ===== Pre-hollow model type classification =====
+        if _is_u_arch_from_low_sections(input_path):
+            _complete_as_no_hollow(
+                job_id, job_dir, input_path, output_dir, status_data, total_steps,
+                reason="Pre-hollow: U-arch detected, skipping hollow processing",
+            )
+            return
 
         # ===== Step 1: Generate hollow =====
         _update_progress(job_id, 1, total_steps, "Generating hollow mesh...", status_data)
@@ -904,25 +1014,10 @@ async def run_ortho_pipeline(
                 if _skip_reasons
                 else "no significant component passed the hollow fit check"
             )
-            logger.info(
-                f"[ortho_pipeline:{job_id}] Hollow interior did not pass fit check "
-                f"({_reason_str}); skipping hollow processing, "
-                f"outputting cleaned input mesh."
+            _complete_as_no_hollow(
+                job_id, job_dir, input_path, output_dir, status_data, total_steps,
+                reason=f"Hollow interior did not pass fit check ({_reason_str})",
             )
-            ortho_result_path = output_dir / "ortho_result.stl"
-            shutil.copyfile(str(input_path), str(ortho_result_path))
-            _cleanup_hollow_intermediates(job_dir, output_dir, job_id)
-            status_data["status"] = "completed"
-            status_data["ortho_progress"] = {
-                "step": total_steps,
-                "total_steps": total_steps,
-                "description": "Complete",
-            }
-            status_data["has_ortho_result"] = True
-            status_data["output_path"] = str(ortho_result_path)
-            status_file = get_job_dir(job_id) / "status.json"
-            with open(status_file, "w") as f:
-                json.dump(status_data, f)
             return
 
         # ===== Step 2: Extend bottom vertices =====
