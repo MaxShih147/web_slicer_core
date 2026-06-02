@@ -79,6 +79,10 @@ class V2SliceCreateRequest(BaseModel):
     # Full Mechado config (Title Case "Print.*") for PRZ physical print-time sync;
     # kept separate from the snake_case slicing `config`. Optional / backward-compatible.
     prz_config: Optional[Dict[str, Any]] = None
+    # Per-job geometry: model bounding-box center offset [x, y] from display center.
+    # Frontend-only value (not part of the reusable Mechado printer profile), so it
+    # rides as a top-level field rather than being injected into prz_config.
+    center: Optional[List[float]] = None
 
 
 class V2ConfigUpdateRequest(BaseModel):
@@ -273,6 +277,8 @@ async def create_slice_job(request: V2SliceCreateRequest):
         }
         if request.prz_config is not None:
             _pending_jobs[job_id]["prz_config"] = request.prz_config
+        if request.center is not None:
+            _pending_jobs[job_id]["center"] = request.center
         return V2Response(success=True, message="Slice job created", data={"jobId": job_id})
     except APIError:
         raise
@@ -433,7 +439,7 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
             _inject_retract_overrides(prz_cfg)
             with open(job_dir / "prz_config.json", "w") as f:
                 json.dump(prz_cfg, f)
-        sla_config = _convert_v2_config_to_sla(config)
+        sla_config = _build_sla_config(prz_cfg, config, pending.get("center"))
         del _pending_jobs[job_id]
         background_tasks.add_task(run_slicing, job_id, sla_config)
         return V2Response(success=True, message="Slicing started", data={"currentConfig": config})
@@ -968,16 +974,22 @@ async def download_prz_v2(job_id: str, request: Request):
     if not sl1_path.exists():
         raise file_not_found(".sl1 archive not found")
 
-    try:
-        body = await request.json()
-    except Exception:
-        raise validation_error("Request body must be valid JSON")
-    if not isinstance(body, dict):
-        raise validation_error("Request body must be a JSON object")
+    # config body 與 preview 皆為 optional。容忍空 body（不視為錯誤），
+    # 以便支援「config 已存在 job 內」的新流程。
+    raw = await request.body()
+    if raw:
+        try:
+            body = json.loads(raw)
+        except Exception:
+            raise validation_error("Request body must be valid JSON")
+        if not isinstance(body, dict):
+            raise validation_error("Request body must be a JSON object")
+    else:
+        body = {}
 
     preview_small_rgb = _decode_preview_rgb(body.pop("preview_small", None))
     preview_large_rgb = _decode_preview_rgb(body.pop("preview_large", None))
-    config = body
+    config = _resolve_prz_download_config(job_id, body)
     _inject_retract_overrides(config)
 
     try:
@@ -1588,3 +1600,125 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     if sla_dict:
         return SLAConfig(**sla_dict)
     return None
+
+
+def _extract_sla_from_mechado(
+    mechado: Dict[str, Any],
+    center: Optional[List[float]] = None,
+) -> Dict[str, Any]:
+    """從完整三段式 mechado config 萃取 SLAConfig 切片參數（回傳 dict，未建模）。
+
+    方案 B（單一真相）：DS-Online 前端只送一份完整 mechado config（含 Machine /
+    Print / Advanced 三段），後端由此萃取出 prusa 切片所需的 snake_case 欄位。
+
+    與 `_convert_v2_config_to_sla` 的差異：本函式理解三段式巢狀結構，並涵蓋
+    `Machine` 與 `Advanced` 區段（舊函式僅讀 `Print` 或頂層 snake，會丟失這兩段）。
+
+    重要約定：
+      - `display_width`/`display_height` 取自 `Machine.bed_size[2]`/`[3]`
+        （bed_size 結構為 [x0, y0, x1, y1]，前兩元素為原點，非幅面尺寸）。
+      - `Advanced.Anti-aliasing Level` 與 `Advanced.Image Blur Pixel` 在 mechado
+        中已是後端刻度（前端 uiToDefault 已套 UI→backend 轉換），此處直接複製，
+        不可再套任何刻度轉換。
+      - `printer_model` 取自 `Machine.machine_type`（前端不另傳）。
+      - 任一來源欄位缺失時，留給 SLAConfig 預設值，不拋錯（僅記 log）。
+
+    NOTE: 萃取出的 `anti_aliasing_level` 為切片控制值（Prusa 刻度 0/1/2），僅供
+    SLAConfig / prusa_slicer_fork 使用，不代表 PRZ 最終的顯示內容。
+    """
+    machine = mechado.get("Machine") or {}
+    print_c = mechado.get("Print") or {}
+    advanced = mechado.get("Advanced") or {}
+    out: Dict[str, Any] = {}
+
+    def put(key: str, val: Any) -> None:
+        """僅在來源存在（非 None）時寫入；缺值留給 SLAConfig 預設。"""
+        if val is not None:
+            out[key] = val
+
+    # ── 核心 9 欄位（對應前端 uiToBackendSlicing 權威清單）──────────────
+    put("layer_height", print_c.get("Layer Height"))                      # 1
+
+    image_size = machine.get("image_size")
+    if isinstance(image_size, list) and len(image_size) >= 2:
+        put("display_pixels_x", image_size[0])                            # 2
+        put("display_pixels_y", image_size[1])                            # 3
+
+    bed_size = machine.get("bed_size")                                    # [x0, y0, x1, y1]
+    if isinstance(bed_size, list) and len(bed_size) >= 4:
+        put("display_width", bed_size[2])                                 # 4  (索引標準)
+        put("display_height", bed_size[3])                                # 5  (索引標準)
+
+    put("anti_aliasing", advanced.get("Anti-aliasing"))                  # 6
+    put("anti_aliasing_level", advanced.get("Anti-aliasing Level"))      # 7  直接複製
+    put("gray_level", advanced.get("Grey Level"))                        # 8
+    put("blur", advanced.get("Image Blur Pixel"))                        # 9  直接複製
+
+    # ── 隨附欄位（非幾何 9 欄，但 SLAConfig 需要）────────────────────────
+    put("printer_model", machine.get("machine_type"))
+    put("exposure_time", print_c.get("Exposure Time"))
+    put("initial_exposure_time", print_c.get("Bottom Exposure Time"))
+    put("bottom_layer_count", print_c.get("Bottom Layer Count"))
+    for sla_key, mechado_key in _SLA_RETRACT_TO_MECHADO.items():
+        put(sla_key, print_c.get(mechado_key))
+
+    # ── center：相對位移 → 絕對座標（依賴正確的 display_width/height）─────
+    if isinstance(center, list) and len(center) >= 2:
+        dw = out.get("display_width", SLAConfig.model_fields["display_width"].default)
+        dh = out.get("display_height", SLAConfig.model_fields["display_height"].default)
+        out["center_x"] = center[0] + dw / 2
+        out["center_y"] = center[1] + dh / 2
+
+    # 缺關鍵幾何欄位時記 log（不拋錯），便於除錯靜默退預設的情況。
+    for critical in ("layer_height", "display_width", "display_height"):
+        if critical not in out:
+            logger.warning(
+                "_extract_sla_from_mechado: missing '%s' in mechado config; "
+                "SLAConfig default will be used", critical,
+            )
+
+    return out
+
+
+def _resolve_prz_download_config(job_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    """解析 download.prz 的 config 來源（design：config body 改 optional）。
+
+    - body 顯式提供（非空）config → 以 body 為優先，直接回傳。
+    - body 未提供 config → 降級從 job 持久化的 `prz_config.json` 讀取。
+    - 兩者皆無 → 拋出 validation error（無可用 config 生成 PRZ）。
+    """
+    if config:
+        return config
+    prz_config_path = get_job_dir(job_id) / "prz_config.json"
+    if prz_config_path.exists():
+        with open(prz_config_path) as f:
+            return json.load(f)
+    raise validation_error(
+        "No config provided in request body and no persisted "
+        "prz_config.json found for this job"
+    )
+
+
+def _build_sla_config(
+    prz_config: Optional[Dict[str, Any]],
+    snake_config: Optional[Dict[str, Any]],
+    center: Optional[List[float]] = None,
+) -> Optional[SLAConfig]:
+    """組裝最終 SLAConfig：mechado 萃取為 base、snake config 欄位級覆蓋（design D3）。
+
+    優先序（last-write-wins，欄位級）：
+        _extract_sla_from_mechado(prz_config, center)   ← base
+            └─ snake_config（PUT /config 傳入）的非 None 欄位逐欄覆蓋
+
+    - 新流程：只送 mechado（snake_config 為空）→ 純萃取結果。
+    - 舊流程：無 mechado、僅 snake_config → base 為空，行為退回
+      `_convert_v2_config_to_sla(snake_config)`，與變更前一致。
+    """
+    snake = snake_config or {}
+    merged: Dict[str, Any] = {}
+    if prz_config is not None:
+        merged.update(_extract_sla_from_mechado(prz_config, center))
+    merged.update({k: v for k, v in snake.items() if v is not None})
+    if merged:
+        return SLAConfig(**merged)
+    return _convert_v2_config_to_sla(snake)
