@@ -958,26 +958,47 @@ def generate_hex_grid(
     col_step = spacing * math.sqrt(3)
     row_step = spacing * 1.5
 
-    # Center the grid
-    half_cols = (grid_count - 1) / 2
-    half_rows = (grid_count - 1) / 2
-
     # Setup raycasting for finding hollow mesh ceiling
     has_hollow = hollow_mesh is not None
     inner_max_z = fallback_height
+    if has_hollow:
+        inner_max_z = hollow_mesh.bounds[1][2] + 5  # max Z + 5
+
+    # Grid placement: anchor the lattice to the model's XY centre and size it to
+    # fully cover the model's XY bounding box. Cells that miss the hollow are
+    # culled by the raycast below, so over-provisioning is safe. This fixes the
+    # off-centre case: the hollow is aligned to the input model's centre, so the
+    # hex must be too — anchoring to (0,0) left off-centre models only partially
+    # covered. Falls back to an origin-centred grid_count x grid_count grid when
+    # no hollow mesh is available.
+    if has_hollow:
+        bmin = hollow_mesh.bounds[0]
+        bmax = hollow_mesh.bounds[1]
+        center_x = (bmin[0] + bmax[0]) / 2.0
+        center_y = (bmin[1] + bmax[1]) / 2.0
+        span_x = bmax[0] - bmin[0]
+        span_y = bmax[1] - bmin[1]
+        # +3 cells of margin so the grid overruns the model edges before culling
+        n_cols = max(grid_count, int(math.ceil(span_x / col_step)) + 3)
+        n_rows = max(grid_count, int(math.ceil(span_y / row_step)) + 3)
+    else:
+        center_x = 0.0
+        center_y = 0.0
+        n_cols = grid_count
+        n_rows = grid_count
+
+    half_cols = (n_cols - 1) / 2
+    half_rows = (n_rows - 1) / 2
 
     # Batch all ray origins/directions for a single intersects_location call
     ray_origins_list = []
     ray_cells = []  # (row, col, cx, cy) for each ray
 
-    if has_hollow:
-        inner_max_z = hollow_mesh.bounds[1][2] + 5  # max Z + 5
-
-    for row in range(grid_count):
-        for col in range(grid_count):
+    for row in range(n_rows):
+        for col in range(n_cols):
             x_offset = (row % 2) * (col_step / 2)
-            cx = (col - half_cols) * col_step + x_offset
-            cy = (row - half_rows) * row_step
+            cx = (col - half_cols) * col_step + x_offset + center_x
+            cy = (row - half_rows) * row_step + center_y
             ray_origins_list.append([cx, cy, -100.0])
             ray_cells.append((row, col, cx, cy))
 
