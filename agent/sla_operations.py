@@ -28,6 +28,11 @@ import struct
 from .config import PRUSA_SLICER_CLI
 from .models import BooleanOperation, CutConfig, CutMode, SLAConfig
 
+# Layer height used only for support-point detection (not for the final print).
+# Coarser slices cut the dominant "Slicing model" cost with negligible impact on
+# detected support points. See generate_supports().
+SUPPORT_DETECTION_LAYER_HEIGHT = 0.15
+
 
 def load_trimesh(path) -> "trimesh.Trimesh":
     """Load an STL file as a single trimesh.Trimesh."""
@@ -93,6 +98,10 @@ def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
         else:
             lines.append(f"{field_name} = {value}")
     lines.append(f"bed_shape = {config.display_width},{config.display_height}")
+    # Declare SLA technology explicitly so the CLI runs the SLA pipeline even
+    # when --export-sla is omitted (the support-only fast path leaves it out;
+    # without this the CLI would default to FFF).
+    lines.append("printer_technology = SLA")
     with open(output_path, "w") as f:
         f.write("\n".join(lines) + "\n")
 
@@ -150,17 +159,27 @@ async def generate_supports(
 
     # Ensure supports are enabled
     config.supports_enable = True
-    generate_config_ini(config, config_file)
+
+    # Support-point detection works off per-layer island analysis, not the final
+    # print resolution. This path doesn't produce an sl1, so slice the object at
+    # a coarser height to slash the dominant "Slicing model" cost. The real print
+    # slicing path still uses the configured layer height.
+    detect_config = config.model_copy(update={
+        "layer_height": SUPPORT_DETECTION_LAYER_HEIGHT,
+        "initial_layer_height": SUPPORT_DETECTION_LAYER_HEIGHT,
+    })
+    generate_config_ini(detect_config, config_file)
 
     # Save config as JSON for reference
     with open(job_dir / "config.json", "w") as f:
         json.dump(config.model_dump(), f, indent=2)
 
-    # Build command - we need --export-sla to trigger support generation
-    # but we won't extract layers from the result
+    # Build command - export only the support STL. Omitting --export-sla lets
+    # the slicer take the support-only fast path: it stops after the pad step,
+    # skipping slice-supports + rasterization + sl1 packing (none of which the
+    # support mesh depends on).
     cmd = [
         str(PRUSA_SLICER_CLI),
-        "--export-sla",
         "--export-support-stl",
         "--output", str(output_file),
         "--load", str(config_file),
