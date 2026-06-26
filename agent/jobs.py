@@ -136,6 +136,16 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     stderr_file = job_dir / "stderr.log"
     config_file = job_dir / "config.ini"
 
+    # Imported support mesh (dual-track binary rasterization): when the frontend
+    # uploaded a separate support STL, the slicer must NOT self-generate supports
+    # or a pad (the raft is part of the imported mesh). Force both off so the INI
+    # is written with supports_enable=0 / pad_enable=0.
+    import_support_file = job_dir / "input" / "support.stl"
+    import_support = import_support_file.exists()
+    if import_support and config is not None:
+        config.supports_enable = False
+        config.pad_enable = False
+
     # Check if supports are enabled
     supports_enabled = config.supports_enable if config else False
 
@@ -158,7 +168,10 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
             "--output", str(output_file),
         ]
 
-        # Add support STL export if supports are enabled
+        # Add support STL export if supports are enabled.
+        # Mutually exclusive with --import-support-stl below: when a support STL
+        # is imported, supports_enable was forced False above, so supports_enabled
+        # is False here and this self-generated-support export branch is skipped.
         if supports_enabled:
             cmd.append("--export-support-stl")
 
@@ -169,6 +182,10 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         # Add config file if generated
         if config and config_file.exists():
             cmd.extend(["--load", str(config_file)])
+
+        # Import the separate support mesh as the support track (dual-track).
+        if import_support:
+            cmd.extend(["--import-support-stl", str(import_support_file)])
 
         cmd.append(str(input_file))
 

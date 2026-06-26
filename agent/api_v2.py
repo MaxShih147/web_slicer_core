@@ -372,6 +372,45 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
     )
 
 
+@router.post("/slices/{job_id}/upload-support", response_model=V2Response)
+async def upload_support_file(job_id: str, file: UploadFile = File(...)):
+    """
+    Upload a separate support-mesh STL for the slice job.
+
+    The support is kept distinct from the model (it is NOT merged) and is landed
+    as input/support.stl on execute. run_slicing then passes it to the slicer via
+    --import-support-stl, with self-generated supports/pad disabled. Sharing the
+    model's world origin (Contract A) keeps the two aligned without a transform.
+    """
+    pending = _require_pending(job_id)
+
+    if not file or not file.filename:
+        raise missing_body("No support file provided")
+
+    if not file.filename.lower().endswith(".stl"):
+        raise validation_error("Only .stl files are supported for supports")
+
+    try:
+        content = await file.read()
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded support file: {exc}")
+
+    if not content:
+        raise missing_body("Uploaded support file is empty")
+
+    _validate_stl_bytes(content, file.filename)
+
+    pending["support_stl"] = content
+
+    return V2Response(
+        success=True,
+        message=f"Support file '{file.filename}' uploaded",
+        data={"filename": file.filename, "bytes": len(content)},
+    )
+
+
 @router.post("/slices/{job_id}/use-model-from/{source_job_id}", response_model=V2Response)
 async def use_model_from_job(job_id: str, source_job_id: str, source_file: str = "boolean.stl"):
     """
@@ -429,6 +468,12 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
         job_dir = create_job(job_id)
         input_path = job_dir / "input" / "model.stl"
         _save_model_to_job(pending["models"][0], input_path)
+        # Land the separate support mesh (if uploaded) as input/support.stl.
+        # run_slicing detects it and passes --import-support-stl to the slicer.
+        support_blob = pending.get("support_stl")
+        if support_blob:
+            with open(job_dir / "input" / "support.stl", "wb") as f:
+                f.write(support_blob)
         config = pending["config"]
         # Persist the Mechado prz_config (NOT the snake_case slicing config) so
         # run_slicing computes the PRZ physical print time from the same source
