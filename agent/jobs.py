@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import shutil
 import subprocess
 import uuid
@@ -189,10 +190,18 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
 
         cmd.append(str(input_file))
 
+        # [layer-rle] Emit layers as PRZ-compatible RLE (not PNG) so the PRZ
+        # download reads them verbatim — no PNG encode (slice) / decode
+        # (download) round-trip. PRZ output is byte-identical (verified). The
+        # layers.zip endpoint converts back to PNG on demand for the rare
+        # PNG-expecting fallback.
+        slice_env = {**os.environ, "SLA_LAYER_RLE": "1"}
+
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=slice_env,
         )
 
         stdout, stderr = await process.communicate()

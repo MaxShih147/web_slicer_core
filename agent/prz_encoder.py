@@ -841,12 +841,18 @@ def encode_prz_streaming(
     Uses ThreadPoolExecutor to parallelize PNG decode + RLE encode
     while maintaining sequential output order.
     """
-    from concurrent.futures import ThreadPoolExecutor
-
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        png_names = sorted(n for n in zf.namelist() if n.endswith(".png"))
+        names = zf.namelist()
 
-    total_layers = len(png_names)
+    # [layer-rle] If PrusaSlicer already emitted PRZ-RLE layers (.rle), use them
+    # directly — skip the PNG decode + re-RLE round-trip. Falls back to the PNG
+    # path (decode + RLE) for standard sl1 archives.
+    rle_names = sorted(n for n in names if n.endswith(".rle"))
+    png_names = sorted(n for n in names if n.endswith(".png"))
+    is_rle = bool(rle_names)
+    layer_names = rle_names if is_rle else png_names
+
+    total_layers = len(layer_names)
 
     # Yield header
     yield _write_header(
@@ -856,18 +862,22 @@ def encode_prz_streaming(
         preview_large=_preview_rgb_to_rgb565_be(preview_large_rgb, PREVIEW_LARGE_SIZE),
     )
 
-    # Read all PNGs from ZIP first (ZIP is sequential I/O, fast)
-    png_data_list = []
+    # Read all layers from ZIP first (ZIP is sequential I/O, fast)
+    layer_data_list = []
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        for png_name in png_names:
-            png_data_list.append(zf.read(png_name))
+        for name in layer_names:
+            layer_data_list.append(zf.read(name))
 
-    # Parallel decode + RLE encode (ProcessPool to bypass GIL)
-    from concurrent.futures import ProcessPoolExecutor
-    import os
-    num_workers = min(os.cpu_count() or 4, 8)
-    with ProcessPoolExecutor(max_workers=num_workers) as pool:
-        rle_futures = list(pool.map(_decode_and_rle, png_data_list, chunksize=32))
+    if is_rle:
+        # Already RLE — use the bytes verbatim, no decode/encode.
+        rle_futures = layer_data_list
+    else:
+        # Parallel PNG decode + RLE encode (ProcessPool to bypass GIL)
+        from concurrent.futures import ProcessPoolExecutor
+        import os
+        num_workers = min(os.cpu_count() or 4, 8)
+        with ProcessPoolExecutor(max_workers=num_workers) as pool:
+            rle_futures = list(pool.map(_decode_and_rle, layer_data_list, chunksize=32))
 
     # Yield each layer (sequential, must be in order)
     for layer_idx, rle_data in enumerate(rle_futures):
