@@ -9,6 +9,8 @@ Unit note (since 2026-05-21): volume / weight / price fields decoded here are
 in mm³. PRZ files encoded before this date stored mL values (~1000× smaller).
 """
 
+from __future__ import annotations  # 3.9-compat for `bytes | memoryview` hints
+
 import struct
 from dataclasses import dataclass, field
 from typing import Optional
