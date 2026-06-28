@@ -917,11 +917,52 @@ async def get_preview_zip_v2(job_id: str):
     return FileResponse(preview_path, media_type="application/zip", filename="preview.zip")
 
 
+def _rle_sl1_to_png_zip(sl1_path) -> bytes:
+    """[layer-rle] Convert an RLE-layer .sl1 to a ZIP of layer PNGs on demand.
+
+    Used by the layers.zip endpoint when PrusaSlicer emitted RLE layers (the
+    fast PRZ path) but a PNG-expecting consumer (rare frontend fallback) asks
+    for layer PNGs. The decoded bitmaps are identical to the original PNG path.
+    """
+    import io
+    import zipfile
+
+    from PIL import Image
+
+    from .prz_decoder import _rle_decode_layer
+
+    with zipfile.ZipFile(sl1_path) as zf:
+        names = zf.namelist()
+        width = height = None
+        try:
+            ini = zf.read("prusaslicer.ini").decode("utf-8", "ignore")
+            for line in ini.splitlines():
+                if line.startswith("display_pixels_x"):
+                    width = int(line.split("=")[1])
+                elif line.startswith("display_pixels_y"):
+                    height = int(line.split("=")[1])
+        except Exception:
+            pass
+        if not (width and height):
+            raise validation_error("cannot determine layer resolution for RLE->PNG")
+
+        rle_names = sorted(n for n in names if n.endswith(".rle"))
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as oz:
+            for name in rle_names:
+                gray = _rle_decode_layer(zf.read(name), width, height)
+                buf = io.BytesIO()
+                Image.fromarray(gray, "L").save(buf, format="PNG")
+                oz.writestr(name[:-4] + ".png", buf.getvalue())
+        return out.getvalue()
+
+
 @router.get("/slices/{job_id}/layers.zip")
 async def get_layers_zip_v2(job_id: str):
     """
-    Get layer PNGs as a ZIP. Serves the .sl1 directly (it IS a ZIP of PNGs).
-    Zero processing time — no resize/re-encode needed.
+    Get layer PNGs as a ZIP. Standard PNG .sl1 is served directly (zero
+    processing). If PrusaSlicer emitted RLE layers (fast PRZ path), they are
+    converted back to PNG on demand for this rare PNG-expecting fallback.
     """
     status_data = _job_status_or_raise(job_id)
     _require_completed(status_data, job_id)
@@ -930,7 +971,21 @@ async def get_layers_zip_v2(job_id: str):
     if not sl1_path.exists():
         raise file_not_found(".sl1 archive not found")
 
-    return FileResponse(sl1_path, media_type="application/zip", filename="layers.zip")
+    import zipfile
+    with zipfile.ZipFile(sl1_path) as zf:
+        has_rle = any(n.endswith(".rle") for n in zf.namelist())
+
+    if not has_rle:
+        return FileResponse(sl1_path, media_type="application/zip", filename="layers.zip")
+
+    png_zip = await asyncio.get_event_loop().run_in_executor(
+        None, _rle_sl1_to_png_zip, sl1_path
+    )
+    return Response(
+        content=png_zip,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=layers.zip"},
+    )
 
 
 def _decode_preview_rgb(field: Optional[dict]) -> Optional["np.ndarray"]:
