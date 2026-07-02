@@ -41,6 +41,11 @@ PRZ_CRLF = b"\r\n"
 PRZ_LAYER_HEADER = 0x55
 LAYER_CONTENT_OFFSET = 195477
 
+# 標頭 metadata 常數（design D4）——集中管理，保留未來改 build-time 注入的彈性
+SOFTWARE_NAME = "Phrozen DS"
+SOFTWARE_VERSION = "0.0.1"   # 產品端版本常數；未來可改 build-time 注入
+PRICE_UNIT = "$/L"
+
 PREVIEW_SMALL_SIZE = 116
 PREVIEW_LARGE_SIZE = 290
 
@@ -53,9 +58,22 @@ RLE_GRAY = 0x40
 # ---------- Helpers ----------
 
 def _pack_str(s: str, size: int) -> bytes:
-    """Pack a string into a fixed-size zero-padded field."""
-    encoded = s.encode("utf-8")[:size]
-    return encoded.ljust(size, b"\x00")
+    """Pack a string into a fixed-size field with a guaranteed trailing NUL.
+
+    Defensive packing (design D3) — protects downstream printer firmware that
+    reads these fields as C-strings:
+      - reserve 1 byte for the NUL terminator (effective content max = size-1),
+        so a full-length string can never leave the field without a 0x00 and
+        cause strlen()/strcpy() to overrun into adjacent bytes;
+      - UTF-8 char-safe truncation: byte-slice to budget, then
+        decode(errors="ignore") drops any partial trailing multibyte sequence
+        so no half a CJK character is ever emitted;
+      - zero-pad to exactly `size`.
+    """
+    budget = size - 1
+    raw = (s or "").encode("utf-8")[:budget]
+    safe = raw.decode("utf-8", errors="ignore").encode("utf-8")
+    return safe.ljust(size, b"\x00")
 
 
 def _traverse_dotpath(config: dict, dotpath: str) -> tuple[bool, Any]:
@@ -470,11 +488,11 @@ def _write_header(
     # Tag (8B)
     buf.write(PRZ_TAG)
 
-    # Software (32B) - zeroed
-    buf.write(b"\x00" * 32)
+    # Software (32B) — 產品識別常數（design D4）
+    buf.write(_pack_str(SOFTWARE_NAME, 32))
 
-    # Software Version (24B) - zeroed
-    buf.write(b"\x00" * 24)
+    # Software Version (24B) — 版本號常數（design D4）
+    buf.write(_pack_str(SOFTWARE_VERSION, 24))
 
     # File Time (24B)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -486,8 +504,9 @@ def _write_header(
     # Printer Type (32B)
     buf.write(_pack_str(_get_str(config, "Machine.machine_type"), 32))
 
-    # Profile Name (32B)
-    buf.write(_pack_str(_get_str(config, "Machine.Machine Name"), 32))
+    # Profile Name (32B) — 樹脂名稱（design D4 契約：讀 Other.profile_name，
+    # 不再誤用 Machine.Machine Name）；缺漏時 _get_str 回空字串 → 降級補 NUL
+    buf.write(_pack_str(_get_str(config, "Other.profile_name"), 32))
 
     # AA Level (2B short BE)
     buf.write(struct.pack(">H", _get_int(config, "Advanced.Anti-aliasing Level")))
@@ -635,14 +654,20 @@ def _write_header(
     volume = resin_volume_mm3 or _get_float(config, "Other.volume")
     buf.write(struct.pack(">f", volume))
 
-    # Weight (4B float BE) — C++ writes volume for weight too
-    buf.write(struct.pack(">f", volume))
+    # TODO(tech-debt): per-resin-density —— 密度/單價目前取自印表機 default profile 的
+    # Resin 區塊（per-printer 粒度），未來應下沉至 resin_profiles 做到 per-resin 精度。
+    # Weight (4B float BE) — 由 volume × 密度 計算（design D2）；密度缺漏/為 0 → 降級寫 volume
+    density = _get_float(config, "Resin.Resin Density")
+    weight = (volume / 1000.0) * density if density else volume
+    buf.write(struct.pack(">f", weight))
 
-    # Price (4B float BE) — C++ writes volume for price too
-    buf.write(struct.pack(">f", volume))
+    # Price (4B float BE) — 由 volume × 單價 計算（design D2）；單價缺漏/為 0 → 降級寫 volume
+    cost = _get_float(config, "Resin.Resin Cost")
+    price = (volume / 1_000_000.0) * cost if cost else volume
+    buf.write(struct.pack(">f", price))
 
-    # Price Unit (8B) - zeroed
-    buf.write(b"\x00" * 8)
+    # Price Unit (8B) — 價格單位常數（design D4）
+    buf.write(_pack_str(PRICE_UNIT, 8))
 
     # Layer Content Offset (4B int BE)
     buf.write(struct.pack(">I", LAYER_CONTENT_OFFSET))
