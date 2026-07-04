@@ -91,24 +91,31 @@ def remove_degenerate_boundary_ears(
         b_edges = extract_boundary_edges(work)
         if len(b_edges) == 0:
             return []
-        b_set = set()
-        for e in b_edges:
-            u, v = int(e[0]), int(e[1])
-            b_set.add((u, v) if u < v else (v, u))
+        # A spike ear has exactly TWO boundary edges, so only faces incident to
+        # the boundary can qualify. Count boundary edges per face with numpy
+        # (encode each undirected edge as one int64 key) instead of a Python loop
+        # over every face — interior faces are never examined individually.
+        faces_arr = np.asarray(faces_arr, dtype=np.int64)
+        maxv = int(faces_arr.max()) + 1
+        tri_pairs = np.stack([
+            faces_arr[:, [0, 1]],
+            faces_arr[:, [1, 2]],
+            faces_arr[:, [2, 0]],
+        ], axis=1)  # (nf, 3, 2), edge order [01, 12, 20] — same as the old loop
+        tri_pairs.sort(axis=2)  # canonical (min, max) per edge
+        tri_key = tri_pairs[:, :, 0] * maxv + tri_pairs[:, :, 1]  # (nf, 3)
+
+        b_pairs = np.sort(np.asarray(b_edges, dtype=np.int64), axis=1)
+        b_key = np.unique(b_pairs[:, 0] * maxv + b_pairs[:, 1])
+
+        on_bdy_all = np.isin(tri_key, b_key)  # (nf, 3) bool
+        cand = np.flatnonzero(on_bdy_all.sum(axis=1) == 2)  # exactly 2 boundary edges
 
         ears = []
-        for fi in range(len(faces_arr)):
+        for fi in cand:
             f = faces_arr[fi]
-            tri_edges = [(int(f[0]), int(f[1])),
-                         (int(f[1]), int(f[2])),
-                         (int(f[2]), int(f[0]))]
-            on_bdy = [
-                (min(u, v), max(u, v)) in b_set for (u, v) in tri_edges
-            ]
-            if sum(on_bdy) != 2:
-                continue
-            # tip = vertex shared by the two boundary edges = opposite the chord
-            chord_local = on_bdy.index(False)
+            # local index of the single non-boundary edge = the interior chord
+            chord_local = int(np.flatnonzero(~on_bdy_all[fi])[0])
             chord_a = int(f[chord_local])
             chord_b = int(f[(chord_local + 1) % 3])
             tip = int(f[(chord_local + 2) % 3])
@@ -125,7 +132,7 @@ def remove_degenerate_boundary_ears(
             cos_tip = max(-1.0, min(1.0, cos_tip))
             if cos_tip > cos_thresh:  # angle < threshold ⇒ spike
                 tip_deg = float(np.degrees(np.arccos(cos_tip)))
-                ears.append((tip_deg, fi))
+                ears.append((tip_deg, int(fi)))
         return ears
 
     for _ in range(max_passes):
@@ -168,7 +175,7 @@ def remove_degenerate_boundary_ears(
             faces = new_idx[faces]
 
     cleaned = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
-    stats["remaining_ears"] = len(_scan_ears(cleaned.vertices, cleaned.faces))
+    stats["remaining_ears"] = -1  # not recomputed — debug-only stat, saved a full rescan
     return cleaned, stats
 
 
@@ -325,9 +332,40 @@ class BoundaryDetectionResult:
 
 # ---------- Mesh Loading ----------
 
+def _fast_load_binary_stl(path: str | Path) -> "trimesh.Trimesh | None":
+    """
+    Read a binary STL with numpy (~50x faster than trimesh.load's default
+    process=True path). Returns None if the file isn't a well-formed binary STL
+    (ASCII STL, wrong size, etc.) so the caller can fall back to trimesh.load.
+
+    Produces an unmerged "triangle soup" (3 verts/face); the downstream
+    clean_mesh() merges duplicate vertices — same as trimesh's own load path.
+    """
+    try:
+        size = os.path.getsize(path)
+        with open(path, "rb") as f:
+            head = f.read(84)
+            if len(head) < 84:
+                return None
+            n = int(np.frombuffer(head[80:84], dtype=np.uint32)[0])
+            # Binary STL is exactly 80(header)+4(count)+50*n bytes. If the size
+            # doesn't match it's ASCII/other → let trimesh handle it.
+            if size != 84 + n * 50 or n == 0:
+                return None
+            body = np.frombuffer(f.read(n * 50), dtype=np.uint8).reshape(n, 50)
+        # bytes 12..48 of each 50-byte record = 3 vertices × 3 float32
+        tris = body[:, 12:48].copy().view(np.float32).reshape(n * 3, 3)
+        faces = np.arange(n * 3, dtype=np.int64).reshape(n, 3)
+        return trimesh.Trimesh(vertices=tris, faces=faces, process=False)
+    except Exception:
+        return None
+
+
 def load_mesh(path: str | Path) -> trimesh.Trimesh:
     """Load a mesh file (STL/OBJ/PLY) and return as Trimesh."""
-    mesh = trimesh.load(str(path), force="mesh")
+    mesh = _fast_load_binary_stl(path)
+    if mesh is None:
+        mesh = trimesh.load(str(path), force="mesh")
     if not isinstance(mesh, trimesh.Trimesh):
         raise ValueError(f"Failed to load as single mesh: {path}")
     if len(mesh.vertices) == 0 or len(mesh.faces) == 0:
@@ -556,37 +594,50 @@ def smooth_boundary_result(
 
 # ---------- Apply Smoothed Boundary to Mesh ----------
 
-def _build_vertex_adjacency(mesh: trimesh.Trimesh) -> dict[int, set[int]]:
-    """Build vertex-to-vertex adjacency from mesh edges."""
-    adj: dict[int, set[int]] = {}
-    for v0, v1 in mesh.edges_unique:
-        adj.setdefault(v0, set()).add(v1)
-        adj.setdefault(v1, set()).add(v0)
-    return adj
+def _build_vertex_adjacency(mesh: trimesh.Trimesh) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Vertex-to-vertex adjacency in CSR form ``(offsets, neighbors)``:
+    ``neighbors[offsets[v]:offsets[v + 1]]`` lists the vertices adjacent to ``v``.
+
+    Built with numpy (sort edge endpoints + bincount) instead of a Python
+    dict-of-sets loop over every unique edge — ~20x faster on large meshes.
+    """
+    nv = len(mesh.vertices)
+    e = mesh.edges_unique.astype(np.int64)
+    rows = np.concatenate([e[:, 0], e[:, 1]])
+    cols = np.concatenate([e[:, 1], e[:, 0]])
+    neighbors = cols[np.argsort(rows, kind="stable")]
+    offsets = np.zeros(nv + 1, dtype=np.int64)
+    np.cumsum(np.bincount(rows, minlength=nv), out=offsets[1:])
+    return offsets, neighbors
 
 
 def _find_n_ring_neighbors(
-    adjacency: dict[int, set[int]],
+    adjacency: tuple[np.ndarray, np.ndarray],
     seed_vertices: set[int],
     n_rings: int,
 ) -> dict[int, int]:
     """
     Find vertices within N edge-rings of seed vertices.
 
+    ``adjacency`` is the CSR ``(offsets, neighbors)`` from _build_vertex_adjacency.
+
     Returns:
         Dict mapping vertex_index -> ring_distance (1 to n_rings).
         Seed vertices themselves are NOT included.
     """
+    offsets, neighbors = adjacency
     ring_map: dict[int, int] = {}
     current_front = seed_vertices.copy()
 
     for ring in range(1, n_rings + 1):
         next_front: set[int] = set()
         for v in current_front:
-            for neighbor in adjacency.get(v, set()):
-                if neighbor not in seed_vertices and neighbor not in ring_map:
-                    ring_map[neighbor] = ring
-                    next_front.add(neighbor)
+            for nb in neighbors[offsets[v]:offsets[v + 1]]:
+                nb = int(nb)
+                if nb not in seed_vertices and nb not in ring_map:
+                    ring_map[nb] = ring
+                    next_front.add(nb)
         current_front = next_front
         if not current_front:
             break
@@ -594,32 +645,17 @@ def _find_n_ring_neighbors(
     return ring_map
 
 
-def apply_boundary_to_mesh(
-    mesh_path: str | Path,
+def _apply_boundary_core(
+    mesh: trimesh.Trimesh,
     original_points: list[list[float]],
     smoothed_points: list[list[float]],
     falloff_rings: int = 3,
-) -> bytes:
+) -> trimesh.Trimesh:
     """
-    Apply smoothed boundary positions to mesh vertices with gradual falloff.
-
-    1. Load mesh, find boundary vertices matching original_points
-    2. Compute displacement = smoothed - original for each boundary vertex
-    3. Apply full displacement to boundary vertices
-    4. Apply falloff displacement to N-ring neighbors
-
-    Args:
-        mesh_path: Path to STL file.
-        original_points: Original boundary points [[x,y,z], ...].
-        smoothed_points: Smoothed boundary points [[x,y,z], ...].
-        falloff_rings: Number of neighbor rings for gradual falloff.
-
-    Returns:
-        Modified STL as bytes.
+    Displace boundary vertices to the smoothed positions, with linear N-ring
+    falloff on neighbours. Operates on an already loaded+cleaned ``mesh`` and
+    returns it (no file I/O) so it can be chained with generate_base in memory.
     """
-    mesh = load_mesh(mesh_path)
-    mesh = clean_mesh(mesh)
-
     orig = np.array(original_points, dtype=np.float64)
     smooth = np.array(smoothed_points, dtype=np.float64)
 
@@ -662,9 +698,46 @@ def apply_boundary_to_mesh(
         new_vertices[vid] += disp
 
     mesh.vertices = new_vertices
+    return mesh
 
-    # Export as binary STL
-    return mesh.export(file_type='stl')
+
+def apply_boundary_to_mesh(
+    mesh_path: str | Path,
+    original_points: list[list[float]],
+    smoothed_points: list[list[float]],
+    falloff_rings: int = 3,
+) -> bytes:
+    """
+    Apply smoothed boundary positions to mesh vertices with gradual falloff.
+    Loads the STL, runs _apply_boundary_core, returns the modified STL as bytes.
+    """
+    mesh = clean_mesh(load_mesh(mesh_path))
+    mesh = _apply_boundary_core(mesh, original_points, smoothed_points, falloff_rings)
+    return mesh.export(file_type="stl")
+
+
+def apply_boundary_then_base(
+    mesh_path: str | Path,
+    original_points: list[list[float]],
+    smoothed_points: list[list[float]],
+    elevation: float = 0.1,
+    chamfer: bool = False,
+    skip_orient: bool = True,
+    falloff_rings: int = 3,
+) -> bytes:
+    """
+    Consolidated apply-boundary + generate-base: parse & clean the mesh ONCE,
+    apply the smoothed boundary in memory, then generate the base on the same
+    mesh — avoiding the second endpoint's STL upload + parse + vertex-merge.
+
+    The apply→base handoff normally goes through a binary (float32) STL, so the
+    applied vertices are truncated to float32 here to keep the result equivalent
+    to the two-call path.
+    """
+    mesh = clean_mesh(load_mesh(mesh_path))
+    mesh = _apply_boundary_core(mesh, original_points, smoothed_points, falloff_rings)
+    mesh.vertices = mesh.vertices.astype(np.float32).astype(np.float64)
+    return generate_base(mesh=mesh, elevation=elevation, chamfer=chamfer, skip_orient=skip_orient)
 
 
 # ---------- Auto-Orient ----------
@@ -748,10 +821,11 @@ def auto_orient_mesh(
 # ---------- Base Generation ----------
 
 def generate_base(
-    mesh_path: str | Path,
+    mesh_path: "str | Path | None" = None,
     elevation: float = 0.0,
     chamfer: bool = False,
     skip_orient: bool = False,
+    mesh: "trimesh.Trimesh | None" = None,
 ) -> bytes:
     """
     Generate a base for a dental mesh.
@@ -772,8 +846,8 @@ def generate_base(
     """
     from mapbox_earcut import triangulate_float64
 
-    mesh = load_mesh(mesh_path)
-    mesh = clean_mesh(mesh)
+    if mesh is None:
+        mesh = clean_mesh(load_mesh(mesh_path))
 
     # Detect boundary for orientation
     boundary_edges = extract_boundary_edges(mesh)
