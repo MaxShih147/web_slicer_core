@@ -1271,6 +1271,51 @@ async def generate_base_endpoint(
     )
 
 
+@router.post("/apply-boundary-and-base")
+async def apply_boundary_and_base_endpoint(
+    file: UploadFile = File(...),
+    data: str = Form(...),
+):
+    """
+    Consolidated base generation: apply the smoothed boundary AND generate the
+    base in a single call, parsing the STL only once. Avoids the second upload +
+    parse + vertex-merge that calling /apply-boundary then /generate-base incurs.
+
+    ``data`` is JSON with: original_points, smoothed_points, falloff_rings,
+    elevation, chamfer, skip_orient. Returns the combined STL.
+    """
+    import asyncio
+    import json
+    import os
+    import tempfile
+    from .boundary_detection import apply_boundary_then_base
+
+    params = json.loads(data)
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            apply_boundary_then_base,
+            tmp_path,
+            params["original_points"],
+            params["smoothed_points"],
+            params.get("elevation", 0.1),
+            params.get("chamfer", False),
+            params.get("skip_orient", True),
+            params.get("falloff_rings", 3),
+        )
+    finally:
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model_with_base.stl"},
+    )
+
+
 @router.post("/auto-orient", response_model=V2Response)
 async def auto_orient_endpoint(
     file: UploadFile = File(...),
