@@ -22,6 +22,38 @@ import trimesh
 
 _PRE_WALL_DUMP_DIR = Path(os.environ.get("BASE_GEN_DEBUG_DUMP_DIR", "/tmp/dental_base_debug"))
 
+def _bg_perf():
+    """Per-call stage timing for base-gen profiling.
+
+    Off by default. Set env ``BG_PROFILE=1`` to enable; timing lines are
+    appended to ``$BG_PROFILE_LOG`` (default ``/tmp/bg_backend_timing.log``).
+    When disabled both returned callables are no-ops, so call sites stay cheap.
+    """
+    if not os.environ.get("BG_PROFILE"):
+        return (lambda *_: None), (lambda *_: None)
+
+    import time as _t
+    log_path = os.environ.get("BG_PROFILE_LOG", "/tmp/bg_backend_timing.log")
+    state = {"t": _t.perf_counter(), "marks": []}
+
+    def mark(label):
+        now = _t.perf_counter()
+        state["marks"].append((label, (now - state["t"]) * 1000.0))
+        state["t"] = now
+
+    def report(title):
+        try:
+            total = sum(ms for _, ms in state["marks"])
+            line = f"[BG-BE] {title} — total {total:.0f}ms | " + " | ".join(
+                f"{l} {ms:.0f}" for l, ms in state["marks"]
+            )
+            with open(log_path, "a") as f:
+                f.write(line + "\n")
+        except Exception:
+            pass
+
+    return mark, report
+
 
 def _ts_tag() -> str:
     return time.strftime("%Y%m%d_%H%M%S") + f"_{int((time.time() % 1) * 1000):03d}"
@@ -135,6 +167,8 @@ def remove_degenerate_boundary_ears(
                 ears.append((tip_deg, int(fi)))
         return ears
 
+    _emark, _ereport = _bg_perf()
+
     for _ in range(max_passes):
         ears = _scan_ears(verts, faces)
         if not ears:
@@ -153,6 +187,8 @@ def remove_degenerate_boundary_ears(
 
         stats["removed_ears"] += len(ears)
         stats["passes"] += 1
+
+    _emark(f"scan_passes(x{stats['passes']})")
 
     # Drop tiny disconnected components (orphan triangles produced by trim).
     work = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
@@ -173,6 +209,9 @@ def remove_degenerate_boundary_ears(
             new_idx[used] = np.arange(len(used))
             verts = verts[used]
             faces = new_idx[faces]
+
+    _emark("orphan_components")
+    _ereport("ear_removal")
 
     cleaned = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
     stats["remaining_ears"] = -1  # not recomputed — debug-only stat, saved a full rescan
@@ -846,8 +885,13 @@ def generate_base(
     """
     from mapbox_earcut import triangulate_float64
 
+    _mark, _report = _bg_perf()
+
     if mesh is None:
-        mesh = clean_mesh(load_mesh(mesh_path))
+        mesh = load_mesh(mesh_path)
+        _mark("load")
+        mesh = clean_mesh(mesh)
+        _mark("clean")
 
     # Detect boundary for orientation
     boundary_edges = extract_boundary_edges(mesh)
@@ -855,6 +899,7 @@ def generate_base(
     if not loops:
         raise ValueError("No boundary loops found on mesh")
     loops.sort(key=lambda l: l.perimeter, reverse=True)
+    _mark("boundary#1")
 
     # Auto-orient using main boundary loop (skip if frontend already oriented)
     if not skip_orient:
@@ -869,9 +914,12 @@ def generate_base(
     effective_elevation = max(elevation, min_elevation)
     mesh.vertices[:, 2] += effective_elevation
 
+    _mark("orient+lift")
+
     # Re-detect boundary on the oriented mesh to get updated points
     # Use aggressive vertex merge to handle trimmed meshes (split vertices may differ slightly)
     mesh.merge_vertices(digits_vertex=4)
+    _mark("merge_vertices")
 
     # Strip "spike ear" triangles on the boundary (2 boundary edges + 1
     # interior chord, with sharp angle at the tip — boundary doubles back).
@@ -883,6 +931,7 @@ def generate_base(
     if ear_max_tip_deg > 0:
         mesh, _ear_stats = remove_degenerate_boundary_ears(mesh, max_tip_angle_deg=ear_max_tip_deg)
         # print(f"[generate_base] ear removal (tip<{ear_max_tip_deg}°): {_ear_stats}")
+    _mark("ear_removal")
 
     boundary_edges = extract_boundary_edges(mesh)
     print(f"[generate_base] vertices: {len(mesh.vertices)}, faces: {len(mesh.faces)}, boundary_edges: {len(boundary_edges)}")
@@ -893,6 +942,7 @@ def generate_base(
     loops.sort(key=lambda l: l.perimeter, reverse=True)
     boundary = loops[0].points
     print(f"[generate_base] main loop: {len(boundary)} points, perimeter: {loops[0].perimeter:.2f}")
+    _mark("boundary#2")
 
     n = len(boundary)
     top_idx = np.asarray(loops[0].vertex_indices, dtype=np.int64)
@@ -997,8 +1047,12 @@ def generate_base(
     if not keep.all():
         combined.update_faces(keep)
         combined.remove_unreferenced_vertices()
+    _mark("wall+bottom+combine")
 
-    return combined.export(file_type='stl')
+    stl = combined.export(file_type='stl')
+    _mark("export")
+    _report("generate_base")
+    return stl
 
 
 # ---------- Main Boundary Selection ----------
