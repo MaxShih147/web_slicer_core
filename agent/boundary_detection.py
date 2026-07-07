@@ -82,6 +82,148 @@ def _dump_pre_wall_snapshot(mesh: trimesh.Trimesh, boundary: np.ndarray) -> None
     _dump_snapshot(mesh, boundary, _ts_tag() + "_pre_wall")
 
 
+def _dump_boundary_pts(pts: np.ndarray, tag: str) -> None:
+    """Write a boundary polyline to the debug dir (for stage-by-stage compare)."""
+    try:
+        _PRE_WALL_DUMP_DIR.mkdir(parents=True, exist_ok=True)
+        path = _PRE_WALL_DUMP_DIR / f"{_ts_tag()}_{tag}.obj"
+        lines = [f"v {q[0]:.6f} {q[1]:.6f} {q[2]:.6f}\n" for q in pts]
+        lines.append("l " + " ".join(str(i + 1) for i in range(len(pts))) + " 1\n")
+        path.write_text("".join(lines))
+    except Exception:
+        pass
+
+
+def _count_self_intersections_xy(pts: np.ndarray) -> int:
+    """Count self-intersections of the closed polyline `pts` (N,2) in XY.
+
+    Brute-force but vectorized per source segment against all later,
+    non-adjacent segments. Used to test the "2+ brush strokes make the
+    boundary non-simple" hypothesis for inward-facing walls.
+    """
+    n = len(pts)
+    a = pts
+    b = np.roll(pts, -1, axis=0)
+    hits = 0
+    for i in range(n):
+        ax, ay = a[i]
+        d1x, d1y = b[i, 0] - ax, b[i, 1] - ay
+        js = np.arange(i + 2, n if i > 0 else n - 1)
+        if len(js) == 0:
+            continue
+        cx, cy = a[js, 0], a[js, 1]
+        d2x, d2y = b[js, 0] - cx, b[js, 1] - cy
+        denom = d1x * d2y - d1y * d2x
+        with np.errstate(invalid="ignore", divide="ignore"):
+            s = ((cx - ax) * d2y - (cy - ay) * d2x) / denom
+            t = ((cx - ax) * d1y - (cy - ay) * d1x) / denom
+        eps = 1e-9
+        ok = (np.abs(denom) > 1e-18) & (s > eps) & (s < 1 - eps) & (t > eps) & (t < 1 - eps)
+        hits += int(np.count_nonzero(ok))
+    return hits
+
+
+def _diagnose_merge(v_before, f_before, mesh_after):
+    """Report shell faces that degenerate or flip when merge_vertices collapses
+    near-duplicate boundary vertices. Tests the "merge flips the faces above the
+    boundary" hypothesis. Writes [MERGE-DIAG] to $BG_PROFILE_LOG.
+    """
+    log = os.environ.get("BG_PROFILE_LOG", "/tmp/bg_backend_timing.log")
+
+    def _normals(v, f):
+        tri = v[f]
+        nrm = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+        return nrm, np.linalg.norm(nrm, axis=1)
+
+    try:
+        va, fa = np.asarray(mesh_after.vertices), np.asarray(mesh_after.faces)
+        nb, lb = _normals(v_before, f_before)
+        na, la = _normals(va, fa)
+        eps = 1e-12
+        deg_before = int(np.count_nonzero(lb < eps))
+        deg_after = int(np.count_nonzero(la < eps))
+        collapsed = int(np.count_nonzero(
+            (fa[:, 0] == fa[:, 1]) | (fa[:, 1] == fa[:, 2]) | (fa[:, 0] == fa[:, 2])
+        ))
+        flipped = None
+        if len(fa) == len(f_before):
+            good = (lb > eps) & (la > eps)
+            dots = np.einsum("ij,ij->i", nb, na)  # sign of unnormalized dot
+            flipped = int(np.count_nonzero(good & (dots < 0)))
+        with open(log, "a") as fp:
+            fp.write(
+                f"[MERGE-DIAG] faces {len(f_before)}->{len(fa)} "
+                f"deg_before={deg_before} deg_after={deg_after} "
+                f"collapsed={collapsed} flipped_faces={flipped}\n"
+            )
+    except Exception as exc:
+        try:
+            with open(log, "a") as fp:
+                fp.write(f"[MERGE-DIAG] failed: {exc}\n")
+        except Exception:
+            pass
+
+
+def _diagnose_walls(boundary, wall_faces, new_verts, combined, n, use_chamfer):
+    """Report why side walls flip inward. Writes to $BG_PROFILE_LOG.
+
+    Checks: boundary XY self-intersection count, per-segment wall-normal
+    outward test (CCW convention), and trimesh winding/watertight status.
+    Also dumps the pre-wall boundary polyline + mesh for offline inspection.
+    Gated by env BASE_GEN_WALL_DIAG.
+    """
+    log = os.environ.get("BG_PROFILE_LOG", "/tmp/bg_backend_timing.log")
+    try:
+        pts = np.asarray(boundary)[:, :2]
+        xsec = _count_self_intersections_xy(pts)
+
+        # Boundary near-duplicate stats: consecutive-vertex spacing along the loop.
+        full = np.asarray(boundary)
+        edge_len = np.linalg.norm(np.diff(full, axis=0, append=full[:1]), axis=1)
+        min_edge = float(edge_len.min()) if len(edge_len) else 0.0
+        short_5um = int(np.count_nonzero(edge_len < 5e-3))
+        short_1um = int(np.count_nonzero(edge_len < 1e-3))
+
+        # Per-segment: the first wall triangle for segment i lives at
+        # wall_faces[stride*i]; expected outward (CCW) = rotate tangent -90°.
+        stride = 4 if use_chamfer else 2
+        inward = []
+        for i in range(n):
+            j = (i + 1) % n
+            tx, ty = pts[j, 0] - pts[i, 0], pts[j, 1] - pts[i, 1]
+            out2d = np.array([ty, -tx])
+            nrm = float(np.linalg.norm(out2d))
+            if nrm < 1e-12:
+                continue
+            out2d /= nrm
+            f = wall_faces[stride * i]
+            a, b, c = new_verts[f[0]], new_verts[f[1]], new_verts[f[2]]
+            fn = np.cross(b - a, c - a)
+            if float(fn[0] * out2d[0] + fn[1] * out2d[1]) < 0:
+                inward.append(i)
+
+        try:
+            wc = bool(combined.is_winding_consistent)
+            wt = bool(combined.is_watertight)
+        except Exception:
+            wc = wt = None
+
+        with open(log, "a") as fp:
+            fp.write(
+                f"[WALL-DIAG] segs={n} self_intersections={xsec} "
+                f"inward_wall_segs={len(inward)} winding_consistent={wc} watertight={wt} "
+                f"| boundary min_edge={min_edge:.5f}mm short(<5um)={short_5um} short(<1um)={short_1um}\n"
+                f"[WALL-DIAG] inward_seg_idx={inward[:60]}\n"
+            )
+        _dump_pre_wall_snapshot(combined, boundary)
+    except Exception as exc:
+        try:
+            with open(log, "a") as fp:
+                fp.write(f"[WALL-DIAG] failed: {exc}\n")
+        except Exception:
+            pass
+
+
 def remove_degenerate_boundary_ears(
     mesh: trimesh.Trimesh,
     max_tip_angle_deg: float = 30.0,
@@ -216,6 +358,90 @@ def remove_degenerate_boundary_ears(
     cleaned = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
     stats["remaining_ears"] = -1  # not recomputed — debug-only stat, saved a full rescan
     return cleaned, stats
+
+
+def collapse_short_boundary_edges(
+    mesh: trimesh.Trimesh,
+    tol: float = 0.03,
+    max_passes: int = 6,
+) -> tuple[trimesh.Trimesh, dict]:
+    """Collapse abnormally short boundary edges, rejecting fold-inducing merges.
+
+    The brush trim/conform can leave near-coincident / hairpin vertices on the
+    open boundary (edges far shorter than the ~0.05mm resample spacing). Extruded
+    into a wall these fold back on themselves — half the wall faces end up with
+    inward normals. This does a guarded half-edge collapse on boundary edges
+    shorter than ``tol`` (mm): each candidate collapse (v→u) is applied only if
+    no incident face would flip its normal or become degenerate — so the cleanup
+    never *creates* a fold. Runs to a fixed point (``max_passes``).
+
+    Returns (mesh, stats).
+    """
+    verts = mesh.vertices.astype(np.float64).copy()
+    faces = mesh.faces.astype(np.int64).copy()
+    stats = {"passes": 0, "collapsed": 0, "rejected_flips": 0}
+
+    for _ in range(max_passes):
+        work = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
+        b_edges = extract_boundary_edges(work)
+        if len(b_edges) == 0:
+            break
+
+        seg = verts[b_edges[:, 0]] - verts[b_edges[:, 1]]
+        d = np.linalg.norm(seg, axis=1)
+        order = np.argsort(d)
+        short = [(int(b_edges[i, 0]), int(b_edges[i, 1])) for i in order if d[i] < tol]
+        if not short:
+            break
+
+        removed: set[int] = set()
+        collapsed = 0
+        for u, v in short:
+            if u in removed or v in removed:
+                continue
+            # Faces incident to v (the vertex being moved onto u).
+            inc = np.where((faces == v).any(axis=1))[0]
+            new_pos = verts[u]
+            ok = True
+            for fi in inc:
+                f = faces[fi]
+                if u in f:
+                    continue  # shares edge (u,v) → becomes degenerate → dropped, fine
+                tri = verts[f]
+                n_old = np.cross(tri[1] - tri[0], tri[2] - tri[0])
+                # Don't let an already-degenerate sliver face block the collapse —
+                # it is garbage geometry (a fold artifact) and will be dropped; only
+                # a healthy, well-formed face may veto the collapse.
+                if float(np.linalg.norm(n_old)) < 2e-6:  # area < 1e-6 mm²
+                    continue
+                tri2 = tri.copy()
+                tri2[f == v] = new_pos
+                n_new = np.cross(tri2[1] - tri2[0], tri2[2] - tri2[0])
+                if float(np.dot(n_old, n_new)) <= 0.0 or float(np.linalg.norm(n_new)) < 1e-12:
+                    ok = False
+                    break
+            if not ok:
+                stats["rejected_flips"] += 1
+                continue
+            faces[faces == v] = u
+            removed.add(v)
+            collapsed += 1
+
+        if collapsed == 0:
+            break
+        # Drop faces that collapsed to a degenerate (repeated vertex index).
+        good = (faces[:, 0] != faces[:, 1]) & (faces[:, 1] != faces[:, 2]) & (faces[:, 0] != faces[:, 2])
+        faces = faces[good]
+        stats["collapsed"] += collapsed
+        stats["passes"] += 1
+
+    # Compact away the merged-out vertices.
+    used = np.unique(faces)
+    remap = -np.ones(len(verts), dtype=np.int64)
+    remap[used] = np.arange(len(used))
+    verts = verts[used]
+    faces = remap[faces]
+    return trimesh.Trimesh(vertices=verts, faces=faces, process=False), stats
 
 
 def diagnose_boundary_xy(boundary: np.ndarray, tag: str = "") -> dict:
@@ -901,6 +1127,11 @@ def generate_base(
     loops.sort(key=lambda l: l.perimeter, reverse=True)
     _mark("boundary#1")
 
+    # Stage dump: boundary as it arrives from the frontend (after clean_mesh's
+    # default merge, before the digits=4 merge and ear removal).
+    if os.environ.get("BASE_GEN_WALL_DIAG"):
+        _dump_boundary_pts(loops[0].points, "b1_frontend")
+
     # Auto-orient using main boundary loop (skip if frontend already oriented)
     if not skip_orient:
         mesh = auto_orient_mesh(mesh, loops[0].points)
@@ -918,7 +1149,19 @@ def generate_base(
 
     # Re-detect boundary on the oriented mesh to get updated points
     # Use aggressive vertex merge to handle trimmed meshes (split vertices may differ slightly)
+    _merge_diag = os.environ.get("BASE_GEN_WALL_DIAG")
+    if _merge_diag:
+        _v_before = mesh.vertices.copy()
+        _f_before = mesh.faces.copy()
     mesh.merge_vertices(digits_vertex=4)
+    if _merge_diag:
+        _diagnose_merge(_v_before, _f_before, mesh)
+        # Stage dump: boundary after the digits=4 merge, before ear removal.
+        _be2 = extract_boundary_edges(mesh)
+        _lp2 = build_boundary_loops(mesh, _be2)
+        if _lp2:
+            _lp2.sort(key=lambda l: l.perimeter, reverse=True)
+            _dump_boundary_pts(_lp2[0].points, "b2_postmerge_preear")
     _mark("merge_vertices")
 
     # Strip "spike ear" triangles on the boundary (2 boundary edges + 1
@@ -932,6 +1175,23 @@ def generate_base(
         mesh, _ear_stats = remove_degenerate_boundary_ears(mesh, max_tip_angle_deg=ear_max_tip_deg)
         # print(f"[generate_base] ear removal (tip<{ear_max_tip_deg}°): {_ear_stats}")
     _mark("ear_removal")
+
+    # Collapse near-coincident / hairpin boundary vertices that ear removal
+    # doesn't catch (fold-guarded), so the wall doesn't extrude into folded,
+    # inward-facing faces. Tolerance in mm via env (0 disables).
+    try:
+        _fold_tol = float(os.environ.get("BASE_GEN_FOLD_COLLAPSE_TOL", "0.03"))
+    except ValueError:
+        _fold_tol = 0.03
+    if _fold_tol > 0:
+        mesh, _fold_stats = collapse_short_boundary_edges(mesh, tol=_fold_tol)
+        if os.environ.get("BASE_GEN_WALL_DIAG"):
+            try:
+                with open(os.environ.get("BG_PROFILE_LOG", "/tmp/bg_backend_timing.log"), "a") as _fp:
+                    _fp.write(f"[FOLD-COLLAPSE] tol={_fold_tol} {_fold_stats}\n")
+            except Exception:
+                pass
+    _mark("fold_collapse")
 
     boundary_edges = extract_boundary_edges(mesh)
     print(f"[generate_base] vertices: {len(mesh.vertices)}, faces: {len(mesh.faces)}, boundary_edges: {len(boundary_edges)}")
@@ -1025,14 +1285,52 @@ def generate_base(
         new_verts = np.vstack([mesh.vertices, bottom])
         bot_base = N_orig
 
+        # Per-segment outward orientation: at a boundary fold the local segment
+        # direction reverses, so the natural wall winding faces inward. Compare
+        # each wall face against a window-smoothed outward direction (robust to
+        # the fold jitter) and flip the winding when it would face inward — the
+        # wall stays outward-facing without touching the boundary geometry.
+        orient_walls = os.environ.get("BASE_GEN_WALL_ORIENT", "1") != "0"
+        if orient_walls:
+            W = 6
+            bxy = boundary[:, :2]
+            tang = np.empty((n, 2))
+            for i in range(n):
+                t = bxy[(i + W) % n] - bxy[(i - W) % n]
+                ln = float(np.hypot(t[0], t[1]))
+                tang[i] = (t / ln) if ln > 1e-12 else (1.0, 0.0)
+            # CCW boundary → outward = tangent rotated -90°: (ty, -tx)
+            outward_xy = np.stack([tang[:, 1], -tang[:, 0]], axis=1)
+
         wall_faces = []
+        _wall_flips = 0
         for i in range(n):
             j = (i + 1) % n
             ti, tj = int(top_idx[i]), int(top_idx[j])
             bi, bj = bot_base + i, bot_base + j
-            wall_faces.append([ti, bi, tj])
-            wall_faces.append([tj, bi, bj])
+            flip = False
+            if orient_walls:
+                e1 = new_verts[bi] - new_verts[ti]
+                e2 = new_verts[tj] - new_verts[ti]
+                nx = e1[1] * e2[2] - e1[2] * e2[1]
+                ny = e1[2] * e2[0] - e1[0] * e2[2]
+                ex = outward_xy[i] + outward_xy[j]
+                if nx * ex[0] + ny * ex[1] < 0.0:
+                    flip = True
+            if flip:
+                wall_faces.append([ti, tj, bi])
+                wall_faces.append([tj, bj, bi])
+                _wall_flips += 1
+            else:
+                wall_faces.append([ti, bi, tj])
+                wall_faces.append([tj, bi, bj])
         wall_faces = np.array(wall_faces, dtype=np.int64)
+        if orient_walls and os.environ.get("BASE_GEN_WALL_DIAG"):
+            try:
+                with open(os.environ.get("BG_PROFILE_LOG", "/tmp/bg_backend_timing.log"), "a") as _fp:
+                    _fp.write(f"[WALL-ORIENT] flipped {_wall_flips}/{n} wall segments outward\n")
+            except Exception:
+                pass
 
         bottom_2d = bottom[:, :2].copy()
         tri_indices = triangulate_float64(bottom_2d, np.array([n]))
@@ -1040,6 +1338,11 @@ def generate_base(
 
     all_faces = np.vstack([mesh.faces.astype(np.int64), wall_faces, bottom_faces])
     combined = trimesh.Trimesh(vertices=new_verts, faces=all_faces, process=False)
+
+    # Wall-normal diagnosis (opt-in) — runs before the area-filter reindex so
+    # wall_faces indices still map into new_verts.
+    if os.environ.get("BASE_GEN_WALL_DIAG"):
+        _diagnose_walls(boundary, wall_faces, new_verts, combined, n, use_chamfer)
 
     # earcut can emit zero-area triangles on near-collinear segments; drop them
     # so we don't introduce NotManifold edges downstream.
