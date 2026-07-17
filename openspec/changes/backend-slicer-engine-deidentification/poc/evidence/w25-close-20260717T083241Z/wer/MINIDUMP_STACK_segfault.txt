@@ -1,0 +1,72 @@
+Opened log file 'C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\poc\evidence\w25-close-20260717T083241Z\dumps\..\wer\MINIDUMP_STACK_segfault.txt'
+
+Microsoft (R) Windows Debugger Version 10.0.22621.755 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+
+Loading Dump File [C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\poc\evidence\w25-close-20260717T083241Z\dumps\segfault.dmp]
+User Mini Dump File with Full Memory: Only application data is available
+
+Symbol search path is: srv*
+Executable search path is: 
+Windows 10 Version 26200 MP (12 procs) Free x64
+Product: WinNt, suite: SingleUserTS
+Edition build lab: 26100.1.amd64fre.ge_release.240331-1435
+Machine Name:
+Debug session time: Fri Jul 17 16:33:18.000 2026 (UTC + 8:00)
+System Uptime: 0 days 5:10:10.969
+Process Uptime: not available
+.NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'
+.......................
+This dump file has an exception of interest stored in it.
+The stored exception information can be accessed via .ecxr.
+(7104.6f1c): Access violation - code c0000005 (first/second chance not available)
+For analysis of this file, run !analyze -v
+*** WARNING: Unable to verify checksum for slicer_core.dll
+slicer_core!slicer_run_cli+0x84580:
+00007ffc`f14a10b0 c70001000000    mov     dword ptr [rax],1 ds:00000000`00000000=????????
+0:000> $$<C:\Temp\w25an.cdb
+0:000> .sympath
+Symbol search path is: srv*
+Expanded Symbol search path is: cache*;SRV*https://msdl.microsoft.com/download/symbols
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+0:000> lm m slicer*
+start             end                 module name
+00007ff7`ebd50000 00007ff7`ebd75000   slicer_engine   (deferred)             
+00007ffc`f13b0000 00007ffc`f3f88000   slicer_core C (export symbols)       slicer_core.dll
+0:000> k
+Child-SP          RetAddr               Call Site
+000000f1`f34fee00 00007ffc`f14a120b     slicer_core!slicer_run_cli+0x84580
+000000f1`f34fee20 00007ffc`f141cb59     slicer_core!slicer_run_cli+0x846db
+*** WARNING: Unable to verify checksum for slicer-engine.exe
+000000f1`f34fee80 00007ff7`ebd51b5e     slicer_core!slicer_run_cli+0x29
+000000f1`f34fef20 00007ff7`ebd51f3c     slicer_engine+0x1b5e
+000000f1`f34ff9c0 00007ffe`0777e957     slicer_engine+0x1f3c
+000000f1`f34ffa00 00007ffe`08787c1c     kernel32!BaseThreadInitThunk+0x17
+000000f1`f34ffa30 00000000`00000000     ntdll!RtlUserThreadStart+0x2c
+0:000> q
+quit:
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'

@@ -14,21 +14,28 @@ repos:
   - web_slicer_core
   - Bundle-Launcher
 blocked_on:
-  - windows-crash-baseline
   - agpl-open-source-compliance-signoff
 resolved_gates:
   - product-approved-neutral-naming-manifest  # 2026-07-17 naming-manifest.md Status=approved
   - product-approved-artifact-manifest-schema  # 2026-07-17 artifact-manifest.schema.md Status=approved
   - macos-m1-poc-rename-strip-three-crashes-scanner  # 2026-07-17 tasks 2.4 PASS; evidence m1-close-20260717T032408Z
   - macos-clean-reference-report-approved  # 2026-07-17 tasks 2.4b; clean-reference-report.md
+  - windows-crash-baseline  # 2026-07-17 tasks 1.7
+  - windows-abi-pdb-export-policy  # 2026-07-17 tasks 2.3
+  - windows-poc-2.5  # 2026-07-17 PASS; evidence w25-close-20260717T083241Z; export=1 -> 5.3
+  - compile-time-qa-crash-harness-2.6-poc  # 2026-07-17; consumer OFF audit -> 5.6/5.7
 progress:
   m1_macos_poc: closed-pass
   m1_evidence: poc/evidence/m1-close-20260717T032408Z/
   clean_reference_report: approved
+  windows_baseline: closed
+  windows_policy: decided
+  windows_poc: closed-pass
+  windows_poc_evidence: poc/evidence/w25-close-20260717T083241Z/
   next:
-    - windows-baseline-1.7
-    - windows-poc-2.5
-    - productize-c-prime-section-5
+    - productize-c-prime-section-5  # includes 5.3 win export=1
+    - consumer-harness-off-audit-5.6
+    - launcher-packaging-section-4
 lifecycle:
   states: [proposed, in_progress, completed, archived]
   completion_requires:

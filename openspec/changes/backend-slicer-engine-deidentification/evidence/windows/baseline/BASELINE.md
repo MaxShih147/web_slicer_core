@@ -16,8 +16,8 @@
 | PDB path in PE | **captured** — console exe debug directory → `...\prusa-slicer-console.pdb` under `prusaslicer_build` |
 | shim loader error | **captured** — `PrusaSlicer.dll was not loaded` |
 
-**Gate：** tasks **1.7 已關閉**；後續依 [`windows-policy.md`](../../windows-policy.md)（tasks **2.3 已定案**）實作 **2.5** PoC。  
-**非本 task：** 三種 QA crash site、去識別後 PASS、Authenticode 最終包（屬 2.5／7.x）。
+**Gate：** tasks **1.7 已關閉**；政策 **2.3 decided**；PoC **2.5 PASS** — [`poc/REPORT-WIN.md`](../../../poc/REPORT-WIN.md)。  
+**非本 task：** Authenticode 最終包、export 收斂為 1（→ 5.3）、consumer OFF harness 稽核（→ 5.6）。
 
 ## 1. Environment
 
@@ -82,15 +82,15 @@
 
 ## 5. Implications for 2.3／2.5
 
-> **2.3 已關閉（2026-07-17）：** 下列皆已寫入 [`windows-policy.md`](../../windows-policy.md)。
+> **2.3／2.5 已關閉（2026-07-17）：** 政策見 [`windows-policy.md`](../../windows-policy.md)；PoC 見 [`poc/REPORT-WIN.md`](../../../poc/REPORT-WIN.md)。
 
-1. **Rename contract：** `prusa-slicer*.exe` → `slicer-engine.exe`；`PrusaSlicer.dll` → `slicer_core.dll`；export `slic3r_main` → **唯一** `slicer_run_cli`。  
-2. **Export surface：** 470 → 1（`.def` 或等效）；否決只改名。  
-3. **PDB policy：** `/DEBUG`＋`/PDB:`＋`/PDBALTPATH:` → 封存 → consumer 無 pdb／無品牌 debug path。  
-4. **Crash harness：** 2.5 需 compile-time QA flavor。  
-5. **Loader string：** 隨 rename 改為中性文案。
+1. **Rename contract：** ~~baseline 現況~~ → **2.5 PoC 已達** `slicer-engine.exe`／`slicer_core.dll`／`slicer_run_cli`（export=1 → **5.3**）。  
+2. **Export surface：** 政策 470 → 1；PoC 入口已更名，殘餘 mangled → **5.3**。  
+3. **PDB policy：** `/DEBUG`＋`/PDB:`＋`/PDBALTPATH:` — **2.5 已證 RSDS 短中性名**。  
+4. **Crash harness：** compile-time — **2.6／2.5 Done**。  
+5. **Loader string：** PoC 已中性化。
 
-## 6. Follow-ups（not blocking 1.7／2.3）
+## 6. Follow-ups（not blocking 1.7／2.3／2.5）
 
 - Authenticode-signed installer baseline（optional）。  
-- tasks **2.5** Windows PoC。
+- **5.3** export 收斂為 1；**5.6** consumer OFF harness 稽核；§3／§4／§5 產品化。

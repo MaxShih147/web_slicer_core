@@ -4,7 +4,7 @@
 **適用 Requirement：** REQ-DEID-002～006、009～015  
 **規範來源：** [`blacklist.md`](./blacklist.md)、[`artifact-manifest.schema.md`](./artifact-manifest.schema.md)、[`design.md`](./design.md) D7／D11／D13  
 
-**PoC 進度（非取代本程序）：** 2026-07-17 macOS arm64 **tasks 2.4 PASS**（[`poc/REPORT.md`](./poc/REPORT.md)、`m1-close-20260717T032408Z`）。正式驗收仍須本文件之 consumer／qa flavor、簽署包與雙平台條款；PoC 額外證實：驗收機不得存在同 UUID dSYM／未 strip 複本（見原則第 9 點）。
+**PoC 進度（非取代本程序）：** 2026-07-17 macOS arm64 **tasks 2.4 PASS**（[`poc/REPORT.md`](./poc/REPORT.md)、`m1-close-20260717T032408Z`）；Windows x64 **tasks 2.3／2.5 PASS**（[`windows-policy.md`](./windows-policy.md)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)、`w25-close-20260717T083241Z`）。正式驗收仍須本文件之 consumer／qa flavor、簽署包與雙平台條款。
 
 ## 1. 驗收原則
 
@@ -112,7 +112,7 @@ reviewers:
 
 實作開始前 MUST 先保存目前正式包之 process／module path、VERSIONINFO、`dumpbin /exports`、WER metadata、PDB-free minidump stack、shim loader error 至 `evidence/windows/baseline/`；未取得時 Windows 實作維持 blocked。
 
-**狀態（2026-07-17）：** baseline **已取得** — [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)。Windows ABI／PDB／export **政策已定案** — [`windows-policy.md`](./windows-policy.md)（tasks 2.3）。
+**狀態（2026-07-17）：** baseline **已取得** — [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)。Windows ABI／PDB／export **政策已定案** — [`windows-policy.md`](./windows-policy.md)（tasks 2.3）。Windows PoC **PASS** — [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)（tasks 2.5）。
 
 ### 5.2 靜態 L1／L2（consumer final）
 
@@ -143,7 +143,7 @@ reviewers:
 
 兩平台 MUST 執行：full SLA slice、generate supports、hollow／drill、cut、project／3MF（若啟用）、invalid input／CLI missing／native crash／timeout／cancel、package install → first launch → slice → uninstall。
 
-輸出比對方式與效能門檻 MUST 在 PoC 結束前簽核。
+輸出比對方式與效能門檻 MUST 在 PoC 結束前簽核（**進度：** 雙平台 PoC 已關閉；門檻簽核仍見 tasks **2.7**）。
 
 ## 7. 證據路徑與審核
 

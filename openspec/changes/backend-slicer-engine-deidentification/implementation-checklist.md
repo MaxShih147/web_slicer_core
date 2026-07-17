@@ -1,6 +1,6 @@
 # 跨 Repository Implementation Checklist
 
-**進度（2026-07-17）：** Gate 0 部分完成；**macOS M1 PoC（tasks 2.4）PASS**；**Windows baseline（1.7）＋政策（2.3）已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`windows-policy.md`](./windows-policy.md)。
+**進度（2026-07-17）：** Gate 0 大部完成；**macOS M1 PoC（2.4）PASS**；**Windows baseline（1.7）＋政策（2.3）＋PoC（2.5）＋compile-time harness（2.6 PoC）已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。
 
 ## Gate 0 — 規格與治理
 
@@ -9,16 +9,16 @@
 - [x] Windows baseline 收集完成（[`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)；2026-07-17）
 - [x] Windows ABI／PDB／export 政策定案（[`windows-policy.md`](./windows-policy.md)；tasks 2.3；2026-07-17）
 - [x] 已知乾淨參考報告批准（[`clean-reference-report.md`](./clean-reference-report.md)；錨點 `m1-close-20260717T032408Z`；2026-07-17）
-- [x] A+B+C′ **macOS** PoC 與 go／no-go 完成（C-full／OLLVM＝L3 不做；D13 ownership 確認）；**Windows PoC 未做**
+- [x] A+B+C′ **雙平台 PoC** go／no-go（macOS 2.4＋Windows 2.5；C-full／OLLVM＝L3 不做；Win export=1 → 5.3）
 - [ ] AGPL／開源法務簽核完成
 
 ## Gate 1 — web_slicer_core／fork
 
 - [ ] macOS 真實 OUTPUT_NAME／全部 thread／codeSigningID／Info.plist 去品牌（**PoC 已驗證** OUTPUT_NAME＋identifier＋thread；正式落地未完）
-- [ ] Windows DLL／shim／export／VERSIONINFO 原子遷移
+- [ ] Windows DLL／shim／export／VERSIONINFO 原子遷移（**PoC 已驗證** rename／VERSIONINFO／PDBALTPATH；export=1 → 5.3；agent／Launcher 路徑未完）
 - [ ] dSYM／PDB 先封存；**fork 完成 consumer strip**；寫入 pre／post_strip hash manifest（PoC 流程已演練；manifest 產品化未完）
-- [ ] Windows headless PDB policy 落地（產→封存→consumer 排除）
-- [ ] release-equivalent QA flavor（compile-time harness）；移除 runtime env harness
+- [ ] Windows headless PDB policy 落地（產→封存→consumer 排除；**PDBALTPATH PoC 2.5 已證**）
+- [ ] release-equivalent QA flavor（compile-time harness）；移除 runtime env harness（**PoC 2.6：** compile-time 已落地；正式 qa_delta／manifest＋consumer OFF → 5.6／5.7）
 - [ ] consumer Release 不含 harness
 - [ ] SBOM／exact source commit 產生
 - [ ] 全 CLI operation regression 通過
@@ -44,8 +44,9 @@
 ## Gate 4 — 動態驗收
 
 - [x] macOS **arm64 PoC**：三種 crash site＋品牌歸因複核通過（正式各 arch／qa flavor 仍待 7.1／7.3）
+- [x] Windows **x64 PoC**：三種 crash＋minidump 模組中性（2.5；`w25-close-20260717T083241Z`；正式 qa flavor／§7 仍待）
 - [ ] macOS 各發布 architecture：release-equivalent qa 三種 crash site＋品牌歸因複核通過
-- [ ] Windows x64：同上
+- [ ] Windows x64：正式 release-equivalent qa／§7 同上
 - [ ] consumer 靜態 L1／L2＋binary inspection 通過
 - [ ] 乾淨環境（無私有 dSYM／PDB／_NT_SYMBOL_PATH）有紀錄（PoC 已記錄教訓；正式 runbook 待補）
 - [ ] Agent 在 engine crash 後存活、job failure semantics 正確

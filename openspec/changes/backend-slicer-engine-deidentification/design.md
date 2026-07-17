@@ -145,7 +145,7 @@ flowchart TD
 
 **決策：** Consumer Release 不含 dSYM／PDB；每個 engine artifact 必須有 neutral build ID 與 UUID／GUID，內部 symbols 儲存於受 ACL 保護之 artifact store，定義 retention、hash、symbolication 與 rollback runbook。
 
-**Windows headless Release PDB policy（tasks 2.3 定案，2026-07-17）：** 正式建置（含 `SLIC3R_GUI=OFF`）**MUST** 顯式：compiler debug info（`/Zi` 或等效）＋ linker `/DEBUG`＋可控 `/PDB:<staging>/<build_id>/slicer-engine.pdb|slicer_core.pdb`＋ **`/PDBALTPATH:slicer-engine.pdb|slicer_core.pdb`**（PE 內僅中性短檔名）。流程：**先**上傳匹配 PDB 至 symbol store 並寫入 manifest（GUID+Age），**再**交付 consumer PE（bundle **無** `.pdb`；debug directory **無**品牌／`prusaslicer_build` 路徑）。**否決**「GUI=OFF 自然有 PDB」與「只 `/XF *.pdb`」。完整 ABI／export／原子遷移見 [`windows-policy.md`](./windows-policy.md)。
+**Windows headless Release PDB policy（tasks 2.3 定案，2026-07-17；tasks **2.5 PoC PASS**）：** 正式建置（含 `SLIC3R_GUI=OFF`）**MUST** 顯式：compiler debug info（`/Zi` 或等效）＋ linker `/DEBUG`＋可控 `/PDB:<staging>/<build_id>/slicer-engine.pdb|slicer_core.pdb`＋ **`/PDBALTPATH:slicer-engine.pdb|slicer_core.pdb`**（PE 內僅中性短檔名）。流程：**先**上傳匹配 PDB 至 symbol store 並寫入 manifest（GUID+Age），**再**交付 consumer PE（bundle **無** `.pdb`；debug directory **無**品牌／`prusaslicer_build` 路徑）。**否決**「GUI=OFF 自然有 PDB」與「只 `/XF *.pdb`」。完整 ABI／export／原子遷移見 [`windows-policy.md`](./windows-policy.md)；PoC 證據見 [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)（export 收斂為 1 仍歸 **5.3**）。
 
 **理由：** L2 不得以永久失去事故診斷能力為代價。
 
@@ -198,8 +198,10 @@ flowchart TD
 6. 是否允許評估結論否決 E（預設是）  
 7. ~~macOS M1 PoC（改名＋strip＋三 crash＋scanner）~~ → **已通過（2026-07-17）：** [`poc/REPORT.md`](./poc/REPORT.md)  
 8. ~~已知乾淨參考報告（2.4b）~~ → **已批准（2026-07-17）：** [`clean-reference-report.md`](./clean-reference-report.md)
+9. ~~Windows 政策（2.3）~~ → **已定案：** [`windows-policy.md`](./windows-policy.md)  
+10. ~~Windows PoC（2.5）＋compile-time harness（2.6 PoC）~~ → **已通過：** [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)
 
-**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。
+**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。下一步：§3／§5 產品化（含 **5.3** Win export=1）。
 
 ## 規範性附件
 
@@ -210,4 +212,6 @@ flowchart TD
 - [`traceability.md`](./traceability.md)：Requirement → Design → Task → Evidence。
 - [`implementation-checklist.md`](./implementation-checklist.md)：跨 repo release gates。
 - [`PROGRESS.md`](./PROGRESS.md)：開發／測試進度快照。
-- [`poc/NOTION-TEST-TASK.md`](./poc/NOTION-TEST-TASK.md)：Notion Test 可貼稿。
+- [`windows-policy.md`](./windows-policy.md)：Windows ABI／PDB／export 政策（2.3）。
+- [`poc/REPORT.md`](./poc/REPORT.md)／[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)：雙平台 PoC 報告。
+- [`poc/NOTION-TEST-TASK.md`](./poc/NOTION-TEST-TASK.md)／[`poc/NOTION-WIN-POLICY-POC-TASK.md`](./poc/NOTION-WIN-POLICY-POC-TASK.md)：Notion Test 可貼稿。

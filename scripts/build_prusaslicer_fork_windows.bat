@@ -150,10 +150,17 @@ echo [PrusaSlicer] Configuring build...
     -DSLIC3R_GUI=OFF ^
     -DSLIC3R_BUILD_TESTS=OFF ^
     -DCMAKE_PREFIX_PATH="%DEPS_DESTDIR%"
+:: QA PoC: compile-time crash harness (consumer builds must omit this flag)
+set "QA_HARNESS_FLAG=-DBUNDLE_QA_CRASH_HARNESS=ON"
+    findstr /c:"BUNDLE_QA_CRASH_HARNESS:BOOL=ON" "%BUILD_DIR%\CMakeCache.txt" >nul 2>&1
+    if !errorlevel! neq 0 set CONFIGURE_SLICER=1
 
 if !errorlevel! neq 0 (
     echo [ERROR] CMake configuration failed
     exit /b 1
+        !QA_HARNESS_FLAG! ^
+    echo [PrusaSlicer] Using existing CMake cache ^(run with 'clean' to reconfigure^)
+    "%CMAKE_BIN%" -DBUNDLE_QA_CRASH_HARNESS=ON "%BUILD_DIR%"
 )
 
 echo [PrusaSlicer] Building...
@@ -161,6 +168,7 @@ echo [PrusaSlicer] Building...
 
 if !errorlevel! neq 0 (
     echo [ERROR] Build failed
+set SLICER_BIN=%BUILD_DIR%\src\Release\slicer-engine.exe
     exit /b 1
 )
 
@@ -169,10 +177,11 @@ echo [PrusaSlicer] ==========================================
 echo [PrusaSlicer] Build complete!
 echo [PrusaSlicer] ==========================================
 echo.
-echo [PrusaSlicer] Binary location: %BUILD_DIR%\src\Release\prusa-slicer.exe
+echo [PrusaSlicer] Binary location: %SLICER_BIN%
+echo [PrusaSlicer] QA harness: BUNDLE_QA_CRASH_HARNESS=ON — set BUNDLE_QA_CRASH_MODE=overflow^|segfault^|exception
 echo.
 echo [PrusaSlicer] To use with the agent:
-echo   set PRUSA_SLICER_BIN=%BUILD_DIR%\src\Release\prusa-slicer.exe
+echo   set SLICER_ENGINE_BIN=%SLICER_BIN%
 echo   scripts\run_agent.bat
 echo.
 

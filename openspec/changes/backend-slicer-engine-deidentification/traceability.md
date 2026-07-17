@@ -1,21 +1,21 @@
 # Requirement Traceability Matrix
 
-**Evidence 更新（2026-07-17）：** macOS M1／tasks 2.4 → [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)；Windows baseline／1.7 → [`evidence/windows/baseline/`](./evidence/windows/baseline/)；Windows 政策／2.3 → [`windows-policy.md`](./windows-policy.md)；[`PROGRESS.md`](./PROGRESS.md)。
+**Evidence 更新（2026-07-17）：** macOS M1／2.4 → [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)；Windows baseline／1.7 → [`evidence/windows/baseline/`](./evidence/windows/baseline/)；Windows 政策／2.3 → [`windows-policy.md`](./windows-policy.md)；Windows PoC／2.5＋harness／2.6 → [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)／`poc/evidence/w25-close-20260717T083241Z/`；[`PROGRESS.md`](./PROGRESS.md)。
 
 | Requirement | Design | Tasks | 驗收證據 |
 |---|---|---|---|
 | REQ-DEID-001 Scope | Goals／Non-goals／威脅模型 | 8.1 | OpenSpec review |
-| REQ-DEID-002 L1+L2（C′） | D1–D3、D13 | 3、5、7 | 雙平台 scan＋品牌歸因複核（**macOS PoC 部分：** m1-close PASS） |
-| REQ-DEID-003 Dual platform | D5 | 2.4–2.5、7.1–7.2 | macOS PoC records；**Windows baseline 已存**（1.7）；Win PoC／驗收仍缺 |
-| REQ-DEID-004 Rename/repack | D1、D13 | 3.1–3.5、4.1–4.6 | Artifact layout＋manifest files[]（PoC：`slicer-engine` OUTPUT_NAME） |
-| REQ-DEID-005 Identity strings | D2 | 3.2、4.3 | `.ips`／VERSIONINFO／codesign（**macOS PoC：** codeSigningID=`slicer-engine`） |
-| REQ-DEID-006 L2／C′ | D3、D5、D7、D10、D13 | 1.8–1.9、2.2–2.5、5.1–5.5 | **macOS：** visibility＋strip＋三 crash＋scanner PASS（2.4／2.2）；**Win 政策 2.3 decided**；Win PoC／正式落地待 |
+| REQ-DEID-002 L1+L2（C′） | D1–D3、D13 | 3、5、7 | 雙平台 scan＋品牌歸因複核（**雙平台 PoC：** m1-close＋w25-close；正式 §7 待） |
+| REQ-DEID-003 Dual platform | D5 | 2.4–2.5、7.1–7.2 | macOS＋Windows PoC records（1.7／2.4／2.5）；正式驗收仍缺 |
+| REQ-DEID-004 Rename/repack | D1、D13 | 3.1–3.5、4.1–4.6 | Artifact layout＋manifest files[]（PoC：雙平台 `slicer-engine`） |
+| REQ-DEID-005 Identity strings | D2 | 3.2、4.3 | `.ips`／VERSIONINFO／codesign（macOS＋Win PoC VERSIONINFO 中性） |
+| REQ-DEID-006 L2／C′ | D3、D5、D7、D10、D13 | 1.8–1.9、2.2–2.5、5.1–5.5 | **macOS 2.4／2.2 PASS**；**Win 2.3＋2.5 PASS**（export=1 → 5.3）；正式落地待 |
 | REQ-DEID-007 不得以 D／E／C-full 取代 | D8 | 2.1、5.8–5.10 | Feasibility decision（C′ 定案；L3 不做） |
 | REQ-DEID-008 AGPL subprocess | D4 | 5.11 | Process-boundary test |
-| REQ-DEID-009 Crash harness／QA derivative | D7 | 2.6、5.6–5.7、7.3 | PoC runtime harness；compile-time／consumer inspection 待 |
-| REQ-DEID-010 Evidence | D5、D11 | 7.1–7.7 | Evidence index＋四方簽核（含 QA）；PoC evidence 已存 |
+| REQ-DEID-009 Crash harness／QA derivative | D7 | 2.6、5.6–5.7、7.3 | **compile-time harness 2.6 PoC Done**；consumer OFF 稽核仍見 5.6／5.7 |
+| REQ-DEID-010 Evidence | D5、D11 | 7.1–7.7 | Evidence index＋四方簽核（含 QA）；雙平台 PoC evidence 已存 |
 | REQ-DEID-011 AGPL modified-work | D9 | 1.6、6.1–6.4 | Legal／OSS sign-off |
-| REQ-DEID-012 Symbol supply chain | D10、D13 | 5.5、6.5–6.7 | Symbol archive＋pre/post_strip hash；**Win PDB 政策 `windows-policy.md`（2.3）**；產品化待 |
+| REQ-DEID-012 Symbol supply chain | D10、D13 | 5.5、6.5–6.7 | Symbol archive＋pre/post_strip hash；**Win PDBALTPATH PoC 2.5**；產品化待 |
 | REQ-DEID-013 Final-artifact gate | D11、D13 | 4.4–4.5、7.4–7.5 | CI run URL |
 | REQ-DEID-014 Functional parity | D12 | 3.6、7.6 | Regression report |
 | REQ-DEID-015 Naming＋artifact schema | D6、D13 | 1.3–1.4 | naming-manifest＋artifact-manifest.schema 簽核 |

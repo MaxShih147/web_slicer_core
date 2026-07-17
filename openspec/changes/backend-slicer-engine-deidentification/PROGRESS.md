@@ -4,7 +4,8 @@
 **Change status：** `in_progress`（見 `.openspec.yaml`）  
 **權威 macOS PoC 證據：** [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)  
 **權威 Windows baseline：** [`evidence/windows/baseline/win-baseline-20260717T055632Z/`](./evidence/windows/baseline/win-baseline-20260717T055632Z/)  
-**PoC 報告：** [`poc/REPORT.md`](./poc/REPORT.md)  
+**權威 Windows PoC：** [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/)  
+**PoC 報告：** [`poc/REPORT.md`](./poc/REPORT.md)（macOS）／[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)（Windows 2.5）  
 **Win baseline 報告：** [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)  
 **Win 政策定案：** [`windows-policy.md`](./windows-policy.md)
 
@@ -20,10 +21,11 @@
 | macOS flags 定案（tasks **2.2**） | **完成**（PoC 定案；manifest hash 鏈仍歸 5.1） |
 | Windows baseline（tasks **1.7**） | **關閉** — 見 BASELINE.md |
 | Windows 政策（tasks **2.3**） | **關閉** — [`windows-policy.md`](./windows-policy.md) |
-| Windows PoC（2.5） | **未開始**（政策已定；需 compile-time harness） |
-| L1 正式改名落地（§3） | **PoC 級已驗證（macOS）**；正式 agent／CMake 雙平台落地未完成 |
-| Launcher 組包（§4） | **未開始** |
-| 正式 C′ 產品化（§5） | **未開始**（macOS PoC 已證明可行性） |
+| Compile-time harness（**2.6** 部分） | **關閉／PoC** — `BUNDLE_QA_CRASH_HARNESS`；consumer OFF 稽核仍歸 **5.6／5.7** |
+| Windows PoC（**2.5**） | **關閉／PASS** — [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)（export 收斂為 1 → **5.3**） |
+| L1 正式改名落地（§3） | **PoC 級已驗證（雙平台）**；正式 agent／CMake／Launcher 路徑未完成 |
+| Launcher 組包（§4） | **未開始**（仍缺正式 post-strip manifest） |
+| 正式 C′ 產品化（§5） | **未開始**（雙平台 PoC 已證明可行性） |
 | AGPL／驗收自動化（§6–7） | **未開始** |
 
 ---
@@ -38,7 +40,7 @@
 | L2 可讀 `Slic3r::` | **0**（乾淨符號環境） |
 | Scanner 原型 | **PASS**（exit 0） |
 | 定案手段 | `-fvisibility=hidden` + plain `strip`（**否決 `strip -x`**） |
-| 殘餘 | `nm` brand ≈172 global（移交 5.1）；runtime harness 須改 compile-time |
+| 殘餘 | `nm` brand ≈172 global（移交 5.1） |
 
 **環境硬條件：** 無同 UUID dSYM／未 strip 複本；否則 ReportCrash／CoreSymbolication 可能還原舊符號。
 
@@ -72,14 +74,30 @@
 
 ---
 
+## 2d. Windows／tasks 2.5 PoC（摘要）
+
+| 項 | 結果 |
+|----|------|
+| Harness | compile-time `BUNDLE_QA_CRASH_HARNESS`；入口 `bundle_qa_crash_probe`（非 SLAPrint） |
+| Rename／ABI | `slicer-engine.exe`／`slicer_core.dll`／`slicer_run_cli` |
+| VERSIONINFO | Company=`Phrozen Technology`；Product=`Slicer Engine` |
+| PDBALTPATH | RSDS=`slicer-engine.pdb`／`slicer_core.pdb`（無建置樹路徑） |
+| 三種 crash | overflow `0xC00000FD`／segfault `0xC0000005`／exception `0xC0000409`＋dump |
+| Minidump | modules `slicer_engine`＋`slicer_core`；frames `slicer_run_cli+…` |
+| Export | `slic3r_main` 已消失；named ≈470 cereal residual → **5.3** |
+| Dump 取得 | LocalDumps 未穩定；本 PoC 以 `cdb` 取 dump（exit 已證三種失敗） |
+
+詳見 [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。
+
+---
+
 ## 3. 下一步（建議優先序）
 
-1. **crash harness compile-time**（`BUNDLE_QA_CRASH_HARNESS`；Win 目前無 runtime mode）  
-2. **2.5** Windows PoC（依 windows-policy 實作＋三種 crash／WER）  
-3. **§3／§5** 正式落地 visibility＋strip／export＋manifest  
-4. **§4** Launcher 驗證＋簽署（不二次 strip）
+1. **§3／§5** 正式落地（含 **5.3** Win export 收斂為 1；macOS visibility＋strip／manifest）  
+2. **5.6／5.7** consumer `BUNDLE_QA_CRASH_HARNESS=OFF` 靜態稽核零 harness  
+3. **§4** Launcher 驗證＋簽署（不二次 strip）  
 
-並行：1.5 Security、1.6 Legal／AGPL。
+並行：1.5 Security、1.6 Legal／AGPL；2.1 書面 A–E 報告收斂。
 
 ---
 
@@ -88,10 +106,14 @@
 | 產物 | 路徑 |
 |------|------|
 | Close 腳本（macOS） | `poc/run_m1_close.sh` |
+| Close 腳本（Windows） | `poc/run_w25_close.ps1` |
 | Scanner 原型（macOS） | `poc/scan_macos_artifact.sh` |
 | Notion M1 測試稿 | [`poc/NOTION-TEST-TASK.md`](./poc/NOTION-TEST-TASK.md) |
 | Notion Win baseline 稿 | [`poc/NOTION-WIN-BASELINE-TASK.md`](./poc/NOTION-WIN-BASELINE-TASK.md) |
+| Notion Win PoC 稿 | [`poc/NOTION-WIN-POC-TASK.md`](./poc/NOTION-WIN-POC-TASK.md) |
+| Notion Win 政策＋PoC 合併稿 | [`poc/NOTION-WIN-POLICY-POC-TASK.md`](./poc/NOTION-WIN-POLICY-POC-TASK.md) |
 | 乾淨參考報告（已批准） | [`clean-reference-report.md`](./clean-reference-report.md) |
 | Win baseline 報告 | [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md) |
 | Win 政策定案（2.3） | [`windows-policy.md`](./windows-policy.md) |
-| Fork visibility | `prusaslicer_fork/src/libslic3r/CMakeLists.txt`、`…/src/CMakeLists.txt` |
+| Win PoC 報告（2.5） | [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md) |
+| Fork visibility／Win rename | `prusaslicer_fork/src/…`（`bundle_qa_crash_probe`、CMake OUTPUT_NAME） |

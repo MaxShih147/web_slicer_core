@@ -150,9 +150,9 @@
 ### 已知限制／Follow-up
 
 1. 本 baseline 對象為 **win-unpacked consumer-like**，非 Authenticode 最終 installer（可選加測）。  
-2. 無三種 QA crash 的「真崩潰 WER 事件」；因本建置無 harness。正式三種 site → tasks **2.5**（compile-time QA flavor）。  
-3. Minidump 取於 `PrusaSlicer.dll` **load 斷點**（證明模組／路徑指紋），非 overflow／segfault／exception site。  
-4. 下一步：OpenSpec **2.3**（DLL／shim／PDB 政策）→ **2.5** Windows PoC。
+2. ~~無三種 QA crash~~ → **後續已由 2.5 完成**（`poc/REPORT-WIN.md`／`w25-close-20260717T083241Z`）。  
+3. Minidump 取於 `PrusaSlicer.dll` **load 斷點**（證明模組／路徑指紋），非 overflow／segfault／exception site（屬 baseline 設計）。  
+4. ~~下一步 2.3→2.5~~ → **已完成**（政策＋PoC PASS）。產品化見 §3／§5（export=1 → 5.3）。
 
 ### 測試結果追蹤（勾選）
 
@@ -168,7 +168,7 @@
 - [x] tasks 1.7 關閉  
 
 > **關閉判定：** 上列皆完成 → **Done／通過**。  
-> 三種 crash PoC／去識別驗收 **不屬本 task**（→ 2.5／7.x）。
+> 三種 crash PoC／去識別驗收 **原不屬本 task**；**後續狀態（2026-07-17）：2.3／2.5 已關閉** — 見 `NOTION-WIN-POLICY-POC-TASK.md`。
 
 ---
 

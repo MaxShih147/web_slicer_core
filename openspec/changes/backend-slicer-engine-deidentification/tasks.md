@@ -1,5 +1,4 @@
-> **進度快照（2026-07-17）：** M1／**2.4 PASS**；**1.7／2.3 Windows baseline＋政策已關閉**；**2.2／2.4b 已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`windows-policy.md`](./windows-policy.md)。下一步優先：compile-time harness → **2.5** Win PoC → §3／§5 產品化。
-
+> **進度快照（2026-07-17）：** M1／**2.4 PASS**；**1.7／2.3／2.5／2.6(PoC) Windows baseline＋政策＋PoC＋compile-time harness 已關閉**；**2.2／2.4b 已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。下一步優先：§3／§5 產品化（含 **5.3** export=1、**5.6** consumer OFF）。
 ## 1. 治理與必要輸入
 
 - [x] 1.1 [REQ-DEID-002] 接受線定案：本版 L2（含 L1）
@@ -13,27 +12,26 @@
 - [x] 1.8 [REQ-DEID-006] C 策略定案：精簡版 C′；全面 namespace／OLLVM＝L3 不做（2026-07-17）
 - [x] 1.9 [REQ-DEID-006／D13] strip／sign ownership 定案：fork strip＋manifest；Launcher 只驗證＋簽署
 
-**Dependency：** 1.3／1.4／1.7／**2.3** 已完成（2026-07-17）；§3／§4／§5 可依簽核名稱與 Win 政策開工。下一步實作入口：**2.5**（需 compile-time harness）。
-
+**Dependency：** 1.3／1.4／1.7／**2.3／2.5／2.6(PoC)** 已完成（2026-07-17）；§3／§4／§5 可依簽核名稱與雙平台 PoC 開工。
 ## 2. 可行性評估與雙平台 PoC
 
-- [ ] 2.1 [REQ-DEID-006/007] 產出 A–E 可行性報告；**C′ 必須可達雙平台 L2**；明確記錄 C-full／OLLVM 為 L3 不做。（**進度：** macOS 側 C′ 已由 2.4 PoC 證明可達 L2；Win 與書面 A–E 報告仍缺）
+- [ ] 2.1 [REQ-DEID-006/007] 產出 A–E 可行性報告；**C′ 必須可達雙平台 L2**；明確記錄 C-full／OLLVM 為 L3 不做。（**進度：** 雙平台 C′ 可行性已由 **2.4／2.5 PoC** 證明；**書面 A–E 報告**仍缺）
 - [x] 2.2 [REQ-DEID-006/012/D13] 定案 macOS（2026-07-17 PoC）：`-fvisibility=hidden -fvisibility-inlines-hidden`（libslic3r＋CLI）；**否決 `strip -x`**；採 plain `strip`；dSYM 先封存再 strip；驗收禁止同 UUID dSYM／未 strip 污染。見 [`poc/REPORT.md`](./poc/REPORT.md)。**pre／post_strip manifest hash 鏈**仍由 5.1 產品化落地。
 - [x] 2.3 [REQ-DEID-006/012] 定案 Windows（2026-07-17）：DLL＋shim ABI（`slicer-engine.exe`→`slicer_core.dll`→唯一 `slicer_run_cli`）；export 收斂為 1（否決只改名留下 470 mangled）；headless `/Zi`＋`/DEBUG`＋`/PDB:`＋**`/PDBALTPATH:`**；產→封存→consumer 無 pdb／無品牌 debug path；VERSIONINFO exe+DLL；原子遷移順序。見 [`windows-policy.md`](./windows-policy.md)。
 - [x] 2.4 [REQ-DEID-006] macOS PoC **關閉**（2026-07-17）：改名＋`codeSigningID`＝L1 OK；visibility＋plain `strip`；thread→`slicer-worker`；三種 crash（含 exception／abort）皆有 `.ips`；乾淨符號環境下 `Slic3r::`=0；scanner PASS。證據 [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)、[`poc/REPORT.md`](./poc/REPORT.md)。殘餘 nm≈172 移交 5.1。
 - [x] 2.4b [REQ-DEID-006] 「已知乾淨參考報告」**已批准**（2026-07-17）：[`clean-reference-report.md`](./clean-reference-report.md)；錨點 `poc/evidence/m1-close-20260717T032408Z/`
-- [ ] 2.5 [REQ-DEID-006] Windows PoC：VERSIONINFO、exports、WER、PDB-free dump、例外型別名、三種 crash site
-- [ ] 2.6 [REQ-DEID-009] PoC 驗證 compile-time QA harness 與 consumer Release 分離（目前仍為 runtime env harness）
+- [x] 2.5 [REQ-DEID-006] Windows PoC **關閉／PASS**（2026-07-17）：`slicer-engine.exe`／`slicer_core.dll`／`slicer_run_cli`；VERSIONINFO 中性；`/PDBALTPATH:` RSDS 短中性名；三種 crash（overflow／segfault／exception）＋dump；minidump 模組無 `PrusaSlicer`。證據 [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。**殘餘：** named exports≈470 → **5.3**；LocalDumps 未穩定（本 PoC 以 `cdb`＋exit 證明）。
+- [x] 2.6 [REQ-DEID-009] PoC：compile-time `BUNDLE_QA_CRASH_HARNESS`＋`bundle_qa_crash_probe`（已移出 `SLAPrint.cpp`）；QA flavor ON 可觸發三種 mode。**正式 consumer OFF 靜態稽核零 harness**仍見 **5.6／5.7**。
 - [ ] 2.7 [REQ-DEID-014] 定案 golden output tolerance 與 performance budget
 - [ ] 2.8 評估結論經 Backend Security／Release Engineering 審閱並回寫 `design.md`
 
-**Dependency：** §5 macOS 路徑已可依 2.2 開工；§5 Windows 已可依 **2.3** 開工（仍建議先 2.5 PoC）。§7 MUST blocked on 全部 §2。
+**Dependency：** §5 雙平台可依 2.2／2.3／2.5 開工。§7 MUST blocked on 其餘 §2（2.1／2.7／2.8）與正式落地。
 
 ## 3. web_slicer_core／fork：L1 與功能相容
 
 - [ ] 3.1 [REQ-DEID-004/015] CMake 雙平台 target／output／runtime directory 使用簽核名稱
 - [ ] 3.2 [REQ-DEID-005] macOS codeSigningID／Info.plist（刪除或中性化）／Version／thread name 去品牌
-- [ ] 3.3 [REQ-DEID-005/006] Windows VERSIONINFO、DLL load path、export entry、shim error 原子遷移
+- [ ] 3.3 [REQ-DEID-005/006] Windows VERSIONINFO、DLL load path、export entry、shim error 原子遷移（**PoC 2.5 已驗證** rename／VERSIONINFO／入口；agent／正式組包路徑＋export=1 → **5.3／§4**）
 - [ ] 3.4 [REQ-DEID-004] 更新 `agent/config.py` 與 neutral env key；舊名 fallback 不進 consumer bundle
 - [ ] 3.5 [REQ-DEID-004] 掃描 user-visible errors、resources、paths、symlink 與 loader diagnostics
 - [ ] 3.6 [REQ-DEID-014] 雙平台執行完整 CLI operation／failure regression
@@ -52,10 +50,10 @@
 - [ ] 5.1 [REQ-DEID-006/D13] macOS fork：依 2.2 定案 flags 產品化＋產 dSYM＋strip；產出 manifest pre／post_strip hash；收斂殘餘 nm brand（PoC≈172）
 - [ ] 5.1b [REQ-DEID-006] RTTI／例外：拋例外 crash site＋必要時 top-level catch（PoC exception→`.ips` 已證明可行；正式化）
 - [ ] 5.2 [REQ-DEID-006] 全部 thread call site 中性化（`slic3r_main`、`slic3r_tbb_*` 等）（**PoC：** `.ips` 已見 `slicer-worker`；須確認全 call site 並進正式包）
-- [ ] 5.3 [REQ-DEID-006] Windows：DLL／shim／export 原子遷移；headless PDB 封存後再排除 consumer PDB
+- [ ] 5.3 [REQ-DEID-006] Windows：DLL／shim／export 原子遷移；headless PDB 封存後再排除 consumer PDB（**PoC：** PDBALTPATH／入口更名已證；**本項核心＝export 收斂為 1**＋正式封存／排除）
 - [ ] 5.4 [REQ-DEID-006] consumer：local＋global 符號掃描通過；無 dSYM／PDB／品牌 debug path
 - [ ] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook
-- [ ] 5.6 [REQ-DEID-009/D7] compile-time QA harness；release-equivalent qa manifest／`qa_delta`；移除 runtime env harness
+- [ ] 5.6 [REQ-DEID-009/D7] compile-time QA harness；release-equivalent qa manifest／`qa_delta`；移除 runtime env harness（**PoC 2.6：** compile-time 已落地；正式 qa_delta／manifest＋確認無 runtime 殘留仍屬本項）
 - [ ] 5.7 [REQ-DEID-009] Consumer binary inspection 無 harness
 - [ ] 5.8 [REQ-DEID-007] （明確不做）C-full／OLLVM＝L3 殘餘風險
 - [ ] 5.9 [REQ-DEID-007] （選配）D packer

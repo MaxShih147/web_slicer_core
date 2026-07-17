@@ -57,7 +57,7 @@
 
 ### 明確非本參考範圍
 
-- Windows／WER  
+- Windows／WER（另見 tasks **2.5**／[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)；本報告僅 macOS）  
 - 已公證／Authenticode 的正式 Bundle 包  
 - `nm` brand 歸零（PoC 殘餘 ≈172 屬 5.1）  
 

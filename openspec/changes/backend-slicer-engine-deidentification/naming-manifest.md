@@ -83,7 +83,7 @@
 | macOS dSYM | 嵌在 binary | 先產 dSYM 封存，再 strip consumer |
 | Windows PDB | GUI=OFF 時 linker `/DEBUG` 不保證；僅 `/XF *.pdb`（baseline 仍洩漏品牌 PDB path） | **已定案（2.3）：** `/Zi`＋`/DEBUG`＋`/PDB:`＋`/PDBALTPATH:` → 封存 → consumer 無 pdb／無品牌 debug path（見 [`windows-policy.md`](./windows-policy.md)） |
 | Thread | `slic3r_main` + `slic3r_tbb_*` | 全部 call site 中性化（`slicer-worker`／`slicer-tbb-N`） |
-| Export | `slic3r_main`＋~470 mangled（baseline） | **唯一** `slicer_run_cli`（`.def` 或等效；見 windows-policy） |
+| Export | `slic3r_main`＋~470 mangled（baseline） | **唯一** `slicer_run_cli`（政策）；**2.5 PoC：** 入口已更名，殘餘 ~470 → **5.3** |
 
 > **本版不做：** 全面 `Slic3r::`→`slice::`、OLLVM。殘餘 `strings` 屬 L3。
 

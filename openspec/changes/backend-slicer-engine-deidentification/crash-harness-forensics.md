@@ -3,19 +3,22 @@
 **版本：** 1.0-draft
 **Status：** 工程修正待辦（對現有 harness 實作的整改）
 **適用 Requirement：** REQ-DEID-006、REQ-DEID-009、REQ-DEID-014；`design.md` D3／D7／D13
-**對應 tasks：** 2.4、2.6、5.6、7.3
+**對應 tasks：** 2.4、2.5、2.6、5.6、7.3
 
-> 本文件針對目前已存在於 working tree 的「Prusa 原生崩潰重現 harness」提出整改。該 harness 可作為取得 **改名前 macOS 基準 `.ips`** 的一次性 spike，但**不得**被當成去識別的正式驗證設計，也**不得**照現況進入 consumer release。
+> **進度（2026-07-17）：** compile-time `BUNDLE_QA_CRASH_HARNESS`＋`bundle_qa_crash_probe` **已落地**（移出 SLAPrint）；macOS／Windows 三種 crash PoC 皆有證據。殘餘：consumer OFF 稽核（5.6／5.7）、正式取證工具參數化、LocalDumps 穩定化。
 
 ---
 
 ## 1. 現況（實作位置）
 
-| Repo | 位置 | 現況 |
+| Repo | 位置 | 現況（2026-07-17） |
 |------|------|------|
-| `prusaslicer_fork` | `src/libslic3r/SLAPrint.cpp`（`SLAPrint::process()` 內 `bundle_force_stack_overflow()`） | **runtime** `std::getenv("BUNDLE_FORCE_PRUSA_STACK_OVERFLOW")` 觸發無限遞迴 stack overflow |
-| `web_slicer_core` | `agent/sla_operations.py` `notify_launcher_if_prusa_crashed()` | 子行程以 signal 結束時寫 sentinel JSON |
-| `Bundle-Launcher` | `main.cjs` `startPrusaCrashHybridWatcher()`／`waitForPrusaIpsReport()` | 偵測 sentinel → 等 `.ips` → `open` → `process.crash()` |
+| `prusaslicer_fork` | `src/bundle_qa_crash_probe.cpp`＋CLI 入口 | **compile-time** `BUNDLE_QA_CRASH_HARNESS`；mode=`BUNDLE_QA_CRASH_MODE`（僅 QA） |
+| `prusaslicer_fork` | ~~`SLAPrint.cpp` runtime getenv~~ | **已移除** |
+| `web_slicer_core` | `agent/sla_operations.py` crash notify | 子行程崩潰語意／取證（正式參數化仍待） |
+| `Bundle-Launcher` | crash watcher／`.ips` 流程 | macOS 取證路徑仍偏舊名；須隨改名參數化 |
+
+> 舊 runtime `BUNDLE_FORCE_PRUSA_STACK_OVERFLOW`／SLAPrint 熱點 **不得**再進任何簽署 release。
 
 ---
 
@@ -77,15 +80,14 @@
 
 ## 4. 完成定義（DoD）
 
-- [ ] harness 僅存在於 compile-time `BUNDLE_QA_CRASH_HARNESS`；consumer binary inspection 零 harness 殘留（5.6／5.7）
-- [ ] 觸發點不在 `SLAPrint.cpp`；fork patch 面記錄於 patch 清單
-- [x] 三類 crash site 皆可觸發並各取得一份基準報告（2.4 PoC：`poc/evidence/m1-close-20260717T032408Z/`；正式驗收仍見 7.3）
-- [ ] compile-time QA harness 與 consumer Release 分離（2.6／5.6）
-- [ ] 參數化／移出 `SLAPrint.cpp` 熱點（5.6）
+- [x] harness 僅以 compile-time `BUNDLE_QA_CRASH_HARNESS` 編入（PoC／2.6）；**consumer binary inspection 零殘留**仍見 5.6／5.7
+- [x] 觸發點不在 `SLAPrint.cpp`（`bundle_qa_crash_probe.cpp`；CLI 入口呼叫）
+- [x] 三類 crash site 皆可觸發並各取得一份基準報告（macOS 2.4：`poc/evidence/m1-close-20260717T032408Z/`；Windows 2.5：`poc/evidence/w25-close-20260717T083241Z/`；正式驗收仍見 7.3）
+- [x] compile-time QA harness 與 consumer Release **分離機制**就緒（2.6 PoC）；consumer OFF 稽核證據仍見 5.6
+- [x] 參數化／移出 `SLAPrint.cpp` 熱點（PoC 完成；正式 5.6 複驗）
 - [ ] 取證工具參數化行程名，改名前後皆可用；以 pid 對應 `.ips`
 - [ ] 取證流程不依賴崩掉 Launcher；乾淨環境執行並記錄環境證據
-- [ ] Windows／WER 對等取證路徑就緒（雙平台對等，`design.md` D5）
-
+- [x] Windows／WER 對等取證路徑就緒（2.5：`cdb` dump＋exit；LocalDumps 穩定化可後續加強）
 ---
 
 ## 5. 與主 tasks 的關係

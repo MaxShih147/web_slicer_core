@@ -120,10 +120,10 @@
 
 ### 已知限制／Follow-up
 
-1. Runtime env harness（`BUNDLE_QA_CRASH_MODE`）僅 PoC；正式須 compile-time QA flavor。  
+1. ~~Runtime env harness~~ → **已改** compile-time `BUNDLE_QA_CRASH_HARNESS`（2.6 PoC；正式 consumer OFF → 5.6／5.7）。  
 2. 正式包不得附 dSYM；驗收環境須無同 UUID 符號污染。  
 3. `nm` 殘餘 ~172 → tasks 2.2 已定案手段，收斂屬 5.1。  
-4. Windows baseline／PoC、Launcher 組包、AGPL 簽核 **不在本 M1 task**；另開 OpenSpec **1.7／2.5**（及對應 Notion Test）。  
+4. ~~Windows baseline／PoC~~ → **已關閉**（1.7／2.3／2.5）；見 `BASELINE.md`／`REPORT-WIN.md`／Notion「Windows 政策定案＋PoC」。Launcher 組包、AGPL 簽核仍另追。  
 5. tasks **2.4b**「已知乾淨參考報告」→ **已批准（2026-07-17，批准人 Vance）**，見 `clean-reference-report.md`。
 
 ### 測試結果追蹤（勾選）
@@ -138,7 +138,7 @@
 - [x] 2.4b 乾淨參考報告正式批准  
 
 > **關閉判定：** 上列本 task 勾選皆完成 → **Done／通過**。  
-> ~~Windows 對等測試~~ **不屬本 task 通過條件**（見「非目的」／「不測」）；請勿以未勾 Windows 阻擋關閉。Windows 追蹤：OpenSpec tasks **1.7**（baseline）→ **2.5**（Win PoC）。
+> ~~Windows 對等測試~~ **不屬本 task 通過條件**（見「非目的」／「不測」）。Windows **後續已完成**：OpenSpec **1.7／2.3／2.5**（見 `NOTION-WIN-POLICY-POC-TASK.md`）。
 
 ---
 

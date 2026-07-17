@@ -4,8 +4,9 @@
 **Change：** `backend-slicer-engine-deidentification`  
 **依據：** [`naming-manifest.md`](./naming-manifest.md)（approved）、[`design.md`](./design.md) D3／D10／D13、[`artifact-manifest.schema.md`](./artifact-manifest.schema.md)、baseline [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)  
 **適用：** REQ-DEID-006／012；解鎖 tasks **2.5**／**5.3**／§3 Windows 實作  
+**PoC：** tasks **2.5 PASS** — [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)／`poc/evidence/w25-close-20260717T083241Z/`
 
-> 本文件為 **政策定案**（對齊 macOS tasks 2.2）。**不**含程式改名實作或 PoC PASS（屬 2.5）。
+> 本文件為 **政策定案**（對齊 macOS tasks 2.2）。程式改名／PoC 證據見 2.5；export 收斂為恰好 1 仍歸 **5.3**。
 
 ---
 
@@ -155,12 +156,12 @@ Launcher **MUST** 驗證 `post_strip_sha256` 與磁碟一致後才 Authenticode�
 
 | 項目 | 2.3（本文件） | 2.5 PoC | §3／§5 產品化 |
 |------|---------------|---------|----------------|
-| ABI／export／PDB／debug 政策文字 | **Done** | 依本政策實作並取證 | 進正式 CMake／組包 |
-| 三種 crash＋WER | — | **必做**（需 compile-time harness） | 進 QA flavor |
+| ABI／export／PDB／debug 政策文字 | **Done** | **Done**（見 REPORT-WIN；export=1 → 5.3） | 進正式 CMake／組包 |
+| 三種 crash＋WER | — | **Done**（compile-time harness；cdb dump） | 進 QA flavor |
 | Authenticode 最終包 | — | 可用未簽 PoC 證明靜態／動態表面 | 正式驗收必須簽署包 |
 | Launcher 改路徑 | — | 可最小改 PoC | 正式 `build-windows-bundle.ps1` |
 
-**2.5 入口條件：** 本政策 `Status=decided`＋1.7 baseline 存在（皆已滿足）＋**compile-time** `BUNDLE_QA_CRASH_HARNESS` 可觸發三種 site（目前 Win 建置無 runtime env harness — 見 1.7 probe）。
+**2.5 狀態（2026-07-17）：** **PASS** — 入口條件已滿足且 PoC 關閉；殘餘 export 收斂與 consumer OFF 稽核見 **5.3／5.6**。
 
 ---
 

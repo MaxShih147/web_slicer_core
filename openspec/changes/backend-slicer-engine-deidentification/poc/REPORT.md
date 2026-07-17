@@ -33,7 +33,7 @@
 | CMake `OUTPUT_NAME=slicer-engine`（Apple） | ✅ |
 | `codesign --identifier slicer-engine` | ✅ |
 | Visibility flags（Apple targets） | ✅ 見 fork `CMakeLists.txt` |
-| Crash harness 三種 mode | ✅ `BUNDLE_QA_CRASH_MODE=overflow\|segfault\|exception`（仍為 **runtime**；正式版須 compile-time） |
+| Crash harness 三種 mode | ✅ `BUNDLE_QA_CRASH_MODE=…`（**已改** compile-time `BUNDLE_QA_CRASH_HARNESS`；見 2.5／2.6／`REPORT-WIN.md`） |
 | Exception → `.ips` | ✅ `noexcept` lambda 強制 terminate／abort（exit 134） |
 | Thread 字串中性化 + 重編 | ✅ |
 | 靜態 `nm` + 動態 `.ips` + scanner | ✅ close run PASS |
@@ -96,10 +96,10 @@ Scanner：`SCAN.json` → **verdict PASS**。
 
 ## 6. Follow-ups（M1 之後，不阻擋 2.4）
 
-1. **2.2 定案：** 殘餘 172 global 的收斂策略；dSYM 封存路徑與 manifest hash 鏈。  
-2. **Harness compile-time 化**（`crash-harness-forensics.md`）；移出 `SLAPrint.cpp`。  
-3. **Windows baseline／PoC**（1.7／2.5）。  
-4. **正式包：** 永不附 dSYM；符號庫 ACL／retention（D12／5.5）。
+1. **2.2 定案：** 殘餘 172 global 的收斂策略；dSYM 封存路徑與 manifest hash 鏈（→ **5.1**）。  
+2. ~~**Harness compile-time 化**~~ **Done（2.6 PoC）** — `BUNDLE_QA_CRASH_HARNESS`／`bundle_qa_crash_probe`；consumer OFF → **5.6**。  
+3. ~~**Windows baseline／PoC**~~ **Done（1.7／2.5）** — 見 `BASELINE.md`／`REPORT-WIN.md`。  
+4. **正式包：** 永不附 dSYM／PDB；符號庫 ACL／retention（D12／5.5）。
 
 ---
 
