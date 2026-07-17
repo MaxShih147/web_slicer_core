@@ -1,0 +1,57 @@
+﻿[
+    {
+        "rel":  "METADATA.json",
+        "sha256":  "33ADDA49CF553229E9D57AE388EF09EC7DE240623E4E0BE0F173BDC036F82502",
+        "bytes":  1972
+    },
+    {
+        "rel":  "static\\VERSIONINFO.txt",
+        "sha256":  "53A9F82A97E5A849DEBFC61145319462C2A2B54A2B9AEDBDD5AA2EB62FE9860D",
+        "bytes":  1724
+    },
+    {
+        "rel":  "static\\EXPORTS_PrusaSlicer.dll.txt",
+        "sha256":  "C9D908FCF6428B3A077F5529B66CD18A6B017A3D5BE59628980C7E281634D1BA",
+        "bytes":  136357
+    },
+    {
+        "rel":  "static\\EXPORT_slic3r_main.txt",
+        "sha256":  "D6C5C99A36C517845D4DC4B9A878E003A453893DD2898CEE74E628DF717FDBBB",
+        "bytes":  86
+    },
+    {
+        "rel":  "static\\PDB_PATH_STRINGS_EXE.txt",
+        "sha256":  "877CE82134FD82DA2E60A3CA3B0D3BEAFDA8439CCEBDC5FB813BB0DF0ECAE892",
+        "bytes":  126
+    },
+    {
+        "rel":  "dynamic\\PROCESS_MODULES_help.txt",
+        "sha256":  "4880AC22A1D48366B807A08E55C34AA071DD0506FBCF091CF82075326B782B42",
+        "bytes":  1174
+    },
+    {
+        "rel":  "dynamic\\SHIM_LOADER_ERROR.txt",
+        "sha256":  "F7A20FE6F983D33FD13FB32EFC74E12651A1FCF997A564F18AE87266C848E661",
+        "bytes":  124
+    },
+    {
+        "rel":  "dynamic\\WER_METADATA_BASELINE.txt",
+        "sha256":  "73BC7DB73F4554FE0F0CE416FD13D76954B86B78A370415353076089E4BA9EF4",
+        "bytes":  1031
+    },
+    {
+        "rel":  "dynamic\\MINIDUMP_STACK_PDBFREE.txt",
+        "sha256":  null,
+        "bytes":  6194
+    },
+    {
+        "rel":  "dumps\\postload-baseline.dmp",
+        "sha256":  "C9C09483683FC9D659AA3600981398E6D55E9D2E6B8DE4FE72499588EDECC78B",
+        "bytes":  29002872
+    },
+    {
+        "rel":  "dumps\\forced-av-baseline.dmp",
+        "sha256":  "4C0ACAB241A3DEECA88B9353F1F0FD49EB273750F2E74E2848FA163358541A93",
+        "bytes":  11702183
+    }
+]

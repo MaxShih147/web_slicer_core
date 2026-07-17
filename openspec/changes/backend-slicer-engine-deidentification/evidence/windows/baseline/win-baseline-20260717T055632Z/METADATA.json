@@ -1,0 +1,31 @@
+﻿{
+    "captured_at_utc":  "2026-07-17T05:56:32.2020087Z",
+    "architecture":  "x64",
+    "change_id":  "backend-slicer-engine-deidentification",
+    "platform":  "Windows",
+    "purpose":  "Windows pre-implementation baseline (acceptance-procedure §5.1)",
+    "files":  [
+                  {
+                      "path":  "C:\\Phrozen3D\\Lechon\\03_Development\\Win\\Bundle-Launcher\\dist\\win-unpacked\\resources\\bundle\\third_party\\prusaslicer_build\\src\\Release\\prusa-slicer-console.exe",
+                      "sha256":  "92F40FD062505FD5494848B0FA22E1484547958076906A5F36DDFA5B89F458DE",
+                      "name":  "prusa-slicer-console.exe",
+                      "bytes":  134144
+                  },
+                  {
+                      "path":  "C:\\Phrozen3D\\Lechon\\03_Development\\Win\\Bundle-Launcher\\dist\\win-unpacked\\resources\\bundle\\third_party\\prusaslicer_build\\src\\Release\\prusa-slicer.exe",
+                      "sha256":  "63B53B12772E5C446622BEB517AB06210337682E697B4A1CC8189B70F9AE407E",
+                      "name":  "prusa-slicer.exe",
+                      "bytes":  134144
+                  },
+                  {
+                      "path":  "C:\\Phrozen3D\\Lechon\\03_Development\\Win\\Bundle-Launcher\\dist\\win-unpacked\\resources\\bundle\\third_party\\prusaslicer_build\\src\\Release\\PrusaSlicer.dll",
+                      "sha256":  "DD998AC8524AB89DC05B1F0DCDB46279BFA5A0B41C80B5CF093AC84ADD55521F",
+                      "name":  "PrusaSlicer.dll",
+                      "bytes":  16932864
+                  }
+              ],
+    "task":  "1.7",
+    "artifact_source":  "C:\\Phrozen3D\\Lechon\\03_Development\\Win\\Bundle-Launcher\\dist\\win-unpacked\\resources\\bundle\\third_party\\prusaslicer_build\\src\\Release",
+    "os_version":  "Microsoft Windows NT 10.0.26200.0",
+    "clean_env_notes":  "_NT_SYMBOL_PATH empty; no private PDB path injected for this capture"
+}

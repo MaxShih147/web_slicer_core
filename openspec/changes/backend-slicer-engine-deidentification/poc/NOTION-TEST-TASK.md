@@ -12,7 +12,7 @@
 
 **標題建議：** M1 macOS PoC：改名＋visibility＋strip；三種 crash 對照 .ips＋scanner 原型
 
-**狀態建議：** 通過／Done  
+**狀態建議：** 通過／Done（本 task 可關閉；Windows 不在本 task 範圍）  
 **測試日期：** 2026-07-17  
 **平台／Arch：** macOS 26.5.1 (25F80)／arm64  
 **執行人：** Backend（PoC）
@@ -123,7 +123,7 @@
 1. Runtime env harness（`BUNDLE_QA_CRASH_MODE`）僅 PoC；正式須 compile-time QA flavor。  
 2. 正式包不得附 dSYM；驗收環境須無同 UUID 符號污染。  
 3. `nm` 殘餘 ~172 → tasks 2.2 已定案手段，收斂屬 5.1。  
-4. Windows baseline／PoC、Launcher 組包、AGPL 簽核尚未測。  
+4. Windows baseline／PoC、Launcher 組包、AGPL 簽核 **不在本 M1 task**；另開 OpenSpec **1.7／2.5**（及對應 Notion Test）。  
 5. tasks **2.4b**「已知乾淨參考報告」→ **已批准（2026-07-17，批准人 Vance）**，見 `clean-reference-report.md`。
 
 ### 測試結果追蹤（勾選）
@@ -136,7 +136,9 @@
 - [x] scanner PASS  
 - [x] 文件回寫（REPORT／tasks 2.4／PROGRESS）  
 - [x] 2.4b 乾淨參考報告正式批准  
-- [ ] Windows 對等測試  
+
+> **關閉判定：** 上列本 task 勾選皆完成 → **Done／通過**。  
+> ~~Windows 對等測試~~ **不屬本 task 通過條件**（見「非目的」／「不測」）；請勿以未勾 Windows 阻擋關閉。Windows 追蹤：OpenSpec tasks **1.7**（baseline）→ **2.5**（Win PoC）。
 
 ---
 

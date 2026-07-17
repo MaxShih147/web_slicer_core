@@ -1,4 +1,4 @@
-> **進度快照（2026-07-17）：** M1／**2.4 PASS**；**2.2／2.4b 已關閉**（乾淨參考報告已批准）。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`clean-reference-report.md`](./clean-reference-report.md)。下一步優先：1.7 Windows baseline → 2.5 Win PoC → §3／§5 產品化。
+> **進度快照（2026-07-17）：** M1／**2.4 PASS**；**1.7 Windows baseline 已關閉**；**2.2／2.4b 已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)。下一步優先：2.3 Win 政策定案 → 2.5 Win PoC → §3／§5 產品化。
 
 ## 1. 治理與必要輸入
 
@@ -9,11 +9,11 @@
 - [x] 1.4 [REQ-DEID-015／LAUNCHER-001] 簽核 [`artifact-manifest.schema.md`](./artifact-manifest.schema.md)（pre／post_strip hash、flavor、files；Status=approved）
 - [ ] 1.5 [REQ-DEID-007] Security／Release 審閱 A+B+C′ 必要、C-full／D／E 僅加成（L3）
 - [ ] 1.6 [REQ-DEID-011] Legal／OSS owner 簽核修改後 fork 的 AGPL release policy
-- [ ] 1.7 [REQ-DEID-003/006] 保存 Windows 現況 baseline（依 `acceptance-procedure.md` §5.1）
+- [x] 1.7 [REQ-DEID-003/006] 保存 Windows 現況 baseline（2026-07-17；依 `acceptance-procedure.md` §5.1）：process／module、VERSIONINFO、`dumpbin /exports`（含 `slic3r_main`）、PDB path、shim loader error、minidump 模組＋PDB-free stack。證據 [`evidence/windows/baseline/win-baseline-20260717T055632Z/`](./evidence/windows/baseline/win-baseline-20260717T055632Z/)、[`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)。
 - [x] 1.8 [REQ-DEID-006] C 策略定案：精簡版 C′；全面 namespace／OLLVM＝L3 不做（2026-07-17）
 - [x] 1.9 [REQ-DEID-006／D13] strip／sign ownership 定案：fork strip＋manifest；Launcher 只驗證＋簽署
 
-**Dependency：** 1.3／1.4 已完成（2026-07-17）；§3／§4／§5 可依簽核名稱開工。1.7 未完成時 Windows L2 實作不得開始。
+**Dependency：** 1.3／1.4／1.7 已完成（2026-07-17）；§3／§4／§5 可依簽核名稱開工。Windows L2 實作仍建議先完成 **2.3** 政策定案再進 **2.5**。
 
 ## 2. 可行性評估與雙平台 PoC
 
@@ -27,7 +27,7 @@
 - [ ] 2.7 [REQ-DEID-014] 定案 golden output tolerance 與 performance budget
 - [ ] 2.8 評估結論經 Backend Security／Release Engineering 審閱並回寫 `design.md`
 
-**Dependency：** §5 macOS 路徑已可依 2.2 開工；§5 Windows 仍 blocked on 2.3／1.7。§7 MUST blocked on 全部 §2。
+**Dependency：** §5 macOS 路徑已可依 2.2 開工；§5 Windows 仍 blocked on **2.3**（1.7 已解除）。§7 MUST blocked on 全部 §2。
 
 ## 3. web_slicer_core／fork：L1 與功能相容
 

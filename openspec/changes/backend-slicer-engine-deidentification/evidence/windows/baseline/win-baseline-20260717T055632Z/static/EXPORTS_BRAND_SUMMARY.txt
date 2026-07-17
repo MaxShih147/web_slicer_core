@@ -1,0 +1,3 @@
+﻿Dump of file C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\PrusaSlicer.dll
+  Section contains the following exports for PrusaSlicer.dll
+        470  1D5 0004C7B0 slic3r_main

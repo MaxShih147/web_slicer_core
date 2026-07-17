@@ -1,0 +1,5 @@
+﻿          D5FB00 [      1C] RVA [size] of Debug Directory
+  Debug Directories
+            45F0 [      54] RVA [size] of Debug Directory
+  Debug Directories
+    6A41BE73 cv            92 00004A28     3428    Format: RSDS, {4BE3C118-F500-463C-B651-859B169D9D50}, 1, C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\prusa-slicer-console.pdb

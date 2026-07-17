@@ -1,0 +1,29 @@
+﻿Microsoft (R) COFF/PE Dumper Version 14.29.30151.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\prusa-slicer-console.exe
+
+File Type: EXECUTABLE IMAGE
+
+  Image has the following dependencies:
+
+    KERNEL32.dll
+    MSVCP140.dll
+    VCRUNTIME140.dll
+    VCRUNTIME140_1.dll
+    api-ms-win-crt-runtime-l1-1-0.dll
+    api-ms-win-crt-stdio-l1-1-0.dll
+    api-ms-win-crt-filesystem-l1-1-0.dll
+    api-ms-win-crt-heap-l1-1-0.dll
+    api-ms-win-crt-math-l1-1-0.dll
+    api-ms-win-crt-locale-l1-1-0.dll
+
+  Summary
+
+        1000 .data
+        1000 .pdata
+        2000 .rdata
+        1000 .reloc
+       1C000 .rsrc
+        3000 .text
