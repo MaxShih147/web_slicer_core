@@ -1,12 +1,13 @@
 # 跨 Repository Implementation Checklist
 
-**進度（2026-07-17）：** Gate 0 部分完成；**macOS M1 PoC（tasks 2.4）PASS**；**Windows baseline（tasks 1.7）已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+**進度（2026-07-17）：** Gate 0 部分完成；**macOS M1 PoC（tasks 2.4）PASS**；**Windows baseline（1.7）＋政策（2.3）已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`windows-policy.md`](./windows-policy.md)。
 
 ## Gate 0 — 規格與治理
 
 - [x] `openspec validate backend-slicer-engine-deidentification --strict` 通過（主 change；2026-07-17）
 - [x] naming-manifest、artifact-manifest.schema 簽核（黑名單 v1.2 沿用；Security 審閱見 1.5）
 - [x] Windows baseline 收集完成（[`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)；2026-07-17）
+- [x] Windows ABI／PDB／export 政策定案（[`windows-policy.md`](./windows-policy.md)；tasks 2.3；2026-07-17）
 - [x] 已知乾淨參考報告批准（[`clean-reference-report.md`](./clean-reference-report.md)；錨點 `m1-close-20260717T032408Z`；2026-07-17）
 - [x] A+B+C′ **macOS** PoC 與 go／no-go 完成（C-full／OLLVM＝L3 不做；D13 ownership 確認）；**Windows PoC 未做**
 - [ ] AGPL／開源法務簽核完成

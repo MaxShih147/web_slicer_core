@@ -16,7 +16,7 @@
 | PDB path in PE | **captured** — console exe debug directory → `...\prusa-slicer-console.pdb` under `prusaslicer_build` |
 | shim loader error | **captured** — `PrusaSlicer.dll was not loaded` |
 
-**Gate：** tasks **1.7 可關閉** → Windows L2 實作（2.3／2.5／§5）不再被「缺 baseline」阻塞。  
+**Gate：** tasks **1.7 已關閉**；後續依 [`windows-policy.md`](../../windows-policy.md)（tasks **2.3 已定案**）實作 **2.5** PoC。  
 **非本 task：** 三種 QA crash site、去識別後 PASS、Authenticode 最終包（屬 2.5／7.x）。
 
 ## 1. Environment
@@ -82,14 +82,15 @@
 
 ## 5. Implications for 2.3／2.5
 
-1. **Rename contract：** `prusa-slicer*.exe` → `slicer-engine.exe`；`PrusaSlicer.dll` → `slicer_core.dll`；export `slic3r_main` → `slicer_run_cli`（atomic with shim／agent）。  
-2. **Export surface is wide open：** 470 exports／大量 `Slic3r` mangled names — C′ must shrink to **single neutral entry**（or equivalent） before L2 PASS.  
-3. **PDB policy：** consumer PE currently embeds brand PDB path；need produce→archive→strip debug directory／exclude `.pdb` from bundle.  
-4. **Crash harness：** Windows build lacks `BUNDLE_QA_CRASH_MODE`；2.5 needs compile-time QA flavor for three crash sites＋WER LocalDumps.  
-5. **Loader string：** shim error hard-codes `PrusaSlicer.dll` — must move with rename.
+> **2.3 已關閉（2026-07-17）：** 下列皆已寫入 [`windows-policy.md`](../../windows-policy.md)。
 
-## 6. Follow-ups（not blocking 1.7）
+1. **Rename contract：** `prusa-slicer*.exe` → `slicer-engine.exe`；`PrusaSlicer.dll` → `slicer_core.dll`；export `slic3r_main` → **唯一** `slicer_run_cli`。  
+2. **Export surface：** 470 → 1（`.def` 或等效）；否決只改名。  
+3. **PDB policy：** `/DEBUG`＋`/PDB:`＋`/PDBALTPATH:` → 封存 → consumer 無 pdb／無品牌 debug path。  
+4. **Crash harness：** 2.5 需 compile-time QA flavor。  
+5. **Loader string：** 隨 rename 改為中性文案。
 
-- Authenticode-signed installer baseline（optional add-on；current evidence is unpack layout used by Launcher dist）.  
-- Notion Test page for Win baseline／PoC（separate from closed M1）.  
-- tasks **2.3** policy write-up using this evidence；then **2.5** PoC.
+## 6. Follow-ups（not blocking 1.7／2.3）
+
+- Authenticode-signed installer baseline（optional）。  
+- tasks **2.5** Windows PoC。

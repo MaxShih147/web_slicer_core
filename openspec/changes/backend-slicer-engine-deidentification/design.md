@@ -83,7 +83,7 @@ flowchart TD
 | **符號可見性控制（優先）＋ strip** | **必須** | **結果導向**：consumer 產物在簽章前完成 strip／符號剝除，使 ReportCrash／WER **不得**將堆疊解析為含黑名單 token 的函式名。**macOS PoC 定案（2026-07-17，tasks 2.4）：** target-scoped `-fvisibility=hidden -fvisibility-inlines-hidden`（`libslic3r`＋CLI）＋ plain `strip`（**否決 `strip -x` 當 L2 充分條件**）＋ `codesign --identifier slicer-engine`；驗收時 consumer 不得附同 UUID dSYM／未 strip 複本（否則 ReportCrash／CoreSymbolication 仍可還原 `Slic3r::`）。殘餘 ~172 global mangled 名移交 2.2／5.1 收斂，不阻擋「堆疊無 `Slic3r::`」PoC。Windows DLL：僅導出單一中性 entry。**`-exported_symbols_list` 僅適用需控 export 的 dylib／DLL，不得誤套在 macOS CLI exe 上當 L2 充分條件。** `-Wl,-dead_strip` 是 dead-code 消除，不是符號隱藏。 |
 | **RTTI／例外型別名稱** | **必須評估並處理** | typeinfo 字串 strip 不清除；未捕捉例外可能洩漏 demangle 型別名。**必須**以拋例外 crash site 實測；必要時 CLI 進入點 top-level catch 轉中性訊息。 |
 | **Thread name 去品牌（全部 call site）** | **必須** | 盤點所有 `set_current_thread_name`／`SetThreadDescription`（含 `slic3r_main` **與** TBB／worker 如 `slic3r_tbb_*`），一律中性命名（≤15 chars）。僅改 main **不足**。 |
-| **Windows 公開 export 去品牌** | **必須** | `PrusaSlicer.dll`／`slic3r_main` → 簽核中性名；shim／CMake／VERSIONINFO／錯誤字串原子遷移。 |
+| **Windows 公開 export 去品牌** | **必須** | `PrusaSlicer.dll`／`slic3r_main` → `slicer_core.dll`／**唯一** `slicer_run_cli`（`.def` 或等效）；shim／CMake／VERSIONINFO／錯誤字串原子遷移。見 [`windows-policy.md`](./windows-policy.md)（tasks **2.3**）。 |
 | 全面 `Slic3r::`→`slice::` | **本版不做** | 屬 L3。 |
 | OLLVM／控制流混淆／packer | **本版不做** | 屬 L3／D。 |
 
@@ -145,7 +145,7 @@ flowchart TD
 
 **決策：** Consumer Release 不含 dSYM／PDB；每個 engine artifact 必須有 neutral build ID 與 UUID／GUID，內部 symbols 儲存於受 ACL 保護之 artifact store，定義 retention、hash、symbolication 與 rollback runbook。
 
-**Windows headless Release PDB policy：** 正式建置（含 `SLIC3R_GUI=OFF`）**MUST** 明確產生可封存之 program PDB（compiler debug info + linker `/DEBUG` 與可控 `/PDB:` 路徑，具體旗標由 PoC 定案）。流程：**先**將匹配 PDB 上傳 symbol store 並寫入 manifest，**再**確保 consumer 包無 `.pdb` 且 PE debug directory **不**洩漏品牌化 PDB path。不得假設「GUI=OFF 時自然有完整 PDB」或「只 `/XF *.pdb` 即滿足 D10」。
+**Windows headless Release PDB policy（tasks 2.3 定案，2026-07-17）：** 正式建置（含 `SLIC3R_GUI=OFF`）**MUST** 顯式：compiler debug info（`/Zi` 或等效）＋ linker `/DEBUG`＋可控 `/PDB:<staging>/<build_id>/slicer-engine.pdb|slicer_core.pdb`＋ **`/PDBALTPATH:slicer-engine.pdb|slicer_core.pdb`**（PE 內僅中性短檔名）。流程：**先**上傳匹配 PDB 至 symbol store 並寫入 manifest（GUID+Age），**再**交付 consumer PE（bundle **無** `.pdb`；debug directory **無**品牌／`prusaslicer_build` 路徑）。**否決**「GUI=OFF 自然有 PDB」與「只 `/XF *.pdb`」。完整 ABI／export／原子遷移見 [`windows-policy.md`](./windows-policy.md)。
 
 **理由：** L2 不得以永久失去事故診斷能力為代價。
 

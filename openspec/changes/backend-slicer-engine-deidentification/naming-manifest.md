@@ -81,9 +81,9 @@
 | macOS strip | 未 strip | fork 於簽章前 strip（D13）；Launcher 只驗證 |
 | 符號掃描 | 僅看 global 會漏 | local（`nm -U`）＋ global／export 分開掃 |
 | macOS dSYM | 嵌在 binary | 先產 dSYM 封存，再 strip consumer |
-| Windows PDB | GUI=OFF 時 linker `/DEBUG` 不保證；僅 `/XF *.pdb` | headless 明確產 PDB→封存→consumer 無 PDB／無品牌 debug path |
+| Windows PDB | GUI=OFF 時 linker `/DEBUG` 不保證；僅 `/XF *.pdb`（baseline 仍洩漏品牌 PDB path） | **已定案（2.3）：** `/Zi`＋`/DEBUG`＋`/PDB:`＋`/PDBALTPATH:` → 封存 → consumer 無 pdb／無品牌 debug path（見 [`windows-policy.md`](./windows-policy.md)） |
 | Thread | `slic3r_main` + `slic3r_tbb_*` | 全部 call site 中性化（`slicer-worker`／`slicer-tbb-N`） |
-| Export | `slic3r_main` | `slicer_run_cli` |
+| Export | `slic3r_main`＋~470 mangled（baseline） | **唯一** `slicer_run_cli`（`.def` 或等效；見 windows-policy） |
 
 > **本版不做：** 全面 `Slic3r::`→`slice::`、OLLVM。殘餘 `strings` 屬 L3。
 

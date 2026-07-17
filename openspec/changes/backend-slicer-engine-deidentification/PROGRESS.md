@@ -5,7 +5,8 @@
 **權威 macOS PoC 證據：** [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)  
 **權威 Windows baseline：** [`evidence/windows/baseline/win-baseline-20260717T055632Z/`](./evidence/windows/baseline/win-baseline-20260717T055632Z/)  
 **PoC 報告：** [`poc/REPORT.md`](./poc/REPORT.md)  
-**Win baseline 報告：** [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)
+**Win baseline 報告：** [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)  
+**Win 政策定案：** [`windows-policy.md`](./windows-policy.md)
 
 ---
 
@@ -18,7 +19,8 @@
 | 乾淨參考報告（tasks **2.4b**） | **已批准** — [`clean-reference-report.md`](./clean-reference-report.md) |
 | macOS flags 定案（tasks **2.2**） | **完成**（PoC 定案；manifest hash 鏈仍歸 5.1） |
 | Windows baseline（tasks **1.7**） | **關閉** — 見 BASELINE.md |
-| Windows PoC／政策（2.3／2.5） | **未開始**（baseline 已解除阻塞） |
+| Windows 政策（tasks **2.3**） | **關閉** — [`windows-policy.md`](./windows-policy.md) |
+| Windows PoC（2.5） | **未開始**（政策已定；需 compile-time harness） |
 | L1 正式改名落地（§3） | **PoC 級已驗證（macOS）**；正式 agent／CMake 雙平台落地未完成 |
 | Launcher 組包（§4） | **未開始** |
 | 正式 C′ 產品化（§5） | **未開始**（macOS PoC 已證明可行性） |
@@ -56,11 +58,25 @@
 
 ---
 
+## 2c. Windows／tasks 2.3 政策定案（摘要）
+
+| 項 | 定案 |
+|----|------|
+| ABI | `slicer-engine.exe` → Load `slicer_core.dll` → `slicer_run_cli` only |
+| Export | consumer **唯一**公開 export；否決只改 `slic3r_main` 留下 ~470 mangled |
+| PDB | `/Zi`＋`/DEBUG`＋`/PDB:`＋**`/PDBALTPATH:`** 短中性名 → 封存 → consumer 無 `.pdb` |
+| Debug directory | 禁止品牌／`prusaslicer_build` 絕對路徑（否決只 XF pdb） |
+| 原子遷移 | shim／DLL／agent／VERSIONINFO（exe+DLL）同變更集 |
+
+詳見 [`windows-policy.md`](./windows-policy.md)。
+
+---
+
 ## 3. 下一步（建議優先序）
 
-1. **2.3** 定案 Windows：DLL＋shim ABI、`/DEBUG`+/PDB: 封存、consumer 排除與 debug directory 政策（依 1.7 證據）  
-2. **2.5** Windows PoC（VERSIONINFO／exports／WER／三種 crash；需 compile-time harness）  
-3. **§3／§5** 正式落地 visibility＋strip＋manifest；harness compile-time 化  
+1. **crash harness compile-time**（`BUNDLE_QA_CRASH_HARNESS`；Win 目前無 runtime mode）  
+2. **2.5** Windows PoC（依 windows-policy 實作＋三種 crash／WER）  
+3. **§3／§5** 正式落地 visibility＋strip／export＋manifest  
 4. **§4** Launcher 驗證＋簽署（不二次 strip）
 
 並行：1.5 Security、1.6 Legal／AGPL。
@@ -77,4 +93,5 @@
 | Notion Win baseline 稿 | [`poc/NOTION-WIN-BASELINE-TASK.md`](./poc/NOTION-WIN-BASELINE-TASK.md) |
 | 乾淨參考報告（已批准） | [`clean-reference-report.md`](./clean-reference-report.md) |
 | Win baseline 報告 | [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md) |
+| Win 政策定案（2.3） | [`windows-policy.md`](./windows-policy.md) |
 | Fork visibility | `prusaslicer_fork/src/libslic3r/CMakeLists.txt`、`…/src/CMakeLists.txt` |

@@ -112,6 +112,8 @@ reviewers:
 
 實作開始前 MUST 先保存目前正式包之 process／module path、VERSIONINFO、`dumpbin /exports`、WER metadata、PDB-free minidump stack、shim loader error 至 `evidence/windows/baseline/`；未取得時 Windows 實作維持 blocked。
 
+**狀態（2026-07-17）：** baseline **已取得** — [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)。Windows ABI／PDB／export **政策已定案** — [`windows-policy.md`](./windows-policy.md)（tasks 2.3）。
+
 ### 5.2 靜態 L1／L2（consumer final）
 
 - path walk；Authenticode verification

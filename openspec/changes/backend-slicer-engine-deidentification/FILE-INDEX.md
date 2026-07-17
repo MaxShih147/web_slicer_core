@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-17）· **M1／2.4 PASS** · **1.7 Win baseline 已關閉** · 進度總表 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-17）· **M1／2.4 PASS** · **1.7／2.3 Win baseline＋政策已關閉** · 進度總表 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -29,6 +29,7 @@
 | [`poc/REPORT.md`](./poc/REPORT.md) | macOS PoC **關閉**（2026-07-17）：L1+L2+三 crash+scanner PASS；權威證據 `poc/evidence/m1-close-20260717T032408Z/` |
 | [`poc/NOTION-TEST-TASK.md`](./poc/NOTION-TEST-TASK.md) | Notion「Test 測試」可貼上全文（依 M1 結果） |
 | [`poc/NOTION-WIN-BASELINE-TASK.md`](./poc/NOTION-WIN-BASELINE-TASK.md) | Notion Win baseline（tasks 1.7）可貼上全文 |
+| [`windows-policy.md`](./windows-policy.md) | Windows ABI／export／PDB／debug directory **政策定案**（tasks 2.3；2026-07-17） |
 | [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md) | Windows 現況 baseline 報告（1.7 關閉） |
 | [`poc/run_m1_close.sh`](./poc/run_m1_close.sh)／[`poc/scan_macos_artifact.sh`](./poc/scan_macos_artifact.sh) | M1 close 腳本＋scanner 原型 |
 

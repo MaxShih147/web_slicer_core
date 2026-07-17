@@ -1,4 +1,4 @@
-> **進度快照（2026-07-17）：** M1／**2.4 PASS**；**1.7 Windows baseline 已關閉**；**2.2／2.4b 已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md)。下一步優先：2.3 Win 政策定案 → 2.5 Win PoC → §3／§5 產品化。
+> **進度快照（2026-07-17）：** M1／**2.4 PASS**；**1.7／2.3 Windows baseline＋政策已關閉**；**2.2／2.4b 已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`windows-policy.md`](./windows-policy.md)。下一步優先：compile-time harness → **2.5** Win PoC → §3／§5 產品化。
 
 ## 1. 治理與必要輸入
 
@@ -13,13 +13,13 @@
 - [x] 1.8 [REQ-DEID-006] C 策略定案：精簡版 C′；全面 namespace／OLLVM＝L3 不做（2026-07-17）
 - [x] 1.9 [REQ-DEID-006／D13] strip／sign ownership 定案：fork strip＋manifest；Launcher 只驗證＋簽署
 
-**Dependency：** 1.3／1.4／1.7 已完成（2026-07-17）；§3／§4／§5 可依簽核名稱開工。Windows L2 實作仍建議先完成 **2.3** 政策定案再進 **2.5**。
+**Dependency：** 1.3／1.4／1.7／**2.3** 已完成（2026-07-17）；§3／§4／§5 可依簽核名稱與 Win 政策開工。下一步實作入口：**2.5**（需 compile-time harness）。
 
 ## 2. 可行性評估與雙平台 PoC
 
 - [ ] 2.1 [REQ-DEID-006/007] 產出 A–E 可行性報告；**C′ 必須可達雙平台 L2**；明確記錄 C-full／OLLVM 為 L3 不做。（**進度：** macOS 側 C′ 已由 2.4 PoC 證明可達 L2；Win 與書面 A–E 報告仍缺）
 - [x] 2.2 [REQ-DEID-006/012/D13] 定案 macOS（2026-07-17 PoC）：`-fvisibility=hidden -fvisibility-inlines-hidden`（libslic3r＋CLI）；**否決 `strip -x`**；採 plain `strip`；dSYM 先封存再 strip；驗收禁止同 UUID dSYM／未 strip 污染。見 [`poc/REPORT.md`](./poc/REPORT.md)。**pre／post_strip manifest hash 鏈**仍由 5.1 產品化落地。
-- [ ] 2.3 [REQ-DEID-006/012] 定案 Windows：DLL＋shim ABI、headless `/DEBUG`+/PDB: 封存、consumer 排除與 debug directory 政策
+- [x] 2.3 [REQ-DEID-006/012] 定案 Windows（2026-07-17）：DLL＋shim ABI（`slicer-engine.exe`→`slicer_core.dll`→唯一 `slicer_run_cli`）；export 收斂為 1（否決只改名留下 470 mangled）；headless `/Zi`＋`/DEBUG`＋`/PDB:`＋**`/PDBALTPATH:`**；產→封存→consumer 無 pdb／無品牌 debug path；VERSIONINFO exe+DLL；原子遷移順序。見 [`windows-policy.md`](./windows-policy.md)。
 - [x] 2.4 [REQ-DEID-006] macOS PoC **關閉**（2026-07-17）：改名＋`codeSigningID`＝L1 OK；visibility＋plain `strip`；thread→`slicer-worker`；三種 crash（含 exception／abort）皆有 `.ips`；乾淨符號環境下 `Slic3r::`=0；scanner PASS。證據 [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)、[`poc/REPORT.md`](./poc/REPORT.md)。殘餘 nm≈172 移交 5.1。
 - [x] 2.4b [REQ-DEID-006] 「已知乾淨參考報告」**已批准**（2026-07-17）：[`clean-reference-report.md`](./clean-reference-report.md)；錨點 `poc/evidence/m1-close-20260717T032408Z/`
 - [ ] 2.5 [REQ-DEID-006] Windows PoC：VERSIONINFO、exports、WER、PDB-free dump、例外型別名、三種 crash site
@@ -27,7 +27,7 @@
 - [ ] 2.7 [REQ-DEID-014] 定案 golden output tolerance 與 performance budget
 - [ ] 2.8 評估結論經 Backend Security／Release Engineering 審閱並回寫 `design.md`
 
-**Dependency：** §5 macOS 路徑已可依 2.2 開工；§5 Windows 仍 blocked on **2.3**（1.7 已解除）。§7 MUST blocked on 全部 §2。
+**Dependency：** §5 macOS 路徑已可依 2.2 開工；§5 Windows 已可依 **2.3** 開工（仍建議先 2.5 PoC）。§7 MUST blocked on 全部 §2。
 
 ## 3. web_slicer_core／fork：L1 與功能相容
 
