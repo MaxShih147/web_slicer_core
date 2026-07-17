@@ -1,0 +1,84 @@
+{
+  "binary": "/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/poc/evidence/m1-close-20260717T031801Z/work/slicer-engine",
+  "sha256": "f5436b54ca21e97e211311725794d447a6f668cb8d34bd0450d01a43243c7f45",
+  "nm_global_brand": 172,
+  "nm_local_brand": 172,
+  "ips": [
+    {
+      "file": "/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/poc/evidence/m1-close-20260717T031801Z/ips/overflow.ips",
+      "tokens": {
+        "prusaslicer": 0,
+        "prusa-slicer": 0,
+        "prusa3d": 0,
+        "slic3r": 16,
+        "libslic3r": 0,
+        "com.prusa3d.slic3r": 0,
+        "slic3r_main": 0,
+        "slic3r_tbb": 0,
+        "prusaslicer_build": 0
+      },
+      "procName": "slicer-engine",
+      "codeSigningID": "slicer-engine",
+      "threads": [
+        "slicer-engine",
+        "slicer-worker",
+        "slicer-engine",
+        "slicer-worker"
+      ],
+      "Slic3r_namespace": 16
+    },
+    {
+      "file": "/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/poc/evidence/m1-close-20260717T031801Z/ips/segfault.ips",
+      "tokens": {
+        "prusaslicer": 0,
+        "prusa-slicer": 0,
+        "prusa3d": 0,
+        "slic3r": 9,
+        "libslic3r": 0,
+        "com.prusa3d.slic3r": 0,
+        "slic3r_main": 0,
+        "slic3r_tbb": 0,
+        "prusaslicer_build": 0
+      },
+      "procName": "slicer-engine",
+      "codeSigningID": "slicer-engine",
+      "threads": [
+        "slicer-engine",
+        "slicer-worker",
+        "slicer-engine",
+        "slicer-worker"
+      ],
+      "Slic3r_namespace": 9
+    },
+    {
+      "file": "/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/poc/evidence/m1-close-20260717T031801Z/ips/exception.ips",
+      "tokens": {
+        "prusaslicer": 0,
+        "prusa-slicer": 0,
+        "prusa3d": 0,
+        "slic3r": 8,
+        "libslic3r": 0,
+        "com.prusa3d.slic3r": 0,
+        "slic3r_main": 0,
+        "slic3r_tbb": 0,
+        "prusaslicer_build": 0
+      },
+      "procName": "slicer-engine",
+      "codeSigningID": "slicer-engine",
+      "threads": [
+        "slicer-engine",
+        "slicer-worker",
+        "slicer-engine",
+        "slicer-worker"
+      ],
+      "Slic3r_namespace": 8
+    }
+  ],
+  "verdict": "FAIL",
+  "notes": [
+    "overflow.ips: readable Slic3r:: stack symbols remain (16)",
+    "segfault.ips: readable Slic3r:: stack symbols remain (9)",
+    "exception.ips: readable Slic3r:: stack symbols remain (8)"
+  ],
+  "codesign_identifier": "slicer-engine"
+}

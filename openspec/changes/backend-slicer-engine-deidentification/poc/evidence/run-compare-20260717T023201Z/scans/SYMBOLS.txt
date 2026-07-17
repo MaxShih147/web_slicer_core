@@ -1,0 +1,3 @@
+unstripped_global=4959
+stripped_global=631
+stripped_local=631

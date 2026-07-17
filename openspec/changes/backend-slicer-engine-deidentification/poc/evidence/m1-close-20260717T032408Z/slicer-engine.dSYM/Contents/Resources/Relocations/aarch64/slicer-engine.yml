@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/poc/evidence/m1-close-20260717T032408Z/work/slicer-engine'
+relocations:     []
+...
