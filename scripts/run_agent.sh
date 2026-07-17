@@ -21,17 +21,24 @@ source .venv/bin/activate
 echo "Installing dependencies..."
 pip install -q -r requirements.txt
 
-# Check if PrusaSlicer CLI exists
-# Use PRUSA_SLICER_BIN env var if set, otherwise use default path
-# Default path matches build script output: third_party/prusaslicer_build/src/prusa-slicer
-CLI_PATH="${PRUSA_SLICER_BIN:-$REPO_ROOT/third_party/prusaslicer_build/src/prusa-slicer}"
+# Check if slicer-engine CLI exists
+# Prefer SLICER_ENGINE_BIN (canonical); accept legacy PRUSA_SLICER_BIN for local transition
+if [ -n "${SLICER_ENGINE_BIN:-}" ]; then
+  CLI_PATH="$SLICER_ENGINE_BIN"
+elif [ -n "${PRUSA_SLICER_BIN:-}" ]; then
+  CLI_PATH="$PRUSA_SLICER_BIN"
+elif [ -f "$REPO_ROOT/slicer-engine/bin/slicer-engine" ]; then
+  CLI_PATH="$REPO_ROOT/slicer-engine/bin/slicer-engine"
+else
+  CLI_PATH="$REPO_ROOT/third_party/prusaslicer_build/src/slicer-engine"
+fi
 if [ ! -f "$CLI_PATH" ]; then
-    echo "ERROR: PrusaSlicer CLI not found at $CLI_PATH"
-    echo "Please build PrusaSlicer first by running: ./scripts/build_prusaslicer_fork_macos.sh"
-    echo "Or set PRUSA_SLICER_BIN environment variable to the correct path."
+    echo "ERROR: Slicer engine CLI not found at $CLI_PATH"
+    echo "Please build first: ./scripts/build_prusaslicer_fork_macos.sh"
+    echo "Or set SLICER_ENGINE_BIN to the correct path."
     exit 1
 fi
-export PRUSA_SLICER_BIN="$CLI_PATH"
+export SLICER_ENGINE_BIN="$CLI_PATH"
 
 # TLS resolution order matches agent/config.py: env, then agent/tls/, then Bundle-Launcher (mac, win).
 if [ -n "${AGENT_TLS_CERTFILE:-}" ]; then

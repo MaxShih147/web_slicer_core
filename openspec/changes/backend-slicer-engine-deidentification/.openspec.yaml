@@ -33,9 +33,10 @@ progress:
   windows_poc: closed-pass
   windows_poc_evidence: poc/evidence/w25-close-20260717T083241Z/
   next:
-    - productize-c-prime-section-5  # includes 5.3 win export=1
-    - consumer-harness-off-audit-5.6
-    - launcher-packaging-section-4
+    - verify-windows-export-1-rebuild  # DONE 2026-07-17: dumpbin=1 slicer_run_cli
+    - macos-package-strip-manifest-run  # script ready; needs mac rebuild
+    - agpl-section-6
+    - dual-platform-acceptance-section-7
 lifecycle:
   states: [proposed, in_progress, completed, archived]
   completion_requires:

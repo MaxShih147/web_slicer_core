@@ -61,21 +61,25 @@ if !errorlevel! neq 0 (
     exit /b 1
 )
 
-:: Check if PrusaSlicer CLI exists
-:: Use PRUSA_SLICER_BIN env var if set, otherwise use default path
-if defined PRUSA_SLICER_BIN (
+:: Check if slicer-engine CLI exists
+:: Prefer SLICER_ENGINE_BIN (canonical); accept legacy PRUSA_SLICER_BIN for local transition
+if defined SLICER_ENGINE_BIN (
+    set CLI_PATH=%SLICER_ENGINE_BIN%
+) else if defined PRUSA_SLICER_BIN (
     set CLI_PATH=%PRUSA_SLICER_BIN%
+) else if exist "%REPO_ROOT%\slicer-engine\bin\slicer-engine.exe" (
+    set CLI_PATH=%REPO_ROOT%\slicer-engine\bin\slicer-engine.exe
 ) else (
-    set CLI_PATH=%REPO_ROOT%\third_party\prusaslicer_build\src\Release\prusa-slicer.exe
+    set CLI_PATH=%REPO_ROOT%\third_party\prusaslicer_build\src\Release\slicer-engine.exe
 )
 echo %CLI_PATH%
 
 if not exist "%CLI_PATH%" (
-    echo [ERROR] PrusaSlicer CLI not found at %CLI_PATH%
-    echo Please build PrusaSlicer first or set PRUSA_SLICER_BIN environment variable.
+    echo [ERROR] Slicer engine CLI not found at %CLI_PATH%
+    echo Please build first ^(scripts\build_prusaslicer_fork_windows.bat^) or set SLICER_ENGINE_BIN.
     exit /b 1
 )
-set PRUSA_SLICER_BIN=%CLI_PATH%
+set SLICER_ENGINE_BIN=%CLI_PATH%
 
 :: TLS resolution order matches agent\config.py: env, then agent\tls\, then Bundle-Launcher (mac, win).
 if defined AGENT_TLS_CERTFILE (
@@ -83,7 +87,7 @@ if defined AGENT_TLS_CERTFILE (
 ) else (
     set CERT_PATH=%REPO_ROOT%\agent\tls\localhost.crt
     if not exist "!CERT_PATH!" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.crt
-    if not exist "!CERT_PATH!" set CERT_PATH=%tlsREPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.crt
+    if not exist "!CERT_PATH!" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.crt
 )
 if defined AGENT_TLS_KEYFILE (
     set KEY_PATH=%AGENT_TLS_KEYFILE%
@@ -112,6 +116,6 @@ echo.
 :: Run the agent
 ::python -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --reload
 :: Run uvicorn directly with .venv python
-"%REPO_ROOT%\.venv\Scripts\python.exe" -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --app-dir "%REPO_ROOT%" --ssl-certfile "%AGENT_TLS_CERTFILE%" --ssl-keyfile "%AGENT_TLS_KEYFILE%"
+"%REPO_ROOT%\%VENV_DIR%\Scripts\python.exe" -m uvicorn agent.main:app --host 127.0.0.1 --port 5179 --app-dir "%REPO_ROOT%" --ssl-certfile "%AGENT_TLS_CERTFILE%" --ssl-keyfile "%AGENT_TLS_KEYFILE%"
 
 endlocal

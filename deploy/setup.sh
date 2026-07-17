@@ -30,7 +30,7 @@ set +a
 # ---------------------------------------------------------------------------
 # Validate required variables
 # ---------------------------------------------------------------------------
-for var in FRONTEND_DIST BACKEND_DIR PRUSA_SLICER_BIN \
+for var in FRONTEND_DIST BACKEND_DIR SLICER_ENGINE_BIN \
            PYTHON_BIN NGINX_BIN NGINX_PORT BACKEND_PORT LOG_DIR; do
     if [ -z "${!var:-}" ]; then
         echo "ERROR: Required variable $var is not set in .env"
@@ -39,7 +39,7 @@ for var in FRONTEND_DIST BACKEND_DIR PRUSA_SLICER_BIN \
 done
 
 # Validate paths exist
-for path_var in FRONTEND_DIST BACKEND_DIR PRUSA_SLICER_BIN PYTHON_BIN NGINX_BIN; do
+for path_var in FRONTEND_DIST BACKEND_DIR SLICER_ENGINE_BIN PYTHON_BIN NGINX_BIN; do
     if [ ! -e "${!path_var}" ]; then
         echo "WARNING: ${path_var}=${!path_var} does not exist"
     fi
@@ -55,7 +55,7 @@ mkdir -p "/opt/homebrew/etc/nginx/servers"
 # ---------------------------------------------------------------------------
 # envsubst variable list — only substitute our variables, not nginx $vars
 # ---------------------------------------------------------------------------
-ENVSUBST_VARS='${BACKEND_PORT} ${NGINX_PORT} ${FRONTEND_DIST} ${LOG_DIR} ${PYTHON_BIN} ${BACKEND_DIR} ${PRUSA_SLICER_BIN} ${NGINX_BIN} ${HOME}'
+ENVSUBST_VARS='${BACKEND_PORT} ${NGINX_PORT} ${FRONTEND_DIST} ${LOG_DIR} ${PYTHON_BIN} ${BACKEND_DIR} ${SLICER_ENGINE_BIN} ${NGINX_BIN} ${HOME}'
 
 # ---------------------------------------------------------------------------
 # Generate configs

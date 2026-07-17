@@ -1,6 +1,6 @@
 # Progress Snapshot — backend-slicer-engine-deidentification
 
-**更新日期：** 2026-07-17  
+**更新日期：** 2026-07-17（修正：macOS 項不得因 Win 工作誤勾）  
 **Change status：** `in_progress`（見 `.openspec.yaml`）  
 **權威 macOS PoC 證據：** [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)  
 **權威 Windows baseline：** [`evidence/windows/baseline/win-baseline-20260717T055632Z/`](./evidence/windows/baseline/win-baseline-20260717T055632Z/)  
@@ -16,104 +16,42 @@
 | 區塊 | 狀態 |
 |------|------|
 | 治理／命名／schema（§1 大部） | **完成**（缺 1.5 Security、1.6 Legal） |
-| M1 macOS PoC（tasks **2.4**） | **關閉／PASS** |
-| 乾淨參考報告（tasks **2.4b**） | **已批准** — [`clean-reference-report.md`](./clean-reference-report.md) |
-| macOS flags 定案（tasks **2.2**） | **完成**（PoC 定案；manifest hash 鏈仍歸 5.1） |
-| Windows baseline（tasks **1.7**） | **關閉** — 見 BASELINE.md |
-| Windows 政策（tasks **2.3**） | **關閉** — [`windows-policy.md`](./windows-policy.md) |
-| Compile-time harness（**2.6** 部分） | **關閉／PoC** — `BUNDLE_QA_CRASH_HARNESS`；consumer OFF 稽核仍歸 **5.6／5.7** |
-| Windows PoC（**2.5**） | **關閉／PASS** — [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)（export 收斂為 1 → **5.3**） |
-| L1 正式改名落地（§3） | **PoC 級已驗證（雙平台）**；正式 agent／CMake／Launcher 路徑未完成 |
-| Launcher 組包（§4） | **未開始**（仍缺正式 post-strip manifest） |
-| 正式 C′ 產品化（§5） | **未開始**（雙平台 PoC 已證明可行性） |
-| AGPL／驗收自動化（§6–7） | **未開始** |
+| M1 macOS PoC（tasks **2.4**） | **關閉／PASS**（先前 Mac；非本輪） |
+| Windows baseline／政策／PoC（**1.7／2.3／2.5**） | **關閉／PASS** |
+| **本輪 Windows 產品化** | **5.3 PASS**（export=1＋package＋`--help`）；3.3／3.4 部分 |
+| **macOS 產品化（§3／4／5）** | **未驗證** — 僅有腳本／原始碼草稿，**tasks 已改回未勾** |
+| Launcher 完整組包／簽章 | **未跑** |
+| AGPL／§7 驗收 | **未開始** |
 
 ---
 
-## 2. M1／tasks 2.4 測試結論（摘要）
+## 2. 本輪實際驗證範圍（Windows only）
 
-| 項 | 結果 |
+| 項 | 狀態 |
 |----|------|
-| L1 `procName`／`codeSigningID` | `slicer-engine` |
-| Thread | `slicer-worker`（`slic3r_main`=0） |
-| 三種 crash → `.ips` | overflow／segfault／exception 皆有 |
-| L2 可讀 `Slic3r::` | **0**（乾淨符號環境） |
-| Scanner 原型 | **PASS**（exit 0） |
-| 定案手段 | `-fvisibility=hidden` + plain `strip`（**否決 `strip -x`**） |
-| 殘餘 | `nm` brand ≈172 global（移交 5.1） |
+| **5.3** export=1 | **PASS**（`dumpbin` 僅 `slicer_run_cli`） |
+| Win package／harness 靜態稽核 | **PASS**（`package_slicer_engine_windows.ps1`） |
+| Win smoke `--help` | **PASS**（含 GMP／MPFR 同目錄） |
+| macOS 5.1／3.2／4.1 | **腳本已寫，未執行** → tasks **未勾** |
 
-**環境硬條件：** 無同 UUID dSYM／未 strip 複本；否則 ReportCrash／CoreSymbolication 可能還原舊符號。
+**驗證指令（Windows）：**
 
----
+```bat
+scripts\build_prusaslicer_fork_windows.bat low clean
+powershell -File scripts\package_slicer_engine_windows.ps1
+```
 
-## 2b. Windows／tasks 1.7 baseline（摘要）
+**macOS（待 Mac 機）：**
 
-| 項 | 結果 |
-|----|------|
-| Process／modules | `prusa-slicer-console`＋`PrusaSlicer.dll` |
-| VERSIONINFO（exe） | `PrusaSlicer`／`Prusa Research`／`PrusaSlicer-2.9.4+UNKNOWN` |
-| Exports | 470 named；`slic3r_main`；大量 `Slic3r` mangled |
-| Loader error | `PrusaSlicer.dll was not loaded` |
-| PDB path（exe） | `...\prusaslicer_build\...\prusa-slicer-console.pdb` |
-| Minidump | modules／stack 見品牌模組名（`postload-baseline.dmp`） |
-| QA crash harness | 本 Windows 建置**無** runtime `BUNDLE_QA_CRASH_MODE` |
+```bash
+./scripts/build_prusaslicer_fork_macos.sh consumer
+./scripts/package_slicer_engine_macos.sh
+```
 
 ---
 
-## 2c. Windows／tasks 2.3 政策定案（摘要）
+## 3. 下一步
 
-| 項 | 定案 |
-|----|------|
-| ABI | `slicer-engine.exe` → Load `slicer_core.dll` → `slicer_run_cli` only |
-| Export | consumer **唯一**公開 export；否決只改 `slic3r_main` 留下 ~470 mangled |
-| PDB | `/Zi`＋`/DEBUG`＋`/PDB:`＋**`/PDBALTPATH:`** 短中性名 → 封存 → consumer 無 `.pdb` |
-| Debug directory | 禁止品牌／`prusaslicer_build` 絕對路徑（否決只 XF pdb） |
-| 原子遷移 | shim／DLL／agent／VERSIONINFO（exe+DLL）同變更集 |
-
-詳見 [`windows-policy.md`](./windows-policy.md)。
-
----
-
-## 2d. Windows／tasks 2.5 PoC（摘要）
-
-| 項 | 結果 |
-|----|------|
-| Harness | compile-time `BUNDLE_QA_CRASH_HARNESS`；入口 `bundle_qa_crash_probe`（非 SLAPrint） |
-| Rename／ABI | `slicer-engine.exe`／`slicer_core.dll`／`slicer_run_cli` |
-| VERSIONINFO | Company=`Phrozen Technology`；Product=`Slicer Engine` |
-| PDBALTPATH | RSDS=`slicer-engine.pdb`／`slicer_core.pdb`（無建置樹路徑） |
-| 三種 crash | overflow `0xC00000FD`／segfault `0xC0000005`／exception `0xC0000409`＋dump |
-| Minidump | modules `slicer_engine`＋`slicer_core`；frames `slicer_run_cli+…` |
-| Export | `slic3r_main` 已消失；named ≈470 cereal residual → **5.3** |
-| Dump 取得 | LocalDumps 未穩定；本 PoC 以 `cdb` 取 dump（exit 已證三種失敗） |
-
-詳見 [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。
-
----
-
-## 3. 下一步（建議優先序）
-
-1. **§3／§5** 正式落地（含 **5.3** Win export 收斂為 1；macOS visibility＋strip／manifest）  
-2. **5.6／5.7** consumer `BUNDLE_QA_CRASH_HARNESS=OFF` 靜態稽核零 harness  
-3. **§4** Launcher 驗證＋簽署（不二次 strip）  
-
-並行：1.5 Security、1.6 Legal／AGPL；2.1 書面 A–E 報告收斂。
-
----
-
-## 4. 相關產物路徑
-
-| 產物 | 路徑 |
-|------|------|
-| Close 腳本（macOS） | `poc/run_m1_close.sh` |
-| Close 腳本（Windows） | `poc/run_w25_close.ps1` |
-| Scanner 原型（macOS） | `poc/scan_macos_artifact.sh` |
-| Notion M1 測試稿 | [`poc/NOTION-TEST-TASK.md`](./poc/NOTION-TEST-TASK.md) |
-| Notion Win baseline 稿 | [`poc/NOTION-WIN-BASELINE-TASK.md`](./poc/NOTION-WIN-BASELINE-TASK.md) |
-| Notion Win PoC 稿 | [`poc/NOTION-WIN-POC-TASK.md`](./poc/NOTION-WIN-POC-TASK.md) |
-| Notion Win 政策＋PoC 合併稿 | [`poc/NOTION-WIN-POLICY-POC-TASK.md`](./poc/NOTION-WIN-POLICY-POC-TASK.md) |
-| 乾淨參考報告（已批准） | [`clean-reference-report.md`](./clean-reference-report.md) |
-| Win baseline 報告 | [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md) |
-| Win 政策定案（2.3） | [`windows-policy.md`](./windows-policy.md) |
-| Win PoC 報告（2.5） | [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md) |
-| Fork visibility／Win rename | `prusaslicer_fork/src/…`（`bundle_qa_crash_probe`、CMake OUTPUT_NAME） |
+1. 在 **Mac** 跑 5.1／3.1–3.2／4.1 並留 evidence 後再勾 tasks  
+2. Win 完整 Launcher installer（4.2／4.5）  
+3. §6 AGPL／§7 雙平台正式驗收  

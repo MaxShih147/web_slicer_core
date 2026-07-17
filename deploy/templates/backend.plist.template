@@ -24,8 +24,8 @@
 
     <key>EnvironmentVariables</key>
     <dict>
-        <key>PRUSA_SLICER_BIN</key>
-        <string>${PRUSA_SLICER_BIN}</string>
+        <key>SLICER_ENGINE_BIN</key>
+        <string>${SLICER_ENGINE_BIN}</string>
         <key>ENABLE_CORS</key>
         <string>false</string>
         <key>PATH</key>

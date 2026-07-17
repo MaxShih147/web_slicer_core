@@ -194,7 +194,7 @@ async def generate_supports(
             success=False,
             operation=OperationType.GENERATE_SUPPORTS,
             job_id=job_id,
-            error=f"PrusaSlicer failed (exit {returncode}): {error_msg}",
+            error=f"Slicing engine failed (exit {returncode}): {error_msg}",
         )
 
     if not support_stl.exists():
@@ -350,7 +350,7 @@ async def generate_hollow(
             success=False,
             operation=OperationType.GENERATE_HOLLOW,
             job_id=job_id,
-            error=f"PrusaSlicer failed (exit {returncode}): {error_msg}",
+            error=f"Slicing engine failed (exit {returncode}): {error_msg}",
         )
 
     if not hollow_stl.exists():
@@ -582,7 +582,7 @@ async def cut_with_plane(
             success=False,
             operation=OperationType.CUT,
             job_id=job_id,
-            error=f"PrusaSlicer cut failed (exit {returncode}): {error_msg}",
+            error=f"Slicing engine cut failed (exit {returncode}): {error_msg}",
         )
 
     if not combined_stl.exists():
