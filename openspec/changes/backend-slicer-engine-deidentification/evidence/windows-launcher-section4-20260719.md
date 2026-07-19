@@ -18,3 +18,7 @@
 
 - `bin/resources/**` still contains ~148 upstream brand-named profile/icon paths (noted by scanner; not fail-closed for PE/layout gate).
 - Install/upgrade/rollback and post-Authenticode §7 remain open.
+
+### Sync note（2026-07-20）
+
+本檔為 **unsigned §4 捕捉快照**。現行（[`PROGRESS.md`](../PROGRESS.md)）：resources brand=**0**；Setup lifecycle／reinject **EV Valid**＋7.5 PASS；QA 4.2 Win PASS；§7 雙平台已關。

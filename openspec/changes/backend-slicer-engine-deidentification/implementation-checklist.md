@@ -1,6 +1,6 @@
 # 跨 Repository Implementation Checklist
 
-**進度（2026-07-19 夜）：** 雙平台 §7＋Gate 5＋**8.5 promote**；未做 8.6。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+**進度（2026-07-20）：** 雙平台 §7＋Gate 5＋**8.5 promote**；Win＋**mac** 回灌／QA 4.2／4.6／5.11／6.4–6.7；未做 8.6。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 
 ## Gate 0 — 規格與治理
 
@@ -21,7 +21,7 @@
 - [x] Windows headless PDB policy 落地（產→封存→consumer 排除；`package_slicer_engine_windows.ps1`；**5.3／5.4**）
 - [x] release-equivalent QA flavor（compile-time harness）；移除 runtime env harness（**macOS 5.6／5.7**；**Win consumer OFF package 閘門 PASS**）
 - [x] consumer Release 不含 harness（**macOS 5.7**；**Win scan／package PASS 2026-07-19**）
-- [ ] SBOM／exact source commit 產生（6.4）
+- [x] SBOM／exact source commit 產生（**Win＋mac 6.4／6.5 PASS 2026-07-20** — Win [`source-chain-6.4-6.5-20260720/`](./evidence/windows/source-chain-6.4-6.5-20260720/)；mac [`source-chain-6.4-6.5-20260719T191352Z/`](./evidence/macos/source-chain-6.4-6.5-20260719T191352Z/)）
 - [x] 全 CLI operation regression 通過（**macOS 抽樣 2026-07-17**；**雙平台 7.6 最小矩陣 PASS 2026-07-19**；§6 延伸 SHOULD）
 
 ## Gate 2 — Bundle-Launcher
@@ -30,17 +30,18 @@
 - [x] 雙平台 layout 去品牌；agent 中立 env／路徑
 - [x] **驗證** strip／hash 後才允許簽署（不二次 strip／rename；**Win：** Authenticode **手動**；**macOS：** Developer ID）
 - [x] macOS codesign（`--identifier slicer-engine`）→ notarize → staple → Gatekeeper（**arm64 PASS**；**7.4 CI** `ci_gate_macos_deid_7.4.sh` **2026-07-19**）
-- [x] Windows Authenticode → install/uninstall（**2026-07-19 手動 Setup Valid＋lifecycle smoke**；內嵌 app exe 未簽）
+- [x] Windows Authenticode → install/uninstall（**2026-07-19** Setup Valid＋lifecycle；**2026-07-20** reinject Setup **EV Valid**＋7.5 `-SetupExe` PASS — SHA256 `15C3E441…`；內嵌 app exe 未簽）
 - [x] AGPL license／NOTICE／source offer 隨正式包可取得（**Win＋mac 簽過包 PASS**；mac＝`…2111`；1.6 approved）
+- [x] Win QA flavor isolation（Launcher **4.2 PASS 2026-07-20**）；**mac QA 4.2 PASS 2026-07-20** — Launcher `verify_qa_flavor_isolation_macos.sh`
 
 ## Gate 3 — 自動掃描
 
 - [x] macOS：**PoC scanner 原型**對 path／identity／`.ips` 符號可讀性通過（`poc/scan_macos_artifact.sh`；非正式 CI gate）
 - [x] macOS：正式 path、identity、**local＋global** 符號掃描通過（`scan_slicer_engine_macos.sh`＋`scan_final_macos_artifact.sh`；**7.4 CI** PASS）
-- [x] Windows：path（PE／layout）、VERSIONINFO、exports、debug directory 通過（**`scan_slicer_engine_windows.ps1` 2026-07-19**；`bin/resources/**` 品牌資產僅 note）
+- [x] Windows：path（PE／layout）、VERSIONINFO、exports、debug directory 通過（**`scan_slicer_engine_windows.ps1`**；**resources brand=0** fail-closed — 2026-07-20）
 - [x] consumer 不含 dSYM／PDB／QA harness（**macOS 5.4／5.7**；**Win package／Launcher gate 2026-07-19**）
 - [x] scanner、blacklist **1.2**、pre／post_strip／**post-sign** hashes 入 evidence（雙平台）
-- [x] 任一命中 fail-fast，無 `continue-on-error`（雙平台 Launcher／package fail closed；**Win 7.5**＋**mac 7.4** CI gates **2026-07-19**）
+- [x] 任一命中 fail-fast，無 `continue-on-error`（雙平台 Launcher／package fail closed；**Win 7.5**＋**mac 7.4** CI gates **2026-07-19／20**）
 
 ## Gate 4 — 動態驗收
 
@@ -48,7 +49,7 @@
 - [x] Windows **x64 PoC**：三種 crash＋minidump 模組中性（2.5；`w25-close-20260717T083241Z`）
 - [x] macOS 現行發布 architecture（arm64）：release-equivalent qa 三種 crash site 可觸發（**2026-07-19** — `evidence/macos/qa-three-crash-20260719/`；`.ips` 鑑識見 PoC）
 - [x] Windows x64：正式 release-equivalent qa 三 crash（**7.3 PASS 2026-07-19** — `evidence/windows/qa-three-crash-20260719/`）
-- [x] consumer 靜態 L1／L2＋binary inspection 通過（**Win：** 手動 post-sign＋**7.5 CI**；mac 手動有、CI 待）
+- [x] consumer 靜態 L1／L2＋binary inspection 通過（**Win：** 手動 post-sign＋**7.5 CI**；**mac：** 手動＋**7.4 CI** PASS）
 - [ ] 乾淨環境（無私有 dSYM／PDB／_NT_SYMBOL_PATH）有紀錄（PoC 已記錄教訓；正式 runbook 待補）
 - [ ] Agent 在 engine crash 後存活、job failure semantics 正確
 - [ ] 受控 dump／report 依資料分類政策保存
@@ -56,8 +57,8 @@
 ## Gate 5 — Release readiness
 
 - [x] Release Engineering、Backend Security、QA、Legal／OSS 四方簽核（**2026-07-19 Vance Approve** — [`evidence/signoff-gate5-pending-20260719.md`](./evidence/signoff-gate5-pending-20260719.md)）
-- [x] 舊版相容／升級／rollback 路徑驗證（**Win Setup smoke＋7.2 declare**；mac 4.6／完整跨版本仍待）
-- [ ] 支援 runbook 可依 build ID 找到 symbols（Win OneDrive＋mac drill 有；演練 6.6–6.7 待）
+- [x] 舊版相容／升級／rollback 路徑驗證（**Win Setup smoke＋7.2 declare**；**mac 4.6 DMG lifecycle sample PASS 2026-07-20**）
+- [x] 支援 runbook 可依 build ID 找到 symbols（**Win 6.6／6.7 PASS**；**mac 6.6／6.7 PASS 2026-07-20** — [`evidence/macos/symbolication-6.6-6.7-20260719T191352Z/`](./evidence/macos/symbolication-6.6-6.7-20260719T191352Z/)）
 - [x] source offer／exact fork commit 渠道可用（**1.6 email／書面 offer approved**）
 - [x] Spec promote（8.5）→ [`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md)
 - [ ] OpenSpec status=`completed`＋archive（8.6；**未執行**；目前仍 `in_progress`）

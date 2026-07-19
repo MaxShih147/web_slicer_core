@@ -99,7 +99,7 @@ Scanner：`SCAN.json` → **verdict PASS**。
 1. ~~**2.2／5.1 流水線＋nm 收斂**~~ → **Done（2026-07-17 夜）** `package_slicer_engine_macos.sh`；arrange／wrapper visibility＋`-exported_symbol,_main`；consumer **nm brand 0**。  
 2. ~~**Harness compile-time 化**~~ **Done（2.6 PoC）** — `BUNDLE_QA_CRASH_HARNESS`／`bundle_qa_crash_probe`；consumer OFF → **5.6**。  
 3. ~~**Windows baseline／PoC**~~ **Done（1.7／2.5）** — 見 `BASELINE.md`／`REPORT-WIN.md`。  
-4. **正式包：** 永不附 dSYM／PDB；符號庫 ACL／retention（D12／5.5）；~~Launcher §4~~ → **Win unsigned＋post-sign Setup 已關（2026-07-19）**；macOS Launcher／§7 仍開。
+4. **正式包：** 永不附 dSYM／PDB；符號庫 ACL／retention（D12／5.5）；~~Launcher §4~~ → **雙平台已關（2026-07-19）**；~~§7~~ → **雙平台 DECLARE／CI／7.6 PASS**（見 [`PROGRESS.md`](../PROGRESS.md)）。
 
 ---
 

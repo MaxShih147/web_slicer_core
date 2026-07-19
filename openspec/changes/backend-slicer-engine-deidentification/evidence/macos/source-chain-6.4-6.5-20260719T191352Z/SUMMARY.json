@@ -1,0 +1,10 @@
+{
+  "task": "6.4/6.5",
+  "platform": "macOS",
+  "captured_at_utc": "2026-07-19T19:13:54.455888+00:00",
+  "verdict": "PASS",
+  "engine_build_id": "slicer-engine-consumer-2026-07-19T095348Z",
+  "cli_sha256": "3c6c0976ff2c6bfe4adf5c13a61e41378f0aab787f09ee47b3e4abba3866b95b",
+  "engine_commit": "59fec072c5215d1e9105856b6b9d483d66d1a222",
+  "source_offer_present": true
+}

@@ -204,8 +204,10 @@ flowchart TD
 
 **工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`（**8.5 promote 已關**；可選僅 **8.6** archive → `completed`）。  
 **已落地（2026-07-19 夜）：** 雙平台 §7 工程＋Gate 5 人簽（Vance）；mac `…2111`；Win 7.2／7.5／7.6；spec promote。  
-**殘留（非 blocking）：** 可選 8.6；mac 4.6／mac QA 4.2；5.1b。  
-**下一步：** 可選 **8.6** archive（可暫緩）。
+**殘留（非 blocking）：** 可選 8.6；5.1b；QA 重配對現行 consumer。  
+**下一步：** 可選 **8.6** archive（可暫緩）。  
+**Doc sync（2026-07-20）：** Launcher 衛星與主 checklist 已對齊 [`PROGRESS.md`](./PROGRESS.md)。  
+**mac close（2026-07-20）：** QA 4.2／4.6／5.11／6.4–6.7 已關。
 
 ## 規範性附件
 

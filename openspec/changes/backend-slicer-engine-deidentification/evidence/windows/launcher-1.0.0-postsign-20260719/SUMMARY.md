@@ -57,6 +57,10 @@ Installed root: `C:\Program Files\Bundle Launcher\resources\bundle\slicer-engine
 - macOS Launcher §4
 - AGPL §6
 
+### Sync note（2026-07-20）
+
+本檔為 **2026-07-19 早上 post-sign 捕捉快照**。現行（[`PROGRESS.md`](../../../PROGRESS.md)）：CLI help／resources=0 已回灌；Setup reinject **EV Valid**（`15C3E441…`）；7.3／7.6／mac §4／AGPL 皆已關。內嵌 app exe 未簽仍為殘留。
+
 ## Artifacts in this folder
 
 - `postsign-meta.json`

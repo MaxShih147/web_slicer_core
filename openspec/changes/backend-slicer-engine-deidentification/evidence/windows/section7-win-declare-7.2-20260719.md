@@ -44,6 +44,10 @@
 - Inner `Bundle Launcher.exe` NotSigned（Setup only）
 - Extended acceptance-procedure §6 matrix＝SHOULD／後補
 
+### Sync note（2026-07-20）
+
+§3 resources／PF help 敘述為 **宣告當日** 狀態。現行：resources brand=**0**；PF help=0＋Setup **EV Valid** — [`../setup-reinject-20260720/SUMMARY.md`](../setup-reinject-20260720/SUMMARY.md)。
+
 ## 4. Declaration
 
 **Windows x64 L1+L2 for this change is accepted** based on the evidence table in §1, subject to:

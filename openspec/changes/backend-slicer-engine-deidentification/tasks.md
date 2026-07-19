@@ -1,4 +1,4 @@
-> **進度快照（2026-07-19 夜）：** 雙平台 §7＋Gate 5＋**8.5 promote** 已關。≈**100%**（blocking）。8.6 archive 未做（依指示）。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+> **進度快照（2026-07-20）：** 雙平台 §7＋Gate 5＋**8.5 promote** 已關。≈**100%**（blocking）。Win＋**mac** QA 4.2／4.6／5.11／6.4–6.7 已關。8.6 archive 未做。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 ## 1. 治理與必要輸入
 
 - [x] 1.1 [REQ-DEID-002] 接受線定案：本版 L2（含 L1）
@@ -43,7 +43,7 @@
 - [x] 4.3 [REQ-DEID-005] 更新簽章／公證／Authenticode 對新產物之識別（**macOS 2026-07-19：** engine `codesign --identifier slicer-engine`＋Developer ID＋notarize／staple PASS；**Win：** Authenticode 維持手動，組包腳本明確 skip）
 - [x] 4.4 [REQ-DEID-013] 接入 final-artifact scanner，任何未豁免命中 fail closed（**macOS：** `scan_final_macos_artifact.sh` PASS；**Win 靜態 gate：** `scan_slicer_engine_windows.ps1`）
 - [x] 4.5 [REQ-DEID-013/D13] 驗證 fork 已 strip（manifest hash＋掃描）；Launcher 不二次 strip／rename（**macOS：** `verify_slicer_engine_artifact.sh` pre-sign／post-sign；**Win 2026-07-19 PASS**）
-- [x] 4.6 [REQ-DEID-014] packaged agent 雙平台可呼叫新 CLI 並通過 install／upgrade／rollback（**Win 2026-07-19：** 已簽 Setup install／uninstall／reinstall＋post-sign scan PASS；證據 [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)；完整 SLA 回歸／rollback 舊版矩陣仍見 7.6；**macOS 4.6 抽樣／完整 lifecycle 仍待**）
+- [x] 4.6 [REQ-DEID-014] packaged agent 雙平台可呼叫新 CLI 並通過 install／upgrade／rollback（**Win 2026-07-19：** 已簽 Setup install／uninstall／reinstall＋post-sign scan PASS；證據 [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)；**macOS 2026-07-20：** 已簽 DMG `…2111` user-space install→scan→uninstall→reinstall PASS — [`evidence/macos/lifecycle-4.6-20260719T191245Z/`](./evidence/macos/lifecycle-4.6-20260719T191245Z/)；完整跨版本 rollback 矩陣仍見 7.6 SHOULD）
 
 ## 5. L2／精簡版 C′ 與 crash harness（必要）
 
@@ -52,23 +52,23 @@
 - [x] 5.2 [REQ-DEID-006] 全部 thread call site 中性化（2026-07-17：`slicer-worker`／`slicer-tbb-N`；GUI `slicer-bg-slc`；證據 [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md)）
 - [x] 5.3 [REQ-DEID-006] Windows：export 收斂為 1＋PDB 封存／排除（**2026-07-17 Win 驗證 PASS**：`dumpbin`=`slicer_run_cli` only；`package_slicer_engine_windows.ps1`）
 - [x] 5.4 [REQ-DEID-006] consumer：local＋global 符號掃描通過；無 dSYM／PDB／品牌 debug path（**macOS：** `scan_slicer_engine_macos.sh` PASS；**Win 2026-07-19：** `scan_slicer_engine_windows.ps1` PASS — export／VERSIONINFO／harness／layout）
-- [x] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook（**Win：OneDrive 手動 — adopted 2026-07-19**；已上傳 consumer `20260719T095415Z`（PDB+manifest）— [`evidence/windows-symbol-archive-runbook-5.5.md`](./evidence/windows-symbol-archive-runbook-5.5.md)；**macOS 本機 drill PASS** — `verify_symbol_archive_macos.sh`＋[`macos-symbol-archive-runbook-5.5.md`](./evidence/macos-symbol-archive-runbook-5.5.md)；正式演練 6.6–6.7 仍可後補；不做 git）
+- [x] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook（**Win：OneDrive 手動 — adopted 2026-07-19**；**macOS 本機 drill PASS**；**Win＋mac 正式演練 6.6–6.7 PASS 2026-07-20**；不做 git）
 - [x] 5.6 [REQ-DEID-009/D7] compile-time QA harness；release-equivalent qa manifest／`qa_delta`；移除 runtime env harness（**macOS：** `SLICER_ENGINE_FLAVOR=qa`＋`qa_delta`；**Win：** consumer 預設 OFF＋package 靜態稽核 PASS）
 - [x] 5.7 [REQ-DEID-009] Consumer binary inspection 無 harness（**macOS** scan＋`strings`；**Win** package 閘門）
 - [x] 5.8 [REQ-DEID-007] （明確不做）C-full／OLLVM＝L3 殘餘風險
 - [ ] 5.9 [REQ-DEID-007] （選配）D packer
 - [ ] 5.10 [REQ-DEID-007] （預設否）E Crash Reporter intercept
-- [x] 5.11 [REQ-DEID-008] subprocess boundary test（**Win 2026-07-20 PASS** — [`evidence/windows/subprocess-5.11-20260719T164527Z/`](./evidence/windows/subprocess-5.11-20260719T164527Z/)；`scripts/verify_subprocess_boundary_windows.ps1`＋`agent/tests/test_subprocess_boundary_5_11.py`）
+- [x] 5.11 [REQ-DEID-008] subprocess boundary test（**Win 2026-07-20 PASS** — [`evidence/windows/subprocess-5.11-20260719T164527Z/`](./evidence/windows/subprocess-5.11-20260719T164527Z/)；**macOS 2026-07-20 PASS** — [`evidence/macos/subprocess-5.11-20260719T191352Z/`](./evidence/macos/subprocess-5.11-20260719T191352Z/)；`scripts/run_macos_compliance_5_11_6_x.sh`）
 
 ## 6. AGPL／供應鏈／發布資訊
 
 - [x] 6.1 [REQ-DEID-011] 修正 `agpl-boundary.md` 與實際 modified fork 狀態一致（**2026-07-19**；**1.6 Vance approved** — `docs/single-node-cloud/agpl-boundary.md`）
 - [x] 6.2 [REQ-DEID-011] 正式包提供 AGPL license、copyright、顯著修改聲明（**Win：** 隨包 `legal/`；**mac 簽過包 `…2111`：** `slicer-engine/legal/` 已在 — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md)；scanner fail-closed 缺包）
 - [x] 6.3 [REQ-DEID-011] 提供 exact fork commit 的 Corresponding Source URL／written offer（**定稿：** email／書面 offer — `legal/slicer-engine/SOURCE_OFFER.md`；**不強制** GitHub URL；Vance approved 2026-07-19）
-- [x] 6.4 [REQ-DEID-011] 建立 binary hash → build manifest／SBOM（SPDX 2.3 JSON，見 `design.md` D10a） → source commit 對應證據（**Win 2026-07-20 PASS** — [`evidence/windows/source-chain-6.4-6.5-20260720/`](./evidence/windows/source-chain-6.4-6.5-20260720/)；`generate_slicer_engine_sbom_windows.ps1`）
-- [x] 6.5 [REQ-DEID-012] Engine `--version` 或 manifest 提供 neutral build ID（**Win 2026-07-20 PASS** — CLI 無 `--version`；改以 `engine_build_id.txt`＋manifest；同上 evidence）
-- [x] 6.6 [REQ-DEID-012] 完成 production symbolication 演練（**Win 2026-07-20 PASS** — PE RSDS GUID∈PDB；OneDrive `20260719T162525Z`；[`evidence/windows/symbolication-6.6-6.7-20260719T165250Z/`](./evidence/windows/symbolication-6.6-6.7-20260719T165250Z/)）
-- [x] 6.7 [REQ-DEID-012] 完成 symbol loss／artifact rollback 演練（**Win 2026-07-20 PASS** — 同上；missing build_id fail；prior `20260719T095415Z` rollback）
+- [x] 6.4 [REQ-DEID-011] 建立 binary hash → build manifest／SBOM（SPDX 2.3 JSON，見 `design.md` D10a） → source commit 對應證據（**Win 2026-07-20 PASS** — [`evidence/windows/source-chain-6.4-6.5-20260720/`](./evidence/windows/source-chain-6.4-6.5-20260720/)；**macOS 2026-07-20 PASS** — [`evidence/macos/source-chain-6.4-6.5-20260719T191352Z/`](./evidence/macos/source-chain-6.4-6.5-20260719T191352Z/)）
+- [x] 6.5 [REQ-DEID-012] Engine `--version` 或 manifest 提供 neutral build ID（**Win＋mac 2026-07-20 PASS** — CLI 無 `--version`；改以 `engine_build_id.txt`＋manifest）
+- [x] 6.6 [REQ-DEID-012] 完成 production symbolication 演練（**Win 2026-07-20 PASS** — [`evidence/windows/symbolication-6.6-6.7-20260719T165250Z/`](./evidence/windows/symbolication-6.6-6.7-20260719T165250Z/)；**macOS 2026-07-20 PASS** — [`evidence/macos/symbolication-6.6-6.7-20260719T191352Z/`](./evidence/macos/symbolication-6.6-6.7-20260719T191352Z/)）
+- [x] 6.7 [REQ-DEID-012] 完成 symbol loss／artifact rollback 演練（**Win＋mac 2026-07-20 PASS** — 同上 evidence）
 
 ## 7. 雙平台驗收與自動化
 

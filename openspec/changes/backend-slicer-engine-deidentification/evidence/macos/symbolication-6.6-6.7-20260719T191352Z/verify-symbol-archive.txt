@@ -1,0 +1,5 @@
+PASS: symbol archive drill
+  build_id=slicer-engine-consumer-2026-07-19T095348Z
+  uuid=A5826E32-5956-3C14-A6B9-63F9354DCAF2
+  dsym=/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine-symbols/slicer-engine.dSYM
+NOTE: formal ACL／remote store／Win PDB／rollback drill still open for full 5.5.

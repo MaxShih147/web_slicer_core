@@ -50,9 +50,9 @@
 
 1. ~~**5.3** export=1~~ → **Done 2026-07-17**（`dumpbin` = `slicer_run_cli` only）。  
 2. ~~**5.6／5.7** consumer harness OFF~~ → **Done**（Win package／scan gate）。  
-3. ~~Agent／Launcher 路徑~~ → **Done 2026-07-19**（Win Launcher unsigned §4 gate；見 [`../evidence/windows-launcher-section4-20260719.md`](../evidence/windows-launcher-section4-20260719.md)）。macOS Launcher §4 仍開。  
+3. ~~Agent／Launcher 路徑~~ → **Done 2026-07-19**（Win＋mac §4；見 [`PROGRESS.md`](../PROGRESS.md)）。  
 4. LocalDumps HKCU 未穩定產出 dump；本 PoC 以 `cdb` 取 dump（exit code 已證明三種 native 失敗）。正式 §7 可用同等取證。  
-5. ~~Authenticode／install lifecycle~~ → **Done 2026-07-19 手動**（Setup Valid＋lifecycle；見 [`../evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](../evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)）。§7 動態／完整回歸／macOS 仍開。CLI help `PrusaSlicer` 殘留待清。
+5. ~~Authenticode／install lifecycle~~ → **Done 2026-07-19／20**（Setup Valid＋lifecycle＋reinject **EV**；見 [`PROGRESS.md`](../PROGRESS.md)）。~~§7／CLI help／mac 4.6／mac QA／mac 5.11／6.x~~ → **已關**；可選僅 **8.6**／5.1b／QA 重配對。
 
 ---
 

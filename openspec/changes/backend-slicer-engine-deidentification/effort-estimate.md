@@ -2,30 +2,29 @@
 
 **Change：** `backend-slicer-engine-deidentification`  
 **定案：** **L2 必須**（含 L1）；**macOS + Windows 皆必過**；L2 手段＝**精簡版 C′**；流水線＝**D13**  
-**日期：** 2026-07-19（夜：≈92–94%；mac 晚上 consumer 已回灌 `…2111`）
+**日期：** 2026-07-20（blocking ≈ **100%**；mac QA／4.6／5.11／6.x 已關；未做 8.6）
 
 ## 里程碑拆分
 
 | 里程碑 | 內容 | 粗估（工程人日） | 狀態／備註 |
 |--------|------|------------------|------------|
-| M0 | 命名／schema／黑名單／Legal | 1–3 | 命名＋schema＋**1.6 Legal approved**；缺 1.5 Security |
+| M0 | 命名／schema／黑名單／Legal | 1–3 | **關閉**（1.5／1.6／2.8 Vance） |
 | M1 | 雙平台 PoC | 4–8 | **關閉 PASS** |
-| M2 | L1 改名＋Win ABI | 5–10 | **雙平台完成**（CLI 簽過包雙平台已清） |
-| M3 | Launcher 組包／驗證／簽署／gate | 4–8 | **雙平台手動閉環**（含 mac 晚上回灌）；CI／mac 4.6 待 |
-| M4 | C′ strip／thread／export／symbol store | 3–7 | **雙平台 C′ 關閉**；5.5 Win＝OneDrive＋mac drill；演練／5.1b 待 |
+| M2 | L1 改名＋Win ABI | 5–10 | **雙平台完成** |
+| M3 | Launcher 組包／驗證／簽署／gate | 4–8 | **雙平台閉環**；7.4／7.5 CI；**mac 4.6 PASS** |
+| M4 | C′ strip／thread／export／symbol store | 3–7 | **雙平台 C′ 關閉**；**Win＋mac 5.11／6.4–6.7 PASS**；5.1b 後補 |
 | M4b | L3 | 5–15+ | 本版不做 |
-| M5 | AGPL＋雙平台正式驗收 | 3–7 | §6＋1.6＋雙平台 legal／Win 7.3 已關；**7.6 SLA／7.4–7.5 CI 未** |
+| M5 | AGPL＋雙平台正式驗收 | 3–7 | **§6＋§7＋Gate 5＋8.5 已關** |
 
 ## 重估指引
 
 | 觀察 | 影響 |
 |------|------|
-| 雙平台 Launcher §4 手動 PASS＋mac 晚上回灌 | M3 主線關閉；剩餘＝CI／mac 4.6 |
-| ~~CLI help~~／~~Legal 1.6~~／~~mac legal 回灌~~ | **已關** |
-| 僅 Setup 簽章 | 若產品要求內嵌 exe 亦簽，另加 Authenticode 工序 |
+| 雙平台 Launcher §4／§7／CI／mac 4.6／合規對稱 | **M3–M5 主線關閉** |
+| 剩餘 | 可選 **8.6 archive**；後補 5.1b；QA 重配對現行 consumer |
 
-**整體完成度：≈ 92–94%**（mac 回灌已關；主殘留 §7.6／CI）。  
-**剩餘合計（粗）：約 2–6 人日**（§7 SLA／CI、resources、mac 4.6、1.5、演練）。
+**整體完成度：≈ 100%**（blocking＋8.5；lifecycle 仍 `in_progress` 至 8.6）。  
+**剩餘合計（粗）：約 0.5–2 人日**（archive 文件／可選後補）。
 
 ## 建議本版合計
 

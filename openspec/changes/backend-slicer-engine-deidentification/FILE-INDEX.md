@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-19 夜）· blocking ≈ **100%** · **8.5 promote 已關** · 未做 8.6 · 進度 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-20）· blocking ≈ **100%** · **8.5 promote 已關** · Win＋mac QA／4.6／5.11／6.x 已關 · 未做 8.6 · 進度 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -104,7 +104,7 @@
 | macOS／Windows final-artifact evidence | **雙平台 post-sign evidence 已存**；**7.4／7.5 CI gate PASS** |
 | CLI help／resource 殘留 | **雙平台 CLI help 已清**；**Win resources brand=0**（2026-07-20）；mac resources 依 `…2111`／staging 既有策略 |
 | AGPL／source-offer | **1.6 approved**；Win＋mac 簽過包皆有 `legal/`（mac＝`…2111`） |
-| 5.5 symbol store | **Win＝OneDrive**；mac 本機 drill PASS；演練 6.6–6.7 後補 |
+| 5.5 symbol store | **Win＝OneDrive**；mac 本機 drill PASS；**Win＋mac 6.6–6.7 PASS** |
 | Win 7.3 QA 三 crash | **PASS** — `evidence/windows/qa-three-crash-20260719/` |
 | Win 7.5 CI gate | **PASS** — [`evidence/windows/ci-gate-7.5-20260719T144512Z/`](./evidence/windows/ci-gate-7.5-20260719T144512Z/) |
 | Win 7.6 minimal matrix | **PASS** — [`evidence/windows/functional-7.6-20260719T143000Z/`](./evidence/windows/functional-7.6-20260719T143000Z/) |
@@ -113,4 +113,4 @@
 | mac 7.4 CI gate | **PASS** — [`evidence/macos/ci-gate-7.4-20260719T151403Z/`](./evidence/macos/ci-gate-7.4-20260719T151403Z/) |
 | mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |
 | Gate 5／8.5 promote | **已關** — Vance Approve；[`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md) |
-| 仍開（非 blocking） | 可選 **8.6** archive；mac 4.6；mac QA 4.2；5.1b |
+| 仍開（非 blocking） | 可選 **8.6** archive；5.1b；QA 重配對現行 consumer |

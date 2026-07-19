@@ -48,6 +48,10 @@
 - Extended acceptance-procedure §6 matrix＝SHOULD／後補 per 2.7
 - macOS 4.6 full lifecycle sample optional
 
+### Sync note（2026-07-20）
+
+§3「4.6 optional」為宣告當日狀態。現行：**mac 4.6 DMG lifecycle sample PASS**；**mac QA 4.2／5.11／6.4–6.7 PASS** — 見 [`PROGRESS.md`](../../PROGRESS.md)。
+
 ## 4. Declaration
 
 **macOS arm64 L1+L2 for this change is accepted** based on the evidence table in §1, subject to:

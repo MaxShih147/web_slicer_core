@@ -1,0 +1,20 @@
+{
+  "task": "6.6/6.7",
+  "platform": "macOS",
+  "captured_at_utc": "2026-07-19T19:13:57.495549+00:00",
+  "verdict": "PASS",
+  "engine_build_id": "slicer-engine-consumer-2026-07-19T095348Z",
+  "uuid_bin": "A5826E32-5956-3C14-A6B9-63F9354DCAF2",
+  "uuid_dsym": "A5826E32-5956-3C14-A6B9-63F9354DCAF2",
+  "uuid_match": true,
+  "drill_store": "/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/evidence/macos/symbolication-6.6-6.7-20260719T191352Z/symbol-store-mirror/macos/slicer-engine-consumer-2026-07-19T095348Z",
+  "symbol_loss_missing_build_id_detected": true,
+  "prior_symbols_path": "/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine-symbols",
+  "verify_symbol_archive": "PASS",
+  "notes": [
+    "6.6: dwarfdump UUID bin == dSYM == staged store; verify_symbol_archive_macos.sh PASS",
+    "6.7a: lookup missing build_id fails (dir absent)",
+    "6.7b: current dSYM retained under symbol-store-mirror for rollback drill",
+    "Consumer tree has no dSYM (PDB-free / dSYM-free packaging unchanged)"
+  ]
+}

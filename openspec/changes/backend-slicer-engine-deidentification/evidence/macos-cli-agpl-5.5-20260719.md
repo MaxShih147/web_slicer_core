@@ -44,7 +44,7 @@ SOURCE-OFFER 模板在 staging 仍可能含 engineering 措辭；以 1.6 evidenc
 ## #3 5.5 mac half
 
 - `verify_symbol_archive_macos.sh` PASS；paired Win＝OneDrive  
-- 演練 6.6–6.7 仍開  
+- ~~演練 6.6–6.7 仍開~~ → **Win＋mac 6.6–6.7 PASS 2026-07-20**（Win [`windows/symbolication-6.6-6.7-20260719T165250Z/`](./windows/symbolication-6.6-6.7-20260719T165250Z/)；mac [`macos/symbolication-6.6-6.7-20260719T191352Z/`](./macos/symbolication-6.6-6.7-20260719T191352Z/)）
 
 ## Gap / next
 

@@ -94,4 +94,4 @@
 
 - Authenticode-signed installer baseline（optional；正式 §7）。  
 - ~~**5.3** export=1~~／~~**5.6** consumer OFF~~ → **Done**。  
-- ~~Launcher §4／Win 正式組包／post-sign~~ → **Win unsigned＋已簽 Setup lifecycle Done 2026-07-19**；macOS Launcher 仍開。見主 [`PROGRESS.md`](../../PROGRESS.md)。
+- ~~Launcher §4／Win 正式組包／post-sign~~ → **雙平台 §4／§7 已關**；見主 [`PROGRESS.md`](../../PROGRESS.md)。
