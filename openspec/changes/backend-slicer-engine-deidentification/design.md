@@ -204,8 +204,8 @@ flowchart TD
 
 **工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`（**8.5 promote 已關**；可選僅 **8.6** archive → `completed`）。  
 **已落地（2026-07-19 夜）：** 雙平台 §7 工程＋Gate 5 人簽（Vance）；mac `…2111`；Win 7.2／7.5／7.6；spec promote。  
-**殘留（非 blocking）：** resources；mac 4.6；5.1b；6.6–6.7；optional Win Setup reinject；Launcher QA 組包 4.2。  
-**下一步：** 可選 **8.6** archive → `status: completed`。
+**殘留（非 blocking）：** Setup EV 簽 reinject；mac 4.6；mac QA 4.2；5.1b；6.6–6.7。  
+**下一步：** 可選 **8.6** archive；插入 EV token 簽 `dist-reinject-…` Setup。
 
 ## 規範性附件
 

@@ -33,7 +33,7 @@
 - [x] 3.2 [REQ-DEID-005] macOS codeSigningID／Info.plist（刪除或中性化）／Version／thread name 去品牌（2026-07-17：`Info.plist.in` 中性；`--help`→`slicer-engine`／`Slicer Engine …`；package `codesign --identifier slicer-engine`；thread `slicer-worker`／`slicer-bg-slc`）
 - [x] 3.3 [REQ-DEID-005/006] Windows VERSIONINFO（exe＋DLL 分 rc）、shim／export／agent 路徑（**Win 已驗證** dumpbin=1、`--help`）
 - [x] 3.4 [REQ-DEID-004] 更新 `agent/config.py` 與 `SLICER_ENGINE_BIN`；舊 `PRUSA_SLICER_BIN` 僅 local fallback（跨平台；Win／macOS 路徑已煙測）
-- [x] 3.5 [REQ-DEID-004] 掃描 user-visible errors、resources、paths、symlink 與 loader diagnostics（**Win 2026-07-19：** help 清零；**mac 簽過包 `…2111`：** `--help`／`--help-fff`=0 — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md)；resources ≈148 後續）
+- [x] 3.5 [REQ-DEID-004] 掃描 user-visible errors、resources、paths、symlink 與 loader diagnostics（**Win 2026-07-20：** help=0＋**resources brand 148→0** fail-closed — `stage_slicer_engine_resources_windows.ps1`；**mac 簽過包 `…2111`：** `--help`／`--help-fff`=0 — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md)）
 - [x] 3.6 [REQ-DEID-014] 雙平台執行完整 CLI operation／failure regression（**macOS 抽樣關閉 2026-07-17：** help／fail／`--export-sla`→`.sl1` PASS；Windows 與完整矩陣仍見 **7.6**）
 
 ## 4. Bundle-Launcher 跨平台包版

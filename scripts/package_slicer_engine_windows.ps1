@@ -14,7 +14,9 @@
 param(
     [string]$BuildReleaseDir = "",
     [string]$OutRoot = "",
+    [ValidateSet("consumer", "qa")]
     [string]$Flavor = "consumer",
+    [string]$ConsumerEquivalentBuildId = "",
     [switch]$SkipDumpbin
 )
 
@@ -94,25 +96,13 @@ foreach ($depDll in @("libgmp-10.dll", "libmpfr-4.dll")) {
     }
 }
 
-# Resources next to exe (same layout as Release/)
-$resSrc = Join-Path $BuildReleaseDir "resources"
-$resDst = Join-Path $BinDir "resources"
-$forkRes = Join-Path $RepoRoot "third_party\prusaslicer_fork\resources"
-if (Test-Path $resSrc) {
-    if ((Get-Item $resSrc).Attributes -band [IO.FileAttributes]::ReparsePoint) {
-        # Junction → copy real tree from fork resources
-        if (Test-Path $forkRes) {
-            robocopy $forkRes $resDst /E /NFL /NDL /NJH /NJS | Out-Null
-            if ($LASTEXITCODE -ge 8) { throw "Failed to copy resources from fork" }
-        }
-    } else {
-        robocopy $resSrc $resDst /E /NFL /NDL /NJH /NJS | Out-Null
-        if ($LASTEXITCODE -ge 8) { throw "Failed to copy resources" }
-    }
-} elseif (Test-Path $forkRes) {
-    robocopy $forkRes $resDst /E /NFL /NDL /NJH /NJS | Out-Null
-    if ($LASTEXITCODE -ge 8) { throw "Failed to copy resources from fork" }
+# Resources next to exe — de-branded filter (macOS parity: stage_slicer_engine_resources_*.sh/ps1)
+$stageResPs1 = Join-Path $PSScriptRoot "stage_slicer_engine_resources_windows.ps1"
+if (-not (Test-Path -LiteralPath $stageResPs1)) {
+    throw "Missing resources staging script: $stageResPs1"
 }
+& powershell -NoProfile -ExecutionPolicy Bypass -File $stageResPs1 -ArtifactRoot $OutRoot
+if ($LASTEXITCODE -ne 0) { throw "stage_slicer_engine_resources_windows.ps1 FAILED" }
 
 # Archive only neutral engine PDBs for symbol store (not in consumer bin; skip brand leftovers)
 foreach ($pdbName in @("slicer-engine.pdb", "slicer_core.pdb")) {
@@ -248,7 +238,7 @@ $manifest = [ordered]@{
             [ordered]@{
                 harness_compile_flag            = "BUNDLE_QA_CRASH_HARNESS"
                 only_differences                = @("compile-time crash harness sites")
-                consumer_equivalent_build_id    = ""
+                consumer_equivalent_build_id    = $(if ($ConsumerEquivalentBuildId) { $ConsumerEquivalentBuildId } else { "" })
             }
         } else { $null })
     approvals = [ordered]@{

@@ -20,7 +20,7 @@
 | REQ-DEID-014 Functional parity | D12 | 3.6、4.6、7.6 | **2.7 approved**；**Win＋mac 7.6 最小矩陣 PASS** |
 | REQ-DEID-015 Naming＋schema | D6、D13 | 1.3–1.4 | 已簽核 |
 | REQ-LAUNCHER-DEID-001–004 | LD1–LD3 | Launcher 1–3／5 | 雙平台 verify／scan／sign；**7.4／7.5 CI scripts** |
-| REQ-LAUNCHER-DEID-005 Flavor | LD5 | Launcher 4.1–4.2 | consumer gate PASS；QA 組包待 |
+| REQ-LAUNCHER-DEID-005 Flavor | LD5 | Launcher 4.1–4.2 | consumer gate PASS；**Win QA 4.2 PASS**；mac QA 待 |
 | REQ-LAUNCHER-DEID-006 AGPL materials | LD4 | Launcher 4.3 | **雙平台簽過包 legal/ PASS**（mac＝`…2111`） |
 
 

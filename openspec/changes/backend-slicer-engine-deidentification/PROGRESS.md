@@ -1,6 +1,6 @@
 # Progress Snapshot — backend-slicer-engine-deidentification
 
-**更新日期：** 2026-07-20（衛星敘述對齊；Gate 5／8.5 promote；未做 8.6 archive）  
+**更新日期：** 2026-07-20（Win Setup 回灌安裝樹＋resources=0＋Launcher QA 4.2；EV 簽 Setup 待 token；未做 8.6 archive）  
 **Change status：** `in_progress`（見 `.openspec.yaml`）  
 
 ## 證據錨點
@@ -14,6 +14,7 @@
 | macOS 7.1／7.4／7.6／qa crash | [`evidence/macos/section7-mac-declare-7.1-20260719.md`](./evidence/macos/section7-mac-declare-7.1-20260719.md)、[`evidence/macos/ci-gate-7.4-20260719T151403Z/`](./evidence/macos/ci-gate-7.4-20260719T151403Z/)、[`evidence/macos/functional-7.6-20260719/SUMMARY.md`](./evidence/macos/functional-7.6-20260719/SUMMARY.md)、[`evidence/macos/qa-three-crash-20260719/`](./evidence/macos/qa-three-crash-20260719/) |
 | Win §4／post-sign／CLI／7.3 | [`evidence/windows-launcher-section4-20260719.md`](./evidence/windows-launcher-section4-20260719.md)、[`evidence/windows/launcher-1.0.0-postsign-20260719/`](./evidence/windows/launcher-1.0.0-postsign-20260719/)、[`evidence/windows/cli-help-printconfig-20260719.md`](./evidence/windows/cli-help-printconfig-20260719.md)、[`evidence/windows/qa-three-crash-20260719/`](./evidence/windows/qa-three-crash-20260719/) |
 | 2.7／Win 7.6／7.2／7.5 | [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md)、[`evidence/windows/functional-7.6-20260719T143000Z/`](./evidence/windows/functional-7.6-20260719T143000Z/)、[`evidence/windows/section7-win-declare-7.2-20260719.md`](./evidence/windows/section7-win-declare-7.2-20260719.md)、[`evidence/windows/ci-gate-7.5-20260719T144512Z/`](./evidence/windows/ci-gate-7.5-20260719T144512Z/) |
+| Win Setup 回灌／resources／QA 4.2 | [`evidence/windows/setup-reinject-20260720/SUMMARY.md`](./evidence/windows/setup-reinject-20260720/SUMMARY.md)；Launcher [`evidence/qa-flavor-4.2-20260720-SUMMARY.md`](../../../../Bundle-Launcher/openspec/changes/backend-slicer-engine-deidentification/evidence/qa-flavor-4.2-20260720-SUMMARY.md) |
 | 2.1 A–E／Legal／簽核包 | [`evidence/feasibility-A-E-2.1-20260719.md`](./evidence/feasibility-A-E-2.1-20260719.md)、[`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md)、[`evidence/signoff-gate5-pending-20260719.md`](./evidence/signoff-gate5-pending-20260719.md) |
 
 ---
@@ -24,7 +25,7 @@
 |------|------|
 | 治理／命名／schema | **完成**（**1.5／1.6** Vance Approve；**2.1** A–E） |
 | §2 PoC／2.7 | **雙平台 PoC PASS**；**2.7 approved**；**2.8** Vance Approve |
-| §3 L1／CLI help | **Win＋mac 簽過包已清**（mac `…2111`；Win staging help-cleared） |
+| §3 L1／CLI help | **Win＋mac 簽過包已清**（mac `…2111`；Win PF／staging help=0；**resources brand=0**） |
 | §4／§5／§6 | 主線關閉（雙平台 §4；C′／5.5；AGPL legal/＋1.6） |
 | §7 Windows | **7.2／7.3／7.5／7.6 PASS** |
 | §7 macOS | **7.1／7.4／7.6 PASS**（arm64） |
@@ -35,8 +36,12 @@
 **已定案：** Legal 1.6＝email／書面 offer；5.5 Win＝OneDrive；**2.7** golden／perf — [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md)。  
 
 **明確缺口（非 blocking）：**
-1. 可選：8.6 archive → `status: completed`（**8.5 已做** — [`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md)）  
-2. 可選：Win Setup 回灌 help-cleared；resources；mac 4.6；符號化演練  
+1. 可選：8.6 archive → `status: completed`（**8.5 已做**）  
+2. 可選：Setup **EV Authenticode** 簽 `dist-reinject-…` 後重跑 7.5 `-SetupExe`（本機無 token）  
+3. 可選：mac 4.6；mac QA 4.2；符號化演練 6.6–6.7  
+4. 後補：5.1b／5.11／6.4–6.5  
+
+**本輪已關（2026-07-20 Win）：** Setup 回灌**安裝樹**；resources 148→0；Launcher QA 4.2（Win）。
 
 ---
 
@@ -51,7 +56,7 @@
 | 7.6 minimal matrix | **PASS** — `functional-7.6-20260719T143000Z` |
 | 7.2 formal declare | **PASS** — `section7-win-declare-7.2-20260719.md` |
 | 7.5 CI gate | **PASS** — script＋GH workflows＋本機 staging／Setup Authenticode |
-| bundle-win sync | help-cleared staging 已同步；Setup 重新 EV 簽＋重裝見 reinject runbook |
+| bundle-win sync | help-cleared＋resources=0；`20260719T162525Z`；PF 已 `/S` 回灌（Setup **NotSigned** 待 EV） |
 
 ### macOS
 
@@ -65,16 +70,17 @@
 
 ## 3. 已知殘留（非 blocking）
 
-1. Win Setup help-cleared 回灌（optional；install tree 可能仍 stale）  
-2. resources ≈148；內嵌 Win app exe 未 Authenticode；mac 4.6；5.1b；6.6–6.7  
+1. Setup EV 簽章（token／reader 未接）— [`setup-reinject-20260720/SUMMARY.md`](./evidence/windows/setup-reinject-20260720/SUMMARY.md)  
+2. 內嵌 Win app exe 未 Authenticode；mac 4.6；mac QA 4.2；5.1b；6.4–6.7  
 
 ---
 
 ## 4. 下一步
 
 1. **8.5 promote 已關** — [`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md)  
-2. 可選：**8.6 archive** → `.openspec.yaml` `completed`（目前仍 `in_progress`／active change）  
-3. 可選：[`evidence/windows/setup-reinject-help-cleared-runbook-20260719.md`](./evidence/windows/setup-reinject-help-cleared-runbook-20260719.md)；resources；mac 4.6  
+2. 可選：**8.6 archive** → `.openspec.yaml` `completed`  
+3. 可選：插入 EV token → 簽 `dist-reinject-20260720002645\Bundle Launcher Setup 1.0.0.exe` → 7.5 `-SetupExe`  
+4. 可選：mac 4.6／mac QA 4.2  
 
 ---
 
@@ -95,6 +101,6 @@
 - **權威：** 本 `PROGRESS.md`＋可重跑磁碟證據（hash／`--help`／目錄是否存在）。  
 - **Launcher 衛星**只引用本檔。  
 - Legal 1.6 以 [`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md) 為政策證據。  
-- mac 現行 consumer＝DMG `…2111`；Win 宣告 consumer＝staging `20260719T105832Z`（install tree 可能仍 stale）。  
+- mac 現行 consumer＝DMG `…2111`；Win 現行 consumer／PF＝`20260719T162525Z`（help=0；resources=0；Setup 待 EV）。  
 - **勿**再寫「mac／Win 7.6 對方未跑」— 雙平台最小矩陣 evidence 皆已存在。  
-- **2026-07-20：** Launcher 衛星敘述已對齊本檔（8.5 已關；mac `…2111`；§7／Gate 5；可選僅 8.6）。
+- **2026-07-20：** 衛星敘述對齊；Win Setup 安裝樹回灌＋resources=0＋Launcher QA 4.2（Win）已關。

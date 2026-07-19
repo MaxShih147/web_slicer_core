@@ -102,7 +102,7 @@
 | Windows 5.3／formal scan | **已關閉 PASS**（export=1＋`scan_slicer_engine_windows.ps1`） |
 | Launcher §4 | **雙平台手動閉環 2026-07-19**（Win Setup／4.6；macOS arm64 verify→notarize→final scan） |
 | macOS／Windows final-artifact evidence | **雙平台 post-sign evidence 已存**；**7.4／7.5 CI gate PASS** |
-| CLI help／resource 殘留 | **雙平台簽過包 CLI help 已清**；resources ≈148 |
+| CLI help／resource 殘留 | **雙平台 CLI help 已清**；**Win resources brand=0**（2026-07-20）；mac resources 依 `…2111`／staging 既有策略 |
 | AGPL／source-offer | **1.6 approved**；Win＋mac 簽過包皆有 `legal/`（mac＝`…2111`） |
 | 5.5 symbol store | **Win＝OneDrive**；mac 本機 drill PASS；演練 6.6–6.7 後補 |
 | Win 7.3 QA 三 crash | **PASS** — `evidence/windows/qa-three-crash-20260719/` |
@@ -113,4 +113,4 @@
 | mac 7.4 CI gate | **PASS** — [`evidence/macos/ci-gate-7.4-20260719T151403Z/`](./evidence/macos/ci-gate-7.4-20260719T151403Z/) |
 | mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |
 | Gate 5／8.5 promote | **已關** — Vance Approve；[`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md) |
-| 仍開（非 blocking） | 可選 **8.6** archive；mac 4.6；Launcher QA 4.2；resources；6.6–6.7 |
+| 仍開（非 blocking） | 可選 **8.6** archive；Setup **EV** 簽 reinject；mac 4.6；mac QA 4.2；6.6–6.7 |

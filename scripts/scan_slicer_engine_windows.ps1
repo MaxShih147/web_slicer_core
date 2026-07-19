@@ -92,9 +92,8 @@ if (-not $ManifestPath) {
 }
 $checks["manifest_path"] = $ManifestPath
 
-# Brand path gate (blacklist §3.3 L1): engine PE / layout paths — NOT deep vendor profile assets.
-# bin/resources/** may still contain upstream PrusaResearch profiles/icons (tracked as notes for §7;
-# renaming that tree is out of scope for this Launcher verify gate / not L2 C′).
+# Brand path gate (blacklist §3.3 L1): engine PE / layout / bin/resources (de-branded via
+# stage_slicer_engine_resources_windows.ps1 — fail closed; SLA uses --load job INI).
 $pdbLeaks = @()
 $brandPaths = @()
 $resourceBrandPaths = @()
@@ -109,10 +108,9 @@ if (Test-Path $BinDir) {
         if ($brandPathRe.IsMatch($rel)) {
             if ($underResources) {
                 $resourceBrandPaths += $rel
-            } else {
-                # PE / non-resource layout must be clean
-                $brandPaths += $rel
             }
+            # All brand path tokens under bin/ fail closed (resources included)
+            $brandPaths += $rel
         }
     }
 }
@@ -147,10 +145,11 @@ $checks["pdb_in_bin"] = $pdbLeaks
 $checks["brand_paths"] = $brandPaths
 $checks["resource_brand_path_count"] = $resourceBrandPaths.Count
 if ($resourceBrandPaths.Count -gt 0) {
-    $notes.Add("bin/resources contains $($resourceBrandPaths.Count) brand-named asset path(s); not fail-closed here (profiles/icons). Sample: $($resourceBrandPaths[0..([Math]::Min(4,$resourceBrandPaths.Count-1))] -join ', ')")
+    $sample = $resourceBrandPaths[0..([Math]::Min(4, $resourceBrandPaths.Count - 1))] -join ', '
+    $notes.Add("bin/resources brand paths (fail-closed): count=$($resourceBrandPaths.Count); sample: $sample")
 }
 if ($pdbLeaks.Count -gt 0) { Add-Fail "PDB files under bin/: $($pdbLeaks -join ', ')" }
-if ($brandPaths.Count -gt 0) { Add-Fail "brand tokens in engine layout/PE paths: $($brandPaths -join ', ')" }
+if ($brandPaths.Count -gt 0) { Add-Fail "brand tokens in engine layout/PE/resources paths: $($brandPaths -join ', ')" }
 
 # symbols/ must not be required for Launcher; note if present (OK for fork staging)
 $symbolsDir = Join-Path $ArtifactRoot "symbols"
