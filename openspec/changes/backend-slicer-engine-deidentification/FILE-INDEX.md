@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-19 夜）· 完成度 ≈ **94–96%** · **Win 7.2／7.5／7.6 閉環** · mac 7.6＋人簽待 · 進度 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-19 夜）· blocking ≈ **100%** · **8.5 promote 已關** · 未做 8.6 · 進度 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -18,7 +18,8 @@
 | [`design.md`](./design.md) | 決策 D1–D13、L1／L2、**精簡版 C′**、D13 流水線與發布治理 |
 | [`tasks.md`](./tasks.md) | 實作與評估檢查清單 |
 | [`effort-estimate.md`](./effort-estimate.md) | 人日草案 |
-| [`specs/slicer-engine-deidentification/spec.md`](./specs/slicer-engine-deidentification/spec.md) | 需求與 Scenario |
+| [`specs/slicer-engine-deidentification/spec.md`](./specs/slicer-engine-deidentification/spec.md) | Change 內需求稿 |
+| [`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md) | **正式規格（8.5 promote）** |
 | [`blacklist.md`](./blacklist.md) | Canonical token、scope、例外、pass／fail |
 | [`acceptance-procedure.md`](./acceptance-procedure.md) | macOS／Windows 可重現驗收 |
 | [`traceability.md`](./traceability.md) | Requirement → Design → Task → Evidence |
@@ -38,6 +39,7 @@
 | [`poc/run_w25_close.ps1`](./poc/run_w25_close.ps1) | Windows 2.5 close 腳本 |
 | [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md) | macOS 5.2／3.5／3.6 抽樣關閉記錄 |
 | [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md) | **2.7 approved：** golden ±5%／perf +20%／7.6 最小矩陣 |
+| [`evidence/macos/functional-7.6-20260719/SUMMARY.md`](./evidence/macos/functional-7.6-20260719/SUMMARY.md) | **mac 7.6 最小矩陣 PASS**（signed `…2111` engine） |
 | [`evidence/macos-productize-5.4-5.6-5.7.md`](./evidence/macos-productize-5.4-5.6-5.7.md) | macOS 5.4／5.6／5.7 正式 scan／qa_delta／consumer harness OFF |
 | `scripts/package_slicer_engine_macos.sh` | **D13 產品化**（dSYM→strip→manifest；tasks 5.1） |
 | `scripts/scan_slicer_engine_macos.sh` | **正式掃描閘**（tasks 5.4／5.6／5.7；packager fail-closed） |
@@ -105,4 +107,7 @@
 | 5.5 symbol store | **Win＝OneDrive**；mac 本機 drill PASS；演練 6.6–6.7 後補 |
 | Win 7.3 QA 三 crash | **PASS** — `evidence/windows/qa-three-crash-20260719/` |
 | Win 7.6 minimal matrix | **PASS** — [`evidence/windows/functional-7.6-20260719T143000Z/`](./evidence/windows/functional-7.6-20260719T143000Z/) |
+| mac 7.6 minimal matrix | **PASS** — [`evidence/macos/functional-7.6-20260719/SUMMARY.md`](./evidence/macos/functional-7.6-20260719/SUMMARY.md) |
+| mac 7.1 declare | **PASS** — [`evidence/macos/section7-mac-declare-7.1-20260719.md`](./evidence/macos/section7-mac-declare-7.1-20260719.md) |
+| mac 7.4 CI gate | **PASS** — [`evidence/macos/ci-gate-7.4-20260719T151403Z/`](./evidence/macos/ci-gate-7.4-20260719T151403Z/) |
 | mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |

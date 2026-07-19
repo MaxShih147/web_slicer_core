@@ -1,0 +1,16 @@
+{
+  "change_id": "backend-slicer-engine-deidentification",
+  "task": "7.6",
+  "platform": "macOS",
+  "arch": "arm64",
+  "policy": "evidence/functional-budget-2.7-approved-20260719.md",
+  "engine_path": "/Users/sw-dev/repos/Bundle/Bundle-Launcher/dist/mac-arm64/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/bin/slicer-engine",
+  "engine_build_id": "slicer-engine-consumer-2026-07-19T095348Z",
+  "engine_post_sign_sha256": "336f930329d11dd02330ec4173802f20f9cd2eddacce171254eb41225cbda5d1",
+  "fixture_stl": "/Users/sw-dev/repos/Bundle/web_slicer_core/agent/jobs/5731d266/input/model.stl",
+  "fixture_stl_sha256": "83eb08cd4bdb9549a6544114f2a7e69ef89ad041526f5af436ab9d334c253edc",
+  "fixture_ini": "/Users/sw-dev/repos/Bundle/web_slicer_core/agent/jobs/5731d266/config.ini",
+  "fixture_ini_sha256": "9e3a38501e71fb82575af11063a54364cda7ea0ac0435bd755962b810d966ba8",
+  "size_baseline_note": "3.6 documented ~1.6MB out.sl1; also self-baseline from cold run",
+  "started_at_utc": "2026-07-19T14:32:02Z"
+}

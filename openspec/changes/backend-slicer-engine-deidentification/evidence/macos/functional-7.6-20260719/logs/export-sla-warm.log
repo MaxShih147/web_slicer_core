@@ -1,0 +1,71 @@
+facet (146108)/ first facet
+  vertex 0/146108  3.29226608E+01 -1.20582485E+01  0.00000000E+00
+  vertex 1/146108  3.29214439E+01 -1.21727753E+01  0.00000000E+00
+  vertex 2/146108  3.28866310E+01 -1.23793631E+01  0.00000000E+00
+facet (146175)/ second facet
+  vertex 0/146175  3.29214439E+01 -1.21727753E+01  0.00000000E+00
+  vertex 1/146175  3.29226646E+01 -1.20582485E+01  0.00000000E+00
+  vertex 2/146175  3.29214439E+01 -1.21727753E+01  9.39171600E+00
+facet (146117)/ first facet
+  vertex 0/146117  3.28866310E+01 -1.23793631E+01  0.00000000E+00
+  vertex 1/146117  3.29136505E+01 -1.19367599E+01  0.00000000E+00
+  vertex 2/146117  3.29226608E+01 -1.20582485E+01  0.00000000E+00
+facet (146177)/ second facet
+  vertex 0/146177  3.29226646E+01 -1.20582485E+01  0.00000000E+00
+  vertex 1/146177  3.29136505E+01 -1.19367599E+01  0.00000000E+00
+  vertex 2/146177  3.29226646E+01 -1.20582485E+01  9.31218910E+00
+facet (146175)/ first facet
+  vertex 0/146175  3.29214439E+01 -1.21727753E+01  0.00000000E+00
+  vertex 1/146175  3.29226646E+01 -1.20582485E+01  0.00000000E+00
+  vertex 2/146175  3.29214439E+01 -1.21727753E+01  9.39171600E+00
+facet (146108)/ second facet
+  vertex 0/146108  3.29226608E+01 -1.20582485E+01  0.00000000E+00
+  vertex 1/146108  3.29214439E+01 -1.21727753E+01  0.00000000E+00
+  vertex 2/146108  3.28866310E+01 -1.23793631E+01  0.00000000E+00
+facet (146177)/ first facet
+  vertex 0/146177  3.29226646E+01 -1.20582485E+01  0.00000000E+00
+  vertex 1/146177  3.29136505E+01 -1.19367599E+01  0.00000000E+00
+  vertex 2/146177  3.29226646E+01 -1.20582485E+01  9.31218910E+00
+facet (146117)/ second facet
+  vertex 0/146117  3.28866310E+01 -1.23793631E+01  0.00000000E+00
+  vertex 1/146117  3.29136505E+01 -1.19367599E+01  0.00000000E+00
+  vertex 2/146117  3.29226608E+01 -1.20582485E+01  0.00000000E+00
+  0% => Assembling model from parts
+  9% => Hollowing model
+ 18% => Drilling holes into model.
+ 27% => Slicing model
+ 36% => Generating support points
+ 46% => Generating support tree
+ 55% => Generating pad
+ 55% => Slicing supports
+ 70% => Merging slices and calculating statistics
+ 73% => Rasterizing layers
+ 74% => Rasterizing layers
+ 75% => Rasterizing layers
+ 76% => Rasterizing layers
+ 77% => Rasterizing layers
+ 78% => Rasterizing layers
+ 79% => Rasterizing layers
+ 80% => Rasterizing layers
+ 81% => Rasterizing layers
+ 82% => Rasterizing layers
+ 83% => Rasterizing layers
+ 84% => Rasterizing layers
+ 85% => Rasterizing layers
+ 86% => Rasterizing layers
+ 87% => Rasterizing layers
+ 88% => Rasterizing layers
+ 89% => Rasterizing layers
+ 90% => Rasterizing layers
+ 91% => Rasterizing layers
+ 92% => Rasterizing layers
+ 93% => Rasterizing layers
+ 94% => Rasterizing layers
+ 95% => Rasterizing layers
+ 96% => Rasterizing layers
+ 97% => Rasterizing layers
+ 98% => Rasterizing layers
+ 99% => Rasterizing layers
+100% => Rasterizing layers
+100% => Slicing done
+Slicing result exported to /Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/evidence/macos/functional-7.6-20260719/out/out-warm.sl1

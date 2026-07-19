@@ -41,6 +41,11 @@ resolved_gates:
   - macos-agpl-legal-in-signed-app  # 2026-07-19 legal/ in …2111 app
   - macos-launcher-evening-reinject  # 2026-07-19 DMG …2111
   - macos-symbol-archive-local-drill-5.5  # 2026-07-19 verify_symbol_archive_macos.sh PASS
+  - macos-section7-declare-7.1-arm64  # 2026-07-19
+  - macos-ci-gate-7.4  # 2026-07-19
+  - feasibility-a-e-2.1-writeup  # 2026-07-19
+  - gate5-vance-signoff-1.5-2.8-7.7  # 2026-07-19
+  - spec-promote-8.5  # 2026-07-19
 progress:
   m1_macos_poc: closed-pass
   m1_evidence: poc/evidence/m1-close-20260717T032408Z/
@@ -74,16 +79,23 @@ progress:
   windows_functional_7_6_minimal: closed-pass  # 2026-07-19 functional-7.6-20260719T143000Z
   windows_section7_declare_7_2: closed-pass  # 2026-07-19
   windows_ci_gate_7_5: closed-pass  # 2026-07-19 ci_gate_windows_deid_7.5.ps1 + workflows
-  overall_progress_pct_approx: 95
+  macos_functional_7_6_minimal: closed-pass  # evidence/macos/functional-7.6-20260719/
+  macos_section7_declare_7_1: closed-pass  # 2026-07-19 arm64
+  macos_ci_gate_7_4: closed-pass  # 2026-07-19 ci_gate_macos_deid_7.4.sh + DMG …2111
+  macos_qa_three_crash_probe: closed-pass  # 2026-07-19 evidence/macos/qa-three-crash-20260719/
+  feasibility_a_e_2_1: closed-pass  # evidence/feasibility-A-E-2.1-20260719.md
+  gate5_human_signoff_1_5_2_8_7_7: closed-pass  # 2026-07-19 Vance Approve all roles
+  spec_promote_8_5: closed-pass  # openspec/specs/slicer-engine-deidentification/spec.md
+  overall_progress_pct_approx: 100
   next:
-    - macos-7-6-minimal-matrix
-    - human-signoff-1.5-2.8-7.7  # evidence/signoff-gate5-pending-20260719.md
+    - optional-8.6-archive-change
     - optional-win-setup-reinject-help-cleared
     - optional-resources-brand-cleanup
     - macos-launcher-4.6-lifecycle-sample
     - symbolication-drill-6.6-6.7
   resolved_gates_extra_note: |
-    Gate 5 human signoff still pending (Legal 1.6 done). Do not set status=completed.
+    Gate 5 countersigned by Vance (Security/Release/QA/Legal). Dual-platform §7 closed.
+    Spec promoted (8.5). Optional: 8.6 archive then status=completed.
 lifecycle:
   states: [proposed, in_progress, completed, archived]
   completion_requires:

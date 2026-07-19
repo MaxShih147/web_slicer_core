@@ -8,7 +8,7 @@
 | **Date** | 2026-07-19 |
 | **Budget／gates** | 2.7 approved；blacklist 1.2；D13 post-strip＋Launcher verify |
 
-> This closes the **Windows** half of dual-platform §7 acceptance for L1+L2 product surfaces covered by existing hard evidence. Full change `completed` still requires macOS 7.1／7.6 and release sign-offs (1.5／7.7).
+> This closes the **Windows** half of dual-platform §7 acceptance for L1+L2 product surfaces covered by existing hard evidence. Full change `completed` still requires macOS **7.1**／**7.4** and release sign-offs (1.5／7.7). **mac 7.6 minimal matrix is PASS** — see [`../macos/functional-7.6-20260719/SUMMARY.md`](../macos/functional-7.6-20260719/SUMMARY.md).
 
 ## 1. Evidence chain（authoritative）
 
@@ -49,8 +49,8 @@
 **Windows x64 L1+L2 for this change is accepted** based on the evidence table in §1, subject to:
 
 1. Shipping the help-cleared consumer (or re-injecting it into signed Setup) for end-user installs.  
-2. macOS §7 still open for dual-platform change completion.  
-3. Security／Release／QA sign-off（tasks 1.5／7.7） and CI gate 7.5 automation.
+2. Security／Release／QA／Legal countersign — **done 2026-07-19 Vance**（[`../signoff-gate5-pending-20260719.md`](../signoff-gate5-pending-20260719.md)）.  
+3. CI gate 7.5 automation — **done**.
 
 **Engineering owner：** backend／release engineering（this evidence pack）.  
 **Human countersign：** see [`../signoff-gate5-pending-20260719.md`](../signoff-gate5-pending-20260719.md).

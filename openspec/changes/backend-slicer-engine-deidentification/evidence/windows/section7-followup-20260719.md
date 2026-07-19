@@ -9,7 +9,7 @@
 |------|--------|
 | **7.3** QA three-crash | **PASS** — [`qa-three-crash-20260719/SUMMARY.md`](./qa-three-crash-20260719/SUMMARY.md) |
 | **7.5** post-Authenticode CI | **PASS** — [`ci-gate-7.5-20260719T144512Z/`](./ci-gate-7.5-20260719T144512Z/)＋GH workflows |
-| **7.6** minimal matrix | **Win PASS** — [`functional-7.6-20260719T143000Z/`](./functional-7.6-20260719T143000Z/)；mac 仍開；§6 延伸 SHOULD 後補 |
+| **7.6** minimal matrix | **Win PASS** — [`functional-7.6-20260719T143000Z/`](./functional-7.6-20260719T143000Z/)；**mac PASS** — [`../macos/functional-7.6-20260719/`](../macos/functional-7.6-20260719/)；§6 延伸 SHOULD 後補 |
 | **7.2** Win L1+L2 declare | **PASS** — [`section7-win-declare-7.2-20260719.md`](./section7-win-declare-7.2-20260719.md) |
 
 ## Already done（manual 7.5）
@@ -27,7 +27,7 @@
 ## 7.6 SLA
 
 - **Win minimal MUST：** PASS（help／fail／`--export-sla` cold＋warm vs 2.7；agent smoke SKIP）— [`functional-7.6-20260719T143000Z/SUMMARY.md`](./functional-7.6-20260719T143000Z/SUMMARY.md)  
-- **mac minimal MUST：** still open  
+- **mac minimal MUST：** PASS — [`../macos/functional-7.6-20260719/SUMMARY.md`](../macos/functional-7.6-20260719/SUMMARY.md)  
 - Extended §6 matrix：SHOULD／後補
 
 ## Decided elsewhere（not §7 blockers）

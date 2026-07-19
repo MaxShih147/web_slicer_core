@@ -1,0 +1,69 @@
+{
+  "task": "7.1-support / mac qa three-crash",
+  "captured_at_utc": "2026-07-19T15:12:59Z",
+  "qa_build_id": "slicer-engine-qa-2026-07-17T121917Z",
+  "consumer_engine": "/Users/sw-dev/repos/Bundle/Bundle-Launcher/dist/mac-arm64/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/bin/slicer-engine",
+  "results": [
+    {
+      "label": "qa-control",
+      "binary": "/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine-qa/bin/slicer-engine",
+      "env": {},
+      "exit": 0,
+      "seconds": 1.066,
+      "stdout_bytes": 5763,
+      "stderr_bytes": 0
+    },
+    {
+      "label": "qa-overflow",
+      "binary": "/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine-qa/bin/slicer-engine",
+      "env": {
+        "BUNDLE_QA_CRASH_MODE": "overflow"
+      },
+      "exit": -11,
+      "seconds": 0.109,
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "label": "qa-segfault",
+      "binary": "/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine-qa/bin/slicer-engine",
+      "env": {
+        "BUNDLE_QA_CRASH_MODE": "segfault"
+      },
+      "exit": -11,
+      "seconds": 0.084,
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "label": "qa-exception",
+      "binary": "/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine-qa/bin/slicer-engine",
+      "env": {
+        "BUNDLE_QA_CRASH_MODE": "exception"
+      },
+      "exit": -6,
+      "seconds": 0.098,
+      "stdout_bytes": 0,
+      "stderr_bytes": 119
+    },
+    {
+      "label": "consumer-segfault-env",
+      "binary": "/Users/sw-dev/repos/Bundle/Bundle-Launcher/dist/mac-arm64/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/bin/slicer-engine",
+      "env": {
+        "BUNDLE_QA_CRASH_MODE": "segfault"
+      },
+      "exit": 0,
+      "seconds": 0.062,
+      "stdout_bytes": 5769,
+      "stderr_bytes": 0
+    }
+  ],
+  "verdicts": {
+    "qa-control": true,
+    "qa-overflow": true,
+    "qa-segfault": true,
+    "qa-exception": true,
+    "consumer-harness-absent": true
+  },
+  "verdict": "PASS"
+}

@@ -195,16 +195,17 @@ flowchart TD
 3. ~~C 策略深度~~ → **已定（2026-07-17）：精簡版 C′（strip＋thread＋Win export）；全面 namespace／OLLVM＝L3 不做**  
 4. ~~命名表／artifact manifest~~ → **已簽核（2026-07-17）：** [`naming-manifest.md`](./naming-manifest.md)＋[`artifact-manifest.schema.md`](./artifact-manifest.schema.md)（Status=approved）  
 5. ~~strip／sign ownership~~ → **已定（D13）：fork strip；Launcher 只驗證＋簽署**  
-6. 是否允許評估結論否決 E（預設是）  
+6. ~~是否允許評估結論否決 E（預設是）~~ → **已定（2026-07-19，tasks 1.5／2.8）：** E／D／C-full 僅 L3；不得取代 A＋B＋C′ — Vance Approve；見 [`evidence/signoff-gate5-pending-20260719.md`](./evidence/signoff-gate5-pending-20260719.md)＋[`evidence/feasibility-A-E-2.1-20260719.md`](./evidence/feasibility-A-E-2.1-20260719.md)  
 7. ~~macOS M1 PoC（改名＋strip＋三 crash＋scanner）~~ → **已通過（2026-07-17）：** [`poc/REPORT.md`](./poc/REPORT.md)  
 8. ~~已知乾淨參考報告（2.4b）~~ → **已批准（2026-07-17）：** [`clean-reference-report.md`](./clean-reference-report.md)
 9. ~~Windows 政策（2.3）~~ → **已定案：** [`windows-policy.md`](./windows-policy.md)  
 10. ~~Windows PoC（2.5）＋compile-time harness（2.6 PoC）~~ → **已通過：** [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)
+11. ~~Gate 5／1.5／2.8／7.7~~ → **已批准（2026-07-19）：Vance**（Security／Release／QA／Legal）
 
-**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。  
-**已落地（2026-07-19 夜）：** 雙平台 Launcher §4；mac 晚上回灌（`post_strip`＝`3c6c0976…`／簽後＝`336f9303…`；`legal/`＋help=0）；Win CLI／AGPL／7.3；1.6 approved。  
-**殘留：** resources；§7.6／CI；mac 4.6；1.5；5.1b；6.6–6.7。  
-**下一步：** §7.6（依 2.7 最小矩陣）／CI。
+**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`（archive／promote＝8.5／8.6 可選下一步）。  
+**已落地（2026-07-19 夜）：** 雙平台 §7 工程＋Gate 5 人簽（Vance）；mac `…2111`；Win 7.2／7.5／7.6。  
+**殘留（非 blocking）：** resources；mac 4.6；5.1b；6.6–6.7；optional Win Setup reinject。  
+**下一步：** 可選 8.5 promote／8.6 archive → `status: completed`。
 
 ## 規範性附件
 

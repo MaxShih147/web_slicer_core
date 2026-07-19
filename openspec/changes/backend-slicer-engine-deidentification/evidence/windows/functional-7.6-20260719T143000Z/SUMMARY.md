@@ -61,8 +61,10 @@ Cold／warm 同機、同 fixture；warm 建立 characterization 自洽（size／
 - `fixture/` — STL＋INI  
 - `runs/` — stdout／stderr／`.sl1`
 
-## Remaining for full 7.6 close
+## Remaining for full change close
 
-- **macOS** 半邊最小矩陣（對 `…2111`）仍開  
+- ~~**macOS** 半邊最小矩陣~~ → **PASS** — [`../../macos/functional-7.6-20260719/SUMMARY.md`](../../macos/functional-7.6-20260719/SUMMARY.md)
+- mac **7.1** 正式宣告／**7.4** CI；人簽 1.5／7.7
+- Optional：Setup reinject help-cleared engine into install tree
 - 可選：agent smoke；acceptance-procedure §6 延伸矩陣（SHOULD）  
 - 建議：新簽 Setup 回灌 help-cleared engine，使 install tree 與本 evidence 一致  
