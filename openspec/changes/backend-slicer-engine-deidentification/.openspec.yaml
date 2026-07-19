@@ -36,6 +36,7 @@ resolved_gates:
   - windows-export-one-5.3  # 2026-07-17 Win productize dumpbin=1
   - windows-launcher-section4-unsigned  # 2026-07-19 4.2/4.4/4.5; Authenticode manual
   - windows-postsign-setup-lifecycle  # 2026-07-19 Setup Valid + install/uninstall/reinstall + scan PASS
+  - macos-launcher-section-4-arm64  # 2026-07-19 D13 verify+sign+notarize+final scan
 progress:
   m1_macos_poc: closed-pass
   m1_evidence: poc/evidence/m1-close-20260717T032408Z/
@@ -55,11 +56,13 @@ progress:
   windows_export_one_5_3: closed-pass  # 2026-07-17 dumpbin=1 slicer_run_cli
   windows_launcher_section4_unsigned: closed-pass  # 2026-07-19
   windows_postsign_setup_lifecycle: closed-pass  # 2026-07-19
-  overall_progress_pct_approx: 83
+  macos_launcher_section_4_arm64: closed-pass  # 2026-07-19
+  macos_launcher_section_4_evidence: evidence/macos-launcher-section4-20260719.md
+  overall_progress_pct_approx: 85
   next:
-    - macos-launcher-section-4
     - cleanup-cli-help-prusa-strings
     - symbol-archive-runbook-5.5
+    - macos-launcher-4.6-lifecycle-sample
     - agpl-section-6
     - dual-platform-acceptance-section-7
 lifecycle:

@@ -89,7 +89,13 @@ if manifest_path.is_file():
         actual = run(["shasum", "-a", "256", str(bin_path)]).stdout.split()[0]
         report["checks"]["post_strip_sha256_manifest"] = post
         report["checks"]["post_strip_sha256_actual"] = actual
-        if actual != post:
+        # After Developer ID codesign, Mach-O bytes change; Launcher records post_sign separately.
+        if os.environ.get("SLICER_ENGINE_SKIP_HASH") == "1":
+            report["checks"]["hash_policy"] = "skipped_post_sign"
+            if actual != post:
+                notes.append("disk sha256 != post_strip (expected after Developer ID codesign)")
+            report["checks"]["post_sign_sha256"] = actual
+        elif actual != post:
             fail("disk sha256 != manifest post_strip_sha256")
     if expect_flavor == "qa":
         qd = manifest.get("qa_delta")

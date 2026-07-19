@@ -1,4 +1,4 @@
-> **進度快照（2026-07-19）：** **Windows Launcher §4（含已簽 Setup post-sign／4.6）** 已落地。下一步：macOS Launcher §4／**5.5**／§6–7 其餘／CLI help 殘留清理。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+> **進度快照（2026-07-19）：** **Windows Launcher §4**（含已簽 Setup post-sign／4.6）與 **macOS Launcher §4 arm64**（D13 verify→組包→Developer ID→notarize→staple→final scan）皆已落地。下一步：**5.5**／§6–7 其餘／CLI help 殘留清理。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 ## 1. 治理與必要輸入
 
 - [x] 1.1 [REQ-DEID-002] 接受線定案：本版 L2（含 L1）
@@ -38,12 +38,12 @@
 
 ## 4. Bundle-Launcher 跨平台包版
 
-- [ ] 4.1 [REQ-DEID-004] 更新 macOS 組包路徑 → `slicer-engine/`（**已改** `build-mac-bundle.sh` 文字；**未在 Mac 跑組包**）
+- [x] 4.1 [REQ-DEID-004] 更新 macOS 組包路徑 → `slicer-engine/`（**2026-07-19：** `build-mac-bundle.sh` 接 `third_party/slicer-engine`＋D13 verify；arm64 正式組包 PASS；證據 [`evidence/macos-launcher-section4-20260719.md`](./evidence/macos-launcher-section4-20260719.md)）
 - [x] 4.2 [REQ-DEID-004/006] 更新 Windows x64 DLL＋shim＋resource 組包路徑（**2026-07-19：** `build-windows-bundle.ps1` D13 copy＋gate；`bundle-win`／`win-unpacked` 已交接掃描 PASS；證據 [`evidence/windows-launcher-section4-20260719.md`](./evidence/windows-launcher-section4-20260719.md)）
-- [ ] 4.3 [REQ-DEID-005] 更新簽章／公證／Authenticode 對新產物之識別（**Win：** Authenticode 維持手動；組包腳本明確 skip；macOS 公證仍待）
-- [x] 4.4 [REQ-DEID-013] 接入 final-artifact scanner，任何未豁免命中 fail closed（**Win 靜態 gate：** `scan_slicer_engine_windows.ps1`；macOS 仍待 Launcher 配線）
-- [x] 4.5 [REQ-DEID-013/D13] 驗證 fork 已 strip（manifest hash＋掃描）；Launcher 不二次 strip／rename（**Win 2026-07-19 PASS**；macOS Launcher 驗證未做）
-- [x] 4.6 [REQ-DEID-014] packaged agent 雙平台可呼叫新 CLI 並通過 install／upgrade／rollback（**Win 2026-07-19：** 已簽 Setup install／uninstall／reinstall＋post-sign scan PASS；證據 [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)；完整 SLA 回歸／rollback 舊版矩陣仍見 7.6；macOS 待）
+- [x] 4.3 [REQ-DEID-005] 更新簽章／公證／Authenticode 對新產物之識別（**macOS 2026-07-19：** engine `codesign --identifier slicer-engine`＋Developer ID＋notarize／staple PASS；**Win：** Authenticode 維持手動，組包腳本明確 skip）
+- [x] 4.4 [REQ-DEID-013] 接入 final-artifact scanner，任何未豁免命中 fail closed（**macOS：** `scan_final_macos_artifact.sh` PASS；**Win 靜態 gate：** `scan_slicer_engine_windows.ps1`）
+- [x] 4.5 [REQ-DEID-013/D13] 驗證 fork 已 strip（manifest hash＋掃描）；Launcher 不二次 strip／rename（**macOS：** `verify_slicer_engine_artifact.sh` pre-sign／post-sign；**Win 2026-07-19 PASS**）
+- [x] 4.6 [REQ-DEID-014] packaged agent 雙平台可呼叫新 CLI 並通過 install／upgrade／rollback（**Win 2026-07-19：** 已簽 Setup install／uninstall／reinstall＋post-sign scan PASS；證據 [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)；完整 SLA 回歸／rollback 舊版矩陣仍見 7.6；**macOS 4.6 抽樣／完整 lifecycle 仍待**）
 
 ## 5. L2／精簡版 C′ 與 crash harness（必要）
 
@@ -52,7 +52,7 @@
 - [x] 5.2 [REQ-DEID-006] 全部 thread call site 中性化（2026-07-17：`slicer-worker`／`slicer-tbb-N`；GUI `slicer-bg-slc`；證據 [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md)）
 - [x] 5.3 [REQ-DEID-006] Windows：export 收斂為 1＋PDB 封存／排除（**2026-07-17 Win 驗證 PASS**：`dumpbin`=`slicer_run_cli` only；`package_slicer_engine_windows.ps1`）
 - [x] 5.4 [REQ-DEID-006] consumer：local＋global 符號掃描通過；無 dSYM／PDB／品牌 debug path（**macOS：** `scan_slicer_engine_macos.sh` PASS；**Win 2026-07-19：** `scan_slicer_engine_windows.ps1` PASS — export／VERSIONINFO／harness／layout）
-- [ ] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook
+- [ ] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook（**macOS 半邊草稿：** [`evidence/macos-symbol-archive-runbook-5.5.md`](./evidence/macos-symbol-archive-runbook-5.5.md)；缺正式 store／Win PDB／演練）
 - [x] 5.6 [REQ-DEID-009/D7] compile-time QA harness；release-equivalent qa manifest／`qa_delta`；移除 runtime env harness（**macOS：** `SLICER_ENGINE_FLAVOR=qa`＋`qa_delta`；**Win：** consumer 預設 OFF＋package 靜態稽核 PASS）
 - [x] 5.7 [REQ-DEID-009] Consumer binary inspection 無 harness（**macOS** scan＋`strings`；**Win** package 閘門）
 - [x] 5.8 [REQ-DEID-007] （明確不做）C-full／OLLVM＝L3 殘餘風險
@@ -75,7 +75,7 @@
 - [ ] 7.1 [REQ-DEID-002/003/006/010] macOS 各發布 architecture L1+L2 通過
 - [ ] 7.2 [REQ-DEID-002/003/006/010] Windows x64 L1+L2 通過
 - [ ] 7.3 [REQ-DEID-006/009] **三種** QA crash site 均通過；consumer 靜態＋inspection 通過
-- [ ] 7.4 [REQ-DEID-013] macOS post-sign／notarize／staple CI gate 通過
+- [ ] 7.4 [REQ-DEID-013] macOS post-sign／notarize／staple CI gate 通過（**arm64 手動閉環 2026-07-19 PASS** — 見 [`evidence/macos-launcher-section4-20260719.md`](./evidence/macos-launcher-section4-20260719.md)；正式 CI 自動化仍待）
 - [ ] 7.5 [REQ-DEID-013] Windows post-Authenticode CI gate 通過（**2026-07-19 手動：** Setup Valid＋安裝後 scan PASS — [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)；正式 CI 自動化仍待）
 - [ ] 7.6 [REQ-DEID-014] 雙平台 functional／performance regression 通過
 - [ ] 7.7 [REQ-DEID-010] Evidence metadata、hash、scanner／blacklist version、四方簽核齊備
