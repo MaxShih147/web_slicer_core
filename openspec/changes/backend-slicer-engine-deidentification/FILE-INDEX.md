@@ -99,5 +99,5 @@
 | Windows 5.3／formal scan | **已關閉 PASS**（export=1＋`scan_slicer_engine_windows.ps1`） |
 | Launcher §4 | **Win unsigned＋post-sign Setup／4.6 已關（2026-07-19）**；macOS 仍缺 |
 | macOS／Windows final-artifact evidence | **Win 手動 post-sign evidence 已存**；macOS／CI 自動化待 §7 |
-| CLI help／resource 殘留 | **追蹤中**（`--help` PrusaSlicer tooltip；resources ≈148） |
-| AGPL／source-offer release evidence | 待 `tasks.md` §6 |
+| CLI help／resource 殘留 | **CLI help 已清（Win）**；resources ≈148 仍追蹤中 |
+| AGPL／source-offer release evidence | **1.6 Vance approved 2026-07-19**；Win legal pack；channel＝email／書面 offer（無強制 GitHub URL） |

@@ -14,7 +14,7 @@
 | REQ-DEID-008 AGPL subprocess | D4 | 5.11 | Process-boundary test |
 | REQ-DEID-009 Crash harness／QA derivative | D7 | 2.6、5.6–5.7、7.3 | consumer harness OFF Done；正式 qa 動態 → 7.3 |
 | REQ-DEID-010 Evidence | D5、D11 | 7.1–7.7 | Win post-sign＋macOS §4 evidence 已存；四方簽核待 |
-| REQ-DEID-011 AGPL modified-work | D9 | 1.6、6.1–6.4 | Legal／OSS sign-off |
+| REQ-DEID-011 AGPL modified-work | D9 | 1.6、6.1–6.4 | **1.6 Vance approved 2026-07-19**；Win legal pack；6.4 SBOM 仍開 |
 | REQ-DEID-012 Symbol supply chain | D10、D13 | 5.5、6.5–6.7 | dSYM／PDB 封存有；macOS runbook 草稿 — [`macos-symbol-archive-runbook-5.5.md`](./evidence/macos-symbol-archive-runbook-5.5.md)；正式 store 待 |
 | REQ-DEID-013 Final-artifact gate | D11、D13 | 4.4–4.5、7.4–7.5 | **Win 手動 post-sign PASS**；**macOS final scan PASS**；CI 自動化待 |
 | REQ-DEID-014 Functional parity | D12 | 3.6、4.6、7.6 | Win install lifecycle smoke PASS；macOS 4.6 待；完整 SLA → 7.6 |

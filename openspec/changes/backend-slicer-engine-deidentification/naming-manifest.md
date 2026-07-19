@@ -135,6 +135,6 @@ Launcher 輸入 **MUST** 附 [`artifact-manifest.schema.md`](./artifact-manifest
 | Product owner（Vance） | Vance | 2026-07-17 | ☑ **approved**（四項 canonical＋衍生 thread／env／VERSIONINFO／正式包佈局） |
 | Backend owner | Vance | 2026-07-17 | ☑ **acknowledged** |
 | Release Engineering | — | 2026-07-17 | ☑ **acknowledged**（含 artifact schema；與 schema 一併 approved） |
-| Legal／OSS（僅確認 AGPL 揭露未受本表影響） | — | 2026-07-17 | ☑ **acknowledged**（命名不移除 license／NOTICE／Corresponding Source） |
+| Legal／OSS（AGPL release policy） | Vance | 2026-07-19 | ☑ **approved**（task 1.6；Corresponding Source＝email／書面 offer；不強制 GitHub URL） |
 
 **簽核完成：** `Status`＝`approved`；`tasks.md` 1.3／1.4 已勾選。若有 blacklist fixtures 於同一 PR 更新。

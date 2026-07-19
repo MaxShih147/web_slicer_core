@@ -2,112 +2,93 @@
 
 ## Overview
 
-PrusaSlicer is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)**. This license has strong copyleft requirements, particularly for software accessed over a network.
+The slicing engine shipped with Bundle Launcher / `web_slicer_core` is a **modified fork** of PrusaSlicer, licensed under the **GNU Affero General Public License v3 or later (AGPL-3.0-or-later)**.
 
-This document defines where PrusaSlicer is used in our system and how the AGPL boundary is maintained.
+This document defines where the engine is used, how the **subprocess AGPL boundary** is maintained for the rest of the product, and what **modified-work release obligations** apply to the engine itself.
 
-## Where PrusaSlicer is Used
+> **Status (2026-07-19):** Tasks **6.1**＋**1.6** closed — Vance **approved** AGPL release policy.  
+> Corresponding Source channel：**email／written offer**（see `legal/slicer-engine/SOURCE_OFFER.md`）。**No mandatory public GitHub URL.**
 
-PrusaSlicer is used **exclusively as a headless CLI binary**. It is invoked by worker processes as an external program.
+## Where the engine is used
+
+The engine runs **exclusively as a headless CLI binary**. Local agent / workers invoke it as an external program (no in-process link to `libslic3r`).
 
 ```
-Worker process                    PrusaSlicer CLI
-(our code, our license)           (AGPL-3.0)
+Worker / local agent              Slicer Engine CLI (AGPL-3.0-or-later)
+(our application code)            (modified PrusaSlicer fork)
 
     job = dequeue()
     prepare_input(job)
-    ──── subprocess.run() ──────> prusa-slicer --export-sla model.stl
+    ──── subprocess ────────────> slicer-engine --export-sla model.stl
                                   ... processes geometry ...
     <──── exit code + files ───── output.sl1
     store_output(job)
 ```
 
-### Interaction boundary
+### Interaction boundary (unchanged)
 
 | Aspect | Detail |
 |--------|--------|
-| **Invocation method** | `subprocess.run()` / `subprocess.Popen()` |
-| **Communication** | Command-line arguments + file I/O |
-| **No linking** | Our code does not link against PrusaSlicer libraries |
-| **No shared memory** | Separate process with separate address space |
-| **No code modification** | We use the unmodified PrusaSlicer binary |
-| **No embedding** | PrusaSlicer is not imported, loaded, or embedded |
+| **Invocation** | `subprocess` / Popen with argv + files |
+| **Communication** | CLI args + filesystem I/O |
+| **No linking** | Application code does **not** link `libslic3r` / engine DLL into the agent process for slicing |
+| **No shared memory** | Separate process address space |
+| **No embedding** | Engine is not imported as a Python/JS module |
 
-## How the AGPL Boundary is Respected
+Windows consumer layout uses a shim `slicer-engine.exe` that loads `slicer_core.dll` **inside the engine process** — that is part of the AGPL Program, not a link from the agent into libslic3r.
 
-### What AGPL requires
+## Modified work — current position
 
-AGPL-3.0 Section 13 (the "network use" clause):
+| Statement | Status |
+|-----------|--------|
+| We ship an **unmodified** upstream binary | **False** — we build and ship a **modified fork** |
+| Product / process rename (Slicer Engine, neutral paths) | **Yes** |
+| Build／de-ID changes (visibility, exports, strip, VERSIONINFO, etc.) | **Yes** |
+| Optional QA crash harness (compile-time; consumer OFF) | **Yes** (QA flavor only) |
 
-> If you modify the Program, your modified version must prominently offer all users interacting with it remotely through a computer network an opportunity to receive the Corresponding Source.
+Therefore AGPL **modified Program** obligations apply to the engine artifact:
 
-### Our position
+1. Ship AGPL license text with the binary (`legal/LICENSE`)
+2. Ship copyright / prominent modification notice (`legal/NOTICE.md`)
+3. Provide Corresponding Source for the **exact** `engine_commit` (`legal/SOURCE_OFFER.md` + public URL when Legal finalizes it)
+4. Do **not** remove or weaken these materials in the name of de-identification (OpenSpec D9 / REQ-DEID-011)
 
-1. **We do not modify PrusaSlicer** — we use the official binary (or a fork built from public source)
-2. **We do not link against PrusaSlicer** — no shared libraries, no dynamic linking, no FFI
-3. **PrusaSlicer is an independent program** — invoked via CLI, communicates via files
-4. **Our application is a separate work** — it orchestrates PrusaSlicer the same way a shell script would
+De-identification (L1/L2) only reduces brand fingerprints in OS diagnostics and product UX. Anyone who reads the legal pack can still learn the upstream origin — that is intentional and required.
 
-This is analogous to:
-- A web application that calls `ffmpeg` to transcode video
-- A CI system that calls `gcc` to compile code
-- A script that calls `imagemagick` to resize images
+## What remains a separate work
 
-The calling application is not a derivative work of the tool it invokes.
-
-## What Source Code Would Need to Be Disclosed
-
-### If we modify PrusaSlicer
-
-If we fork and modify PrusaSlicer source code, we must:
-
-1. Make the modified source available to any user who interacts with it over the network
-2. Include a prominent notice about the modifications
-3. Provide source alongside the binary or via a written offer
-
-This applies to our forked PrusaSlicer binary, **not to our web application**.
-
-### If we DO NOT modify PrusaSlicer
-
-No source disclosure obligation for our application. We should:
-
-- Document which version of PrusaSlicer is used
-- Provide a link to the upstream source repository
-- Include the AGPL license text alongside the binary
-
-## What is NOT a Derived Work
-
-The following are **not** derivative works of PrusaSlicer:
+The following are **not** treated as derivative works of the engine solely because they invoke the CLI:
 
 | Component | Reason |
 |-----------|--------|
-| FastAPI application | Separate program, no linking |
-| Worker process | Invokes CLI via subprocess |
-| Frontend (Vue.js) | Runs in browser, no interaction with PrusaSlicer |
-| Queue system | Infrastructure, no PrusaSlicer code |
-| Nginx config | Infrastructure |
-| Job management logic | Orchestration, not derivation |
-| STL processing (trimesh) | Separate library, separate license |
+| FastAPI / cloud services | Separate programs; no linking |
+| Local agent Python | Invokes CLI via subprocess |
+| Frontend (Vue.js) | Browser; no engine link |
+| Queue / nginx / job orchestration | Infrastructure / orchestration |
+| STL tooling (e.g. trimesh) | Separate libraries |
 
-## Practical Guidelines
+## Practical guidelines
 
-1. **Never import PrusaSlicer code** into our Python/JS codebase
-2. **Never link against** `libslic3r` or other PrusaSlicer libraries
-3. **Always invoke via CLI** — `subprocess.run(["prusa-slicer", ...])`
-4. **Keep the binary separate** — stored at a known path, not bundled in our source tree
-5. **Document the version** — record which PrusaSlicer version/commit is deployed
-6. **If forking**: maintain the fork as a separate repository with full AGPL compliance
+1. **Never** import engine C++ into Python/JS or link `libslic3r` into the agent
+2. **Always** invoke via CLI (`SLICER_ENGINE_BIN` / packaged `slicer-engine`)
+3. Keep engine binaries in the staged `slicer-engine/` layout (not mixed into app source as a library)
+4. Record `engine_commit` / `engine_build_id` / hashes in `engine-artifact-manifest.json`
+5. On every consumer package, include `legal/LICENSE`, `legal/NOTICE.md`, `legal/SOURCE_OFFER.md`
+6. Corresponding Source：follow the written／email offer in `SOURCE_OFFER.md`（Vance-approved 2026-07-19；public browse URL optional）
 
-## Current PrusaSlicer Usage in Code
+## Code touchpoints
 
 | File | Usage |
 |------|-------|
-| `agent/sla_operations.py` | Calls PrusaSlicer CLI for hollow, support, slicing |
-| `agent/config.py` | Stores path to PrusaSlicer binary |
+| `agent/sla_operations.py` | Calls slicer-engine CLI for hollow / support / slice |
+| `agent/config.py` | `SLICER_ENGINE_BIN` (legacy `PRUSA_SLICER_BIN` local fallback only) |
+| `scripts/package_slicer_engine_windows.ps1` | Stages consumer PE + legal pack |
+| `legal/slicer-engine/*` | License / NOTICE / written offer templates |
 
-All invocations follow the pattern:
+Typical invocation:
+
 ```python
-subprocess.run([config.PRUSA_SLICER_PATH, "--export-sla", ...])
+subprocess.run([config.SLICER_ENGINE_BIN, "--export-sla", ...])
 ```
 
-No PrusaSlicer Python bindings, no ctypes, no shared objects.
+No engine Python bindings, no ctypes load of `slicer_core.dll` from the agent for slicing.

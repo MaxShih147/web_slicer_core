@@ -117,9 +117,26 @@ if (Test-Path $BinDir) {
     }
 }
 Get-ChildItem -LiteralPath $ArtifactRoot -Force -ErrorAction SilentlyContinue | ForEach-Object {
-    if ($_.Name -ieq "symbols" -or $_.Name -ieq "bin") { return }
+    if ($_.Name -ieq "symbols" -or $_.Name -ieq "bin" -or $_.Name -ieq "legal") { return }
     $rel = $_.Name
     if ($brandPathRe.IsMatch($rel)) { $brandPaths += $rel }
+}
+
+# AGPL legal pack (REQ-DEID-011) — required for consumer staging/bundles
+$legalDir = Join-Path $ArtifactRoot "legal"
+$legalRequired = @("LICENSE", "NOTICE.md", "SOURCE_OFFER.md")
+$legalPresent = @()
+$legalMissing = @()
+if (Test-Path $legalDir) {
+    foreach ($name in $legalRequired) {
+        if (Test-Path (Join-Path $legalDir $name)) { $legalPresent += $name } else { $legalMissing += $name }
+    }
+} else {
+    $legalMissing = $legalRequired
+}
+$checks["legal_pack"] = @{ present = $legalPresent; missing = $legalMissing }
+if ($ExpectFlavor -eq "consumer" -and $legalMissing.Count -gt 0) {
+    Add-Fail "consumer legal pack missing: $($legalMissing -join ', ') (expected under legal/)"
 }
 # Top-level PE names under bin must be neutral
 foreach ($pe in @("slicer-engine.exe", "slicer_core.dll")) {

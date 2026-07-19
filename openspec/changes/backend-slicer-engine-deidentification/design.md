@@ -202,9 +202,9 @@ flowchart TD
 10. ~~Windows PoC（2.5）＋compile-time harness（2.6 PoC）~~ → **已通過：** [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)
 
 **工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。  
-**已落地（2026-07-19）：** Windows Launcher §4.2／4.4／4.5／**4.6**＋手動 post-sign Setup（Authenticode Valid；install／uninstall／reinstall；scan PASS）。  
-**殘留：** CLI `--help` `PrusaSlicer` tooltip；resources 品牌檔名；內嵌 app exe 未簽。  
-**下一步：** macOS Launcher **§4**；清 CLI help；**5.5**；§6／§7 其餘。
+**已落地（2026-07-19）：** Windows Launcher §4.2／4.4／4.5／**4.6**＋手動 post-sign Setup；**CLI help 去品牌**；**AGPL legal pack＋1.6 Vance approved**（email／書面 offer；無強制 GitHub URL）；5.5 雙平台 runbook 草稿。  
+**殘留：** resources 品牌檔名；內嵌 app exe 未簽；5.5 正式 store；§7 動態／CI；1.5 Security。  
+**下一步：** 5.5 store；§7。
 
 ## 規範性附件
 

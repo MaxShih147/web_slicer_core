@@ -13,8 +13,7 @@ acceptance:
 repos:
   - web_slicer_core
   - Bundle-Launcher
-blocked_on:
-  - agpl-open-source-compliance-signoff
+blocked_on: []
 resolved_gates:
   - product-approved-neutral-naming-manifest  # 2026-07-17 naming-manifest.md Status=approved
   - product-approved-artifact-manifest-schema  # 2026-07-17 artifact-manifest.schema.md Status=approved
@@ -37,6 +36,7 @@ resolved_gates:
   - windows-launcher-section4-unsigned  # 2026-07-19 4.2/4.4/4.5; Authenticode manual
   - windows-postsign-setup-lifecycle  # 2026-07-19 Setup Valid + install/uninstall/reinstall + scan PASS
   - macos-launcher-section-4-arm64  # 2026-07-19 D13 verify+sign+notarize+final scan
+  - agpl-open-source-compliance-signoff  # 2026-07-19 Vance approved; email/written offer; no mandatory GitHub URL
 progress:
   m1_macos_poc: closed-pass
   m1_evidence: poc/evidence/m1-close-20260717T032408Z/
@@ -58,13 +58,12 @@ progress:
   windows_postsign_setup_lifecycle: closed-pass  # 2026-07-19
   macos_launcher_section_4_arm64: closed-pass  # 2026-07-19
   macos_launcher_section_4_evidence: evidence/macos-launcher-section4-20260719.md
-  overall_progress_pct_approx: 85
+  legal_1_6_agpl_signoff: closed-pass  # 2026-07-19 Vance approved
+  overall_progress_pct_approx: 90
   next:
-    - cleanup-cli-help-prusa-strings
-    - symbol-archive-runbook-5.5
-    - macos-launcher-4.6-lifecycle-sample
-    - agpl-section-6
+    - symbol-archive-store-5.5
     - dual-platform-acceptance-section-7
+    - optional-resources-brand-cleanup
 lifecycle:
   states: [proposed, in_progress, completed, archived]
   completion_requires:

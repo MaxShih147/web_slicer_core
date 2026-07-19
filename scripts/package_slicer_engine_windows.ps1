@@ -122,6 +122,20 @@ foreach ($pdbName in @("slicer-engine.pdb", "slicer_core.pdb")) {
     }
 }
 
+# AGPL legal pack (REQ-DEID-011 / tasks 6.2–6.3) — must ship with consumer artifact
+$LegalSrc = Join-Path $RepoRoot "legal\slicer-engine"
+$LegalDst = Join-Path $OutRoot "legal"
+$LicenseSrc = Join-Path $RepoRoot "third_party\prusaslicer_fork\LICENSE"
+New-Item -ItemType Directory -Path $LegalDst -Force | Out-Null
+if (-not (Test-Path $LicenseSrc)) { throw "Missing AGPL LICENSE at $LicenseSrc" }
+Copy-Item -LiteralPath $LicenseSrc -Destination (Join-Path $LegalDst "LICENSE") -Force
+foreach ($doc in @("NOTICE.md", "SOURCE_OFFER.md")) {
+    $src = Join-Path $LegalSrc $doc
+    if (-not (Test-Path $src)) { throw "Missing legal pack file: $src" }
+    Copy-Item -LiteralPath $src -Destination (Join-Path $LegalDst $doc) -Force
+}
+Write-Host "AGPL legal pack staged: $LegalDst" -ForegroundColor Green
+
 $exeDst = Join-Path $BinDir "slicer-engine.exe"
 $dllDst = Join-Path $BinDir "slicer_core.dll"
 if (-not (Test-Path $exeDst)) { throw "Staging missing slicer-engine.exe" }

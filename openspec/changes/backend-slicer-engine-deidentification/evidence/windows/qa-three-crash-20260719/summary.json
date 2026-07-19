@@ -1,0 +1,32 @@
+﻿[
+    {
+        "mode":  "overflow",
+        "exit_code":  -1073741571,
+        "ntstatus":  "0xC00000FD STACK_OVERFLOW",
+        "pass":  true
+    },
+    {
+        "mode":  "segfault",
+        "exit_code":  -1073741819,
+        "ntstatus":  "0xC0000005 ACCESS_VIOLATION",
+        "pass":  true
+    },
+    {
+        "mode":  "exception",
+        "exit_code":  -1073740791,
+        "ntstatus":  "0xC0000409 FAST_FAIL/abort",
+        "pass":  true
+    },
+    {
+        "mode":  "control_no_env",
+        "exit_code":  0,
+        "ntstatus":  "ok",
+        "pass":  true
+    },
+    {
+        "mode":  "consumer_with_segfault_env",
+        "exit_code":  0,
+        "ntstatus":  "harness_absent",
+        "pass":  true
+    }
+]
