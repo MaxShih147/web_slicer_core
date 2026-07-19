@@ -37,6 +37,7 @@
 | [`poc/run_m1_close.sh`](./poc/run_m1_close.sh)／[`poc/scan_macos_artifact.sh`](./poc/scan_macos_artifact.sh) | M1 close 腳本＋scanner 原型 |
 | [`poc/run_w25_close.ps1`](./poc/run_w25_close.ps1) | Windows 2.5 close 腳本 |
 | [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md) | macOS 5.2／3.5／3.6 抽樣關閉記錄 |
+| [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md) | **2.7 approved：** golden ±5%／perf +20%／7.6 最小矩陣 |
 | [`evidence/macos-productize-5.4-5.6-5.7.md`](./evidence/macos-productize-5.4-5.6-5.7.md) | macOS 5.4／5.6／5.7 正式 scan／qa_delta／consumer harness OFF |
 | `scripts/package_slicer_engine_macos.sh` | **D13 產品化**（dSYM→strip→manifest；tasks 5.1） |
 | `scripts/scan_slicer_engine_macos.sh` | **正式掃描閘**（tasks 5.4／5.6／5.7；packager fail-closed） |

@@ -73,7 +73,8 @@ progress:
   windows_qa_three_crash_7_3: closed-pass  # 2026-07-19
   overall_progress_pct_approx: 93
   next:
-    - dual-platform-acceptance-section-7  # 7.6 SLA; 7.4/7.5 CI
+    - dual-platform-7-6-minimal-matrix  # per functional-budget-2.7-approved-20260719.md
+    - dual-platform-acceptance-section-7  # 7.1/7.2 declare; 7.4/7.5 CI
     - optional-resources-brand-cleanup
     - macos-launcher-4.6-lifecycle-sample
     - symbolication-drill-6.6-6.7

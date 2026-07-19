@@ -204,7 +204,7 @@ flowchart TD
 **工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。  
 **已落地（2026-07-19 夜）：** 雙平台 Launcher §4；mac 晚上回灌（`post_strip`＝`3c6c0976…`／簽後＝`336f9303…`；`legal/`＋help=0）；Win CLI／AGPL／7.3；1.6 approved。  
 **殘留：** resources；§7.6／CI；mac 4.6；1.5；5.1b；6.6–6.7。  
-**下一步：** §7.6／CI。
+**下一步：** §7.6（依 2.7 最小矩陣）／CI。
 
 ## 規範性附件
 

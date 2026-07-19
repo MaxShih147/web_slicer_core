@@ -14,7 +14,7 @@
 | macOS staging CLI／AGPL／5.5 | [`evidence/macos-cli-agpl-5.5-20260719.md`](./evidence/macos-cli-agpl-5.5-20260719.md) |
 | Win Launcher／post-sign | [`evidence/windows-launcher-section4-20260719.md`](./evidence/windows-launcher-section4-20260719.md)、[`evidence/windows/launcher-1.0.0-postsign-20260719/`](./evidence/windows/launcher-1.0.0-postsign-20260719/) |
 | Win CLI help | [`evidence/windows/cli-help-printconfig-20260719.md`](./evidence/windows/cli-help-printconfig-20260719.md) |
-| Win 5.5／7.3／Legal 1.6 | [`evidence/windows-symbol-archive-runbook-5.5.md`](./evidence/windows-symbol-archive-runbook-5.5.md)、[`evidence/windows/qa-three-crash-20260719/`](./evidence/windows/qa-three-crash-20260719/)、[`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md) |
+| Win 5.5／7.3／Legal 1.6／2.7 | [`evidence/windows-symbol-archive-runbook-5.5.md`](./evidence/windows-symbol-archive-runbook-5.5.md)、[`evidence/windows/qa-three-crash-20260719/`](./evidence/windows/qa-three-crash-20260719/)、[`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md)、[`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md) |
 
 ---
 
@@ -32,10 +32,10 @@
 
 **完成度（粗）：≈ 92–94%**（mac 回灌缺口已關；主殘留 §7.6／CI／resources／4.6／1.5）。  
 
-**已定案：** Legal 1.6 channel＝email／書面 offer；5.5 Win＝OneDrive 手動。  
+**已定案：** Legal 1.6 channel＝email／書面 offer；5.5 Win＝OneDrive 手動；**2.7** golden／perf — [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md)。  
 
 **明確缺口（勿寫成已完成）：**
-1. §7.6 SLA；7.4／7.5 CI  
+1. §7.6（依 2.7 最小矩陣）；7.4／7.5 CI  
 2. resources 品牌檔名；mac 4.6；1.5；符號化演練  
 
 ---
@@ -83,8 +83,9 @@ export ARCH_SUFFIX="arm64"
 
 ## 4. 下一步
 
-1. §7.6 SLA；7.4／7.5 CI  
-2. 可選：resources、mac 4.6、1.5、符號化演練  
+1. **§7.6**（mac／Win 依 2.7 最小矩陣；可與 7.1 證據整理並行）  
+2. 7.4／7.5 CI；1.5／2.8／7.7 簽核  
+3. 可選：resources、mac 4.6、符號化演練  
 
 ---
 

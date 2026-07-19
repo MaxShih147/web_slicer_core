@@ -1,4 +1,4 @@
-> **進度快照（2026-07-19 夜）：** mac 晚上 consumer 已回灌簽過包（DMG `…2111`；`legal/`＋help=0）。雙平台 §4／CLI／AGPL 有硬證。≈**92–94%**。下一步：7.6／CI。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+> **進度快照（2026-07-19 夜）：** mac 晚上 consumer 已回灌；**2.7 budget approved**。≈**92–94%**。下一步：依 2.7 **跑 mac／Win 7.6 最小矩陣**（7.1 證據可並行）。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 ## 1. 治理與必要輸入
 
 - [x] 1.1 [REQ-DEID-002] 接受線定案：本版 L2（含 L1）
@@ -22,7 +22,7 @@
 - [x] 2.4b [REQ-DEID-006] 「已知乾淨參考報告」**已批准**（2026-07-17）：[`clean-reference-report.md`](./clean-reference-report.md)；錨點 `poc/evidence/m1-close-20260717T032408Z/`
 - [x] 2.5 [REQ-DEID-006] Windows PoC **關閉／PASS**（2026-07-17）：`slicer-engine.exe`／`slicer_core.dll`／`slicer_run_cli`；VERSIONINFO 中性；`/PDBALTPATH:` RSDS 短中性名；三種 crash（overflow／segfault／exception）＋dump；minidump 模組無 `PrusaSlicer`。證據 [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。**殘餘 named exports≈470 已由 5.3 產品化關閉**；LocalDumps 未穩定（本 PoC 以 `cdb`＋exit 證明）。
 - [x] 2.6 [REQ-DEID-009] PoC：compile-time `BUNDLE_QA_CRASH_HARNESS`＋`bundle_qa_crash_probe`（已移出 `SLAPrint.cpp`）；QA flavor ON 可觸發三種 mode。**正式 consumer OFF 靜態稽核：** Win package 閘門＋macOS **5.6／5.7** 皆已關閉（2026-07-17）。
-- [ ] 2.7 [REQ-DEID-014] 定案 golden output tolerance 與 performance budget
+- [x] 2.7 [REQ-DEID-014] 定案 golden output tolerance 與 performance budget（**approved 2026-07-19：** 輸出非 bit-identical＋size ±5%；效能 ≤基線×1.20；7.6＝最小矩陣 MUST／§6 延伸 SHOULD — [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md)）
 - [ ] 2.8 評估結論經 Backend Security／Release Engineering 審閱並回寫 `design.md`
 
 **Dependency：** §5 雙平台可依 2.2／2.3／2.5 開工。§7 MUST blocked on 其餘 §2（2.1／2.7／2.8）與正式落地。
@@ -77,7 +77,7 @@
 - [x] 7.3 [REQ-DEID-006/009] **三種** QA crash site 均通過；consumer 靜態＋inspection 通過（**Win 2026-07-19：** overflow／segfault／exception NTSTATUS PASS；consumer＋env 不觸發；見 [`evidence/windows/qa-three-crash-20260719/SUMMARY.md`](./evidence/windows/qa-three-crash-20260719/SUMMARY.md)；macOS 動態仍見既有 PoC／可後補正式 §7）
 - [ ] 7.4 [REQ-DEID-013] macOS post-sign／notarize／staple CI gate 通過（**arm64 手動閉環 2026-07-19 PASS** — 見 [`evidence/macos-launcher-section4-20260719.md`](./evidence/macos-launcher-section4-20260719.md)；正式 CI 自動化仍待）
 - [ ] 7.5 [REQ-DEID-013] Windows post-Authenticode CI gate 通過（**手動 PASS 2026-07-19**；**升 CI＝未做／後補** — [`evidence/windows/section7-followup-20260719.md`](./evidence/windows/section7-followup-20260719.md)）
-- [ ] 7.6 [REQ-DEID-014] 雙平台 functional／performance regression 通過（**Win／mac 完整 SLA 矩陣未跑**；本輪不擋 7.3）
+- [ ] 7.6 [REQ-DEID-014] 雙平台 functional／performance regression 通過（**門檻已定 2.7** — [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md)；**最小矩陣尚未跑**）
 - [ ] 7.7 [REQ-DEID-010] Evidence metadata、hash、scanner／blacklist version、四方簽核齊備
 
 ## 8. OpenSpec lifecycle

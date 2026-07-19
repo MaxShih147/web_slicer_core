@@ -143,7 +143,7 @@ reviewers:
 
 兩平台 MUST 執行：full SLA slice、generate supports、hollow／drill、cut、project／3MF（若啟用）、invalid input／CLI missing／native crash／timeout／cancel、package install → first launch → slice → uninstall。
 
-輸出比對方式與效能門檻 MUST 在 PoC 結束前簽核（**進度：** 雙平台 PoC 已關閉；門檻簽核仍見 tasks **2.7**）。
+輸出比對方式與效能門檻 MUST 在 PoC 結束前簽核（**已定案 2026-07-19：** [`evidence/functional-budget-2.7-approved-20260719.md`](./evidence/functional-budget-2.7-approved-20260719.md) — size ±5%、非 bit-identical；perf ≤基線×1.20；7.6 最小矩陣 MUST）。
 
 ## 7. 證據路徑與審核
 

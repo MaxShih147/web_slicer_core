@@ -17,7 +17,7 @@
 | REQ-DEID-011 AGPL | D9 | 1.6、6.1–6.4 | **1.6 approved**；**Win＋mac 簽過包皆有 legal/**；6.4 SBOM 開 |
 | REQ-DEID-012 Symbol supply | D10、D13 | 5.5、6.5–6.7 | Win OneDrive＋mac drill；演練後補 |
 | REQ-DEID-013 Final-artifact gate | D11、D13 | 4.4–4.5、7.4–7.5 | 雙平台手動 PASS；CI 待 |
-| REQ-DEID-014 Functional parity | D12 | 3.6、4.6、7.6 | Win install smoke；mac 4.6／7.6 待 |
+| REQ-DEID-014 Functional parity | D12 | 3.6、4.6、7.6 | **2.7 approved**；Win install smoke；mac／Win **7.6 最小矩陣待跑** |
 | REQ-DEID-015 Naming＋schema | D6、D13 | 1.3–1.4 | 已簽核 |
 | REQ-LAUNCHER-DEID-001–004 | LD1–LD3 | Launcher 1–3／5 | 雙平台 verify／scan／sign 手動 PASS |
 | REQ-LAUNCHER-DEID-005 Flavor | LD5 | Launcher 4.1–4.2 | consumer gate PASS；QA 組包待 |
