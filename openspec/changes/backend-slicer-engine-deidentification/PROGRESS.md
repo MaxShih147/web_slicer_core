@@ -1,6 +1,6 @@
 # Progress Snapshot — backend-slicer-engine-deidentification
 
-**更新日期：** 2026-07-20（mac QA 4.2／4.6／5.11／6.4–6.7 對稱；Win 5.1b RTTI probe；未做 8.6 archive）  
+**更新日期：** 2026-07-20（mac 5.1b exception 型別名 PASS；Win 5.1b WER probe；未做 8.6 archive）  
 **Change status：** `in_progress`（見 `.openspec.yaml`）  
 
 ## 證據錨點
@@ -18,6 +18,7 @@
 | Win 5.11／6.4–6.7 | [`evidence/windows/subprocess-5.11-20260719T164527Z/`](./evidence/windows/subprocess-5.11-20260719T164527Z/)、[`source-chain-6.4-6.5-20260720/`](./evidence/windows/source-chain-6.4-6.5-20260720/)、[`symbolication-6.6-6.7-20260719T165250Z/`](./evidence/windows/symbolication-6.6-6.7-20260719T165250Z/) |
 | mac QA 4.2／4.6／5.11／6.4–6.7 | Launcher [`qa-flavor-4.2-macos-20260720-SUMMARY.md`](../../../../Bundle-Launcher/openspec/changes/backend-slicer-engine-deidentification/evidence/qa-flavor-4.2-macos-20260720-SUMMARY.md)；[`evidence/macos/lifecycle-4.6-20260719T191245Z/`](./evidence/macos/lifecycle-4.6-20260719T191245Z/)；[`subprocess-5.11-…`](./evidence/macos/subprocess-5.11-20260719T191352Z/)；[`source-chain-6.4-6.5-…`](./evidence/macos/source-chain-6.4-6.5-20260719T191352Z/)；[`symbolication-6.6-6.7-…`](./evidence/macos/symbolication-6.6-6.7-20260719T191352Z/) |
 | Win 5.1b RTTI probe | [`evidence/windows/rtti-5.1b-probe-20260720/SUMMARY.md`](./evidence/windows/rtti-5.1b-probe-20260720/SUMMARY.md) |
+| mac 5.1b exception／.ips | [`evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md`](./evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md) |
 | 2.1 A–E／Legal／簽核包 | [`evidence/feasibility-A-E-2.1-20260719.md`](./evidence/feasibility-A-E-2.1-20260719.md)、[`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md)、[`evidence/signoff-gate5-pending-20260719.md`](./evidence/signoff-gate5-pending-20260719.md) |
 
 ---
@@ -40,13 +41,12 @@
 
 **明確缺口（非 blocking）：**
 1. 可選：8.6 archive → `status: completed`（**8.5 已做**）  
-2. 後補：5.1b（RTTI／例外正式化）；5.9／5.10（明確選配／預設否）；QA 重配對現行 consumer build_id  
-   - **Win 2026-07-20 probe：** QA `exception`→abort／WER **無** demangle `Slic3r::` — [`evidence/windows/rtti-5.1b-probe-20260720/SUMMARY.md`](./evidence/windows/rtti-5.1b-probe-20260720/SUMMARY.md)；暫不需 Win catch  
-   - **mac 既有 PoC：** `.ips`／exception.log **有** `Slic3r::qa::BundleQaForcedException`（catch 若做應優先 mac）  
+2. 後補：5.9／5.10（明確選配／預設否）；QA 重配對現行 consumer build_id（可選）  
+   - **5.1b 已關（2026-07-20）：** Win WER 無 demangle；mac 中性 terminate＋乾淨 `.ips` 無型別名 — [`evidence/macos/rtti-5.1b-exception-20260720/`](./evidence/macos/rtti-5.1b-exception-20260720/)  
 
 **本輪已關（2026-07-20 Win）：** Setup 安裝樹回灌；resources=0；QA 4.2；**EV 簽 Setup＋7.5 `-SetupExe` PASS**；**5.11／6.4／6.5／6.6／6.7**；**5.1b Win surface probe**。  
 
-**本輪已關（2026-07-20 mac）：** QA 4.2 isolation；**4.6** DMG lifecycle sample；**5.11／6.4／6.5／6.6／6.7** 對稱。
+**本輪已關（2026-07-20 mac）：** QA 4.2 isolation；**4.6** DMG lifecycle sample；**5.11／6.4／6.5／6.6／6.7** 對稱；**5.1b exception 型別名 PASS**。
 
 ---
 
@@ -78,15 +78,14 @@
 ## 3. 已知殘留（非 blocking）
 
 1. 內嵌 Win app exe 未 Authenticode；QA 重配對現行 consumer（歷史 pairing note）  
-2. 5.1b RTTI／例外正式化（**Win WER 表面已 probe＝無 demangle 洩漏**；mac PoC 仍見型別名 — 見 §1 缺口 #2）  
 
 ---
 
 ## 4. 下一步
 
-1. **8.5 promote 已關**  
+1. **8.5 promote 已關**；**5.1b 已關**  
 2. 可選：**8.6 archive** → `completed`（依指示可暫緩）  
-3. 後補：5.1b（優先 mac catch／等效，若要關）；QA rebuild 配對現行 consumer  
+3. 可選：QA rebuild 配對現行 consumer  
 
 ---
 
@@ -113,5 +112,7 @@
 - **勿**再寫「mac／Win 7.6 對方未跑」— 雙平台最小矩陣 evidence 皆已存在。  
 - **2026-07-20：** 衛星對齊；Win 回灌＋resources＋QA 4.2；**7.5 signed Setup**；**5.11／6.4–6.7 Win PASS**。  
 - **2026-07-20（doc sync）：** 衛星 `proposal`／`design`／evidence sync 表與主 `implementation-checklist`／`FILE-INDEX`／`tasks` 5.5 註記已對齊本檔（不再寫 Setup EV pending／6.4–6.7 未做）。  
-- **2026-07-20（full sync）：** 主＋衛星治理／tasks／checklist／evidence sync 表對齊；不再寫 mac 4.6／QA／5.11／6.x「待」。剩餘僅 **8.6**／5.1b／QA 重配對。  
-- **2026-07-20（stash merge）：** 解消 `PROGRESS` conflict — 採 upstream「mac 對稱已關」＋保留本機 Win 5.1b RTTI probe／mac PoC 對照註記。
+- **2026-07-20（full sync）：** 主＋衛星治理／tasks／checklist／evidence sync 表對齊；不再寫 mac 4.6／QA／5.11／6.x「待」。  
+- **2026-07-20（stash merge）：** 解消 `PROGRESS` conflict — 採 upstream「mac 對稱已關」＋保留本機 Win 5.1b RTTI probe／mac PoC 對照註記。  
+- **2026-07-20（5.1b mac）：** 中性 terminate＋乾淨 `.ips` PASS；tasks 5.1b 勾選。剩餘可選僅 **8.6**／QA 重配對。  
+- **2026-07-20（Launcher sync）：** 衛星 `SYNC-STATUS`／`FILE-INDEX`／`proposal`／`design`／`.openspec.yaml`／`evidence/rtti-5.1b-20260720-SYNC.md` 已對齊本檔（5.1b 已關）。

@@ -1,4 +1,4 @@
-> **進度快照（2026-07-20）：** 雙平台 §7＋Gate 5＋**8.5 promote** 已關。≈**100%**（blocking）。Win＋**mac** QA 4.2／4.6／5.11／6.4–6.7 已關。8.6 archive 未做。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+> **進度快照（2026-07-20）：** 雙平台 §7＋Gate 5＋**8.5 promote**＋**5.1b** 已關。≈**100%**（blocking）。Win＋**mac** QA 4.2／4.6／5.11／6.4–6.7 已關。8.6 archive 未做。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 ## 1. 治理與必要輸入
 
 - [x] 1.1 [REQ-DEID-002] 接受線定案：本版 L2（含 L1）
@@ -48,7 +48,7 @@
 ## 5. L2／精簡版 C′ 與 crash harness（必要）
 
 - [x] 5.1 [REQ-DEID-006/D13] macOS fork：依 2.2 定案 flags 產品化＋產 dSYM＋strip；產出 manifest pre／post_strip hash；收斂殘餘 nm brand（PoC≈172）（**關閉 2026-07-17：** `package_slicer_engine_macos.sh`；補 visibility；CLI `-Wl,-exported_symbol,_main`；consumer **nm brand global=0／local=0**）
-- [ ] 5.1b [REQ-DEID-006] RTTI／例外：拋例外 crash site＋必要時 top-level catch（PoC exception→`.ips` 已證明可行；正式化）
+- [x] 5.1b [REQ-DEID-006] RTTI／例外：CLI 中性 `set_terminate`＋`try/catch`（`PrusaSlicer.cpp`）；mac QA `exception`→abort／`.ips` 無 demangle 型別名（**2026-07-20 PASS** — [`evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md`](./evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md)；Win WER 表面見既有 probe）
 - [x] 5.2 [REQ-DEID-006] 全部 thread call site 中性化（2026-07-17：`slicer-worker`／`slicer-tbb-N`；GUI `slicer-bg-slc`；證據 [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md)）
 - [x] 5.3 [REQ-DEID-006] Windows：export 收斂為 1＋PDB 封存／排除（**2026-07-17 Win 驗證 PASS**：`dumpbin`=`slicer_run_cli` only；`package_slicer_engine_windows.ps1`）
 - [x] 5.4 [REQ-DEID-006] consumer：local＋global 符號掃描通過；無 dSYM／PDB／品牌 debug path（**macOS：** `scan_slicer_engine_macos.sh` PASS；**Win 2026-07-19：** `scan_slicer_engine_windows.ps1` PASS — export／VERSIONINFO／harness／layout）

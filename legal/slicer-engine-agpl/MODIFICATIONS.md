@@ -14,7 +14,9 @@ Material changes relative to upstream PrusaSlicer include (non-exhaustive):
    **Slicer Engine**.
 3. **L2 / C′ hardening** — Hidden visibility + plain `strip` (macOS); export
    surface reduced to `slicer_run_cli` (Windows); neutral thread names;
-   dSYM / PDB archived outside the consumer tree.
+   dSYM / PDB archived outside the consumer tree; CLI neutral
+   `std::set_terminate` / top-level catch so uncaught exceptions do not print
+   demangled `Slic3r::` type names via libc++abi.
 4. **QA crash harness** — Optional compile-time `BUNDLE_QA_CRASH_HARNESS`
    (qa flavor only; **off** in consumer releases).
 5. **Headless / agent integration** — Build flags and packaging scripts for

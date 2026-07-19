@@ -12,7 +12,7 @@
 | M1 | 雙平台 PoC | 4–8 | **關閉 PASS** |
 | M2 | L1 改名＋Win ABI | 5–10 | **雙平台完成** |
 | M3 | Launcher 組包／驗證／簽署／gate | 4–8 | **雙平台閉環**；7.4／7.5 CI；**mac 4.6 PASS** |
-| M4 | C′ strip／thread／export／symbol store | 3–7 | **雙平台 C′ 關閉**；**Win＋mac 5.11／6.4–6.7 PASS**；5.1b 後補 |
+| M4 | C′ strip／thread／export／symbol store | 3–7 | **雙平台 C′ 關閉**；**Win＋mac 5.11／6.4–6.7 PASS**；**5.1b PASS** |
 | M4b | L3 | 5–15+ | 本版不做 |
 | M5 | AGPL＋雙平台正式驗收 | 3–7 | **§6＋§7＋Gate 5＋8.5 已關** |
 
@@ -21,7 +21,7 @@
 | 觀察 | 影響 |
 |------|------|
 | 雙平台 Launcher §4／§7／CI／mac 4.6／合規對稱 | **M3–M5 主線關閉** |
-| 剩餘 | 可選 **8.6 archive**；後補 5.1b；QA 重配對現行 consumer |
+| 剩餘 | 可選 **8.6 archive**；QA 重配對現行 consumer（可選） |
 
 **整體完成度：≈ 100%**（blocking＋8.5；lifecycle 仍 `in_progress` 至 8.6）。  
 **剩餘合計（粗）：約 0.5–2 人日**（archive 文件／可選後補）。

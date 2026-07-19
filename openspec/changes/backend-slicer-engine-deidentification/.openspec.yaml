@@ -96,16 +96,17 @@ progress:
   macos_subprocess_5_11: closed-pass
   macos_source_chain_6_4_6_5: closed-pass
   macos_symbolication_6_6_6_7: closed-pass
+  macos_5_1b_rtti_exception: closed-pass  # 2026-07-20 neutral terminate + clean .ips
   overall_progress_pct_approx: 100
   next:
     - optional-8.6-archive-change
-    - optional-5.1b-rtti-exception
     - optional-qa-rebuild-pair-current-consumer
   resolved_gates_extra_note: |
     Gate 5 countersigned by Vance (Security/Release/QA/Legal). Dual-platform §7 closed.
     Spec promoted (8.5). Win reinject EV + 5.11/6.4–6.7 closed 2026-07-20.
     mac QA 4.2 + 4.6 + 5.11/6.4–6.7 closed 2026-07-20.
-    Optional: 8.6 archive then status=completed; 5.1b; QA rebuild pair to current consumer.
+    mac 5.1b exception type-name PASS 2026-07-20 (neutral set_terminate).
+    Optional: 8.6 archive then status=completed; QA rebuild pair to current consumer.
     Doc sync 2026-07-20: satellite + implementation-checklist aligned to PROGRESS.md.
 lifecycle:
   states: [proposed, in_progress, completed, archived]

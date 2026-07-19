@@ -52,7 +52,7 @@
 2. ~~**5.6／5.7** consumer harness OFF~~ → **Done**（Win package／scan gate）。  
 3. ~~Agent／Launcher 路徑~~ → **Done 2026-07-19**（Win＋mac §4；見 [`PROGRESS.md`](../PROGRESS.md)）。  
 4. LocalDumps HKCU 未穩定產出 dump；本 PoC 以 `cdb` 取 dump（exit code 已證明三種 native 失敗）。正式 §7 可用同等取證。  
-5. ~~Authenticode／install lifecycle~~ → **Done 2026-07-19／20**（Setup Valid＋lifecycle＋reinject **EV**；見 [`PROGRESS.md`](../PROGRESS.md)）。~~§7／CLI help／mac 4.6／mac QA／mac 5.11／6.x~~ → **已關**；可選僅 **8.6**／5.1b／QA 重配對。
+5. ~~Authenticode／install lifecycle~~ → **Done 2026-07-19／20**（Setup Valid＋lifecycle＋reinject **EV**；見 [`PROGRESS.md`](../PROGRESS.md)）。~~§7／CLI help／mac 4.6／mac QA／mac 5.11／6.x／5.1b~~ → **已關**；可選僅 **8.6**／QA 重配對。
 
 ---
 

@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-20）· blocking ≈ **100%** · **8.5 promote 已關** · Win＋mac QA／4.6／5.11／6.x 已關 · 未做 8.6 · 進度 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-20）· blocking ≈ **100%** · **8.5 promote 已關** · **5.1b 已關** · Win＋mac QA／4.6／5.11／6.x 已關 · 未做 8.6 · 進度 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -58,6 +58,8 @@
 | [`../../../../macOS_system_report.md`](../../../../macOS_system_report.md) | 實測 macOS System Report（Prusa 指紋） |
 | [`evidence/windows/baseline/`](./evidence/windows/baseline/) | Windows baseline（**1.7 已關閉**；權威 `win-baseline-20260717T055632Z/`） |
 | [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/) | Windows PoC evidence（**2.5 PASS**） |
+| [`evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md`](./evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md) | **5.1b mac** exception abort／`.ips` 型別名 PASS |
+| [`evidence/windows/rtti-5.1b-probe-20260720/SUMMARY.md`](./evidence/windows/rtti-5.1b-probe-20260720/SUMMARY.md) | **5.1b Win** WER／abort 表面 probe PASS |
 | Notion：基礎資安防護 | 產品 story（後端範圍；改名必要 + 加密／屏蔽評估優先） |
 | Notion Test 稿（Win 2.3＋2.5） | [`poc/NOTION-WIN-POLICY-POC-TASK.md`](./poc/NOTION-WIN-POLICY-POC-TASK.md) |
 
@@ -113,4 +115,5 @@
 | mac 7.4 CI gate | **PASS** — [`evidence/macos/ci-gate-7.4-20260719T151403Z/`](./evidence/macos/ci-gate-7.4-20260719T151403Z/) |
 | mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |
 | Gate 5／8.5 promote | **已關** — Vance Approve；[`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md) |
-| 仍開（非 blocking） | 可選 **8.6** archive；5.1b；QA 重配對現行 consumer |
+| 5.1b RTTI／例外 | **已關 PASS 2026-07-20** — mac [`evidence/macos/rtti-5.1b-exception-20260720/`](./evidence/macos/rtti-5.1b-exception-20260720/)；Win [`evidence/windows/rtti-5.1b-probe-20260720/`](./evidence/windows/rtti-5.1b-probe-20260720/)；Launcher pointer `Bundle-Launcher/.../evidence/rtti-5.1b-20260720-SYNC.md` |
+| 仍開（非 blocking） | 可選 **8.6** archive；QA 重配對現行 consumer |

@@ -1,6 +1,6 @@
 # 跨 Repository Implementation Checklist
 
-**進度（2026-07-20）：** 雙平台 §7＋Gate 5＋**8.5 promote**；Win＋**mac** 回灌／QA 4.2／4.6／5.11／6.4–6.7；未做 8.6。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+**進度（2026-07-20）：** 雙平台 §7＋Gate 5＋**8.5 promote**＋**5.1b**；Win＋**mac** 回灌／QA 4.2／4.6／5.11／6.4–6.7；未做 8.6。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 
 ## Gate 0 — 規格與治理
 

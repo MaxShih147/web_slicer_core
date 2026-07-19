@@ -9,7 +9,7 @@
 | REQ-DEID-003 Dual platform | D5 | 2.4–2.5、7.1–7.2 | **雙平台已宣告** |
 | REQ-DEID-004 Rename/repack | D1、D13 | 3.1–3.5、4.1–4.6 | Win＋mac §4／CLI／晚上回灌 evidence |
 | REQ-DEID-005 Identity strings | D2 | 3.2、4.3 | mac notarize＋Win Setup PASS；內嵌 Win exe 未簽 |
-| REQ-DEID-006 L2／C′ | D3、D5、D7、D10、D13 | 1.8–1.9、2.2–2.5、5.1–5.5 | C′／scan PASS；5.1b 待 |
+| REQ-DEID-006 L2／C′ | D3、D5、D7、D10、D13 | 1.8–1.9、2.2–2.5、5.1–5.5、**5.1b** | C′／scan PASS；5.1b mac＋Win PASS 2026-07-20 |
 | REQ-DEID-007 不得以 D／E／C-full 取代 | D8 | 2.1、5.8–5.10 | **2.1 A–E**；**1.5／2.8 Vance Approve** |
 | REQ-DEID-008 AGPL subprocess | D4 | 5.11 | **Win＋mac 5.11 PASS** |
 | REQ-DEID-009 Crash harness／QA | D7 | 2.6、5.6–5.7、7.3 | consumer OFF；**Win 7.3 PASS**；**mac qa three-crash PASS**；**Win＋mac QA 4.2 PASS** |

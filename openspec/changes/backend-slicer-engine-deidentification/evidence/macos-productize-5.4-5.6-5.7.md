@@ -58,6 +58,6 @@ Toggling `BUNDLE_QA_CRASH_HARNESS` via global `add_definitions` forces a broad `
 
 - ~~Windows **5.3**／Windows formal scan gate~~ → **closed 2026-07-17～19**（export=1＋`scan_slicer_engine_windows.ps1`＋Launcher unsigned gate）  
 - **5.5** symbol archive runbook  
-- **5.1b** RTTI formalization  
+- ~~**5.1b** RTTI formalization~~ → **PASS 2026-07-20**（[`macos/rtti-5.1b-exception-20260720/`](./macos/rtti-5.1b-exception-20260720/)；Win probe 同日）
 - **macOS** Launcher **§4** handoff／CI gate（**Win unsigned＋post-sign Setup closed 2026-07-19**）  
 - Dual-platform §7 acceptance（含 qa 動態）；CLI help `PrusaSlicer` 殘留清理  

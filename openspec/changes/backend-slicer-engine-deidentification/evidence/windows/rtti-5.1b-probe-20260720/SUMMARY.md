@@ -45,16 +45,16 @@ L2 黑名單對「可讀崩潰報告」的關注點是 WER／stack 文字；本�
 
 ## Implication for 5.1b top-level catch
 
-在目前 **Win QA exception→abort** 路徑下，**沒有**觀測到「abort／WER 印出 `Slic3r::` 型別名」→ **Windows 不強制**加 CLI top-level catch。
+在目前 **Win QA exception→abort** 路徑下，**沒有**觀測到「abort／WER 印出 `Slic3r::` 型別名」→ **Windows 不強制**加 CLI top-level catch（仍已套用與 mac 相同之中性 `set_terminate`／`try/catch` 對稱修）。
 
-對照（既有 mac PoC，非本輪）：`poc/evidence/m1-close-…/ips/exception.log` 有  
+對照（既有 mac PoC，已由 2026-07-20 修關閉）：舊 `exception.log` 曾有  
 
 `libc++abi: terminating due to uncaught exception of type Slic3r::qa::BundleQaForcedException`  
 
-→ **macOS `.ips`／abort 文字會洩漏 demangle 型別名**；若要關 5.1b，優先在 **mac** 做 catch／等效，而非 Win。
+→ **已關：** [`../macos/rtti-5.1b-exception-20260720/SUMMARY.md`](../macos/rtti-5.1b-exception-20260720/SUMMARY.md)（中性 terminate＋乾淨 `.ips` 無型別名）。
 
 ## Related
 
-- tasks **5.1b**（Win 表面本證據＝暫不需 catch；mac 仍見 PoC 洩漏）
+- tasks **5.1b**（Win＋mac 表面 2026-07-20 皆 PASS）
 - 7.3 QA three-crash；PoC `w25-close`／`m1-close`
 - design D3 RTTI／例外
