@@ -201,7 +201,9 @@ flowchart TD
 9. ~~Windows 政策（2.3）~~ → **已定案：** [`windows-policy.md`](./windows-policy.md)  
 10. ~~Windows PoC（2.5）＋compile-time harness（2.6 PoC）~~ → **已通過：** [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)
 
-**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。下一步：§3／§5 產品化（含 **5.3** Win export=1）。
+**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。  
+**已落地（2026-07-17）：** macOS **3.1–3.6（除 3.3）**＋**5.1／5.2**。  
+**下一步：** Windows **5.3**；Launcher **§4**；**5.5** symbol archive runbook。（macOS **5.4／5.6／5.7** 已關閉 2026-07-17）
 
 ## 規範性附件
 

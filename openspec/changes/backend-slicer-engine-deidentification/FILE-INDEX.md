@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-17）· **M1／2.4 PASS** · **1.7／2.3／2.5／2.6(PoC) Win 已關閉** · 進度總表 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-17 夜）· macOS **5.1／5.2／5.4／5.6／5.7／3.5／3.6** 關閉 · 進度 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -36,6 +36,12 @@
 | [`evidence/windows/baseline/BASELINE.md`](./evidence/windows/baseline/BASELINE.md) | Windows 現況 baseline 報告（1.7 關閉） |
 | [`poc/run_m1_close.sh`](./poc/run_m1_close.sh)／[`poc/scan_macos_artifact.sh`](./poc/scan_macos_artifact.sh) | M1 close 腳本＋scanner 原型 |
 | [`poc/run_w25_close.ps1`](./poc/run_w25_close.ps1) | Windows 2.5 close 腳本 |
+| [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md) | macOS 5.2／3.5／3.6 抽樣關閉記錄 |
+| [`evidence/macos-productize-5.4-5.6-5.7.md`](./evidence/macos-productize-5.4-5.6-5.7.md) | macOS 5.4／5.6／5.7 正式 scan／qa_delta／consumer harness OFF |
+| `scripts/package_slicer_engine_macos.sh` | **D13 產品化**（dSYM→strip→manifest；tasks 5.1） |
+| `scripts/scan_slicer_engine_macos.sh` | **正式掃描閘**（tasks 5.4／5.6／5.7；packager fail-closed） |
+| `third_party/slicer-engine/`（local gitignored） | consumer 佈局＋manifest＋`scan-report.json` |
+| `third_party/slicer-engine-qa/`（local gitignored） | QA flavor＋`qa_delta` |
 
 ## 2. 證據與產品脈絡
 
@@ -77,11 +83,14 @@
 |------|------|
 | macOS PoC（tasks 2.4） | **已關閉 PASS** — [`poc/REPORT.md`](./poc/REPORT.md)／`m1-close-20260717T032408Z` |
 | 乾淨參考報告（tasks 2.4b） | **已批准** — [`clean-reference-report.md`](./clean-reference-report.md) |
-| macOS flags 定案（tasks 2.2） | **已完成** — visibility＋否決 strip -x；hash 鏈歸 5.1 |
+| macOS flags 定案（tasks 2.2） | **已完成** — visibility＋否決 strip -x |
+| macOS L1 產品化（3.1／3.2／3.4） | **已落地**（2026-07-17 晚）— CMake／plist／help／`SLICER_ENGINE_BIN` |
+| macOS D13 package（5.1） | **關閉** — 流水線＋nm brand **0**（2026-07-17 夜） |
 | Notion Test 稿 | [`poc/NOTION-TEST-TASK.md`](./poc/NOTION-TEST-TASK.md) |
 | 可行性評估報告定案 | 待 `tasks.md` 2.1／2.8；雙平台 C′ 已由 2.4／2.5 PoC 證明 |
-| 引擎命名＋交接 schema | naming-manifest＋artifact-manifest.schema；**已簽核（2026-07-17）**；§3／§4／§5 可開工 |
+| 引擎命名＋交接 schema | naming-manifest＋artifact-manifest.schema；**已簽核（2026-07-17）** |
 | Windows baseline | **已關閉**（1.7） |
 | Windows PoC | **已關閉 PASS**（2.5）— export=1 → 5.3 |
+| Launcher §4 | **未開始**（macOS post-strip manifest 已有本機樣品；正式交接／Win 仍缺） |
 | macOS／Windows final-artifact evidence | 待 `tasks.md` §7 |
 | AGPL／source-offer release evidence | 待 `tasks.md` §6 |

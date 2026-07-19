@@ -19,7 +19,7 @@
 | 三種 crash | **Done** — overflow／segfault／exception 皆有 dump＋非零失敗 exit |
 | Minidump 模組名 | **Done** — `slicer_engine`／`slicer_core`（無 `PrusaSlicer`） |
 | Export 收斂為 1 | **部分** — `slic3r_main` 已消失；仍 ~470 cereal mangled → **5.3** |
-| Go／No-go | **Go** 進 §3／§5 產品化（export 歸零另追） |
+| Go／No-go | **Go** 進 §3／§5 產品化（export 歸零另追）— **macOS 產品化已開始／大部落地（2026-07-17 晚）** |
 
 ---
 
@@ -50,7 +50,7 @@
 
 1. **5.3** 將 consumer export 收斂為唯一 `slicer_run_cli`（cereal `dllexport` 衛生）。  
 2. **5.6／5.7** consumer binary inspection 證明無 harness 符號。  
-3. Agent／Launcher 路徑改 `slicer-engine/`（§3／§4）。  
+3. Agent／Launcher 路徑改 `slicer-engine/`（§3／§4）— **macOS agent 路徑已於 2026-07-17 晚改 `SLICER_ENGINE_BIN`**；Win／Launcher 仍開。  
 4. LocalDumps HKCU 未穩定產出 dump；本 PoC 以 `cdb` 取 dump（exit code 已證明三種 native 失敗）。  
 5. DLL `OriginalFilename` 目前與 exe 共用 rc 模板（仍為 `slicer-engine.exe`）— 產品化可拆 DLL 專用 rc。
 

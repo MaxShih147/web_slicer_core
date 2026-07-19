@@ -96,10 +96,10 @@ Scanner：`SCAN.json` → **verdict PASS**。
 
 ## 6. Follow-ups（M1 之後，不阻擋 2.4）
 
-1. **2.2 定案：** 殘餘 172 global 的收斂策略；dSYM 封存路徑與 manifest hash 鏈（→ **5.1**）。  
+1. ~~**2.2／5.1 流水線＋nm 收斂**~~ → **Done（2026-07-17 夜）** `package_slicer_engine_macos.sh`；arrange／wrapper visibility＋`-exported_symbol,_main`；consumer **nm brand 0**。  
 2. ~~**Harness compile-time 化**~~ **Done（2.6 PoC）** — `BUNDLE_QA_CRASH_HARNESS`／`bundle_qa_crash_probe`；consumer OFF → **5.6**。  
 3. ~~**Windows baseline／PoC**~~ **Done（1.7／2.5）** — 見 `BASELINE.md`／`REPORT-WIN.md`。  
-4. **正式包：** 永不附 dSYM／PDB；符號庫 ACL／retention（D12／5.5）。
+4. **正式包：** 永不附 dSYM／PDB；符號庫 ACL／retention（D12／5.5）；Launcher §4。
 
 ---
 

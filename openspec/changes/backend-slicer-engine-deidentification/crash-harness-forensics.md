@@ -5,7 +5,7 @@
 **適用 Requirement：** REQ-DEID-006、REQ-DEID-009、REQ-DEID-014；`design.md` D3／D7／D13
 **對應 tasks：** 2.4、2.5、2.6、5.6、7.3
 
-> **進度（2026-07-17）：** compile-time `BUNDLE_QA_CRASH_HARNESS`＋`bundle_qa_crash_probe` **已落地**（移出 SLAPrint）；macOS／Windows 三種 crash PoC 皆有證據。殘餘：consumer OFF 稽核（5.6／5.7）、正式取證工具參數化、LocalDumps 穩定化。
+> **進度（2026-07-17）：** compile-time harness＋macOS **5.6／5.7** consumer OFF／qa_delta **已關閉**。殘餘：正式三 crash 動態驗收（7.3）、Win consumer 閘、LocalDumps 穩定化。
 
 ---
 
@@ -80,11 +80,11 @@
 
 ## 4. 完成定義（DoD）
 
-- [x] harness 僅以 compile-time `BUNDLE_QA_CRASH_HARNESS` 編入（PoC／2.6）；**consumer binary inspection 零殘留**仍見 5.6／5.7
+- [x] harness 僅以 compile-time `BUNDLE_QA_CRASH_HARNESS` 編入；**macOS consumer inspection 零殘留**（5.7）
 - [x] 觸發點不在 `SLAPrint.cpp`（`bundle_qa_crash_probe.cpp`；CLI 入口呼叫）
 - [x] 三類 crash site 皆可觸發並各取得一份基準報告（macOS 2.4：`poc/evidence/m1-close-20260717T032408Z/`；Windows 2.5：`poc/evidence/w25-close-20260717T083241Z/`；正式驗收仍見 7.3）
-- [x] compile-time QA harness 與 consumer Release **分離機制**就緒（2.6 PoC）；consumer OFF 稽核證據仍見 5.6
-- [x] 參數化／移出 `SLAPrint.cpp` 熱點（PoC 完成；正式 5.6 複驗）
+- [x] compile-time QA harness 與 consumer Release **分離**＋`qa_delta`（macOS 5.6）
+- [x] 參數化／移出 `SLAPrint.cpp` 熱點（PoC＋5.6 複驗）
 - [ ] 取證工具參數化行程名，改名前後皆可用；以 pid 對應 `.ips`
 - [ ] 取證流程不依賴崩掉 Launcher；乾淨環境執行並記錄環境證據
 - [x] Windows／WER 對等取證路徑就緒（2.5：`cdb` dump＋exit；LocalDumps 穩定化可後續加強）

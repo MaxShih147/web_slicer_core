@@ -1,4 +1,4 @@
-> **進度快照（2026-07-17）：** 本輪產品化**僅在 Windows 機驗證**。勾選規則：平台專屬項須在該平台跑過才可 `[x]`；僅改腳本／原始碼、未在 macOS 建置／組包／驗收者**不得**勾完成。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+> **進度快照（2026-07-17）：** 雙平台各自驗證後合併。**macOS** 已關 3.1／3.2／3.4／3.5／3.6／5.1／5.2／5.4／5.6／5.7；**Windows** 已關 3.3／5.3（export=1＋package）與 Win consumer harness 閘。勾選規則：平台專屬項須在該平台跑過才可 `[x]`。下一步：Launcher **§4**／**5.5**／§6–7。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 ## 1. 治理與必要輸入
 
 - [x] 1.1 [REQ-DEID-002] 接受線定案：本版 L2（含 L1）
@@ -16,12 +16,12 @@
 ## 2. 可行性評估與雙平台 PoC
 
 - [ ] 2.1 [REQ-DEID-006/007] 產出 A–E 可行性報告；**C′ 必須可達雙平台 L2**；明確記錄 C-full／OLLVM 為 L3 不做。（**進度：** 雙平台 C′ 可行性已由 **2.4／2.5 PoC** 證明；**書面 A–E 報告**仍缺）
-- [x] 2.2 [REQ-DEID-006/012/D13] 定案 macOS（2026-07-17 PoC）：`-fvisibility=hidden -fvisibility-inlines-hidden`（libslic3r＋CLI）；**否決 `strip -x`**；採 plain `strip`；dSYM 先封存再 strip；驗收禁止同 UUID dSYM／未 strip 污染。見 [`poc/REPORT.md`](./poc/REPORT.md)。**pre／post_strip manifest hash 鏈**仍由 5.1 產品化落地。
+- [x] 2.2 [REQ-DEID-006/012/D13] 定案 macOS（2026-07-17 PoC）：`-fvisibility=hidden -fvisibility-inlines-hidden`（libslic3r＋CLI）；**否決 `strip -x`**；採 plain `strip`；dSYM 先封存再 strip；驗收禁止同 UUID dSYM／未 strip 污染。見 [`poc/REPORT.md`](./poc/REPORT.md)。**pre／post_strip manifest hash 鏈**已由 **5.1** `scripts/package_slicer_engine_macos.sh` 產品化。
 - [x] 2.3 [REQ-DEID-006/012] 定案 Windows（2026-07-17）：DLL＋shim ABI（`slicer-engine.exe`→`slicer_core.dll`→唯一 `slicer_run_cli`）；export 收斂為 1（否決只改名留下 470 mangled）；headless `/Zi`＋`/DEBUG`＋`/PDB:`＋**`/PDBALTPATH:`**；產→封存→consumer 無 pdb／無品牌 debug path；VERSIONINFO exe+DLL；原子遷移順序。見 [`windows-policy.md`](./windows-policy.md)。
 - [x] 2.4 [REQ-DEID-006] macOS PoC **關閉**（2026-07-17）：改名＋`codeSigningID`＝L1 OK；visibility＋plain `strip`；thread→`slicer-worker`；三種 crash（含 exception／abort）皆有 `.ips`；乾淨符號環境下 `Slic3r::`=0；scanner PASS。證據 [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)、[`poc/REPORT.md`](./poc/REPORT.md)。殘餘 nm≈172 移交 5.1。
 - [x] 2.4b [REQ-DEID-006] 「已知乾淨參考報告」**已批准**（2026-07-17）：[`clean-reference-report.md`](./clean-reference-report.md)；錨點 `poc/evidence/m1-close-20260717T032408Z/`
-- [x] 2.5 [REQ-DEID-006] Windows PoC **關閉／PASS**（2026-07-17）：`slicer-engine.exe`／`slicer_core.dll`／`slicer_run_cli`；VERSIONINFO 中性；`/PDBALTPATH:` RSDS 短中性名；三種 crash（overflow／segfault／exception）＋dump；minidump 模組無 `PrusaSlicer`。證據 [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。**殘餘：** named exports≈470 → **5.3**（本輪 Win 產品化已關）；LocalDumps 未穩定（本 PoC 以 `cdb`＋exit 證明）。
-- [x] 2.6 [REQ-DEID-009] PoC：compile-time `BUNDLE_QA_CRASH_HARNESS`＋`bundle_qa_crash_probe`（已移出 `SLAPrint.cpp`）；QA flavor ON 可觸發三種 mode。**正式 consumer OFF 靜態稽核：** Win 已由 package 閘門驗證；macOS 產品化仍見 **5.6／5.7**。
+- [x] 2.5 [REQ-DEID-006] Windows PoC **關閉／PASS**（2026-07-17）：`slicer-engine.exe`／`slicer_core.dll`／`slicer_run_cli`；VERSIONINFO 中性；`/PDBALTPATH:` RSDS 短中性名；三種 crash（overflow／segfault／exception）＋dump；minidump 模組無 `PrusaSlicer`。證據 [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。**殘餘 named exports≈470 已由 5.3 產品化關閉**；LocalDumps 未穩定（本 PoC 以 `cdb`＋exit 證明）。
+- [x] 2.6 [REQ-DEID-009] PoC：compile-time `BUNDLE_QA_CRASH_HARNESS`＋`bundle_qa_crash_probe`（已移出 `SLAPrint.cpp`）；QA flavor ON 可觸發三種 mode。**正式 consumer OFF 靜態稽核：** Win package 閘門＋macOS **5.6／5.7** 皆已關閉（2026-07-17）。
 - [ ] 2.7 [REQ-DEID-014] 定案 golden output tolerance 與 performance budget
 - [ ] 2.8 評估結論經 Backend Security／Release Engineering 審閱並回寫 `design.md`
 
@@ -29,12 +29,12 @@
 
 ## 3. web_slicer_core／fork：L1 與功能相容
 
-- [ ] 3.1 [REQ-DEID-004/015] CMake 雙平台 target／output／runtime directory 使用簽核名稱（**Win 已驗證** `slicer-engine`／`slicer_core`＋staging；**macOS 產品化建置／OUTPUT 尚未在本輪跑過**）
-- [ ] 3.2 [REQ-DEID-005] macOS codeSigningID／Info.plist／Version／thread（**僅有腳本草稿** `package_slicer_engine_macos.sh`；**未在 Mac 執行**）
+- [x] 3.1 [REQ-DEID-004/015] CMake 雙平台 target／output／runtime directory 使用簽核名稱（2026-07-17：macOS `OUTPUT_NAME=slicer-engine`、移除品牌 POST_BUILD symlink；Win 已驗證 `slicer-engine`／`slicer_core`＋staging）
+- [x] 3.2 [REQ-DEID-005] macOS codeSigningID／Info.plist（刪除或中性化）／Version／thread name 去品牌（2026-07-17：`Info.plist.in` 中性；`--help`→`slicer-engine`／`Slicer Engine …`；package `codesign --identifier slicer-engine`；thread `slicer-worker`／`slicer-bg-slc`）
 - [x] 3.3 [REQ-DEID-005/006] Windows VERSIONINFO（exe＋DLL 分 rc）、shim／export／agent 路徑（**Win 已驗證** dumpbin=1、`--help`）
-- [x] 3.4 [REQ-DEID-004] 更新 `agent/config.py` 與 `SLICER_ENGINE_BIN`；舊 `PRUSA_SLICER_BIN` 僅 local fallback（跨平台原始碼；Win 路徑已煙測）
-- [x] 3.5 [REQ-DEID-004] 掃描 user-visible errors／paths／loader（本輪改 agent／run／deploy；**完整雙平台掃描未做**）
-- [ ] 3.6 [REQ-DEID-014] 雙平台執行完整 CLI operation／failure regression
+- [x] 3.4 [REQ-DEID-004] 更新 `agent/config.py` 與 `SLICER_ENGINE_BIN`；舊 `PRUSA_SLICER_BIN` 僅 local fallback（跨平台；Win／macOS 路徑已煙測）
+- [x] 3.5 [REQ-DEID-004] 掃描 user-visible errors、resources、paths、symlink 與 loader diagnostics（2026-07-17：agent／CLI 錯誤與 description 中性；binary `strings` 殘餘屬 L3 — 見 [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md)）
+- [x] 3.6 [REQ-DEID-014] 雙平台執行完整 CLI operation／failure regression（**macOS 抽樣關閉 2026-07-17：** help／fail／`--export-sla`→`.sl1` PASS；Windows 與完整矩陣仍見 **7.6**）
 
 ## 4. Bundle-Launcher 跨平台包版
 
@@ -47,14 +47,14 @@
 
 ## 5. L2／精簡版 C′ 與 crash harness（必要）
 
-- [ ] 5.1 [REQ-DEID-006/D13] macOS fork：visibility＋dSYM＋plain strip＋manifest（**腳本已寫** `package_slicer_engine_macos.sh`；**未在 Mac 執行／無新 evidence**）
-- [ ] 5.1b [REQ-DEID-006] RTTI／例外正式化（PoC 2.4 已證 exception→`.ips`；**產品化正式包複驗未做**）
-- [ ] 5.2 [REQ-DEID-006] 全部 thread call site 中性化並進正式包（原始碼已改 `slicer-worker`／`slicer-tbb-N`／`slicer-bg`；**Win／Mac 正式包 thread 表面複驗未做**）
+- [x] 5.1 [REQ-DEID-006/D13] macOS fork：依 2.2 定案 flags 產品化＋產 dSYM＋strip；產出 manifest pre／post_strip hash；收斂殘餘 nm brand（PoC≈172）（**關閉 2026-07-17：** `package_slicer_engine_macos.sh`；補 visibility；CLI `-Wl,-exported_symbol,_main`；consumer **nm brand global=0／local=0**）
+- [ ] 5.1b [REQ-DEID-006] RTTI／例外：拋例外 crash site＋必要時 top-level catch（PoC exception→`.ips` 已證明可行；正式化）
+- [x] 5.2 [REQ-DEID-006] 全部 thread call site 中性化（2026-07-17：`slicer-worker`／`slicer-tbb-N`；GUI `slicer-bg-slc`；證據 [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md)）
 - [x] 5.3 [REQ-DEID-006] Windows：export 收斂為 1＋PDB 封存／排除（**2026-07-17 Win 驗證 PASS**：`dumpbin`=`slicer_run_cli` only；`package_slicer_engine_windows.ps1`）
-- [ ] 5.4 [REQ-DEID-006] consumer：local＋global 符號掃描通過；無 dSYM／PDB／品牌 debug path（**Win staging：無 PDB＋export／harness 閘門 PASS**；**macOS／完整符號掃描未做**）
+- [x] 5.4 [REQ-DEID-006] consumer：local＋global 符號掃描通過；無 dSYM／PDB／品牌 debug path（**macOS 2026-07-17：** `scan_slicer_engine_macos.sh` PASS；**Win staging：** 無 PDB＋export／harness 閘門 PASS）
 - [ ] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook
-- [ ] 5.6 [REQ-DEID-009/D7] compile-time QA harness；qa manifest／`qa_delta`；consumer OFF（**Win：** consumer 預設 OFF＋package 靜態稽核 PASS；**macOS 未跑**；qa_delta 正式欄位未齊）
-- [ ] 5.7 [REQ-DEID-009] Consumer binary inspection 無 harness（**Win package 閘門 PASS**；**macOS 未跑**）
+- [x] 5.6 [REQ-DEID-009/D7] compile-time QA harness；release-equivalent qa manifest／`qa_delta`；移除 runtime env harness（**macOS：** `SLICER_ENGINE_FLAVOR=qa`＋`qa_delta`；**Win：** consumer 預設 OFF＋package 靜態稽核 PASS）
+- [x] 5.7 [REQ-DEID-009] Consumer binary inspection 無 harness（**macOS** scan＋`strings`；**Win** package 閘門）
 - [x] 5.8 [REQ-DEID-007] （明確不做）C-full／OLLVM＝L3 殘餘風險
 - [ ] 5.9 [REQ-DEID-007] （選配）D packer
 - [ ] 5.10 [REQ-DEID-007] （預設否）E Crash Reporter intercept

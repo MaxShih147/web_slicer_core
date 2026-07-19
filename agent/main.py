@@ -13,7 +13,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTa
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
-from .config import HOST, PORT, PRUSA_SLICER_CLI, TLS_CERT_PATH, TLS_KEY_PATH
+from .config import HOST, PORT, SLICER_ENGINE_CLI, TLS_CERT_PATH, TLS_KEY_PATH
 from .models import JobCreateResponse, JobStatus, JobStatusResponse, SLAConfig
 from .jobs import (
     create_job,
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="web_slicer_core Agent",
-    description="Local agent for SLA slicing using PrusaSlicer CLI. Supports multiple frontends via versioned APIs.",
+    description="Local agent for SLA slicing using the slicer engine CLI. Supports multiple frontends via versioned APIs.",
     version="0.2.0",
     lifespan=lifespan,
 )
@@ -180,7 +180,7 @@ async def root():
     return {
         "service": "web_slicer_core",
         "status": "running",
-        "cli_available": PRUSA_SLICER_CLI.exists(),
+        "cli_available": SLICER_ENGINE_CLI.exists(),
     }
 
 

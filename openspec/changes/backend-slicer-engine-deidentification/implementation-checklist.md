@@ -1,6 +1,6 @@
 # 跨 Repository Implementation Checklist
 
-**進度（2026-07-17）：** Gate 0 大部完成；**macOS M1 PoC（2.4）PASS**；**Windows baseline（1.7）＋政策（2.3）＋PoC（2.5）＋compile-time harness（2.6 PoC）已關閉**。詳見 [`PROGRESS.md`](./PROGRESS.md)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。
+**進度（2026-07-17 夜）：** Gate 0 大部完成；雙平台 PoC 已關閉；**macOS Gate 1：3.1／3.2／3.4＋5.1 關閉**（nm brand 0）。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 
 ## Gate 0 — 規格與治理
 
@@ -14,14 +14,15 @@
 
 ## Gate 1 — web_slicer_core／fork
 
-- [ ] macOS 真實 OUTPUT_NAME／全部 thread／codeSigningID／Info.plist 去品牌（**PoC 已驗證** OUTPUT_NAME＋identifier＋thread；正式落地未完）
-- [ ] Windows DLL／shim／export／VERSIONINFO 原子遷移（**PoC 已驗證** rename／VERSIONINFO／PDBALTPATH；export=1 → 5.3；agent／Launcher 路徑未完）
-- [ ] dSYM／PDB 先封存；**fork 完成 consumer strip**；寫入 pre／post_strip hash manifest（PoC 流程已演練；manifest 產品化未完）
+- [x] macOS 真實 OUTPUT_NAME／codeSigningID／Info.plist 去品牌（2026-07-17 晚：正式落地；thread 全 call site 稽核仍見 **5.2**）
+- [x] Agent 中立 env／路徑（`SLICER_ENGINE_BIN`／`SLICER_ENGINE_CLI`；2026-07-17）
+- [ ] Windows DLL／shim／export／VERSIONINFO 原子遷移（**PoC 已驗證** rename／VERSIONINFO／PDBALTPATH；export=1 → **5.3**；Launcher 路徑未完）
+- [x] macOS：dSYM 先封存；**fork 完成 consumer strip**；寫入 pre／post_strip hash manifest；**nm brand 0**（2026-07-17 夜：tasks **5.1** 關閉）
 - [ ] Windows headless PDB policy 落地（產→封存→consumer 排除；**PDBALTPATH PoC 2.5 已證**）
-- [ ] release-equivalent QA flavor（compile-time harness）；移除 runtime env harness（**PoC 2.6：** compile-time 已落地；正式 qa_delta／manifest＋consumer OFF → 5.6／5.7）
-- [ ] consumer Release 不含 harness
+- [x] release-equivalent QA flavor（compile-time harness）；移除 runtime env harness（**macOS 2026-07-17：** 5.6／5.7；`qa_delta`＋consumer scan PASS；Windows 仍待）
+- [x] consumer Release 不含 harness（**macOS 2026-07-17：** 5.7；Windows 仍待）
 - [ ] SBOM／exact source commit 產生
-- [ ] 全 CLI operation regression 通過
+- [x] 全 CLI operation regression 通過（**macOS 抽樣 2026-07-17**；Windows／完整矩陣 → 7.6）
 
 ## Gate 2 — Bundle-Launcher
 
@@ -37,7 +38,7 @@
 - [x] macOS：**PoC scanner 原型**對 path／identity／`.ips` 符號可讀性通過（`poc/scan_macos_artifact.sh`；非正式 CI gate）
 - [ ] macOS：正式 CI path、identity、**local＋global** 符號掃描通過
 - [ ] Windows：path、VERSIONINFO、exports、debug directory 通過
-- [ ] consumer 不含 dSYM／PDB／QA harness
+- [x] consumer 不含 dSYM／PDB／QA harness（**macOS 2026-07-17：** 5.4／5.7 scan；Windows PDB 仍見 5.3）
 - [ ] scanner、blacklist **1.2**、pre／post_strip／post-sign hashes 入 evidence
 - [ ] 任一命中 fail-fast，無 `continue-on-error`
 

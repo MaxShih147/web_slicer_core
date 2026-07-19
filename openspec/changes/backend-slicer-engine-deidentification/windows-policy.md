@@ -156,12 +156,13 @@ Launcher **MUST** 驗證 `post_strip_sha256` 與磁碟一致後才 Authenticode�
 
 | 項目 | 2.3（本文件） | 2.5 PoC | §3／§5 產品化 |
 |------|---------------|---------|----------------|
-| ABI／export／PDB／debug 政策文字 | **Done** | **Done**（見 REPORT-WIN；export=1 → 5.3） | 進正式 CMake／組包 |
+| ABI／export／PDB／debug 政策文字 | **Done** | **Done**（見 REPORT-WIN；export=1 → 5.3） | Win 正式 CMake／組包仍開；**macOS 3.1／5.1 流水線已落地（2026-07-17）** |
 | 三種 crash＋WER | — | **Done**（compile-time harness；cdb dump） | 進 QA flavor |
 | Authenticode 最終包 | — | 可用未簽 PoC 證明靜態／動態表面 | 正式驗收必須簽署包 |
-| Launcher 改路徑 | — | 可最小改 PoC | 正式 `build-windows-bundle.ps1` |
+| Launcher 改路徑 | — | 可最小改 PoC | 正式 `build-windows-bundle.ps1`／macOS bundle |
 
-**2.5 狀態（2026-07-17）：** **PASS** — 入口條件已滿足且 PoC 關閉；殘餘 export 收斂與 consumer OFF 稽核見 **5.3／5.6**。
+**2.5 狀態（2026-07-17）：** **PASS** — 入口條件已滿足且 PoC 關閉；殘餘 export 收斂與 consumer OFF 稽核見 **5.3／5.6**。  
+**macOS 產品化（2026-07-17 晚）：** 見主 [`PROGRESS.md`](./PROGRESS.md)（3.1／3.2／3.4／5.1 流水線）。
 
 ---
 

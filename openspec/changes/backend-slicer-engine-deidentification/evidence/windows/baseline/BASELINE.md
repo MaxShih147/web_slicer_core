@@ -93,4 +93,5 @@
 ## 6. Follow-ups（not blocking 1.7／2.3／2.5）
 
 - Authenticode-signed installer baseline（optional）。  
-- **5.3** export 收斂為 1；**5.6** consumer OFF harness 稽核；§3／§4／§5 產品化。
+- **5.3** export 收斂為 1；**5.6** consumer OFF harness 稽核。  
+- macOS §3／5.1 流水線 **已於 2026-07-17 晚落地**（見主 [`PROGRESS.md`](../../PROGRESS.md)）；Launcher §4／Win 正式組包仍開。

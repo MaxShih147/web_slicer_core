@@ -12,10 +12,10 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-from .config import JOBS_DIR, PRUSA_SLICER_CLI, EXPORT_PROJECT_3MF
+from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
 from .prz_encoder import _compute_print_time
-from .sla_operations import generate_config_ini
+from .sla_operations import generate_config_ini, notify_launcher_if_prusa_crashed
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     try:
         # Run PrusaSlicer CLI
         cmd = [
-            str(PRUSA_SLICER_CLI),
+            str(SLICER_ENGINE_CLI),
             "--export-sla",
             "--export-preview-pngs", "0.25",
             "--output", str(output_file),
@@ -209,6 +209,8 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         # Save stderr for debugging
         with open(stderr_file, "wb") as f:
             f.write(stderr)
+
+        notify_launcher_if_prusa_crashed(process.returncode)
 
         if process.returncode != 0:
             error_msg = stderr.decode("utf-8", errors="replace")
@@ -266,7 +268,7 @@ async def export_project_3mf(job_id: str, input_file: Path, output_dir: Path):
 
     try:
         cmd = [
-            str(PRUSA_SLICER_CLI),
+            str(SLICER_ENGINE_CLI),
             "--export-3mf",
             "--output", str(output_3mf),
             str(input_file),

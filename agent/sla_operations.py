@@ -18,6 +18,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -25,8 +27,48 @@ from typing import Optional, Dict, Any, List
 
 import struct
 
-from .config import PRUSA_SLICER_CLI
+from .config import SLICER_ENGINE_CLI
 from .models import BooleanOperation, CutConfig, CutMode, SLAConfig
+
+logger = logging.getLogger(__name__)
+
+
+def notify_launcher_if_prusa_crashed(returncode: Optional[int]) -> None:
+    """Write Launcher sentinel when the slicing engine died by signal and crash test is armed.
+
+    Used by Bundle-Launcher hybrid flow: Prusa native crash → agent sentinel →
+    Launcher opens DiagnosticReports then process.crash() for the OS dialog.
+    """
+    if os.environ.get("BUNDLE_FORCE_PRUSA_STACK_OVERFLOW", "")[:1] != "1":
+        return
+    if returncode is None or returncode == 0:
+        return
+    # POSIX: negative == -signal; 128+signal is the shell-style encoding.
+    if not (returncode < 0 or returncode >= 128):
+        return
+    sentinel = os.environ.get("BUNDLE_PRUSA_CRASH_SENTINEL")
+    if not sentinel:
+        return
+    path = Path(sentinel)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "returncode": returncode,
+                    "pid": os.getpid(),
+                    "timestamp": time.time(),
+                }
+            ),
+            encoding="utf-8",
+        )
+        logger.warning(
+            "Wrote engine crash sentinel returncode=%s path=%s",
+            returncode,
+            path,
+        )
+    except OSError as exc:
+        logger.error("Failed to write engine crash sentinel: %s", exc)
 
 # Layer height used only for support-point detection (not for the final print).
 # Coarser slices cut the dominant "Slicing model" cost with negligible impact on
@@ -127,6 +169,7 @@ async def run_prusa_cli(
         with open(stderr_file, "wb") as f:
             f.write(stderr)
 
+    notify_launcher_if_prusa_crashed(process.returncode)
     return process.returncode, stdout, stderr
 
 
@@ -179,7 +222,7 @@ async def generate_supports(
     # skipping slice-supports + rasterization + sl1 packing (none of which the
     # support mesh depends on).
     cmd = [
-        str(PRUSA_SLICER_CLI),
+        str(SLICER_ENGINE_CLI),
         "--export-support-stl",
         "--output", str(output_file),
         "--load", str(config_file),
@@ -247,7 +290,7 @@ async def slice_model(
 
     # Build command
     cmd = [
-        str(PRUSA_SLICER_CLI),
+        str(SLICER_ENGINE_CLI),
         "--export-sla",
         "--export-preview-pngs", "0.25",
         "--output", str(output_file),
@@ -333,7 +376,7 @@ async def generate_hollow(
 
     # Build command for hollow export
     cmd = [
-        str(PRUSA_SLICER_CLI),
+        str(SLICER_ENGINE_CLI),
         "--export-hollow-stl",
         f"--hollowing-min-thickness={config.hollowing_min_thickness}",
         f"--hollowing-quality={config.hollowing_quality}",
@@ -567,7 +610,7 @@ async def cut_with_plane(
     # Build command for cut operation
     # PrusaSlicer --cut <Z> outputs both upper and lower parts in one STL
     cmd = [
-        str(PRUSA_SLICER_CLI),
+        str(SLICER_ENGINE_CLI),
         f"--cut={cut_config.cut_height}",
         "--export-stl",
         "--output", str(combined_stl),
