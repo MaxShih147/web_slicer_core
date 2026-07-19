@@ -1,8 +1,9 @@
 # Symbol archive runbook（macOS half）— tasks 5.5
 
-**Status：** draft／macOS operational  
+**Status：** operational local drill／remote store still TODO  
 **Date：** 2026-07-19  
-**Depends：** D13 `package_slicer_engine_macos.sh`
+**Depends：** D13 `package_slicer_engine_macos.sh`  
+**Drill script：** `scripts/verify_symbol_archive_macos.sh`
 
 ## What is archived
 
@@ -26,6 +27,20 @@ PACKAGE_SLICER_ENGINE=1 ./scripts/build_prusaslicer_fork_macos.sh
 # SLICER_ENGINE_FLAVOR=consumer ./scripts/package_slicer_engine_macos.sh
 ```
 
+## Local drill（required before closing mac half of 5.5）
+
+```bash
+./scripts/verify_symbol_archive_macos.sh
+# optional explicit roots:
+# ./scripts/verify_symbol_archive_macos.sh third_party/slicer-engine third_party/slicer-engine-symbols
+```
+
+Pass criteria:
+
+1. Consumer tree has no `.dSYM`／`.unstripped`／`.pdb`  
+2. Binary UUID == dSYM UUID == manifest `symbol_archive.uuid_or_guid`（when present）  
+3. Script exits 0（atos smoke is best-effort）
+
 ## Lookup for crash symbolication
 
 1. From customer report / Launcher version note `engine_build_id`（or post_sign sha256）.  
@@ -34,7 +49,7 @@ PACKAGE_SLICER_ENGINE=1 ./scripts/build_prusaslicer_fork_macos.sh
 4. Symbolicate with matching dSYM（lldb / `atos` / Xcode）.  
 5. **Never** copy dSYM into consumer release or next to a stapled app under test.
 
-## Retention / ACL（TODO for full 5.5 close）
+## Retention / ACL（still open for full 5.5）
 
 - [ ] Upload dSYM + unstripped + manifest to internal artifact store（ACL-restricted）  
 - [ ] Retention policy（e.g. N release trains）  

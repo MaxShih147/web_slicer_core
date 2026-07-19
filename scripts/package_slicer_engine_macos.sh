@@ -201,6 +201,11 @@ echo "$BUILD_ID" >"$OUT_ROOT/engine_build_id.txt"
 # Stage de-branded Resources for Apple CLI path (bin/../Resources)
 "$ROOT_DIR/scripts/stage_slicer_engine_resources_macos.sh" "$OUT_ROOT"
 
+# AGPL materials (tasks 6.2／6.3) — path names stay neutral; content may name upstream
+if [[ "${SKIP_SLICER_ENGINE_AGPL:-0}" != "1" ]]; then
+  "$ROOT_DIR/scripts/stage_slicer_engine_agpl_macos.sh" "$OUT_ROOT"
+fi
+
 if [[ -e "$OUT_ROOT/bin/$DSYM_NAME" ]]; then
   echo "[ERROR] dSYM leaked into artifact tree" >&2
   exit 1
@@ -225,6 +230,7 @@ echo "[slicer-engine]   manifest:  $MANIFEST"
 echo "[slicer-engine]   flavor:    $FLAVOR"
 echo "[slicer-engine]   build_id:  $BUILD_ID"
 echo "[slicer-engine]   dSYM:      $SYMBOLS_ROOT/$DSYM_NAME"
+echo "[slicer-engine]   legal:     $OUT_ROOT/legal/"
 echo "[slicer-engine]   nm brand:  global=$GLOBAL_HITS local=$LOCAL_HITS"
 echo "[slicer-engine] =========================================="
 echo "[slicer-engine] Use:"

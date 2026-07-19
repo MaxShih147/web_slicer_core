@@ -4,7 +4,7 @@
 **適用 Requirement：** REQ-DEID-002～006、009～015  
 **規範來源：** [`blacklist.md`](./blacklist.md)、[`artifact-manifest.schema.md`](./artifact-manifest.schema.md)、[`design.md`](./design.md) D7／D11／D13  
 
-**PoC／產品化進度（非取代本程序）：** 雙平台 PoC／C′ 已關。2026-07-19 **Windows 已簽 Setup post-sign gate PASS**（[`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)；Authenticode Valid；install／uninstall／reinstall；安裝後 scan PASS）。正式完成宣告仍須 macOS Launcher／雙平台動態 §7／Legal。殘留：CLI help `PrusaSlicer` tooltip。
+**PoC／產品化進度（非取代本程序）：** 雙平台 PoC／C′ 已關。2026-07-19 **雙平台 Launcher §4 手動閉環有硬證**（Win Setup post-sign；mac arm64 verify→sign→notarize→final scan）。**1.6 Vance approved**（evidence md）。**CLI／AGPL：** Win 正式包已關；**mac 僅 staging**（已簽 `.app` 未回灌晚上 consumer）。正式完成宣告仍須 mac 重包＋雙平台動態 §7／7.6。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 
 ## 1. 驗收原則
 

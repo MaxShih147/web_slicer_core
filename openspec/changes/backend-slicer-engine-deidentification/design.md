@@ -202,9 +202,9 @@ flowchart TD
 10. ~~Windows PoC（2.5）＋compile-time harness（2.6 PoC）~~ → **已通過：** [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)
 
 **工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。  
-**已落地（2026-07-19）：** Windows Launcher §4.2／4.4／4.5／**4.6**＋手動 post-sign Setup；**CLI help 去品牌**；**AGPL legal pack＋1.6 Vance approved**（email／書面 offer；無強制 GitHub URL）；5.5 雙平台 runbook 草稿。  
-**殘留：** resources 品牌檔名；內嵌 app exe 未簽；5.5 正式 store；§7 動態／CI；1.5 Security。  
-**下一步：** 5.5 store；§7。
+**已落地（2026-07-19 夜）：** 雙平台 Launcher §4；mac 晚上回灌（`post_strip`＝`3c6c0976…`／簽後＝`336f9303…`；`legal/`＋help=0）；Win CLI／AGPL／7.3；1.6 approved。  
+**殘留：** resources；§7.6／CI；mac 4.6；1.5；5.1b；6.6–6.7。  
+**下一步：** §7.6／CI。
 
 ## 規範性附件
 

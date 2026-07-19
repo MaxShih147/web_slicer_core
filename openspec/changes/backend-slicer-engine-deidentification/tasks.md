@@ -1,4 +1,4 @@
-> **進度快照（2026-07-19 晚）：** Launcher §4 閉環；CLI help 已清；**1.6 Vance approved**；**5.5 OneDrive**（含 `20260719T095415Z`／`20260719T105832Z`）；**Win 7.3 QA 三 crash PASS**。下一步：7.6 SLA、7.5 CI、可選 resources／Launcher QA 組包。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+> **進度快照（2026-07-19 夜）：** mac 晚上 consumer 已回灌簽過包（DMG `…2111`；`legal/`＋help=0）。雙平台 §4／CLI／AGPL 有硬證。≈**92–94%**。下一步：7.6／CI。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 ## 1. 治理與必要輸入
 
 - [x] 1.1 [REQ-DEID-002] 接受線定案：本版 L2（含 L1）
@@ -33,7 +33,7 @@
 - [x] 3.2 [REQ-DEID-005] macOS codeSigningID／Info.plist（刪除或中性化）／Version／thread name 去品牌（2026-07-17：`Info.plist.in` 中性；`--help`→`slicer-engine`／`Slicer Engine …`；package `codesign --identifier slicer-engine`；thread `slicer-worker`／`slicer-bg-slc`）
 - [x] 3.3 [REQ-DEID-005/006] Windows VERSIONINFO（exe＋DLL 分 rc）、shim／export／agent 路徑（**Win 已驗證** dumpbin=1、`--help`）
 - [x] 3.4 [REQ-DEID-004] 更新 `agent/config.py` 與 `SLICER_ENGINE_BIN`；舊 `PRUSA_SLICER_BIN` 僅 local fallback（跨平台；Win／macOS 路徑已煙測）
-- [x] 3.5 [REQ-DEID-004] 掃描 user-visible errors、resources、paths、symlink 與 loader diagnostics（**macOS 2026-07-17** agent／CLI 錯誤中性；**Win 2026-07-19：** `--help`／`--help-fff`／`--help-sla` 零 `PrusaSlicer` — [`evidence/windows/cli-help-printconfig-20260719.md`](./evidence/windows/cli-help-printconfig-20260719.md)；resources 品牌檔名 ≈148 屬後續）
+- [x] 3.5 [REQ-DEID-004] 掃描 user-visible errors、resources、paths、symlink 與 loader diagnostics（**Win 2026-07-19：** help 清零；**mac 簽過包 `…2111`：** `--help`／`--help-fff`=0 — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md)；resources ≈148 後續）
 - [x] 3.6 [REQ-DEID-014] 雙平台執行完整 CLI operation／failure regression（**macOS 抽樣關閉 2026-07-17：** help／fail／`--export-sla`→`.sl1` PASS；Windows 與完整矩陣仍見 **7.6**）
 
 ## 4. Bundle-Launcher 跨平台包版
@@ -52,7 +52,7 @@
 - [x] 5.2 [REQ-DEID-006] 全部 thread call site 中性化（2026-07-17：`slicer-worker`／`slicer-tbb-N`；GUI `slicer-bg-slc`；證據 [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md)）
 - [x] 5.3 [REQ-DEID-006] Windows：export 收斂為 1＋PDB 封存／排除（**2026-07-17 Win 驗證 PASS**：`dumpbin`=`slicer_run_cli` only；`package_slicer_engine_windows.ps1`）
 - [x] 5.4 [REQ-DEID-006] consumer：local＋global 符號掃描通過；無 dSYM／PDB／品牌 debug path（**macOS：** `scan_slicer_engine_macos.sh` PASS；**Win 2026-07-19：** `scan_slicer_engine_windows.ps1` PASS — export／VERSIONINFO／harness／layout）
-- [x] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook（**Win：OneDrive 手動 — adopted 2026-07-19**；已上傳 consumer `20260719T095415Z`（PDB+manifest）；見 [`evidence/windows-symbol-archive-runbook-5.5.md`](./evidence/windows-symbol-archive-runbook-5.5.md)；**macOS 半邊／正式演練 6.6–6.7 仍可後補**；不做 git）
+- [x] 5.5 [REQ-DEID-012] symbol archive、build ID、ACL、retention、hash、runbook（**Win：OneDrive 手動 — adopted 2026-07-19**；已上傳 consumer `20260719T095415Z`（PDB+manifest）— [`evidence/windows-symbol-archive-runbook-5.5.md`](./evidence/windows-symbol-archive-runbook-5.5.md)；**macOS 本機 drill PASS** — `verify_symbol_archive_macos.sh`＋[`macos-symbol-archive-runbook-5.5.md`](./evidence/macos-symbol-archive-runbook-5.5.md)；正式演練 6.6–6.7 仍可後補；不做 git）
 - [x] 5.6 [REQ-DEID-009/D7] compile-time QA harness；release-equivalent qa manifest／`qa_delta`；移除 runtime env harness（**macOS：** `SLICER_ENGINE_FLAVOR=qa`＋`qa_delta`；**Win：** consumer 預設 OFF＋package 靜態稽核 PASS）
 - [x] 5.7 [REQ-DEID-009] Consumer binary inspection 無 harness（**macOS** scan＋`strings`；**Win** package 閘門）
 - [x] 5.8 [REQ-DEID-007] （明確不做）C-full／OLLVM＝L3 殘餘風險
@@ -62,8 +62,8 @@
 
 ## 6. AGPL／供應鏈／發布資訊
 
-- [x] 6.1 [REQ-DEID-011] 修正 `agpl-boundary.md` 與實際 modified fork 狀態一致（**2026-07-19**；**1.6 Vance approved**）
-- [x] 6.2 [REQ-DEID-011] 正式包提供 AGPL license、copyright、顯著修改聲明（**Win staging：** `slicer-engine/legal/{LICENSE,NOTICE.md}` via `package_slicer_engine_windows.ps1`；scanner fail-closed 缺包）
+- [x] 6.1 [REQ-DEID-011] 修正 `agpl-boundary.md` 與實際 modified fork 狀態一致（**2026-07-19**；**1.6 Vance approved** — `docs/single-node-cloud/agpl-boundary.md`）
+- [x] 6.2 [REQ-DEID-011] 正式包提供 AGPL license、copyright、顯著修改聲明（**Win：** 隨包 `legal/`；**mac 簽過包 `…2111`：** `slicer-engine/legal/` 已在 — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md)；scanner fail-closed 缺包）
 - [x] 6.3 [REQ-DEID-011] 提供 exact fork commit 的 Corresponding Source URL／written offer（**定稿：** email／書面 offer — `legal/slicer-engine/SOURCE_OFFER.md`；**不強制** GitHub URL；Vance approved 2026-07-19）
 - [ ] 6.4 [REQ-DEID-011] 建立 binary hash → build manifest／SBOM（SPDX 2.3 JSON，見 `design.md` D10a） → source commit 對應證據
 - [ ] 6.5 [REQ-DEID-012] Engine `--version` 或 manifest 提供 neutral build ID

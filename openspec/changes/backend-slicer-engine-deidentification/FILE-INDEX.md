@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-19 晚）· **Win post-sign Setup PASS** · 完成度 ≈ **83%** · 進度 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-19 夜）· 完成度 ≈ **92–94%** · mac 晚上 consumer 已回灌（`…2111`）· 進度 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -97,7 +97,10 @@
 | Windows baseline | **已關閉**（1.7） |
 | Windows PoC | **已關閉 PASS**（2.5） |
 | Windows 5.3／formal scan | **已關閉 PASS**（export=1＋`scan_slicer_engine_windows.ps1`） |
-| Launcher §4 | **Win unsigned＋post-sign Setup／4.6 已關（2026-07-19）**；macOS 仍缺 |
-| macOS／Windows final-artifact evidence | **Win 手動 post-sign evidence 已存**；macOS／CI 自動化待 §7 |
-| CLI help／resource 殘留 | **CLI help 已清（Win）**；resources ≈148 仍追蹤中 |
-| AGPL／source-offer release evidence | **1.6 Vance approved 2026-07-19**；Win legal pack；channel＝email／書面 offer（無強制 GitHub URL） |
+| Launcher §4 | **雙平台手動閉環 2026-07-19**（Win Setup／4.6；macOS arm64 verify→notarize→final scan） |
+| macOS／Windows final-artifact evidence | **雙平台手動 post-sign evidence 已存**；CI 自動化待 §7 |
+| CLI help／resource 殘留 | **雙平台簽過包 CLI help 已清**；resources ≈148 |
+| AGPL／source-offer | **1.6 approved**；Win＋mac 簽過包皆有 `legal/`（mac＝`…2111`） |
+| 5.5 symbol store | **Win＝OneDrive**；mac 本機 drill PASS；演練 6.6–6.7 後補 |
+| Win 7.3 QA 三 crash | **PASS** — `evidence/windows/qa-three-crash-20260719/` |
+| mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |

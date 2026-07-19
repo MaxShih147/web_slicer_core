@@ -40,8 +40,9 @@
 
 1. Developer ID codesign **must** change engine sha256 vs `post_strip_sha256`; final gate uses `VERIFY_MODE=post-sign` + records `post_sign_sha256` outside the app（do not write into stapled bundle）.
 2. Resources copy excludes `*prusa*`／`*slic3r*` filenames（L1 path gate）.
-3. Windows §4／Authenticode／§7 dual-platform still open.
-4. **Security：** notary app-password was used via env for this run; rotate if exposed in chat logs.
+3. Windows §4／Authenticode／§7 dual-platform still open（at capture time；Win §4 later closed same day）.
+4. **Superseded for CLI／AGPL current claims：** evening reinject DMG `…2111` — [`macos-launcher-evening-reinject-20260719.md`](./macos-launcher-evening-reinject-20260719.md).
+5. **Security：** notary app-password was used via env for this run; rotate if exposed in chat logs.
 
 ## Reproduce
 

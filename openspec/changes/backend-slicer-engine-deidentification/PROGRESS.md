@@ -1,93 +1,90 @@
 # Progress Snapshot — backend-slicer-engine-deidentification
 
-**更新日期：** 2026-07-19（1.6 Vance approved；**5.5 Win＝OneDrive 手動**已上傳 `20260719T095415Z`；接著 §7）  
+**更新日期：** 2026-07-19（夜：mac 晚上 consumer 已回灌簽過包）  
 **Change status：** `in_progress`（見 `.openspec.yaml`）  
-**權威 macOS PoC：** [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/)  
-**權威 Windows PoC：** [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/)  
-**macOS 產品化證據：** [`evidence/macos-productize-5.2-3.5-3.6.md`](./evidence/macos-productize-5.2-3.5-3.6.md)、[`evidence/macos-productize-5.4-5.6-5.7.md`](./evidence/macos-productize-5.4-5.6-5.7.md)  
-**macOS Launcher §4：** [`evidence/macos-launcher-section4-20260719.md`](./evidence/macos-launcher-section4-20260719.md)  
-**Win Launcher unsigned：** [`evidence/windows-launcher-section4-20260719.md`](./evidence/windows-launcher-section4-20260719.md)  
-**Win post-sign Setup：** [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)  
-**Win CLI help cleanup：** [`evidence/windows/cli-help-printconfig-20260719.md`](./evidence/windows/cli-help-printconfig-20260719.md)  
-**Win 5.5 runbook：** [`evidence/windows-symbol-archive-runbook-5.5.md`](./evidence/windows-symbol-archive-runbook-5.5.md)  
-**Legal 1.6：** [`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md)
+
+## 證據錨點
+
+| 證據 | 路徑 |
+|------|------|
+| macOS PoC | [`poc/evidence/m1-close-20260717T032408Z/`](./poc/evidence/m1-close-20260717T032408Z/) |
+| Windows PoC | [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/) |
+| macOS Launcher §4（首次 arm64） | [`evidence/macos-launcher-section4-20260719.md`](./evidence/macos-launcher-section4-20260719.md) |
+| macOS 晚上回灌（CLI＋legal） | [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |
+| macOS staging CLI／AGPL／5.5 | [`evidence/macos-cli-agpl-5.5-20260719.md`](./evidence/macos-cli-agpl-5.5-20260719.md) |
+| Win Launcher／post-sign | [`evidence/windows-launcher-section4-20260719.md`](./evidence/windows-launcher-section4-20260719.md)、[`evidence/windows/launcher-1.0.0-postsign-20260719/`](./evidence/windows/launcher-1.0.0-postsign-20260719/) |
+| Win CLI help | [`evidence/windows/cli-help-printconfig-20260719.md`](./evidence/windows/cli-help-printconfig-20260719.md) |
+| Win 5.5／7.3／Legal 1.6 | [`evidence/windows-symbol-archive-runbook-5.5.md`](./evidence/windows-symbol-archive-runbook-5.5.md)、[`evidence/windows/qa-three-crash-20260719/`](./evidence/windows/qa-three-crash-20260719/)、[`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md) |
 
 ---
 
-## 1. 總覽
+## 1. 總覽（可驗證現況）
 
 | 區塊 | 狀態 |
 |------|------|
-| 治理／命名／schema（§1 大部） | **完成**（缺 1.5 Security；**1.6 Legal＝Vance approved**） |
-| 雙平台 PoC（§2） | **關閉／PASS** |
-| §3 L1 | **關閉**（Win CLI help 已清）；resources ≈148 仍殘 |
-| §5 C′ | **大部關閉**；5.1b 待；**5.5 Win＝OneDrive 手動（已上傳一版）**；macOS store／演練後補 |
-| §4 Launcher | **雙平台工程閉環**；macOS 4.6 完整 lifecycle 待 |
-| §6–7 | **§6＋1.6 關閉**；**Win 7.3 QA 三 crash PASS**；Win 7.5 **手動** PASS（CI 後補）；**7.6 SLA 未跑** |
+| 治理／命名／schema | **完成**（缺 1.5 Security；**1.6**＝evidence 記載 Vance approved） |
+| §2 PoC | **雙平台關閉／PASS** |
+| §3 L1／CLI help | **Win＋mac 簽過包已清**（mac `--help`／`--help-fff` PrusaSlicer=0 on `…2111` app） |
+| §5 C′／5.5 | 主線關閉；**Win OneDrive adopted**；**mac 本機 drill PASS**；演練 6.6–6.7 後補 |
+| §4 Launcher | **雙平台手動閉環 PASS**；mac 現行產物＝晚上回灌 DMG `…2111`；mac 4.6 lifecycle 待 |
+| §6 AGPL | **1.6 approved**；**Win＋mac 簽過包皆有 `legal/`** |
+| §7 | **Win 7.3 PASS**；7.4／7.5 手動有、CI 待；**7.6 SLA 未跑** |
 
-**完成度（粗）：≈ 90%**。  
-**已定案（勿再列「仍待」）：** Legal 1.6；5.5 Win store＝**OneDrive 手動**（禁 git；無強制 public GitHub URL）。  
-剩餘主線＝§7 動態／SLA／CI、resources、macOS 4.6、1.5 Security。
+**完成度（粗）：≈ 92–94%**（mac 回灌缺口已關；主殘留 §7.6／CI／resources／4.6／1.5）。  
+
+**已定案：** Legal 1.6 channel＝email／書面 offer；5.5 Win＝OneDrive 手動。  
+
+**明確缺口（勿寫成已完成）：**
+1. §7.6 SLA；7.4／7.5 CI  
+2. resources 品牌檔名；mac 4.6；1.5；符號化演練  
 
 ---
 
-## 2. 已驗證結果（雙平台）
+## 2. 已驗證結果
 
-### Windows
+### Windows（以 Win evidence 為準）
 
 | 項 | 狀態 |
 |----|------|
-| **5.3** export=1 | **PASS** |
-| Win package／formal scan | **PASS**（含 **legal/** fail-closed） |
-| CLI `--help`／`--help-fff`／`--help-sla` | **PASS** — 零 `PrusaSlicer`（build `20260719T095415Z`） |
-| Launcher §4 unsigned gate | **PASS** |
-| **Post-sign Setup 1.0.0** | **PASS** — Authenticode **Valid**（PHROZEN TECH EV）；install／uninstall／reinstall；scan **PASS** |
-| Setup SHA256 | `6592EE9E01D311ABE6BEF22FF384DBD3526DCBAC3FB414B797D23EEE37D446C5` |
-| AGPL legal pack | `slicer-engine/legal/`；**1.6 Vance approved**（email／書面 offer） |
-| **5.5 OneDrive** | 已上傳 `…\slicer-engine-symbols\windows\20260719T095415Z\` |
-| **7.3 QA 三 crash** | **PASS** — [`evidence/windows/qa-three-crash-20260719/SUMMARY.md`](./evidence/windows/qa-three-crash-20260719/SUMMARY.md) |
-| 內嵌 `Bundle Launcher.exe` | **NotSigned**（僅簽 Setup） |
+| §4 unsigned＋已簽 Setup lifecycle | **PASS** |
+| CLI help 清零 | **PASS** |
+| AGPL `legal/`＋1.6 | **PASS** |
+| 5.5 OneDrive／7.3 QA 三 crash | **PASS** |
 
-```bat
-scripts\build_prusaslicer_fork_windows.bat low
-powershell -File scripts\package_slicer_engine_windows.ps1
-powershell -File ..\Bundle-Launcher\scripts\verify_slicer_engine_windows.ps1
+### macOS — 現行簽過產物（2026-07-19 夜）
+
+| 產物 | build_id | 證明 | CLI help | `legal/` |
+|------|----------|------|----------|----------|
+| **已簽** `.app`＋DMG `…2111` | `…2026-07-19T095348Z` | `post_strip`＝`3c6c0976…`；簽後＝`336f9303…`＝scan JSON **PASS**；Identifier=`slicer-engine` | **PASS**（exit 0；PrusaSlicer=0） | **有** |
+| staging（同源） | 同上 | formal scan PASS | **PASS** | **有** |
+| 下午 DMG `…1450`（舊） | `…2026-07-17T123302Z` | 歷史證據；**已被 `…2111` 取代為現行 consumer** | 未證明 | 無 |
+
+```bash
+cd Bundle-Launcher
+SKIP_PRINTER_BUILD=1 SKIP_X64=1 ./build-scripts/build-mac-bundle.sh
+export CERT_ID="Developer ID Application: Po Yuan Wang (TM35RSG7WJ)"
+export TEAM_ID="TM35RSG7WJ"
+export NOTARY_PROFILE="phrozen-notary"
+export APP_PATH="dist/mac-arm64/Bundle Launcher.app"
+export ARCH_SUFFIX="arm64"
+./release_sign_notarize.sh
 ```
-
-### macOS
-
-| 項 | 狀態 |
-|----|------|
-| Formal scan gate | `scan_slicer_engine_macos.sh`；packager fail-closed |
-| Consumer | nm 0；無 dSYM；`harness_markers=[]`；PASS |
-| QA flavor | `slicer-engine-qa/`＋`qa_delta`；PASS |
-| **Launcher §4 arm64** | **PASS** — D13 verify→bundle→Developer ID→notarize→staple→final scan |
-| DMG | `~/Desktop/Bundle Launcher_mac_arm64_1.0.0-202607191450.dmg` |
 
 ---
 
 ## 3. 已知殘留
 
-1. ~~CLI `--help` `PrusaSlicer` tooltip~~ → **已清（Win 2026-07-19）**  
-2. `bin/resources/**` 品牌檔名（profiles／icons；scanner note）  
-3. 內嵌 Win app exe 未 Authenticode（僅 Setup 簽章）  
-4. macOS 4.6 install／upgrade／rollback 完整 lifecycle 未抽樣  
-5. ~~5.5 正式 store~~ → **Win 定案 OneDrive 手動**（已上傳 `20260719T095415Z`）；macOS／演練後補；5.1b RTTI  
-6. ~~Legal 1.6~~ → **Vance approved**（email／書面 offer）  
-7. ~~§7.3 動態三 crash~~ → **Win PASS**；完整 SLA／CI 自動化仍開  
+1. resources 品牌檔名 ≈148  
+2. 內嵌 Win app exe 未 Authenticode  
+3. macOS 4.6 install lifecycle  
+4. §7.6 SLA；7.4／7.5 CI；5.1b；6.6–6.7 演練；1.5 Security  
 
 ---
 
-## 4. 下一步（Windows 機優先）
+## 4. 下一步
 
-1. **§7.6** SLA 回歸（完整矩陣）— 排程另跑  
-2. **§7.5** 升 CI（手動已 PASS）  
-3. 可選：resources 品牌檔名；Launcher 4.2 QA 組包；1.5 Security；5.5 符號化演練  
-
-**已定案（勿再當「仍待」）：**  
-- Legal 1.6 — Vance approved；email／書面 offer；無強制 GitHub URL  
-- 5.5 Win store — OneDrive 手動（已上傳 `20260719T095415Z`）  
-- §7.3 Win QA 三 crash — PASS
+1. §7.6 SLA；7.4／7.5 CI  
+2. 可選：resources、mac 4.6、1.5、符號化演練  
 
 ---
 
@@ -95,18 +92,16 @@ powershell -File ..\Bundle-Launcher\scripts\verify_slicer_engine_windows.ps1
 
 | 產物 | 路徑 |
 |------|------|
-| Win package／scan | `scripts/package_slicer_engine_windows.ps1`、`scan_slicer_engine_windows.ps1` |
-| Win legal templates | `legal/slicer-engine/` |
-| Win Launcher | `Bundle-Launcher/build-scripts/build-windows-bundle.ps1`、`scripts/verify_slicer_engine_windows.ps1` |
-| Post-sign evidence (Win) | [`evidence/windows/launcher-1.0.0-postsign-20260719/`](./evidence/windows/launcher-1.0.0-postsign-20260719/) |
-| D13 package (macOS) | `scripts/package_slicer_engine_macos.sh` |
-| Formal scan (macOS) | `scripts/scan_slicer_engine_macos.sh` |
-| Launcher D13 verify (macOS) | `Bundle-Launcher/scripts/verify_slicer_engine_artifact.sh` |
-| Final app scan (macOS) | `Bundle-Launcher/scripts/scan_final_macos_artifact.sh` |
-| macOS §4 證據 | [`evidence/macos-launcher-section4-20260719.md`](./evidence/macos-launcher-section4-20260719.md) |
+| mac D13 package（含 AGPL staging） | `scripts/package_slicer_engine_macos.sh`、`stage_slicer_engine_agpl_macos.sh` |
+| mac 5.5 drill | `scripts/verify_symbol_archive_macos.sh` |
+| Launcher D13／final scan | `Bundle-Launcher/scripts/verify_slicer_engine_artifact.sh`、`scan_final_macos_artifact.sh` |
+| 權威進度 | 本檔；Launcher 衛星須與本檔一致 |
 
 ---
 
-## 6. 文件同步（2026-07-19）
+## 6. 雙 repo 同步規則
 
-已對齊：本檔、`tasks.md`（3.5／5.5／6.1–6.3）、`agpl-boundary.md`、Launcher satellite `tasks.md` 4.3、Win evidence（CLI help／5.5 runbook／§7 follow-up）。
+- **權威：** 本 `PROGRESS.md`＋可重跑磁碟證據（hash／`--help`／目錄是否存在）。  
+- **Launcher 衛星**只引用本檔。  
+- Legal 1.6 以 [`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md) 為政策證據（非 Apple／hash 級證明）。  
+- mac 現行 consumer 以 [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md)（DMG `…2111`）為準，勿再引用 `…1450` 作 CLI／AGPL 現況。

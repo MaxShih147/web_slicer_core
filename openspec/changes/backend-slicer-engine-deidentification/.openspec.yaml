@@ -37,6 +37,10 @@ resolved_gates:
   - windows-postsign-setup-lifecycle  # 2026-07-19 Setup Valid + install/uninstall/reinstall + scan PASS
   - macos-launcher-section-4-arm64  # 2026-07-19 D13 verify+sign+notarize+final scan
   - agpl-open-source-compliance-signoff  # 2026-07-19 Vance approved; email/written offer; no mandatory GitHub URL
+  - macos-cli-help-debrand  # 2026-07-19 signed app …2111 help=0
+  - macos-agpl-legal-in-signed-app  # 2026-07-19 legal/ in …2111 app
+  - macos-launcher-evening-reinject  # 2026-07-19 DMG …2111
+  - macos-symbol-archive-local-drill-5.5  # 2026-07-19 verify_symbol_archive_macos.sh PASS
 progress:
   m1_macos_poc: closed-pass
   m1_evidence: poc/evidence/m1-close-20260717T032408Z/
@@ -48,7 +52,10 @@ progress:
   macos_productize_3_1_3_2_3_4: landed-2026-07-17
   macos_d13_package_5_1: closed-pass  # nm brand 172 -> 0
   macos_threads_5_2: closed-pass
-  macos_user_visible_3_5: closed-pass  # L3 strings residual acknowledged
+  macos_user_visible_3_5: closed-pass
+  macos_cli_help_debrand: closed-pass  # 2026-07-19 signed …2111 help=0
+  macos_agpl_legal_in_signed_app: closed-pass  # 2026-07-19
+  macos_launcher_evening_reinject: closed-pass  # evidence/macos-launcher-evening-reinject-20260719.md
   macos_cli_regression_3_6: closed-pass-macos-sample  # full dual-platform -> 7.6
   macos_symbol_scan_5_4: closed-pass
   macos_qa_flavor_5_6: closed-pass
@@ -58,12 +65,18 @@ progress:
   windows_postsign_setup_lifecycle: closed-pass  # 2026-07-19
   macos_launcher_section_4_arm64: closed-pass  # 2026-07-19
   macos_launcher_section_4_evidence: evidence/macos-launcher-section4-20260719.md
+  macos_launcher_evening_reinject_evidence: evidence/macos-launcher-evening-reinject-20260719.md
   legal_1_6_agpl_signoff: closed-pass  # 2026-07-19 Vance approved
-  overall_progress_pct_approx: 90
+  macos_agpl_legal_staged: closed-pass
+  macos_symbol_archive_local_drill: closed-pass
+  windows_symbol_archive_onedrive_5_5: closed-pass  # 2026-07-19
+  windows_qa_three_crash_7_3: closed-pass  # 2026-07-19
+  overall_progress_pct_approx: 93
   next:
-    - symbol-archive-store-5.5
-    - dual-platform-acceptance-section-7
+    - dual-platform-acceptance-section-7  # 7.6 SLA; 7.4/7.5 CI
     - optional-resources-brand-cleanup
+    - macos-launcher-4.6-lifecycle-sample
+    - symbolication-drill-6.6-6.7
 lifecycle:
   states: [proposed, in_progress, completed, archived]
   completion_requires:
