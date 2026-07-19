@@ -35,4 +35,4 @@
 ## Task close
 
 - `tasks.md` **1.5**／**2.8**／**7.7** → checked  
-- Next：optional 8.5 promote／8.6 archive／`.openspec.yaml` `completed` when product wants formal archive
+- **Follow-up（2026-07-19 夜）：** **8.5 promote 已關** — [`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md)。可選 **8.6** archive／`.openspec.yaml` `completed` 仍未做。

@@ -95,19 +95,22 @@
 | macOS L1 產品化（3.1／3.2／3.4） | **已落地**（2026-07-17 晚）— CMake／plist／help／`SLICER_ENGINE_BIN` |
 | macOS D13 package（5.1） | **關閉** — 流水線＋nm brand **0**（2026-07-17 夜） |
 | Notion Test 稿 | [`poc/NOTION-TEST-TASK.md`](./poc/NOTION-TEST-TASK.md) |
-| 可行性評估報告定案 | 待 `tasks.md` 2.1／2.8；雙平台 C′ 已由 2.4／2.5 PoC 證明 |
+| 可行性評估報告定案 | **已關** — [`evidence/feasibility-A-E-2.1-20260719.md`](./evidence/feasibility-A-E-2.1-20260719.md)；**2.8 Vance Approve** |
 | 引擎命名＋交接 schema | naming-manifest＋artifact-manifest.schema；**已簽核（2026-07-17）** |
 | Windows baseline | **已關閉**（1.7） |
 | Windows PoC | **已關閉 PASS**（2.5） |
 | Windows 5.3／formal scan | **已關閉 PASS**（export=1＋`scan_slicer_engine_windows.ps1`） |
 | Launcher §4 | **雙平台手動閉環 2026-07-19**（Win Setup／4.6；macOS arm64 verify→notarize→final scan） |
-| macOS／Windows final-artifact evidence | **雙平台手動 post-sign evidence 已存**；CI 自動化待 §7 |
+| macOS／Windows final-artifact evidence | **雙平台 post-sign evidence 已存**；**7.4／7.5 CI gate PASS** |
 | CLI help／resource 殘留 | **雙平台簽過包 CLI help 已清**；resources ≈148 |
 | AGPL／source-offer | **1.6 approved**；Win＋mac 簽過包皆有 `legal/`（mac＝`…2111`） |
 | 5.5 symbol store | **Win＝OneDrive**；mac 本機 drill PASS；演練 6.6–6.7 後補 |
 | Win 7.3 QA 三 crash | **PASS** — `evidence/windows/qa-three-crash-20260719/` |
+| Win 7.5 CI gate | **PASS** — [`evidence/windows/ci-gate-7.5-20260719T144512Z/`](./evidence/windows/ci-gate-7.5-20260719T144512Z/) |
 | Win 7.6 minimal matrix | **PASS** — [`evidence/windows/functional-7.6-20260719T143000Z/`](./evidence/windows/functional-7.6-20260719T143000Z/) |
 | mac 7.6 minimal matrix | **PASS** — [`evidence/macos/functional-7.6-20260719/SUMMARY.md`](./evidence/macos/functional-7.6-20260719/SUMMARY.md) |
 | mac 7.1 declare | **PASS** — [`evidence/macos/section7-mac-declare-7.1-20260719.md`](./evidence/macos/section7-mac-declare-7.1-20260719.md) |
 | mac 7.4 CI gate | **PASS** — [`evidence/macos/ci-gate-7.4-20260719T151403Z/`](./evidence/macos/ci-gate-7.4-20260719T151403Z/) |
 | mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |
+| Gate 5／8.5 promote | **已關** — Vance Approve；[`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md) |
+| 仍開（非 blocking） | 可選 **8.6** archive；mac 4.6；Launcher QA 4.2；resources；6.6–6.7 |

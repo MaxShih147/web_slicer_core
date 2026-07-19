@@ -1,6 +1,6 @@
 # Progress Snapshot — backend-slicer-engine-deidentification
 
-**更新日期：** 2026-07-19（夜：Gate 5 Vance Approve；**8.5 promote**；未做 8.6 archive）  
+**更新日期：** 2026-07-20（衛星敘述對齊；Gate 5／8.5 promote；未做 8.6 archive）  
 **Change status：** `in_progress`（見 `.openspec.yaml`）  
 
 ## 證據錨點
@@ -96,4 +96,5 @@
 - **Launcher 衛星**只引用本檔。  
 - Legal 1.6 以 [`evidence/legal-1.6-vance-approved-20260719.md`](./evidence/legal-1.6-vance-approved-20260719.md) 為政策證據。  
 - mac 現行 consumer＝DMG `…2111`；Win 宣告 consumer＝staging `20260719T105832Z`（install tree 可能仍 stale）。  
-- **勿**再寫「mac／Win 7.6 對方未跑」— 雙平台最小矩陣 evidence 皆已存在。
+- **勿**再寫「mac／Win 7.6 對方未跑」— 雙平台最小矩陣 evidence 皆已存在。  
+- **2026-07-20：** Launcher 衛星敘述已對齊本檔（8.5 已關；mac `…2111`；§7／Gate 5；可選僅 8.6）。

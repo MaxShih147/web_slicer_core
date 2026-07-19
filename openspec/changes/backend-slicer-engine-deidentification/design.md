@@ -202,10 +202,10 @@ flowchart TD
 10. ~~Windows PoC（2.5）＋compile-time harness（2.6 PoC）~~ → **已通過：** [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)
 11. ~~Gate 5／1.5／2.8／7.7~~ → **已批准（2026-07-19）：Vance**（Security／Release／QA／Legal）
 
-**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`（archive／promote＝8.5／8.6 可選下一步）。  
-**已落地（2026-07-19 夜）：** 雙平台 §7 工程＋Gate 5 人簽（Vance）；mac `…2111`；Win 7.2／7.5／7.6。  
-**殘留（非 blocking）：** resources；mac 4.6；5.1b；6.6–6.7；optional Win Setup reinject。  
-**下一步：** 可選 8.5 promote／8.6 archive → `status: completed`。
+**工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`（**8.5 promote 已關**；可選僅 **8.6** archive → `completed`）。  
+**已落地（2026-07-19 夜）：** 雙平台 §7 工程＋Gate 5 人簽（Vance）；mac `…2111`；Win 7.2／7.5／7.6；spec promote。  
+**殘留（非 blocking）：** resources；mac 4.6；5.1b；6.6–6.7；optional Win Setup reinject；Launcher QA 組包 4.2。  
+**下一步：** 可選 **8.6** archive → `status: completed`。
 
 ## 規範性附件
 
