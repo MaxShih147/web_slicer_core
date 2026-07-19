@@ -58,17 +58,17 @@
 - [x] 5.8 [REQ-DEID-007] （明確不做）C-full／OLLVM＝L3 殘餘風險
 - [ ] 5.9 [REQ-DEID-007] （選配）D packer
 - [ ] 5.10 [REQ-DEID-007] （預設否）E Crash Reporter intercept
-- [ ] 5.11 [REQ-DEID-008] subprocess boundary test
+- [x] 5.11 [REQ-DEID-008] subprocess boundary test（**Win 2026-07-20 PASS** — [`evidence/windows/subprocess-5.11-20260719T164527Z/`](./evidence/windows/subprocess-5.11-20260719T164527Z/)；`scripts/verify_subprocess_boundary_windows.ps1`＋`agent/tests/test_subprocess_boundary_5_11.py`）
 
 ## 6. AGPL／供應鏈／發布資訊
 
 - [x] 6.1 [REQ-DEID-011] 修正 `agpl-boundary.md` 與實際 modified fork 狀態一致（**2026-07-19**；**1.6 Vance approved** — `docs/single-node-cloud/agpl-boundary.md`）
 - [x] 6.2 [REQ-DEID-011] 正式包提供 AGPL license、copyright、顯著修改聲明（**Win：** 隨包 `legal/`；**mac 簽過包 `…2111`：** `slicer-engine/legal/` 已在 — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md)；scanner fail-closed 缺包）
 - [x] 6.3 [REQ-DEID-011] 提供 exact fork commit 的 Corresponding Source URL／written offer（**定稿：** email／書面 offer — `legal/slicer-engine/SOURCE_OFFER.md`；**不強制** GitHub URL；Vance approved 2026-07-19）
-- [ ] 6.4 [REQ-DEID-011] 建立 binary hash → build manifest／SBOM（SPDX 2.3 JSON，見 `design.md` D10a） → source commit 對應證據
-- [ ] 6.5 [REQ-DEID-012] Engine `--version` 或 manifest 提供 neutral build ID
-- [ ] 6.6 [REQ-DEID-012] 完成 production symbolication 演練
-- [ ] 6.7 [REQ-DEID-012] 完成 symbol loss／artifact rollback 演練
+- [x] 6.4 [REQ-DEID-011] 建立 binary hash → build manifest／SBOM（SPDX 2.3 JSON，見 `design.md` D10a） → source commit 對應證據（**Win 2026-07-20 PASS** — [`evidence/windows/source-chain-6.4-6.5-20260720/`](./evidence/windows/source-chain-6.4-6.5-20260720/)；`generate_slicer_engine_sbom_windows.ps1`）
+- [x] 6.5 [REQ-DEID-012] Engine `--version` 或 manifest 提供 neutral build ID（**Win 2026-07-20 PASS** — CLI 無 `--version`；改以 `engine_build_id.txt`＋manifest；同上 evidence）
+- [x] 6.6 [REQ-DEID-012] 完成 production symbolication 演練（**Win 2026-07-20 PASS** — PE RSDS GUID∈PDB；OneDrive `20260719T162525Z`；[`evidence/windows/symbolication-6.6-6.7-20260719T165250Z/`](./evidence/windows/symbolication-6.6-6.7-20260719T165250Z/)）
+- [x] 6.7 [REQ-DEID-012] 完成 symbol loss／artifact rollback 演練（**Win 2026-07-20 PASS** — 同上；missing build_id fail；prior `20260719T095415Z` rollback）
 
 ## 7. 雙平台驗收與自動化
 

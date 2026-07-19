@@ -113,4 +113,4 @@
 | mac 7.4 CI gate | **PASS** — [`evidence/macos/ci-gate-7.4-20260719T151403Z/`](./evidence/macos/ci-gate-7.4-20260719T151403Z/) |
 | mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |
 | Gate 5／8.5 promote | **已關** — Vance Approve；[`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md) |
-| 仍開（非 blocking） | 可選 **8.6** archive；Setup **EV** 簽 reinject；mac 4.6；mac QA 4.2；6.6–6.7 |
+| 仍開（非 blocking） | 可選 **8.6** archive；mac 4.6；mac QA 4.2；5.1b |

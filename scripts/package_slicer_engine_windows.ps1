@@ -252,6 +252,16 @@ Set-Content -LiteralPath $ManifestPath -Value $json -Encoding utf8
 Copy-Item -LiteralPath $ManifestPath -Destination $ManifestAliasPath -Force
 Write-Host "Wrote $ManifestPath (alias: $ManifestAliasPath)" -ForegroundColor Green
 
+# 6.5 — neutral build ID sidecar (CLI has no --version)
+$writeIdPs1 = Join-Path $PSScriptRoot "write_engine_build_id_windows.ps1"
+& powershell -NoProfile -ExecutionPolicy Bypass -File $writeIdPs1 -ArtifactRoot $OutRoot
+if ($LASTEXITCODE -ne 0) { throw "write_engine_build_id_windows.ps1 FAILED" }
+
+# 6.4 — SPDX 2.3 SBOM + source-chain.json
+$sbomPs1 = Join-Path $PSScriptRoot "generate_slicer_engine_sbom_windows.ps1"
+& powershell -NoProfile -ExecutionPolicy Bypass -File $sbomPs1 -ArtifactRoot $OutRoot
+if ($LASTEXITCODE -ne 0) { throw "generate_slicer_engine_sbom_windows.ps1 FAILED" }
+
 # Fail-closed formal scan (same gate Launcher will re-run)
 $scanPs1 = Join-Path $PSScriptRoot "scan_slicer_engine_windows.ps1"
 if (Test-Path $scanPs1) {

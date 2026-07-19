@@ -1,0 +1,19 @@
+﻿{
+    "task":  "5.11",
+    "captured_at_utc":  "2026-07-19T16:45:28.5587841Z",
+    "verdict":  "PASS",
+    "checks":  {
+                   "agent_pid":  21564,
+                   "engine_pid":  27512,
+                   "help_exit":  0,
+                   "help_prusaslicer_hits":  0,
+                   "agent_mapped_engine_dlls":  [
+
+                                                ],
+                   "engine_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\slicer-engine\\bin\\slicer-engine.exe",
+                   "engine_is_external_exe":  true
+               },
+    "failures":  [
+
+                 ]
+}
