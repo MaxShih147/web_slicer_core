@@ -1,0 +1,1 @@
+No such file: D:\Repos\Phrozen\Bundle\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\functional-7.6-20260719T143000Z\fixture\does-not-exist.stl

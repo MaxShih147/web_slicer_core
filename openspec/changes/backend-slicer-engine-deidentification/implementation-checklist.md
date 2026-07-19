@@ -1,6 +1,6 @@
 # 跨 Repository Implementation Checklist
 
-**進度（2026-07-19 夜）：** mac 晚上 consumer 已回灌簽過包（`…2111`；`legal/`＋help=0）。≈**92–94%**。詳見 [`PROGRESS.md`](./PROGRESS.md)。
+**進度（2026-07-19 夜）：** Win **7.2／7.5／7.6** 工程閉環；≈**94–96%**。下一步 mac 7.6＋人簽。詳見 [`PROGRESS.md`](./PROGRESS.md)。
 
 ## Gate 0 — 規格與治理
 
@@ -40,7 +40,7 @@
 - [x] Windows：path（PE／layout）、VERSIONINFO、exports、debug directory 通過（**`scan_slicer_engine_windows.ps1` 2026-07-19**；`bin/resources/**` 品牌資產僅 note）
 - [x] consumer 不含 dSYM／PDB／QA harness（**macOS 5.4／5.7**；**Win package／Launcher gate 2026-07-19**）
 - [x] scanner、blacklist **1.2**、pre／post_strip／**post-sign** hashes 入 evidence（雙平台）
-- [x] 任一命中 fail-fast，無 `continue-on-error`（雙平台 Launcher／package 已 fail closed；CI 配線待）
+- [x] 任一命中 fail-fast，無 `continue-on-error`（雙平台 Launcher／package fail closed；**Win 7.5 CI** `ci_gate_windows_deid_7.5.ps1`＋GH workflows **2026-07-19**；mac CI 待）
 
 ## Gate 4 — 動態驗收
 
@@ -48,15 +48,15 @@
 - [x] Windows **x64 PoC**：三種 crash＋minidump 模組中性（2.5；`w25-close-20260717T083241Z`）
 - [ ] macOS 各發布 architecture：release-equivalent qa 三種 crash site＋品牌歸因複核通過
 - [x] Windows x64：正式 release-equivalent qa 三 crash（**7.3 PASS 2026-07-19** — `evidence/windows/qa-three-crash-20260719/`）
-- [ ] consumer 靜態 L1／L2＋binary inspection 通過（正式簽署包 — 手動已有；CI 宣告待）
+- [x] consumer 靜態 L1／L2＋binary inspection 通過（**Win：** 手動 post-sign＋**7.5 CI**；mac 手動有、CI 待）
 - [ ] 乾淨環境（無私有 dSYM／PDB／_NT_SYMBOL_PATH）有紀錄（PoC 已記錄教訓；正式 runbook 待補）
 - [ ] Agent 在 engine crash 後存活、job failure semantics 正確
 - [ ] 受控 dump／report 依資料分類政策保存
 
 ## Gate 5 — Release readiness
 
-- [ ] Release Engineering、Backend Security、QA、Legal／OSS 四方簽核（Legal 1.6 已關；其餘待）
-- [ ] 舊版相容／升級／rollback 路徑驗證（Win Setup smoke 有；完整矩陣 → 7.6／mac 4.6）
+- [ ] Release Engineering、Backend Security、QA、Legal／OSS 四方簽核（Legal 1.6 已關；**簽核包** [`evidence/signoff-gate5-pending-20260719.md`](./evidence/signoff-gate5-pending-20260719.md)）
+- [x] 舊版相容／升級／rollback 路徑驗證（**Win Setup smoke＋7.2 declare**；mac 4.6／完整跨版本仍待）
 - [ ] 支援 runbook 可依 build ID 找到 symbols（Win OneDrive＋mac drill 有；演練 6.6–6.7 待）
 - [x] source offer／exact fork commit 渠道可用（**1.6 email／書面 offer approved**）
-- [ ] OpenSpec status 更新為 completed 並準備 archive／spec promotion（目前 **`in_progress`**）
+- [ ] OpenSpec status 更新為 completed 並準備 archive／spec promotion（目前 **`in_progress`**；blocked on mac §7＋人簽）

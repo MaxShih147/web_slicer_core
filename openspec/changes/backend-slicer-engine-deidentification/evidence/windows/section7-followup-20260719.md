@@ -8,8 +8,9 @@
 | Item | Status |
 |------|--------|
 | **7.3** QA three-crash | **PASS** — [`qa-three-crash-20260719/SUMMARY.md`](./qa-three-crash-20260719/SUMMARY.md) |
-| **7.5** post-Authenticode | **手動 PASS**（Setup Valid＋lifecycle）；**CI 自動化未做**（後補） |
-| **7.6** full SLA／perf | **未跑**（完整矩陣；不擋本輪 7.3） |
+| **7.5** post-Authenticode CI | **PASS** — [`ci-gate-7.5-20260719T144512Z/`](./ci-gate-7.5-20260719T144512Z/)＋GH workflows |
+| **7.6** minimal matrix | **Win PASS** — [`functional-7.6-20260719T143000Z/`](./functional-7.6-20260719T143000Z/)；mac 仍開；§6 延伸 SHOULD 後補 |
+| **7.2** Win L1+L2 declare | **PASS** — [`section7-win-declare-7.2-20260719.md`](./section7-win-declare-7.2-20260719.md) |
 
 ## Already done（manual 7.5）
 
@@ -17,20 +18,17 @@
 |------|----------|
 | Post-Authenticode Setup | [`launcher-1.0.0-postsign-20260719/SUMMARY.md`](./launcher-1.0.0-postsign-20260719/SUMMARY.md) |
 | Static consumer gate | `scan_slicer_engine_windows.ps1` PASS（含 legal pack） |
+| CI automation | `Bundle-Launcher/scripts/ci_gate_windows_deid_7.5.ps1`＋build／release workflows |
 
-## 7.5 CI automation（仍開）
+## 7.5 CI automation
 
-Promote the manual checklist into CI when ready:
-
-1. Build／package consumer  
-2. Optional：sign Setup（or consume pre-signed artifact）  
-3. `Setup /S` → scan install root  
-4. Uninstall／reinstall → rescan  
-5. Fail closed on scan FAIL or Authenticode invalid  
+**Closed 2026-07-19.** Gate script fail-closed on scan＋`--help` PrusaSlicer=0；release workflow optionally checks Setup Authenticode Valid.
 
 ## 7.6 SLA
 
-Run agent／CLI SLA matrix against packaged `slicer-engine` when scheduled（out of this Windows priority pass）.
+- **Win minimal MUST：** PASS（help／fail／`--export-sla` cold＋warm vs 2.7；agent smoke SKIP）— [`functional-7.6-20260719T143000Z/SUMMARY.md`](./functional-7.6-20260719T143000Z/SUMMARY.md)  
+- **mac minimal MUST：** still open  
+- Extended §6 matrix：SHOULD／後補
 
 ## Decided elsewhere（not §7 blockers）
 

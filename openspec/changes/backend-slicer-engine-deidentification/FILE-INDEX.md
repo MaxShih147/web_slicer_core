@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-19 夜）· 完成度 ≈ **92–94%** · mac 晚上 consumer 已回灌（`…2111`）· 進度 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-19 夜）· 完成度 ≈ **94–96%** · **Win 7.2／7.5／7.6 閉環** · mac 7.6＋人簽待 · 進度 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -104,4 +104,5 @@
 | AGPL／source-offer | **1.6 approved**；Win＋mac 簽過包皆有 `legal/`（mac＝`…2111`） |
 | 5.5 symbol store | **Win＝OneDrive**；mac 本機 drill PASS；演練 6.6–6.7 後補 |
 | Win 7.3 QA 三 crash | **PASS** — `evidence/windows/qa-three-crash-20260719/` |
+| Win 7.6 minimal matrix | **PASS** — [`evidence/windows/functional-7.6-20260719T143000Z/`](./evidence/windows/functional-7.6-20260719T143000Z/) |
 | mac 晚上回灌 | **PASS** — [`evidence/macos-launcher-evening-reinject-20260719.md`](./evidence/macos-launcher-evening-reinject-20260719.md) |

@@ -71,13 +71,19 @@ progress:
   macos_symbol_archive_local_drill: closed-pass
   windows_symbol_archive_onedrive_5_5: closed-pass  # 2026-07-19
   windows_qa_three_crash_7_3: closed-pass  # 2026-07-19
-  overall_progress_pct_approx: 93
+  windows_functional_7_6_minimal: closed-pass  # 2026-07-19 functional-7.6-20260719T143000Z
+  windows_section7_declare_7_2: closed-pass  # 2026-07-19
+  windows_ci_gate_7_5: closed-pass  # 2026-07-19 ci_gate_windows_deid_7.5.ps1 + workflows
+  overall_progress_pct_approx: 95
   next:
-    - dual-platform-7-6-minimal-matrix  # per functional-budget-2.7-approved-20260719.md
-    - dual-platform-acceptance-section-7  # 7.1/7.2 declare; 7.4/7.5 CI
+    - macos-7-6-minimal-matrix
+    - human-signoff-1.5-2.8-7.7  # evidence/signoff-gate5-pending-20260719.md
+    - optional-win-setup-reinject-help-cleared
     - optional-resources-brand-cleanup
     - macos-launcher-4.6-lifecycle-sample
     - symbolication-drill-6.6-6.7
+  resolved_gates_extra_note: |
+    Gate 5 human signoff still pending (Legal 1.6 done). Do not set status=completed.
 lifecycle:
   states: [proposed, in_progress, completed, archived]
   completion_requires:

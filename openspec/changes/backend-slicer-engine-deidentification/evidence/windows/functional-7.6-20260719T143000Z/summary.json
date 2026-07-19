@@ -1,0 +1,101 @@
+﻿{
+    "task":  "7.6",
+    "platform":  "Windows",
+    "captured_at_utc":  "2026-07-19T14:35:57Z",
+    "budget_ref":  "evidence/functional-budget-2.7-approved-20260719.md",
+    "under_test":  {
+                       "kind":  "consumer-staging-help-cleared",
+                       "path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\slicer-engine\\bin\\slicer-engine.exe",
+                       "engine_build_id":  "20260719T105832Z",
+                       "flavor":  "consumer",
+                       "exe_sha256":  "254248FC041C30FE0DB3529DA5EEEABC0BDE0156E712AB46B79D05E6F0DD76E5",
+                       "dll_sha256":  "DF36EAB9105548732BA4D8F87484E09DB5431A9747B1122123CE9EE8FBB93A41",
+                       "post_strip_sha256":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+                       "scan_report":  "PASS (slicer-engine/scan-report.json)",
+                       "note":  "Program Files install still postsign morning tree (help PrusaSlicer\u003e0); primary 7.6 uses current help-cleared consumer staging matching Win CLI cleanup evidence."
+                   },
+    "install_tree_delta":  {
+                               "path":  "C:\\Program Files\\Bundle Launcher\\resources\\bundle\\slicer-engine\\bin\\slicer-engine.exe",
+                               "exe_sha256":  "F9498CCB208C67AE878DCCA58D5826754DBB9B7C0CDD29BC009760DB6AD62F2F",
+                               "help_prusaslicer_hits":  3,
+                               "note":  "Stale vs help-cleared package; reinject Setup recommended before claiming install-tree help=0."
+                           },
+    "fixture":  {
+                    "stl":  "fixture/model.stl",
+                    "stl_sha256":  "B3962F18E7265FB65FD4072C3DB5D51234D9EE2B92A95F4F371FA02BFE063425",
+                    "stl_source":  "prusaslicer_fork/tests/data/test_stl/ASCII/20mmbox-LF.stl",
+                    "ini":  "fixture/config.ini",
+                    "ini_sha256":  "EBA1F78D2ABE23205BC5A37F8D9D9BF0ACA0F9EFB417BEEE71878DBB660F725D",
+                    "class":  "5731d266-class minimal SLA export (20mm box + default SLAConfig)"
+                },
+    "cases":  [
+                  {
+                      "name":  "01-help",
+                      "exit":  0,
+                      "duration_sec":  1.016,
+                      "prusaslicer_hits":  0,
+                      "slic3r_hits":  0,
+                      "stdout_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\01-help-stdout.txt",
+                      "stderr_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\01-help-stderr.txt",
+                      "verdict":  "PASS"
+                  },
+                  {
+                      "name":  "01-help-fff",
+                      "exit":  0,
+                      "duration_sec":  1.01,
+                      "prusaslicer_hits":  0,
+                      "slic3r_hits":  18,
+                      "stdout_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\01-help-fff-stdout.txt",
+                      "stderr_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\01-help-fff-stderr.txt",
+                      "verdict":  "PASS"
+                  },
+                  {
+                      "name":  "02-missing-stl",
+                      "exit":  1,
+                      "duration_sec":  1.009,
+                      "prusaslicer_hits":  0,
+                      "slic3r_hits":  0,
+                      "stdout_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\02-missing-stl-stdout.txt",
+                      "stderr_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\02-missing-stl-stderr.txt",
+                      "verdict":  "PASS"
+                  },
+                  {
+                      "name":  "02-invalid-stl",
+                      "exit":  1,
+                      "duration_sec":  1.019,
+                      "prusaslicer_hits":  0,
+                      "slic3r_hits":  0,
+                      "stdout_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\02-invalid-stl-stdout.txt",
+                      "stderr_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\functional-7.6-20260719T143000Z\\runs\\02-invalid-stl-stderr.txt",
+                      "verdict":  "PASS"
+                  },
+                  {
+                      "name":  "03-export-sla-cold-baseline",
+                      "exit":  0,
+                      "duration_sec":  1.01,
+                      "output_bytes":  129207,
+                      "output_exists":  true,
+                      "prusaslicer_hits":  0,
+                      "verdict":  "PASS"
+                  },
+                  {
+                      "name":  "03-export-sla-warm-vs-baseline",
+                      "exit":  0,
+                      "duration_sec":  1.007,
+                      "output_bytes":  129207,
+                      "output_exists":  true,
+                      "size_ratio_vs_cold":  1,
+                      "time_ratio_vs_cold":  0.9969,
+                      "prusaslicer_hits":  0,
+                      "size_within_pm5":  true,
+                      "time_within_x120":  true,
+                      "verdict":  "PASS"
+                  },
+                  {
+                      "name":  "04-packaged-agent-smoke",
+                      "verdict":  "SKIP",
+                      "note":  "optional per 2.7; not run this pass"
+                  }
+              ],
+    "overall":  "PASS"
+}

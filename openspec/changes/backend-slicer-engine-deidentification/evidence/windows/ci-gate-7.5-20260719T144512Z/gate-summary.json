@@ -1,0 +1,19 @@
+﻿{
+    "task":  "7.5",
+    "captured_at_utc":  "2026-07-19T14:45:17.0555836Z",
+    "artifact_root":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\slicer-engine",
+    "setup_exe":  "D:\\Repos\\Phrozen\\Bundle\\Bundle-Launcher\\dist\\Bundle Launcher Setup 1.0.0.exe",
+    "expect_flavor":  "consumer",
+    "checks":  {
+                   "scan":  "PASS",
+                   "help_exit":  0,
+                   "help_prusaslicer_hits":  0,
+                   "authenticode_status":  "Valid",
+                   "setup_sha256":  "6592EE9E01D311ABE6BEF22FF384DBD3526DCBAC3FB414B797D23EEE37D446C5",
+                   "authenticode":  "PASS"
+               },
+    "failures":  [
+
+                 ],
+    "verdict":  "PASS"
+}
