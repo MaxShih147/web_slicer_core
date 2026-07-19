@@ -1,6 +1,6 @@
 schema: spec-driven
 created: 2026-07-14
-updated: 2026-07-17
+updated: 2026-07-19
 title: 後端切片引擎去識別（L1+L2／精簡版 C′＋D13，macOS+Windows）
 status: in_progress
 type: feature
@@ -34,6 +34,8 @@ resolved_gates:
   - macos-qa-flavor-qa-delta-5.6  # 2026-07-17 night
   - macos-consumer-harness-off-5.7  # 2026-07-17 night
   - windows-export-one-5.3  # 2026-07-17 Win productize dumpbin=1
+  - windows-launcher-section4-unsigned  # 2026-07-19 4.2/4.4/4.5; Authenticode manual
+  - windows-postsign-setup-lifecycle  # 2026-07-19 Setup Valid + install/uninstall/reinstall + scan PASS
 progress:
   m1_macos_poc: closed-pass
   m1_evidence: poc/evidence/m1-close-20260717T032408Z/
@@ -51,8 +53,12 @@ progress:
   macos_qa_flavor_5_6: closed-pass
   macos_consumer_harness_5_7: closed-pass
   windows_export_one_5_3: closed-pass  # 2026-07-17 dumpbin=1 slicer_run_cli
+  windows_launcher_section4_unsigned: closed-pass  # 2026-07-19
+  windows_postsign_setup_lifecycle: closed-pass  # 2026-07-19
+  overall_progress_pct_approx: 83
   next:
-    - launcher-packaging-section-4
+    - macos-launcher-section-4
+    - cleanup-cli-help-prusa-strings
     - symbol-archive-runbook-5.5
     - agpl-section-6
     - dual-platform-acceptance-section-7

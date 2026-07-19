@@ -145,7 +145,7 @@ flowchart TD
 
 **決策：** Consumer Release 不含 dSYM／PDB；每個 engine artifact 必須有 neutral build ID 與 UUID／GUID，內部 symbols 儲存於受 ACL 保護之 artifact store，定義 retention、hash、symbolication 與 rollback runbook。
 
-**Windows headless Release PDB policy（tasks 2.3 定案，2026-07-17；tasks **2.5 PoC PASS**）：** 正式建置（含 `SLIC3R_GUI=OFF`）**MUST** 顯式：compiler debug info（`/Zi` 或等效）＋ linker `/DEBUG`＋可控 `/PDB:<staging>/<build_id>/slicer-engine.pdb|slicer_core.pdb`＋ **`/PDBALTPATH:slicer-engine.pdb|slicer_core.pdb`**（PE 內僅中性短檔名）。流程：**先**上傳匹配 PDB 至 symbol store 並寫入 manifest（GUID+Age），**再**交付 consumer PE（bundle **無** `.pdb`；debug directory **無**品牌／`prusaslicer_build` 路徑）。**否決**「GUI=OFF 自然有 PDB」與「只 `/XF *.pdb`」。完整 ABI／export／原子遷移見 [`windows-policy.md`](./windows-policy.md)；PoC 證據見 [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)（export 收斂為 1 仍歸 **5.3**）。
+**Windows headless Release PDB policy（tasks 2.3 定案，2026-07-17；tasks **2.5 PoC PASS**；**5.3／Launcher §4 unsigned 2026-07-19 PASS**）：** 正式建置（含 `SLIC3R_GUI=OFF`）**MUST** 顯式：compiler debug info（`/Zi` 或等效）＋ linker `/DEBUG`＋可控 `/PDB:<staging>/<build_id>/slicer-engine.pdb|slicer_core.pdb`＋ **`/PDBALTPATH:slicer-engine.pdb|slicer_core.pdb`**（PE 內僅中性短檔名）。流程：**先**上傳匹配 PDB 至 symbol store 並寫入 manifest（GUID+Age），**再**交付 consumer PE（bundle **無** `.pdb`；debug directory **無**品牌／`prusaslicer_build` 路徑）。**否決**「GUI=OFF 自然有 PDB」與「只 `/XF *.pdb`」。完整 ABI／export／原子遷移見 [`windows-policy.md`](./windows-policy.md)；PoC 證據見 [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)。
 
 **理由：** L2 不得以永久失去事故診斷能力為代價。
 
@@ -202,8 +202,9 @@ flowchart TD
 10. ~~Windows PoC（2.5）＋compile-time harness（2.6 PoC）~~ → **已通過：** [`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)
 
 **工程進度：** 見 [`PROGRESS.md`](./PROGRESS.md)。Change status=`in_progress`。  
-**已落地（2026-07-17）：** macOS **3.1–3.6（除 3.3）**＋**5.1／5.2**。  
-**下一步：** Windows **5.3**；Launcher **§4**；**5.5** symbol archive runbook。（macOS **5.4／5.6／5.7** 已關閉 2026-07-17）
+**已落地（2026-07-19）：** Windows Launcher §4.2／4.4／4.5／**4.6**＋手動 post-sign Setup（Authenticode Valid；install／uninstall／reinstall；scan PASS）。  
+**殘留：** CLI `--help` `PrusaSlicer` tooltip；resources 品牌檔名；內嵌 app exe 未簽。  
+**下一步：** macOS Launcher **§4**；清 CLI help；**5.5**；§6／§7 其餘。
 
 ## 規範性附件
 

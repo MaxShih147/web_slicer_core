@@ -56,8 +56,8 @@ Toggling `BUNDLE_QA_CRASH_HARNESS` via global `add_definitions` forces a broad `
 
 ## Out of scope（still open）
 
-- Windows **5.3**／Windows formal scan gate  
+- ~~Windows **5.3**／Windows formal scan gate~~ → **closed 2026-07-17～19**（export=1＋`scan_slicer_engine_windows.ps1`＋Launcher unsigned gate）  
 - **5.5** symbol archive runbook  
 - **5.1b** RTTI formalization  
-- Launcher **§4** handoff／CI gate  
-- Dual-platform §7 acceptance  
+- **macOS** Launcher **§4** handoff／CI gate（**Win unsigned＋post-sign Setup closed 2026-07-19**）  
+- Dual-platform §7 acceptance（含 qa 動態）；CLI help `PrusaSlicer` 殘留清理  

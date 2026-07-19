@@ -62,7 +62,7 @@
 
 正式對外引擎產物 **MUST（必須）** 以 **精簡版 C′** 達成 L2，使 [`acceptance-procedure.md`](../../acceptance-procedure.md) 定義之 macOS 與 Windows L2 表面 **MUST NOT（不得）** 命中 [`blacklist.md`](../../blacklist.md)。C′ **MUST** 包含：
 
-1. **符號可見性控制（優先）＋ strip（fork 完成，見 D13）：** consumer 產物在交予 Launcher 簽署前完成 strip／符號剝除。手段為結果導向；具體 flags 由 PoC target-scoped 定案（macOS CLI 候選：`-fvisibility=hidden` + `strip -x`；Windows DLL：僅導出單一中性 entry）。**`-exported_symbols_list` 不得作為 macOS CLI exe 的 L2 充分條件。** 靜態驗證 **MUST** 分開掃描 local／defined 與 global／dynamic 符號；**MUST NOT** 僅以 `nm -gU` 判定通過。
+1. **符號可見性控制（優先）＋ strip（fork 完成，見 D13）：** consumer 產物在交予 Launcher 簽署前完成 strip／符號剝除。手段為結果導向；具體 flags 由 PoC target-scoped 定案（**macOS：** `-fvisibility=hidden -fvisibility-inlines-hidden`＋ **plain `strip`**（**否決 `strip -x` 當 L2 充分條件**）；Windows DLL：僅導出單一中性 entry）。**`-exported_symbols_list` 不得作為 macOS CLI exe 的 L2 充分條件。** 靜態驗證 **MUST** 分開掃描 local／defined 與 global／dynamic 符號；**MUST NOT** 僅以 `nm -gU` 判定通過。
 2. **RTTI／例外型別名稱：** **MUST** 以未捕捉 C++ 例外 crash site 驗證；若洩漏品牌型別名，**MUST** 於 CLI 進入點加 top-level catch 或等效處理。
 3. **Thread name 去品牌（全部 call site）：** 所有 `set_current_thread_name`／`SetThreadDescription`（含 main 與 TBB／worker）**MUST** 改為簽核中性命名規則（見 [`naming-manifest.md`](../../naming-manifest.md)）。
 4. **Windows 公開 export／DLL ABI 去品牌：** shim／DLL／export／VERSIONINFO／錯誤字串 **MUST** 原子遷移為簽核中性名並通過 smoke test。

@@ -4,7 +4,7 @@
 **適用 Requirement：** REQ-DEID-002～006、009～015  
 **規範來源：** [`blacklist.md`](./blacklist.md)、[`artifact-manifest.schema.md`](./artifact-manifest.schema.md)、[`design.md`](./design.md) D7／D11／D13  
 
-**PoC 進度（非取代本程序）：** 2026-07-17 macOS arm64 **tasks 2.4 PASS**（[`poc/REPORT.md`](./poc/REPORT.md)、`m1-close-20260717T032408Z`）；Windows x64 **tasks 2.3／2.5 PASS**（[`windows-policy.md`](./windows-policy.md)、[`poc/REPORT-WIN.md`](./poc/REPORT-WIN.md)、`w25-close-20260717T083241Z`）。正式驗收仍須本文件之 consumer／qa flavor、簽署包與雙平台條款。
+**PoC／產品化進度（非取代本程序）：** 雙平台 PoC／C′ 已關。2026-07-19 **Windows 已簽 Setup post-sign gate PASS**（[`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)；Authenticode Valid；install／uninstall／reinstall；安裝後 scan PASS）。正式完成宣告仍須 macOS Launcher／雙平台動態 §7／Legal。殘留：CLI help `PrusaSlicer` tooltip。
 
 ## 1. 驗收原則
 

@@ -29,7 +29,8 @@ if (-not $OutRoot) {
 
 $BinDir = Join-Path $OutRoot "bin"
 $SymbolDir = Join-Path $OutRoot "symbols"
-$ManifestPath = Join-Path $OutRoot "artifact-manifest.json"
+$ManifestPath = Join-Path $OutRoot "engine-artifact-manifest.json"
+$ManifestAliasPath = Join-Path $OutRoot "artifact-manifest.json"
 
 function Get-Sha256([string]$Path) {
     return (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
@@ -113,9 +114,12 @@ if (Test-Path $resSrc) {
     if ($LASTEXITCODE -ge 8) { throw "Failed to copy resources from fork" }
 }
 
-# Archive PDBs for symbol store (not in consumer bin)
-Get-ChildItem -LiteralPath $BuildReleaseDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue | ForEach-Object {
-    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $SymbolDir $_.Name) -Force
+# Archive only neutral engine PDBs for symbol store (not in consumer bin; skip brand leftovers)
+foreach ($pdbName in @("slicer-engine.pdb", "slicer_core.pdb")) {
+    $pdbSrc = Join-Path $BuildReleaseDir $pdbName
+    if (Test-Path $pdbSrc) {
+        Copy-Item -LiteralPath $pdbSrc -Destination (Join-Path $SymbolDir $pdbName) -Force
+    }
 }
 
 $exeDst = Join-Path $BinDir "slicer-engine.exe"
@@ -179,30 +183,80 @@ $pdbInBin = Get-ChildItem -LiteralPath $BinDir -Filter "*.pdb" -Recurse -ErrorAc
 if ($pdbInBin) { throw "Consumer bin must not contain PDB files" }
 
 $buildId = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+$engineCommit = "unknown"
+try {
+    Push-Location $RepoRoot
+    $engineCommit = (git rev-parse HEAD 2>$null)
+    if (-not $engineCommit) { $engineCommit = "unknown" }
+} finally {
+    Pop-Location
+}
+
+$archivedPdbs = @(Get-ChildItem -LiteralPath $SymbolDir -Filter "*.pdb" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
 $manifest = [ordered]@{
-    schema_version = "1.0"
-    build_id       = $buildId
-    flavor         = $Flavor
-    platform       = "windows-x64"
-    files          = @(
+    schema_version   = "1.0"
+    engine_commit    = "$engineCommit".Trim()
+    engine_build_id  = $buildId
+    build_id         = $buildId  # alias for older consumers
+    flavor           = $Flavor
+    platform         = "Windows"
+    architecture     = "x64"
+    created_at_utc   = (Get-Date).ToUniversalTime().ToString("o")
+    pre_strip_sha256 = $preExe   # primary engine CLI (shim)
+    post_strip_sha256 = $postExe
+    files            = @(
         [ordered]@{
             path              = "bin/slicer-engine.exe"
+            role              = "shim"
             pre_strip_sha256  = $preExe
             post_strip_sha256 = $postExe
+            sha256            = $postExe
         },
         [ordered]@{
             path              = "bin/slicer_core.dll"
+            role              = "engine_dll"
             pre_strip_sha256  = $preDll
             post_strip_sha256 = $postDll
+            sha256            = $postDll
             named_exports     = $exportCount
             export_entry      = "slicer_run_cli"
         }
     )
-    symbols_archived = @(Get-ChildItem -LiteralPath $SymbolDir -Filter "*.pdb" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
-    notes            = "Windows PE: pre/post hash equal when no post-link rewrite; PDB excluded from bin."
+    symbol_archive = [ordered]@{
+        kind           = $(if ($archivedPdbs.Count -gt 0) { "PDB" } else { "none" })
+        archived_files = $archivedPdbs
+    }
+    identity = [ordered]@{
+        windows_original_filename = "slicer-engine.exe"
+        product_version           = "Slicer Engine"
+    }
+    qa_delta = $(if ($Flavor -eq "qa") {
+            [ordered]@{
+                harness_compile_flag            = "BUNDLE_QA_CRASH_HARNESS"
+                only_differences                = @("compile-time crash harness sites")
+                consumer_equivalent_build_id    = ""
+            }
+        } else { $null })
+    approvals = [ordered]@{
+        naming_manifest_version = "1.3"
+    }
+    notes = "Windows PE: pre/post hash equal when no post-link rewrite; PDB excluded from bin. Authenticode is manual (Launcher does not sign)."
 }
 
-$manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ManifestPath -Encoding utf8
-Write-Host "Wrote $ManifestPath" -ForegroundColor Green
+$json = $manifest | ConvertTo-Json -Depth 8
+Set-Content -LiteralPath $ManifestPath -Value $json -Encoding utf8
+Copy-Item -LiteralPath $ManifestPath -Destination $ManifestAliasPath -Force
+Write-Host "Wrote $ManifestPath (alias: $ManifestAliasPath)" -ForegroundColor Green
+
+# Fail-closed formal scan (same gate Launcher will re-run)
+$scanPs1 = Join-Path $PSScriptRoot "scan_slicer_engine_windows.ps1"
+if (Test-Path $scanPs1) {
+    Write-Host "`n=== Running scan_slicer_engine_windows (fail closed) ===" -ForegroundColor Cyan
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $scanPs1 -ArtifactRoot $OutRoot -ExpectFlavor $Flavor
+    if ($LASTEXITCODE -ne 0) { throw "scan_slicer_engine_windows.ps1 FAILED" }
+} else {
+    Write-Host "WARN: scan script missing at $scanPs1" -ForegroundColor Yellow
+}
+
 Write-Host "Consumer staging ready: $BinDir" -ForegroundColor Green
 Write-Host "Set SLICER_ENGINE_BIN=$exeDst"

@@ -5,7 +5,7 @@
 > **Feature 標題：** 後端切片引擎去識別：Prusa CLI 改名重包與 OS Crash Report 指紋屏蔽（**L2／Win+macOS**）  
 > **類型：** Feature（非 Bug／非優化）  
 > **接受線：** L1+L2 必須（L2＝精簡版 C′＋D13 流水線）；平台 macOS+Windows 必須；C-full／OLLVM＝L3 不做  
-> **Status：** `in_progress`（2026-07-17 夜）· macOS **5.1／5.2／5.4／5.6／5.7／3.5／3.6** 關閉 · 進度 [`PROGRESS.md`](./PROGRESS.md)
+> **Status：** `in_progress`（2026-07-19 晚）· **Win post-sign Setup PASS** · 完成度 ≈ **83%** · 進度 [`PROGRESS.md`](./PROGRESS.md)
 
 ## 1. 本 change 產物
 
@@ -40,8 +40,13 @@
 | [`evidence/macos-productize-5.4-5.6-5.7.md`](./evidence/macos-productize-5.4-5.6-5.7.md) | macOS 5.4／5.6／5.7 正式 scan／qa_delta／consumer harness OFF |
 | `scripts/package_slicer_engine_macos.sh` | **D13 產品化**（dSYM→strip→manifest；tasks 5.1） |
 | `scripts/scan_slicer_engine_macos.sh` | **正式掃描閘**（tasks 5.4／5.6／5.7；packager fail-closed） |
+| `scripts/package_slicer_engine_windows.ps1` | **Win D13 package**（PDB 封存、manifest、export／harness 閘） |
+| `scripts/scan_slicer_engine_windows.ps1` | **Win 正式掃描閘**（tasks 4.4／4.5／5.4；fail closed；Authenticode 不要求） |
+| [`evidence/windows-launcher-section4-20260719.md`](./evidence/windows-launcher-section4-20260719.md) | Win Launcher §4 unsigned gate PASS |
+| [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md) | **已簽 Setup** post-sign／lifecycle／scan PASS |
 | `third_party/slicer-engine/`（local gitignored） | consumer 佈局＋manifest＋`scan-report.json` |
 | `third_party/slicer-engine-qa/`（local gitignored） | QA flavor＋`qa_delta` |
+| `slicer-engine/`（Win local staging） | Windows consumer layout＋`engine-artifact-manifest.json` |
 
 ## 2. 證據與產品脈絡
 
@@ -90,7 +95,9 @@
 | 可行性評估報告定案 | 待 `tasks.md` 2.1／2.8；雙平台 C′ 已由 2.4／2.5 PoC 證明 |
 | 引擎命名＋交接 schema | naming-manifest＋artifact-manifest.schema；**已簽核（2026-07-17）** |
 | Windows baseline | **已關閉**（1.7） |
-| Windows PoC | **已關閉 PASS**（2.5）— export=1 → 5.3 |
-| Launcher §4 | **未開始**（macOS post-strip manifest 已有本機樣品；正式交接／Win 仍缺） |
-| macOS／Windows final-artifact evidence | 待 `tasks.md` §7 |
+| Windows PoC | **已關閉 PASS**（2.5） |
+| Windows 5.3／formal scan | **已關閉 PASS**（export=1＋`scan_slicer_engine_windows.ps1`） |
+| Launcher §4 | **Win unsigned＋post-sign Setup／4.6 已關（2026-07-19）**；macOS 仍缺 |
+| macOS／Windows final-artifact evidence | **Win 手動 post-sign evidence 已存**；macOS／CI 自動化待 §7 |
+| CLI help／resource 殘留 | **追蹤中**（`--help` PrusaSlicer tooltip；resources ≈148） |
 | AGPL／source-offer release evidence | 待 `tasks.md` §6 |

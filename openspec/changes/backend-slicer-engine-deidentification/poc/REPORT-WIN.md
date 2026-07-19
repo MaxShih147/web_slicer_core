@@ -18,8 +18,8 @@
 | PDBALTPATH | **Done** — RSDS=`slicer-engine.pdb`／`slicer_core.pdb`（無 `prusaslicer_build` 路徑） |
 | 三種 crash | **Done** — overflow／segfault／exception 皆有 dump＋非零失敗 exit |
 | Minidump 模組名 | **Done** — `slicer_engine`／`slicer_core`（無 `PrusaSlicer`） |
-| Export 收斂為 1 | **部分** — `slic3r_main` 已消失；仍 ~470 cereal mangled → **5.3** |
-| Go／No-go | **Go** 進 §3／§5 產品化（export 歸零另追）— **macOS 產品化已開始／大部落地（2026-07-17 晚）** |
+| Export 收斂為 1 | **部分（PoC 當日）** — 仍 ~470 cereal mangled → **其後 5.3 已關閉（export=1）** |
+| Go／No-go | **Go** 進 §3／§5 — **後續 5.3／Launcher §4（Win unsigned）已於 2026-07-17～19 關閉** |
 
 ---
 
@@ -48,11 +48,11 @@
 
 ## 3. Follow-ups
 
-1. **5.3** 將 consumer export 收斂為唯一 `slicer_run_cli`（cereal `dllexport` 衛生）。  
-2. **5.6／5.7** consumer binary inspection 證明無 harness 符號。  
-3. Agent／Launcher 路徑改 `slicer-engine/`（§3／§4）— **macOS agent 路徑已於 2026-07-17 晚改 `SLICER_ENGINE_BIN`**；Win／Launcher 仍開。  
-4. LocalDumps HKCU 未穩定產出 dump；本 PoC 以 `cdb` 取 dump（exit code 已證明三種 native 失敗）。  
-5. DLL `OriginalFilename` 目前與 exe 共用 rc 模板（仍為 `slicer-engine.exe`）— 產品化可拆 DLL 專用 rc。
+1. ~~**5.3** export=1~~ → **Done 2026-07-17**（`dumpbin` = `slicer_run_cli` only）。  
+2. ~~**5.6／5.7** consumer harness OFF~~ → **Done**（Win package／scan gate）。  
+3. ~~Agent／Launcher 路徑~~ → **Done 2026-07-19**（Win Launcher unsigned §4 gate；見 [`../evidence/windows-launcher-section4-20260719.md`](../evidence/windows-launcher-section4-20260719.md)）。macOS Launcher §4 仍開。  
+4. LocalDumps HKCU 未穩定產出 dump；本 PoC 以 `cdb` 取 dump（exit code 已證明三種 native 失敗）。正式 §7 可用同等取證。  
+5. ~~Authenticode／install lifecycle~~ → **Done 2026-07-19 手動**（Setup Valid＋lifecycle；見 [`../evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](../evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md)）。§7 動態／完整回歸／macOS 仍開。CLI help `PrusaSlicer` 殘留待清。
 
 ---
 
