@@ -1,0 +1,106 @@
+[
+  {
+    "path": "stdout\\exception-meta.txt",
+    "size": 202,
+    "hits": {},
+    "context_strings_sample": [],
+    "context_count": 0
+  },
+  {
+    "path": "stdout\\exception-stderr.txt",
+    "size": 0,
+    "hits": {},
+    "context_strings_sample": [],
+    "context_count": 0
+  },
+  {
+    "path": "stdout\\exception-stdout.txt",
+    "size": 0,
+    "hits": {},
+    "context_strings_sample": [],
+    "context_count": 0
+  },
+  {
+    "path": "wer\\ReportArchive_exception\\Report.wer",
+    "size": 44994,
+    "hits": {},
+    "context_strings_sample": [],
+    "context_count": 0
+  },
+  {
+    "path": "dumps\\slicer-engine.exe.4368.dmp",
+    "size": 2129081,
+    "hits": {
+      "Slic3r": {
+        "ascii": 3750,
+        "utf16le": 0
+      },
+      "ForcedException": {
+        "ascii": 1,
+        "utf16le": 0
+      },
+      "BundleQa": {
+        "ascii": 1,
+        "utf16le": 0
+      },
+      "runtime_error": {
+        "ascii": 5,
+        "utf16le": 0
+      },
+      ".?AV": {
+        "ascii": 3855,
+        "utf16le": 0
+      }
+    },
+    "context_strings_sample": [
+      ".?AV<lambda_1>@?4??print_help@CLI@Slic3r@@YAX_NW4PrinterTechnology@3@@Z@",
+      ".?AV<lambda_5_>@CLI@Slic3r@@",
+      ".?AVRuntimeError@Slic3r@@",
+      ".?AVCriticalException@Slic3r@@",
+      ".?AVException@Slic3r@@",
+      ".?AVBadOptionTypeException@Slic3r@@",
+      ".?AVConfigurationError@Slic3r@@",
+      ".?AVConfigOption@Slic3r@@",
+      ".?AV?$ConfigOptionFloatTempl@$0A@@Slic3r@@",
+      ".?AV?$ConfigOptionFloatsTempl@$0A@@Slic3r@@",
+      ".?AV?$ConfigOptionIntTempl@$0A@@Slic3r@@",
+      ".?AV?$ConfigOptionIntsTempl@$0A@@Slic3r@@",
+      ".?AVConfigOptionStrings@Slic3r@@",
+      ".?AVConfigOptionPoint3@Slic3r@@",
+      ".?AV<lambda_2>@?GE@??process_actions@CLI@Slic3r@@YA_NAEAUData@23@AEBVDynamicPrintConfig@3@AEAV?$vector@VModel@Slic3r@@V?$allocator@VModel@Slic3r@@@std@@@std@@@Z@",
+      ".?AV<lambda_1>@?GE@??process_actions@CLI@Slic3r@@YA_NAEAUData@23@AEBVDynamicPrintConfig@3@AEAV?$vector@VModel@Slic3r@@V?$allocator@VModel@Slic3r@@@std@@@std@@@Z@",
+      ".?AV<lambda_2>@?1??get_thumbnail_generator_cli@CLI@Slic3r@@YA?AV?$function@$$A6A?AV?$vector@UThumbnailData@Slic3r@@V?$allocator@UThumbnailData@Slic3r@@@std@@@std@@AEBUThumbnailsParams@Slic3r@@@Z@std@@",
+      ".?AV<lambda_1>@?4??get_thumbnail_generator_cli@CLI@Slic3r@@YA?AV?$function@$$A6A?AV?$vector@UThumbnailData@Slic3r@@V?$allocator@UThumbnailData@Slic3r@@@std@@@std@@AEBUThumbnailsParams@Slic3r@@@Z@std@@",
+      ".?AV<lambda_5_>@PrintBase@Slic3r@@",
+      ".?AV<lambda_3_>@JobController@sla@Slic3r@@",
+      ".?AV<lambda_2_>@JobController@sla@Slic3r@@",
+      ".?AV<lambda_1_>@JobController@sla@Slic3r@@",
+      ".?AV<lambda_1>@?1???$generate_interior@V?$_Array_iterator@UCSGPart@csg@Slic3r@@$00@std@@@sla@Slic3r@@YA?AV?$unique_ptr@UInterior@sla@Slic3r@@UInteriorDeleter@23@@std@@AEBV?$Range@V?$_Array_iterator@UC",
+      "SGPart@csg@Slic3r@@$00@std@@@2@AEBUHollowingConfig@12@AEBUJobController@12@@Z@",
+      ".?AUForcedException@BundleQa@Slic3r@@",
+      ".?AVUnknownOptionException@Slic3r@@",
+      ".?AVNoDefinitionException@Slic3r@@",
+      ".?AVBadOptionValueException@Slic3r@@",
+      ".?AV?$ConfigOptionFloatsTempl@$00@Slic3r@@",
+      ".?AV?$ConfigOptionPercentsTempl@$00@Slic3r@@",
+      ".?AV?$ConfigOptionFloatsOrPercentsTempl@$0A@@Slic3r@@",
+      ".?AVConfigOptionPoint@Slic3r@@",
+      ".?AV?$ConfigOptionSingle@V?$Matrix@N$01$00$01$01$00@Eigen@@$0A@@Slic3r@@",
+      ".?AV?$ConfigOptionSingle@V?$Matrix@N$02$00$01$02$00@Eigen@@$0A@@Slic3r@@",
+      ".?AV?$ConfigOptionBoolsTempl@$00@Slic3r@@",
+      ".?AVConfigOptionEnumGeneric@Slic3r@@",
+      ".?AV?$ConfigOptionEnumsGenericTempl@$0A@@Slic3r@@",
+      ".?AV?$ConfigOptionSingle@_N$00@Slic3r@@",
+      ".?AVInvalidArgument@Slic3r@@",
+      ".?AVLogicError@Slic3r@@"
+    ],
+    "context_count": 1898
+  },
+  {
+    "path": "wer\\AppCrash_slicer-engine.ex_ca166a93415c8468b70264ab0bcb7eee4368730_166aa479_cab_9b20fd4f-8a4d-420f-8c7f-2a82818bb86f",
+    "size": 44994,
+    "hits": {},
+    "context_strings_sample": [],
+    "context_count": 0
+  }
+]
