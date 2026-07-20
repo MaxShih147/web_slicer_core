@@ -56,6 +56,7 @@
 | 路徑 | 說明 |
 |------|------|
 | [`../../../../macOS_system_report.md`](../../../../macOS_system_report.md) | 實測 macOS System Report（Prusa 指紋） |
+| [`evidence/macos/before-after-compare-20260721/`](./evidence/macos/before-after-compare-20260721/) | **macOS Before/After 視覺證據**（對齊 Win `before-after-compare-20260720`；真實 Finder／Console／codesign；[`index.html`](./evidence/macos/before-after-compare-20260721/index.html)） |
 | [`evidence/windows/baseline/`](./evidence/windows/baseline/) | Windows baseline（**1.7 已關閉**；權威 `win-baseline-20260717T055632Z/`） |
 | [`poc/evidence/w25-close-20260717T083241Z/`](./poc/evidence/w25-close-20260717T083241Z/) | Windows PoC evidence（**2.5 PASS**） |
 | [`evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md`](./evidence/macos/rtti-5.1b-exception-20260720/SUMMARY.md) | **5.1b mac** exception abort／`.ips` 型別名 PASS |

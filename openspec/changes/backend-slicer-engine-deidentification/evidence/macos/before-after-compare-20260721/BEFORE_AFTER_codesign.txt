@@ -1,0 +1,59 @@
+=== BEFORE ===
+Executable=/Applications/Bundle Launcher.app/Contents/Resources/bundle/third_party/prusaslicer_build/src/PrusaSlicer
+Identifier=com.prusa3d.slic3r/
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20500 size=172415 flags=0x10000(runtime) hashes=5381+3 location=embedded
+VersionPlatform=1
+VersionMin=1703936
+VersionSDK=1705216
+Hash type=sha256 size=32
+CandidateCDHash sha256=4bdf86410669b64dcee1e920364feff7a3ddeaab
+CandidateCDHashFull sha256=4bdf86410669b64dcee1e920364feff7a3ddeaab5abdd1d6fd59c175bf81d983
+Hash choices=sha256
+CMSDigest=4bdf86410669b64dcee1e920364feff7a3ddeaab5abdd1d6fd59c175bf81d983
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=59424768
+Executable Segment flags=0x1
+Page size=16384
+CDHash=4bdf86410669b64dcee1e920364feff7a3ddeaab
+Signature size=8974
+Authority=Developer ID Application: Po Yuan Wang (TM35RSG7WJ)
+Authority=Developer ID Certification Authority
+Authority=Apple Root CA
+Timestamp=Jul 12, 2026 at 2:13:52 PM
+Info.plist entries=16
+TeamIdentifier=TM35RSG7WJ
+Runtime Version=26.5.0
+Sealed Resources version=2 rules=10 files=30
+Internal requirements count=1 size=180
+
+=== AFTER ===
+Executable=/Users/sw-dev/repos/Bundle/Bundle-Launcher/dist/mac-arm64/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/bin/slicer-engine
+Identifier=slicer-engine
+Format=Mach-O thin (arm64)
+CodeDirectory v=20500 size=114937 flags=0x10000(runtime) hashes=3586+2 location=embedded
+VersionPlatform=1
+VersionMin=1703936
+VersionSDK=1705216
+Hash type=sha256 size=32
+CandidateCDHash sha256=b958a7b42f066c64734a2fef4f4728301fd4e71e
+CandidateCDHashFull sha256=b958a7b42f066c64734a2fef4f4728301fd4e71ef9c8021c260f792d3e24edf3
+Hash choices=sha256
+CMSDigest=b958a7b42f066c64734a2fef4f4728301fd4e71ef9c8021c260f792d3e24edf3
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=57131008
+Executable Segment flags=0x1
+Page size=16384
+CDHash=b958a7b42f066c64734a2fef4f4728301fd4e71e
+Signature size=8974
+Authority=Developer ID Application: Po Yuan Wang (TM35RSG7WJ)
+Authority=Developer ID Certification Authority
+Authority=Apple Root CA
+Timestamp=Jul 19, 2026 at 9:11:10 PM
+Info.plist=not bound
+TeamIdentifier=TM35RSG7WJ
+Runtime Version=26.5.0
+Sealed Resources=none
+Internal requirements count=1 size=176

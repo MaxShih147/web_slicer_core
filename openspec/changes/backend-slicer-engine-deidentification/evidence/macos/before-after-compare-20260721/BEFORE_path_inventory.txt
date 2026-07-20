@@ -1,0 +1,22 @@
+BEFORE install folder:
+total 172648
+drwxr-xr-x@ 20 sw-dev  admin       640 Jul 12 14:22 .
+drwxr-xr-x@ 10 sw-dev  admin       320 Jul 12 14:22 ..
+-rw-r--r--@  1 sw-dev  admin       513 Jul 12 14:22 CTestTestfile.cmake
+-rw-r--r--@  1 sw-dev  admin      4387 Jul 12 14:22 Info.plist
+-rw-r--r--@  1 sw-dev  admin     17847 Jul 12 14:22 Makefile
+lrwxr-xr-x@  1 sw-dev  admin        11 Jul 12 14:23 PrusaGCodeViewer -> PrusaSlicer
+-rwxr-xr-x@  1 sw-dev  admin  88344816 Jul 12 14:22 PrusaSlicer
+-rw-r--r--@  1 sw-dev  admin       804 Jul 12 14:22 PrusaSlicer-gcodeviewer.rc
+-rw-r--r--@  1 sw-dev  admin      1988 Jul 12 14:22 PrusaSlicer.manifest
+-rw-r--r--@  1 sw-dev  admin       745 Jul 12 14:22 PrusaSlicer.rc
+drwxr-xr-x@  3 sw-dev  admin        96 Jul 12 14:22 _CodeSignature
+drwxr-xr-x@  5 sw-dev  admin       160 Jul 12 14:22 clipper
+-rw-r--r--@  1 sw-dev  admin      3017 Jul 12 14:22 cmake_install.cmake
+drwxr-xr-x@  6 sw-dev  admin       192 Jul 12 14:22 libseqarrange
+drwxr-xr-x@  6 sw-dev  admin       192 Jul 12 14:22 libslic3r
+drwxr-xr-x@  6 sw-dev  admin       192 Jul 12 14:22 occt_wrapper
+lrwxr-xr-x@  1 sw-dev  admin        11 Jul 12 14:23 prusa-gcodeviewer -> PrusaSlicer
+lrwxr-xr-x@  1 sw-dev  admin        11 Jul 12 14:23 prusa-slicer -> PrusaSlicer
+drwxr-xr-x@  5 sw-dev  admin       160 Jul 12 14:22 slic3r-arrange
+drwxr-xr-x@  5 sw-dev  admin       160 Jul 12 14:22 slic3r-arrange-wrapper

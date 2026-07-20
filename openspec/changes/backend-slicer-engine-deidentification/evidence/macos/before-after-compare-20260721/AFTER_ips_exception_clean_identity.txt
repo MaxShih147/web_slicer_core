@@ -1,0 +1,17 @@
+# AFTER exception clean (5.1b)
+file: AFTER_exception_clean.ips
+procName: slicer-engine
+codeSigningID: slicer-engine
+bundleID: None
+version: 
+thread: None
+frames:
+  - __pthread_kill
+  - pthread_kill
+  - abort
+  - imageOffset:12276
+  - std::__terminate(void (*)())
+  - std::terminate()
+  - imageOffset:412676
+  - imageOffset:12196
+  - start

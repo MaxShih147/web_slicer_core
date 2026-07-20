@@ -1,0 +1,18 @@
+{
+  "captured_at_utc": "2026-07-20T17:05:13Z",
+  "host": "SW-DevdeMacBook-Pro.local",
+  "platform": "macOS arm64",
+  "compiler": "AppleClang (Xcode toolchain)",
+  "cmake_cache": "/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/prusaslicer_build/CMakeCache.txt",
+  "flags": {
+    "CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE:BOOL": "ON",
+    "CMAKE_BUILD_TYPE:STRING": "RelWithDebInfo",
+    "CMAKE_CXX_FLAGS_RELEASE:STRING": "-O3 -DNDEBUG",
+    "CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING": "-O2 -g -DNDEBUG",
+    "CMAKE_C_FLAGS_RELEASE:STRING": "-O3 -DNDEBUG",
+    "CMAKE_C_FLAGS_RELWITHDEBINFO:STRING": "-O2 -g -DNDEBUG"
+  },
+  "build_script_default": "RelWithDebInfo (typically Clang -O2 -g -DNDEBUG)",
+  "verdict": "CONFIRMED: macOS engine build uses Clang -O2 via RelWithDebInfo (CMAKE_CXX_FLAGS_RELWITHDEBINFO=-O2 -g -DNDEBUG).",
+  "note": "Literal MSVC /O2 is Windows-only; macOS equivalent class is Clang -O2 via RelWithDebInfo/Release."
+}

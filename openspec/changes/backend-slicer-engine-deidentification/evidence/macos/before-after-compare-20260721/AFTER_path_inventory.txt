@@ -1,0 +1,16 @@
+AFTER slicer-engine root:
+total 24
+drwxr-xr-x@  8 sw-dev  staff   256 Jul 19 21:09 .
+drwxr-xr-x@  7 sw-dev  staff   224 Jul 19 21:09 ..
+drwxr-xr-x@ 11 sw-dev  staff   352 Jul 19 21:09 Resources
+drwxr-xr-x@  3 sw-dev  staff    96 Jul 19 21:11 bin
+-rw-r--r--@  1 sw-dev  staff  1576 Jul 19 21:09 engine-artifact-manifest.json
+-rw-r--r--@  1 sw-dev  staff    42 Jul 19 21:09 engine_build_id.txt
+drwxr-xr-x@  7 sw-dev  staff   224 Jul 19 21:09 legal
+-rw-r--r--@  1 sw-dev  staff   895 Jul 19 21:20 scan-report.json
+
+AFTER bin:
+total 115008
+drwxr-xr-x@ 3 sw-dev  staff        96 Jul 19 21:11 .
+drwxr-xr-x@ 8 sw-dev  staff       256 Jul 19 21:09 ..
+-rwxr-xr-x@ 1 sw-dev  staff  58882848 Jul 19 21:11 slicer-engine

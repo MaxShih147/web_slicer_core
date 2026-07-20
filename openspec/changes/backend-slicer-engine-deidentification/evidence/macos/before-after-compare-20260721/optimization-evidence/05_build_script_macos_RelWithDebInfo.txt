@@ -1,0 +1,21 @@
+16-fi
+17-
+18:# Prefer RelWithDebInfo so dsymutil can archive DWARF before strip (D13 / 5.1).
+19-# Override with SLICER_ENGINE_BUILD_TYPE=Release if needed.
+20:BUILD_TYPE="${SLICER_ENGINE_BUILD_TYPE:-RelWithDebInfo}"
+21-
+22-# Flavor: consumer (default, harness OFF) | qa (BUNDLE_QA_CRASH_HARNESS=ON)
+--
+76-  # Build deps without wxWidgets (headless/CLI mode)
+77-  "$CMAKE_BIN" .. \
+78:    -DCMAKE_BUILD_TYPE=Release \
+79-    -DCMAKE_OSX_SYSROOT="$OSX_SYSROOT" \
+80-    -DPrusaSlicer_deps_PACKAGE_EXCLUDES="wxWidgets"
+--
+107-fi
+108-
+109:echo "[PrusaSlicer] Configuring build (CMAKE_BUILD_TYPE=$BUILD_TYPE, flavor=$FLAVOR, harness=$HARNESS_FLAG)..."
+110-"$CMAKE_BIN" "$SRC_DIR" \
+111:  -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+112-  -DCMAKE_OSX_SYSROOT="$OSX_SYSROOT" \
+113-  -DSLIC3R_GUI=OFF \

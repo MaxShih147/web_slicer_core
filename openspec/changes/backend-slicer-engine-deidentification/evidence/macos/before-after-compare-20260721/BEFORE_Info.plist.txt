@@ -1,0 +1,94 @@
+{
+  "CFBundleDocumentTypes" => [
+    0 => {
+      "CFBundleTypeExtensions" => [
+        0 => "stl"
+        1 => "STL"
+      ]
+      "CFBundleTypeIconFile" => "stl.icns"
+      "CFBundleTypeName" => "STL"
+      "CFBundleTypeRole" => "Viewer"
+      "LISsAppleDefaultForType" => true
+      "LSHandlerRank" => "Alternate"
+    }
+    1 => {
+      "CFBundleTypeExtensions" => [
+        0 => "obj"
+        1 => "OBJ"
+      ]
+      "CFBundleTypeIconFile" => "PrusaSlicer.icns"
+      "CFBundleTypeName" => "STL"
+      "CFBundleTypeRole" => "Viewer"
+      "LISsAppleDefaultForType" => true
+      "LSHandlerRank" => "Alternate"
+    }
+    2 => {
+      "CFBundleTypeExtensions" => [
+        0 => "amf"
+        1 => "AMF"
+      ]
+      "CFBundleTypeIconFile" => "PrusaSlicer.icns"
+      "CFBundleTypeName" => "AMF"
+      "CFBundleTypeRole" => "Viewer"
+      "LISsAppleDefaultForType" => true
+      "LSHandlerRank" => "Alternate"
+    }
+    3 => {
+      "CFBundleTypeExtensions" => [
+        0 => "3mf"
+        1 => "3MF"
+      ]
+      "CFBundleTypeIconFile" => "PrusaSlicer.icns"
+      "CFBundleTypeName" => "3MF"
+      "CFBundleTypeRole" => "Viewer"
+      "LISsAppleDefaultForType" => true
+      "LSHandlerRank" => "Alternate"
+    }
+    4 => {
+      "CFBundleTypeExtensions" => [
+        0 => "gcode"
+        1 => "GCODE"
+      ]
+      "CFBundleTypeIconFile" => "gcode.icns"
+      "CFBundleTypeName" => "GCODE"
+      "CFBundleTypeRole" => "Viewer"
+      "LISsAppleDefaultForType" => true
+      "LSHandlerRank" => "Alternate"
+    }
+    5 => {
+      "CFBundleTypeExtensions" => [
+        0 => "bgcode"
+        1 => "BGCODE"
+      ]
+      "CFBundleTypeIconFile" => "bgcode.icns"
+      "CFBundleTypeName" => "BGCODE"
+      "CFBundleTypeRole" => "Viewer"
+      "LISsAppleDefaultForType" => true
+      "LSHandlerRank" => "Alternate"
+    }
+  ]
+  "CFBundleExecutable" => "PrusaSlicer"
+  "CFBundleGetInfoString" => "PrusaSlicer Copyright (C) 2011-2019 Alessandro Ranellucci, (C) 2016-2025 Prusa Reseach"
+  "CFBundleIconFile" => "PrusaSlicer.icns"
+  "CFBundleIdentifier" => "com.prusa3d.slic3r/"
+  "CFBundleInfoDictionaryVersion" => "6.0"
+  "CFBundleName" => "PrusaSlicer"
+  "CFBundlePackageType" => "APPL"
+  "CFBundleShortVersionString" => "PrusaSlicer PrusaSlicer-2.9.4+UNKNOWN"
+  "CFBundleSignature" => "????"
+  "CFBundleURLTypes" => [
+    0 => {
+      "CFBundleURLName" => "PrusaSlicer Downloads"
+      "CFBundleURLSchemes" => [
+        0 => "prusaslicer"
+      ]
+    }
+  ]
+  "CFBundleVersion" => "PrusaSlicer-2.9.4+UNKNOWN"
+  "LSEnvironment" => {
+    "ASAN_OPTIONS" => "detect_container_overflow=0"
+  }
+  "LSMinimumSystemVersion" => "10.13"
+  "NSHighResolutionCapable" => true
+  "NSPrincipalClass" => "NSApplication"
+}

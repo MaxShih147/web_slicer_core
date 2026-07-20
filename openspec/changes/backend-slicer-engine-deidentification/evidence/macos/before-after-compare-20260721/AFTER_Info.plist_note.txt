@@ -1,0 +1,1 @@
+AFTER: codesign reports Info.plist=not bound (headless CLI; no branded CFBundleIdentifier)
