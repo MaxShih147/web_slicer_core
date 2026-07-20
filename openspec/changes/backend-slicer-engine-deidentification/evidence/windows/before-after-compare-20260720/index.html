@@ -767,7 +767,11 @@
       <p>
         <strong style="color:var(--accent)">2026-07-20 fixes</strong> —
         (1) <code>slicer-engine.exe</code> icon → <code>WebSlicer_PrinterControl/assets/icon.ico</code> via rcedit;
-        (2) AFTER VERSIONINFO from consumer <code>slicer-engine\bin</code> — no <code>prusaslicer_build</code> in paths.
+        (2) AFTER VERSIONINFO from consumer <code>slicer-engine\bin</code> — no <code>prusaslicer_build</code> in paths;
+        (3) <strong style="color:var(--ink)">WER surface</strong> rebuilt from live OS UI —
+        Explorer <code>AppCrash_prusa-slicer-con…</code> vs <code>AppCrash_slicer-engine…</code>
+        + identity fields annotated（red=prusa/slic3r，green=slicer-engine）；
+        cleaned ghosting／overlapping labels.
         Hard-refresh <kbd style="font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:2px">Ctrl+F5</kbd> if images are cached.
       </p>
     </aside>
@@ -788,7 +792,7 @@
     <div class="showcase">
       <figure class="frame">
         <img src="shots/COMPARE_02_crash_minidump_stack_before_vs_after.png" alt="Crash stack before vs after" loading="lazy" />
-        <figcaption class="frame-cap"><span>Crash minidump stack</span><span>02 · PDB-free cdb</span></figcaption>
+        <figcaption class="frame-cap"><span>Crash minidump — Before <code>lm</code>+<code>k</code> brand frames vs After AV + <code>slicer_run_cli</code></span><span>02 · PDB-free cdb</span></figcaption>
       </figure>
     </div>
     <div class="showcase">
@@ -799,8 +803,14 @@
     </div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/COMPARE_04_WER_surface_before_vs_after.png" alt="WER before vs after" loading="lazy" />
-        <figcaption class="frame-cap"><span>WER surface</span><span>04 · Error reporting</span></figcaption>
+        <img src="shots/COMPARE_04_WER_surface_before_vs_after.png" alt="WER before vs after annotated" loading="lazy" />
+        <figcaption class="frame-cap"><span>WER surface · clean crop + prusa/slic3r annotations</span><span>04 · Error reporting</span></figcaption>
+      </figure>
+    </div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="shots/COMPARE_04b_WER_Report_wer_notepad_before_vs_after.png" alt="Report.wer identity annotated" loading="lazy" />
+        <figcaption class="frame-cap"><span>Report.wer identity · red=prusa/slic3r · green=slicer-engine</span><span>04b · annotated</span></figcaption>
       </figure>
     </div>
   </section>
@@ -819,7 +829,9 @@
           <tr><td>Minidump modules</td><td class="before">prusa_slicer_console, PrusaSlicer</td><td class="after">slicer_engine, slicer_core</td></tr>
           <tr><td>Stack frames</td><td class="before">prusa_slicer_console!wmain+…</td><td class="after">slicer_core!slicer_run_cli+…</td></tr>
           <tr><td>Public export</td><td class="before">slic3r_main</td><td class="after">slicer_run_cli</td></tr>
-          <tr><td>WER App name</td><td class="before">branded module / path lines</td><td class="after">slicer-engine.exe / Slicer Engine</td></tr>
+          <tr><td>WER AppCrash folder</td><td class="before">AppCrash_prusa-slicer-con…</td><td class="after">AppCrash_slicer-engine…</td></tr>
+          <tr><td>WER NsAppName / Sig[0]</td><td class="before">prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
+          <tr><td>WER AppName / Friendly</td><td class="before">PrusaSlicer</td><td class="after">Slicer Engine</td></tr>
           <tr><td>Company / Product</td><td class="before">Prusa Research / PrusaSlicer</td><td class="after">Phrozen Technology / Slicer Engine</td></tr>
           <tr><td>PDB path</td><td class="before">…\prusaslicer_build\…\prusa-slicer-console.pdb</td><td class="after">slicer-engine.pdb / slicer_core.pdb</td></tr>
         </tbody>
@@ -832,14 +844,23 @@
       <span class="section-num">03</span>
       <h2>Install folder &amp; paths</h2>
     </div>
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.55;color:var(--dim);max-width:72ch">
+      Before 欄是<strong style="color:var(--muted);font-weight:500">舊 unpack／Program Files 清點</strong>（見
+      <code>BEFORE_path_inventory.txt</code>），不是「現行官方 bat 會編出什麼」。
+      GUI／viewer 在 Before 出現＝舊全量樹殘留；agent 只呼叫 console。
+      現行管線：預設<strong style="color:var(--muted);font-weight:500">不編</strong> GUI／viewer，打包再 SKIP 防舊檔——
+      詳見 <a href="shim-three-way-proof.html#s8" style="color:var(--accent)">三啟動器證明 §08 建置 vs 打包</a>。
+      After 的「not shipped」＝正式包不出貨，不是「三個都編好再刪」。
+    </p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Item</th><th>Before</th><th>After</th></tr></thead>
+        <thead><tr><th>Item</th><th>Before（舊清點）</th><th>After（正式包）</th></tr></thead>
         <tbody>
           <tr><td>Engine root</td><td class="before">…\third_party\prusaslicer_build\src\Release\</td><td class="after">…\slicer-engine\</td></tr>
-          <tr><td>CLI exe</td><td class="before">prusa-slicer.exe / prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
+          <tr><td>CLI exe（agent 實際呼叫；唯一會編）</td><td class="before">prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
+          <tr><td>GUI（舊樹殘留；現行不編）</td><td class="before">prusa-slicer.exe</td><td class="after">(not shipped)</td></tr>
           <tr><td>Core DLL</td><td class="before">PrusaSlicer.dll</td><td class="after">slicer_core.dll</td></tr>
-          <tr><td>Viewer</td><td class="before">prusa-gcodeviewer.exe</td><td class="after">(removed from consumer bin)</td></tr>
+          <tr><td>Viewer（舊樹殘留；現行不編）</td><td class="before">prusa-gcodeviewer.exe</td><td class="after">(not shipped)</td></tr>
           <tr><td>Build leftovers</td><td class="before">PrusaSlicer.exp / .lib</td><td class="after">(not shipped)</td></tr>
           <tr><td>Deps</td><td>libgmp-10.dll, libmpfr-4.dll</td><td>libgmp-10.dll, libmpfr-4.dll</td></tr>
         </tbody>
@@ -866,17 +887,18 @@
     <div class="pair">
       <figure class="card">
         <img src="shots/04_BEFORE_crash_minidump_stack.png" alt="Before crash" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge before">Before</span> Crash minidump — crop shows only first <code>lm</code> line (<code>prusa_slicer_console</code>)</figcaption>
+        <figcaption class="card-foot"><span class="badge before">Before</span> Crash minidump — <code>lm</code> + <code>k</code> brand frames (<code>prusa_slicer_console</code> / <code>PrusaSlicer</code>)</figcaption>
       </figure>
       <figure class="card">
         <img src="shots/06_AFTER_crash_minidump_stack.png" alt="After crash" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge after">After</span> Crash minidump stack</figcaption>
+        <figcaption class="card-foot"><span class="badge after">After</span> Crash minidump — AV <code>c0000005</code> + <code>slicer_core!slicer_run_cli</code></figcaption>
       </figure>
     </div>
     <p class="note" style="margin:0.75rem 0 0.5rem;color:var(--muted);font-size:.92em;line-height:1.45">
-      <strong style="color:var(--before)">PrusaSlicer proof:</strong>
-      shot <code>04</code> was cropped before the second <code>lm</code> row.
-      Full baseline log lists both modules; see proof crop below and live-modules shot <code>11</code>.
+      COMPARE_02／shot <code>04</code>／<code>06</code> 已改為<strong style="color:var(--ink);font-weight:500">差異幀摘錄</strong>（省略兩邊相同的 WinDbg boilerplate）。
+      Before＝postload baseline；After＝segfault PoC。完整原文：
+      <code>BEFORE_crash_minidump_stack.txt</code>／<code>AFTER_crash_minidump_stack_segfault.txt</code>。
+      另見 proof crop <code>14</code> 與 live-modules shot <code>11</code>。
     </p>
     <div class="showcase">
       <figure class="frame">
@@ -910,7 +932,9 @@
     <p class="note" style="margin:0 0 1rem;color:var(--muted);font-size:.92em;line-height:1.5">
       Windows <strong style="color:var(--ink)">does not</strong> show a pretty built-in “minidump viewer”.
       A <code>.dmp</code> is binary; the OS surfaces are folders + WER metadata + Event Log.
-      Opening the dump uses WinDbg (or VS). Captured live on this machine 2026-07-20.
+      Opening the dump uses WinDbg (or VS).
+      <strong style="color:var(--ink)">WER before／after</strong> below are live Explorer + Notepad captures of authentic
+      <code>ReportArchive\AppCrash_*</code> folders（2026-07-20 night refresh — not cdb dump text）.
     </p>
     <div class="showcase">
       <figure class="frame">
@@ -930,22 +954,28 @@
     </div>
     <div class="pair">
       <figure class="card">
-        <img src="shots/16_OS_WER_ReportArchive_slicer-engine.png" alt="WER AFTER" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge after">OS</span> WER ReportArchive · <code>AppCrash_slicer-engine…</code></figcaption>
+        <img src="shots/17_OS_WER_ReportArchive_prusa-slicer-console_annotated.png" alt="WER BEFORE annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge before">Before</span> Explorer crop · boxed <code>AppCrash_prusa-slicer-con…</code></figcaption>
       </figure>
       <figure class="card">
-        <img src="shots/17_OS_WER_ReportArchive_prusa-slicer-console.png" alt="WER BEFORE" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge before">OS</span> WER ReportArchive · <code>AppCrash_prusa-slicer-con…</code></figcaption>
+        <img src="shots/16_OS_WER_ReportArchive_slicer-engine_annotated.png" alt="WER AFTER annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">After</span> Explorer crop · boxed <code>AppCrash_slicer-engine…</code></figcaption>
       </figure>
     </div>
     <div class="pair">
       <figure class="card">
-        <img src="shots/18_OS_WER_Report_wer_slicer-engine_notepad.png" alt="Report.wer" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge after">OS</span> <code>Report.wer</code> text · App=<code>slicer-engine.exe</code></figcaption>
+        <img src="shots/22_OS_WER_Report_wer_prusa-slicer-console_notepad_annotated.png" alt="BEFORE Report.wer annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge before">Before</span> identity fields · red boxes = prusa/slic3r（8 hits）</figcaption>
       </figure>
       <figure class="card">
+        <img src="shots/18_OS_WER_Report_wer_slicer-engine_notepad_annotated.png" alt="AFTER Report.wer annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">After</span> identity fields · green boxes = slicer-engine（prusa/slic3r absent）</figcaption>
+      </figure>
+    </div>
+    <div class="showcase">
+      <figure class="frame">
         <img src="shots/20b_OS_EventViewer_Application_Error_1000_notepad.png" alt="Event ID 1000" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge after">OS</span> Event Viewer Application Error 1000 excerpt</figcaption>
+        <figcaption class="frame-cap"><span>Event Viewer Application Error 1000 excerpt</span><span>20b · OS</span></figcaption>
       </figure>
     </div>
   </section>

@@ -1,0 +1,20 @@
+﻿# AFTER WER identity fields (verbatim from live Report.wer)
+# Source file: AFTER_Report.wer
+
+Version=1
+EventType=BEX64
+NsAppName=slicer-engine.exe
+OriginalFilename=slicer-engine.exe
+AppSessionGuid=00001110-0001-0085-b06a-a619af17dd01
+TargetAppId=W:0006dc2d4442b14daa7232535112f5365a2f00000904!00008bab373224e3919ea16543c399fad9c9875b66b8!slicer-engine.exe
+TargetAppVer=2026//07//19:10:37:38!0!slicer-engine.exe
+IsFatal=1
+Sig[0].Value=slicer-engine.exe
+UI[2]=D:\Repos\Phrozen\Bundle\web_slicer_core\slicer-engine-qa\bin\slicer-engine.exe
+LoadedModule[0]=D:\Repos\Phrozen\Bundle\web_slicer_core\slicer-engine-qa\bin\slicer-engine.exe
+LoadedModule[8]=D:\Repos\Phrozen\Bundle\web_slicer_core\slicer-engine-qa\bin\slicer_core.dll
+LoadedModule[15]=D:\Repos\Phrozen\Bundle\web_slicer_core\slicer-engine-qa\bin\libgmp-10.dll
+LoadedModule[16]=D:\Repos\Phrozen\Bundle\web_slicer_core\slicer-engine-qa\bin\libmpfr-4.dll
+FriendlyEventName=已停止運作
+AppName=Slicer Engine
+AppPath=D:\Repos\Phrozen\Bundle\web_slicer_core\slicer-engine-qa\bin\slicer-engine.exe

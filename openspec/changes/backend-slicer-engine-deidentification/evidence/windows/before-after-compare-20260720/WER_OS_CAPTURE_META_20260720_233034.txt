@@ -1,0 +1,7 @@
+﻿AFTER_FOLDER=C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_slicer-engine.ex_ca166a93415c8468b70264ab0bcb7eee4368730_166aa479_cab_9b20fd4f-8a4d-420f-8c7f-2a82818bb86f
+AFTER_EXPLORER=D:\Repos\Phrozen\Bundle\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\before-after-compare-20260720\shots\16_OS_WER_ReportArchive_slicer-engine.png
+AFTER_NOTEPAD=D:\Repos\Phrozen\Bundle\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\before-after-compare-20260720\shots\18_OS_WER_Report_wer_slicer-engine_notepad.png
+PARENT=D:\Repos\Phrozen\Bundle\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\before-after-compare-20260720\shots\23_OS_WER_ReportArchive_parent_20260720_233034.png
+STAMP=20260720_233034
+MODE=after
+FORCE=False

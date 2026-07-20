@@ -1,0 +1,7 @@
+﻿BEFORE_FOLDER=C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_prusa-slicer-con_21c4c1f13a2f7f8634e9833e0c4d6ab55539096_2f983990_3e47e83b-e5d0-47fe-ae82-faff671c0aec
+BEFORE_EXPLORER=D:\Repos\Phrozen\Bundle\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\before-after-compare-20260720\shots\17_OS_WER_ReportArchive_prusa-slicer-console.png
+BEFORE_NOTEPAD=D:\Repos\Phrozen\Bundle\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\before-after-compare-20260720\shots\22_OS_WER_Report_wer_prusa-slicer-console_notepad.png
+PARENT=D:\Repos\Phrozen\Bundle\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\before-after-compare-20260720\shots\23_OS_WER_ReportArchive_parent_20260720_233017.png
+STAMP=20260720_233017
+MODE=before
+FORCE=True

@@ -18,9 +18,10 @@
 | # | File | What it shows |
 |---|------|----------------|
 | 1 | [`shots/COMPARE_01_install_folder_before_vs_after.png`](./shots/COMPARE_01_install_folder_before_vs_after.png) | Explorer install folder filenames |
-| 2 | [`shots/COMPARE_02_crash_minidump_stack_before_vs_after.png`](./shots/COMPARE_02_crash_minidump_stack_before_vs_after.png) | PDB-free crash minidump stack |
+| 2 | [`shots/COMPARE_02_crash_minidump_stack_before_vs_after.png`](./shots/COMPARE_02_crash_minidump_stack_before_vs_after.png) | PDB-free crash minidump — **differentiating frames**: Before `lm`+`k` brand tokens vs After AV + `slicer_run_cli`（boilerplate omitted；2026-07-21 rebuild） |
 | 3 | [`shots/COMPARE_03_VERSIONINFO_before_vs_after.png`](./shots/COMPARE_03_VERSIONINFO_before_vs_after.png) | PE VERSIONINFO — **real** Explorer Properties · 詳細資料（非 dump） |
-| 4 | [`shots/COMPARE_04_WER_surface_before_vs_after.png`](./shots/COMPARE_04_WER_surface_before_vs_after.png) | WER brand lines vs Report.wer |
+| 4 | [`shots/COMPARE_04_WER_surface_before_vs_after.png`](./shots/COMPARE_04_WER_surface_before_vs_after.png) | **Real OS UI** — Explorer `AppCrash_*` folders + full `Report.wer` in Notepad（`NsAppName=`） |
+| 4b | [`shots/COMPARE_04b_WER_Report_wer_notepad_before_vs_after.png`](./shots/COMPARE_04b_WER_Report_wer_notepad_before_vs_after.png) | Notepad-only identity compare（full live `Report.wer`） |
 
 ### Individual real screenshots
 
@@ -29,10 +30,14 @@
 | `01_BEFORE_explorer_install_folder.png` | Explorer BEFORE filename layout |
 | `02_AFTER_explorer_install_folder.png` | Explorer AFTER `slicer-engine\bin` |
 | `03_AFTER_explorer_slicer-engine_root.png` | Explorer AFTER `slicer-engine\` root |
-| `04_BEFORE_crash_minidump_stack.png` | Baseline cdb stack（`prusa_slicer_console`／`PrusaSlicer`） |
-| `05_BEFORE_wer_brand_lines.png` | Baseline WER／dump brand lines |
-| `06_AFTER_crash_minidump_stack.png` | PoC segfault stack（`slicer_core!slicer_run_cli`） |
-| `07_AFTER_WER_Report.png` | Live archived `Report.wer`（App=`slicer-engine.exe`） |
+| `04_BEFORE_crash_minidump_stack.png` | Baseline cdb `lm`+`k` brand frames（`prusa_slicer_console`／`PrusaSlicer`／`wmain`） |
+| `05_BEFORE_wer_brand_lines.png` | （legacy）Baseline WER／dump brand lines — **superseded by OS shots 17／22 for WER surface** |
+| `06_AFTER_crash_minidump_stack.png` | PoC segfault AV + `slicer_core!slicer_run_cli` frames |
+| `07_AFTER_WER_Report.png` | （legacy）archived `Report.wer` view — **superseded by shot 18** |
+| `16_OS_WER_ReportArchive_slicer-engine.png` | **Live** Explorer AFTER · `AppCrash_slicer-engine…` |
+| `17_OS_WER_ReportArchive_prusa-slicer-console.png` | **Live** Explorer BEFORE · `AppCrash_prusa-slicer-con…`（fresh crash 2026-07-20） |
+| `18_OS_WER_Report_wer_slicer-engine_notepad.png` | **Live** Notepad AFTER · full `Report.wer` · `NsAppName=slicer-engine.exe` |
+| `22_OS_WER_Report_wer_prusa-slicer-console_notepad.png` | **Live** Notepad BEFORE · full `Report.wer` · `NsAppName=prusa-slicer-console.exe` |
 | `08_BEFORE_VERSIONINFO.png` | Real Properties · 詳細資料 — `prusa-slicer-console.exe`（Prusa Research / PrusaSlicer） |
 | `09_AFTER_VERSIONINFO.png` | Real Properties · 詳細資料 — `slicer-engine.exe`（Phrozen / Slicer Engine 1.0.5；對齊現行 `version.inc`） |
 | `10_BEFORE_path_inventory.png` | Baseline PATH_INVENTORY |
@@ -51,7 +56,9 @@
 | Minidump `lm` modules | `prusa_slicer_console`，`PrusaSlicer` | `slicer_engine`，`slicer_core` |
 | Stack frames（PDB-free） | `prusa_slicer_console!wmain+…` | `slicer_core!slicer_run_cli+…`，`slicer_engine+0x…` |
 | Public export | `slic3r_main`（+ ~470 mangled；baseline） | `slicer_run_cli`（唯一公開 entry；5.3） |
-| WER App / Friendly | brand module／path lines in baseline dump surface | `NsAppName=slicer-engine.exe`；Friendly／Product=`Slicer Engine` |
+| WER AppCrash folder（Explorer） | `AppCrash_prusa-slicer-con…`（live ReportArchive） | `AppCrash_slicer-engine…`（live ReportArchive） |
+| WER `NsAppName`／`Sig[0]`（Report.wer） | `prusa-slicer-console.exe` | `slicer-engine.exe` |
+| WER AppName／Friendly | `PrusaSlicer` | `Slicer Engine` |
 | Exception（PoC segfault） | （baseline dump＝loader breakpoint；非 QA crash） | Access violation `c0000005` on QA segfault dump |
 | Company / Product（VERSIONINFO） | `Prusa Research`／`PrusaSlicer`／`PrusaSlicer-2.9.4+UNKNOWN` | `Phrozen Technology`／`Slicer Engine`／`SlicerEngine-2.9.4+UNKNOWN` |
 | PDB path in PE | `...\prusaslicer_build\...\prusa-slicer-console.pdb` | short neutral `slicer-engine.pdb`／`slicer_core.pdb`（`/PDBALTPATH:`） |
@@ -60,13 +67,19 @@
 
 ## Table B — Install folder files & paths
 
-| Item | BEFORE（修改前） | AFTER（修改後） |
+Before 欄＝舊 unpack／Program Files 清點（`BEFORE_path_inventory.txt`），**不是**現行官方 bat 產物清單。
+GUI／viewer 在 Before 出現＝舊全量樹殘留；agent 只呼叫 console。
+現行管線＝預設**不編** GUI／viewer + 打包 SKIP 防舊檔（見 [`shim-three-way-proof.html` §08](./shim-three-way-proof.html#s8)）。
+After「not shipped」＝正式包不出貨，**不是**「三個都編好再刪」。
+
+| Item | BEFORE（舊清點） | AFTER（正式包） |
 |------|------------------|-----------------|
 | Bundle engine root | `...\bundle\third_party\prusaslicer_build\src\Release\` | `...\bundle\slicer-engine\` |
 | Runtime bin dir | same Release folder | `...\slicer-engine\bin\` |
-| Shim / CLI exe | `prusa-slicer.exe`，`prusa-slicer-console.exe` | **`slicer-engine.exe` only** |
+| Shim / CLI exe（agent 實際呼叫；唯一會編） | `prusa-slicer-console.exe` | **`slicer-engine.exe` only** |
+| GUI（舊樹殘留；現行不編） | `prusa-slicer.exe`（非 agent 路徑） | **not shipped** |
 | Core DLL | `PrusaSlicer.dll` | **`slicer_core.dll`** |
-| Viewer leftover | `prusa-gcodeviewer.exe` present | **not** in consumer engine bin |
+| Viewer（舊樹殘留；現行不編） | `prusa-gcodeviewer.exe` present | **not shipped** |
 | Build leftovers | `PrusaSlicer.exp`，`PrusaSlicer.lib` | **not** in consumer package |
 | Deps kept | `libgmp-10.dll`，`libmpfr-4.dll`，`OCCTWrapper.dll`（STEP） | `libgmp-10.dll`，`libmpfr-4.dll`，**`OCCTWrapper.dll`**（2026-07-20：正式包 MUST 附帶） |
 | Manifest／legal | （pre-deid layout） | `engine-artifact-manifest.json`，`scan-report.json`，`legal\`，`sbom.spdx.json` |
@@ -76,11 +89,12 @@
 
 | BEFORE | AFTER |
 |--------|-------|
-| `prusa-slicer-console.exe`／`prusa-slicer.exe` | `slicer-engine.exe` |
+| `prusa-slicer-console.exe`（agent CLI；唯一會編） | `slicer-engine.exe` |
+| `prusa-slicer.exe`（舊樹殘留；現行不編／不出貨） | not shipped |
 | `PrusaSlicer.dll` | `slicer_core.dll` |
 | `slic3r_main`（export） | `slicer_run_cli` |
 | `...\prusaslicer_build\...` | `...\slicer-engine\` |
-| `prusa-gcodeviewer.exe` | removed from engine consumer path |
+| `prusa-gcodeviewer.exe`（舊樹殘留；現行不編／不出貨） | not shipped |
 
 ---
 
@@ -88,6 +102,9 @@
 
 1. **PE icon：** `slicer-engine.exe` now embeds `WebSlicer_PrinterControl/assets/icon.ico`（same bytes as Bundle-Launcher `icon.ico`；`ExtractAssociatedIcon` hash match）. Applied to consumer trees＋`package_slicer_engine_windows.ps1` now runs `rcedit --set-icon` before post hash.
 2. **VERSIONINFO After path：** evidence re-dumped from `Bundle-Launcher\dist\win-unpacked\resources\bundle\slicer-engine\bin\` — **no** `prusaslicer_build` in the File= lines.
+3. **WER surface → real OS UI（night）：** Forced a fresh `prusa-slicer-console.exe` AppCrash（no debugger）so Windows wrote a live `AppCrash_prusa-slicer-con…` ReportArchive； recaptured AFTER `AppCrash_slicer-engine…`； opened full `Report.wer` in Notepad（word-wrap off，find `NsAppName=`）. Rebuilt `COMPARE_04`／`COMPARE_04b`. Capture helper：[`capture_wer_os_surface.ps1`](./capture_wer_os_surface.ps1). Artifacts：`BEFORE_Report.wer`／`AFTER_Report.wer`.
+4. **WER clean + annotate（night follow-up）：** Removed Notepad/Mica ghosting and overlapping composite labels. Explorer crops via `PrintWindow`（avoids Cursor overlay）. Identity fields = verbatim clean render from live `Report.wer` with red boxes on `prusa|slic3r|PrusaSlicer` and green boxes on `slicer-engine|Slicer Engine|slicer_core`. Scripts：[`clean_annotate_wer.ps1`](./clean_annotate_wer.ps1). Annotated assets：`*_annotated.png`，`COMPARE_04`／`COMPARE_04b`.
+5. **COMPARE_02 stack rebuild（2026-07-21）：** Old composite cropped WinDbg boilerplate so Before／After looked almost identical. Rebuilt from authentic log excerpts：Before = `lm`+`k` brand frames；After = AV + `slicer_run_cli`. Script：[`rebuild_compare02_stack.ps1`](./rebuild_compare02_stack.ps1). Updated `04`／`06`／`COMPARE_02`.
 
 ---
 
