@@ -1,0 +1,18 @@
+﻿{
+    "captured_at_utc":  "2026-07-20T03:38:00.8189722Z",
+    "host":  "VANCE-WANG",
+    "platform":  "Windows x64",
+    "compiler":  "MSVC (Visual Studio 2022 Community)",
+    "cmake_cache":  "C:\\Phrozen3D\\Lechon\\03_Development\\Win\\web_slicer_core\\third_party\\prusaslicer_build\\CMakeCache.txt",
+    "cmake_build_type":  "Release",
+    "cmake_cxx_flags_release":  "/MD /O2 /Ob2 /DNDEBUG",
+    "cmake_c_flags_release":  "/MD /O2 /Ob2 /DNDEBUG",
+    "cmake_cxx_flags_relwithdebinfo":  "/MD /Zi /O2 /Ob1 /DNDEBUG",
+    "cmake_cxx_flags_debug":  "/MDd /Zi /Ob0 /Od /RTC1",
+    "vcxproj_release_optimization":  "MaxSpeed  (= MSVC /O2)",
+    "vcxproj_release_inline":  "AnySuitable (= MSVC /Ob2)",
+    "build_script":  "build_prusaslicer_fork_windows.bat uses --config Release",
+    "macos_script_default":  "RelWithDebInfo (Clang typically -O2 -g -DNDEBUG; not verified on this Windows host)",
+    "verdict":  "CONFIRMED: Windows consumer engine build uses MSVC /O2 (equivalent to GCC/Clang -O2 class optimization).",
+    "gcc_clang_note":  "Literal \u0027-O2\u0027 is a GCC/Clang flag. On this Windows build the equivalent flag is MSVC \u0027/O2\u0027."
+}

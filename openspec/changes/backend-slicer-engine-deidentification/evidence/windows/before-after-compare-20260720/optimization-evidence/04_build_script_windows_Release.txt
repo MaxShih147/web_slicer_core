@@ -1,0 +1,22 @@
+﻿# Source: C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\scripts\build_prusaslicer_fork_windows.bat
+# Lines that select Release config (MSVC multi-config)
+
+   5: :: Memory Mode / Flavor Configuration
+  15: set BUILD_FLAVOR=consumer
+  17: if /i "%2"=="qa" set BUILD_FLAVOR=qa
+  18: if /i "%3"=="qa" set BUILD_FLAVOR=qa
+  24: set BUILD_FLAVOR=qa
+ 154: -DCMAKE_BUILD_TYPE=Release ^
+ 164: "%CMAKE_BIN%" --build . --config Release -- !MSBUILD_ARGS!
+ 212: :: Flavor already parsed at top (consumer default; qa enables harness).
+ 213: if /i "!BUILD_FLAVOR!"=="qa" (
+ 216: echo [CONFIG] Flavor: QA ^(BUNDLE_QA_CRASH_HARNESS=ON^)
+ 220: echo [CONFIG] Flavor: consumer ^(BUNDLE_QA_CRASH_HARNESS=OFF^)
+ 235: -DCMAKE_BUILD_TYPE=Release ^
+ 255: "%CMAKE_BIN%" --build . --config Release --target PrusaSlicer_app_console -- !MSBUILD_ARGS!
+ 263: set SLICER_BIN=%BUILD_DIR%\src\Release\slicer-engine.exe
+ 264: set SLICER_DLL=%BUILD_DIR%\src\Release\slicer_core.dll
+ 276: if exist "%DEPS_BIN%\libgmp-10.dll" copy /Y "%DEPS_BIN%\libgmp-10.dll" "%BUILD_DIR%\src\Release\" >nul
+ 277: if exist "%DEPS_BIN%\libmpfr-4.dll" copy /Y "%DEPS_BIN%\libmpfr-4.dll" "%BUILD_DIR%\src\Release\" >nul
+ 286: echo [PrusaSlicer] Flavor: !BUILD_FLAVOR! ^(BUNDLE_QA_CRASH_HARNESS=!QA_HARNESS_BOOL!^)
+ 287: if /i "!BUILD_FLAVOR!"=="qa" (

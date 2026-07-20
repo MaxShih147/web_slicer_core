@@ -23,12 +23,18 @@ Windows consumer 引擎：**單一 shim** `slicer-engine.exe` 只載入 **`slice
 ```text
 slicer-engine/bin/slicer-engine.exe    # shim（取代 prusa-slicer.exe／prusa-slicer-console.exe）
 slicer-engine/bin/slicer_core.dll      # 核心（取代 PrusaSlicer.dll）
+slicer-engine/bin/OCCTWrapper.dll      # STEP/STP 延遲載入外掛（必帶）
+slicer-engine/bin/libgmp-10.dll        # runtime
+slicer-engine/bin/libmpfr-4.dll        # runtime
+slicer-engine/bin/resources/           # Windows：exe 同目錄 resources（Setup.cpp 硬編；MUST 保留資料夾）
 ```
 
 | 角色 | 淘汰 | 定案 |
 |------|------|------|
 | Shim exe | `prusa-slicer.exe`、`prusa-slicer-console.exe` | **`slicer-engine.exe`**（正式包只保留一個 headless shim） |
 | Core DLL | `PrusaSlicer.dll` | **`slicer_core.dll`** |
+| STEP 外掛 | （無） | **`OCCTWrapper.dll`**（與 exe 同目錄；讀 `.step`／`.stp` 時 `LoadLibrary`；正式包 **MUST** 附帶） |
+| Resources | 品牌路徑名（prusa／slic3r） | **`bin/resources/`** MUST 存在（`parent_path()/resources`）；內容經去品牌 stage；SLA 雖以 `--load` INI 為主，**不得**未驗證即整夾刪除（精簡＝另案） |
 | 公開 entry | `slic3r_main`／`_slic3r_main@8` | **`slicer_run_cli`**（唯一允許之 GetProcAddress 名） |
 | 目錄 | `prusaslicer_build/...` | **`slicer-engine/`**（Launcher `extraResources`） |
 

@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>三啟動器差異與核心同源證明 — Evidence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --void: #22242c;
+      --surface: #2c2e38;
+      --surface-2: #353744;
+      --line: rgba(255,255,255,.16);
+      --line-strong: rgba(255,255,255,.28);
+      --ink: #faf9f6;
+      --muted: rgba(250,249,246,.86);
+      --dim: rgba(250,249,246,.68);
+      --before: #ff8a7a;
+      --after: #7eebc4;
+      --accent: #e0c070;
+      --accent-dim: rgba(224,192,112,.16);
+      --radius: 2px;
+      --ease: cubic-bezier(.22,1,.36,1);
+      --gui: #7eb8ff;
+      --viewer: #e0a0ff;
+      --console: #7eebc4;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--ink);
+      background: var(--void);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,169,98,.07) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 60%, rgba(110,196,168,.04) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 35% at 0% 80%, rgba(232,93,76,.05) 0%, transparent 45%);
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .18;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 28px 120px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 200px minmax(0, 1fr);
+      gap: 36px;
+      align-items: start;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 64px;
+      padding: 20px 0 40px;
+      align-self: start;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+    }
+
+    .sidebar-label {
+      margin: 0 0 14px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    nav.toc {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      border-left: 1px solid var(--line-strong);
+      padding-left: 0;
+    }
+    nav.toc a {
+      position: relative;
+      color: var(--dim);
+      text-decoration: none;
+      font-size: 13.5px;
+      line-height: 1.35;
+      padding: 9px 12px 9px 14px;
+      border-left: 2px solid transparent;
+      margin-left: -1px;
+      transition: color .2s, border-color .2s, background .2s;
+    }
+    nav.toc a:hover {
+      color: var(--ink);
+      background: rgba(255,255,255,.03);
+    }
+    nav.toc a.is-active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: var(--accent-dim);
+      font-weight: 600;
+    }
+
+    .main { min-width: 0; }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+      .sidebar {
+        position: sticky;
+        top: 52px;
+        z-index: 40;
+        max-height: none;
+        padding: 12px 0 8px;
+        margin: 0 -18px 8px;
+        padding-left: 18px;
+        padding-right: 18px;
+        background: rgba(34,36,44,.96);
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(10px);
+      }
+      nav.toc {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        border-left: 0;
+        gap: 6px;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+      }
+      nav.toc a {
+        flex: 0 0 auto;
+        border-left: 0;
+        margin-left: 0;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      nav.toc a.is-active {
+        border-color: var(--accent);
+        color: var(--void);
+        background: var(--accent);
+      }
+      .sidebar-label { display: none; }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* site switcher — match index.html */
+    .site-switcher {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+      margin: 0 -28px 8px;
+      padding: 12px 28px;
+      background: rgba(34,36,44,.94);
+      border-bottom: 1px solid var(--line-strong);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .site-switcher .site-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-right: 4px;
+    }
+    .site-switcher a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 7px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+      transition: border-color .2s, color .2s, background .2s;
+    }
+    .site-switcher a:hover {
+      color: var(--ink);
+      border-color: var(--accent);
+    }
+    .site-switcher a.is-active {
+      color: var(--void);
+      background: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* hero */
+    .hero {
+      padding: 72px 0 56px;
+      border-bottom: 1px solid var(--line);
+      animation: rise .9s var(--ease) both;
+    }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .eyebrow::before {
+      content: "";
+      width: 32px;
+      height: 1px;
+      background: var(--accent);
+      opacity: .6;
+    }
+    .hero h1 {
+      margin: 0 0 20px;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: clamp(2.4rem, 5.5vw, 3.75rem);
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -.02em;
+      max-width: 18ch;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: rgba(250,249,246,.78);
+    }
+    .hero-lede {
+      max-width: 54ch;
+      margin: 0 0 32px;
+      font-size: 1.12rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .hero-lede code {
+      font-size: 13px;
+      padding: 2px 7px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--line-strong);
+      border-radius: 2px;
+      color: var(--ink);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .03em;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+    }
+    .pill strong { color: var(--ink); font-weight: 650; }
+
+    /* sections */
+    section {
+      padding-top: 64px;
+      animation: rise .8s var(--ease) both;
+    }
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .section-num {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 2.5rem;
+      font-weight: 400;
+      line-height: 1;
+      color: rgba(255,255,255,.35);
+      user-select: none;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-family: "Cormorant Garamond", serif;
+      font-size: 1.85rem;
+      font-weight: 400;
+      letter-spacing: -.01em;
+      color: var(--ink);
+    }
+    .sub {
+      margin: -12px 0 20px;
+      color: var(--dim);
+      font-size: 15px;
+    }
+    .sub code {
+      font-size: 13px;
+      padding: 2px 6px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      font-family: ui-monospace, Consolas, monospace;
+      color: var(--ink);
+    }
+
+    /* tables */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+    }
+    thead th {
+      padding: 14px 18px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: #3a3c48;
+      border-bottom: 1px solid var(--line-strong);
+    }
+    tbody td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      vertical-align: top;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,.04); }
+    tbody td:first-child {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .mono {
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    code {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+    .tag-gui { background: rgba(126,184,255,.18); color: var(--gui); }
+    .tag-viewer { background: rgba(224,160,255,.18); color: var(--viewer); }
+    .tag-console { background: rgba(126,235,196,.18); color: var(--console); }
+    .yes { color: var(--after); font-weight: 600; }
+    .no { color: var(--dim); }
+
+    pre {
+      margin: 0;
+      padding: 20px 22px;
+      overflow-x: auto;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: rgba(250,249,246,.88);
+    }
+    pre .c { color: rgba(126,235,196,.75); }
+    pre .k { color: var(--accent); }
+    pre .s { color: #e8a0c0; }
+
+    .callout {
+      margin: 20px 0 0;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .callout code {
+      font-size: 13px;
+      padding: 2px 6px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      color: var(--ink);
+    }
+
+    .eq { display: grid; gap: 10px; margin-top: 20px; }
+    .eq-card {
+      padding: 14px 18px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 8px;
+    }
+    @media (max-width: 900px) {
+      .grid-3 { grid-template-columns: 1fr; }
+      .shell { padding: 0 18px 80px; }
+      .site-switcher { margin: 0 -18px 8px; padding: 10px 18px; }
+    }
+    .info-card {
+      padding: 20px 22px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .info-card h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .info-card p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .info-card code {
+      font-size: 12.5px;
+      padding: 1px 5px;
+      background: rgba(255,255,255,.08);
+      border-radius: 2px;
+    }
+
+    footer {
+      margin-top: 80px;
+      padding-top: 32px;
+      border-top: 1px solid var(--line-strong);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--dim);
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color .25s;
+    }
+    footer a:hover { border-bottom-color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <nav class="site-switcher" aria-label="Evidence report pages">
+    <span class="site-label">Reports</span>
+    <a href="index.html">Before / After 去識別</a>
+    <a href="shim-three-way-proof.html" class="is-active" aria-current="page">三啟動器差異證明</a>
+    <a href="COMPARISON.md">COMPARISON.md</a>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar" aria-label="Page sections">
+      <p class="sidebar-label">On this page</p>
+      <nav class="toc" id="sideToc">
+        <a href="#s0">0 · 結論</a>
+        <a href="#s1">1 · 用途矩陣</a>
+        <a href="#s2">2 · PE 實測</a>
+        <a href="#s3">3 · CMake</a>
+        <a href="#s4">4 · 啟動器碼</a>
+        <a href="#s5">5 · 同源證明</a>
+        <a href="#s6">6 · 正式包</a>
+        <a href="#s7">7 · 自動加參數</a>
+        <a href="#s8">8 · 建置 vs 打包</a>
+        <a href="#s9">9 · resources 研究</a>
+      </nav>
+    </aside>
+
+    <div class="main">
+  <header class="hero">
+    <div class="eyebrow">Evidence Report · Windows</div>
+    <h1>Three Shims <em>→</em><br />One Core</h1>
+    <p class="hero-lede">
+      嚴格對照 <code>prusa-slicer.exe</code>、<code>prusa-gcodeviewer.exe</code>、
+      <code>prusa-slicer-console.exe</code>：用途差異、PE／原始碼證據、核心同源，以及
+      <strong style="color:var(--ink)">web_slicer_core 管線是「建置就不編 GUI／viewer」還是「打包再過濾」</strong>。
+      正式包 console 線已改名為 <code>slicer-engine.exe</code>。
+    </p>
+    <div class="meta-row">
+      <span class="pill"><strong>2026-07-20</strong> proof pack</span>
+      <span class="pill">OpenSpec <strong>backend-slicer-engine-deidentification</strong></span>
+      <span class="pill">dumpbin + CMake + source</span>
+      <span class="pill"><strong>build</strong> only console</span>
+    </div>
+  </header>
+
+  <section id="s0">
+    <div class="section-head">
+      <span class="section-num">00</span>
+      <h2>一句話結論</h2>
+    </div>
+    <p class="sub">先給可驗收命題，下方各節為證據。</p>
+    <div class="grid-3">
+      <div class="info-card">
+        <h3><span class="tag tag-gui">GUI</span> prusa-slicer.exe</h3>
+        <p>完整桌面 slicer 啟動器。Subsystem = Windows GUI。不強制預覽模式。</p>
+      </div>
+      <div class="info-card">
+        <h3><span class="tag tag-viewer">VIEWER</span> prusa-gcodeviewer.exe</h3>
+        <p>同一 GUI 家族；編譯時寫死插入 <code>--gcodeviewer</code>，預設只開 G-code 預覽器模式。</p>
+      </div>
+      <div class="info-card">
+        <h3><span class="tag tag-console">CLI</span> prusa-slicer-console.exe</h3>
+        <p>命令列啟動器。Subsystem = Windows CUI。正式包改名為 <code>slicer-engine.exe</code>。</p>
+      </div>
+    </div>
+    <div class="callout">
+      <strong style="color:var(--ink)">核心功能：</strong>三者不是三套切片引擎。皆為小啟動器 → 載入<strong>同一顆</strong>核心 DLL →
+      呼叫<strong>同一個</strong>入口。差異在啟動殼（GUI／CUI）與是否強制 <code>--gcodeviewer</code> 模式。
+      <br /><br />
+      <strong style="color:var(--ink)">管線：</strong>正式建置<strong>不是</strong>「三個都編完再打包刪」。
+      官方腳本<strong>只編</strong> <code>PrusaSlicer_app_console</code> → <code>slicer-engine.exe</code>；
+      GUI／viewer 預設不編譯；打包再 SKIP 品牌殘留當保險。詳見 <a href="#s8" style="color:var(--accent)">§08</a>。
+    </div>
+  </section>
+
+  <section id="s1">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>嚴格差異矩陣</h2>
+    </div>
+    <p class="sub">可用「Subsystem + 是否內嵌 --gcodeviewer」唯一判別三者。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>判準</th>
+            <th>prusa-slicer.exe</th>
+            <th>prusa-gcodeviewer.exe</th>
+            <th>prusa-slicer-console.exe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CMake target</td>
+            <td class="mono">PrusaSlicer_app_gui</td>
+            <td class="mono">PrusaSlicer_app_gcodeviewer</td>
+            <td class="mono">PrusaSlicer_app_console</td>
+          </tr>
+          <tr>
+            <td>OUTPUT_NAME</td>
+            <td class="mono">prusa-slicer</td>
+            <td class="mono">prusa-gcodeviewer</td>
+            <td class="mono">舊 console → 現 slicer-engine</td>
+          </tr>
+          <tr>
+            <td>CMake 連結型態</td>
+            <td><code>WIN32</code>（GUI）</td>
+            <td><code>WIN32</code>（GUI）</td>
+            <td>非 WIN32（console）</td>
+          </tr>
+          <tr>
+            <td>編譯巨集</td>
+            <td class="mono">SLIC3R_WRAPPER_NOCONSOLE</td>
+            <td class="mono">NOCONSOLE + GCODEVIEWER</td>
+            <td class="mono">SLIC3R_WRAPPER_CONSOLE</td>
+          </tr>
+          <tr>
+            <td>進入點</td>
+            <td class="mono">wWinMain</td>
+            <td class="mono">wWinMain</td>
+            <td class="mono">wmain</td>
+          </tr>
+          <tr>
+            <td>插入 --gcodeviewer</td>
+            <td class="no">否</td>
+            <td class="yes">是（編譯期寫死）</td>
+            <td class="no">否</td>
+          </tr>
+          <tr>
+            <td>產品用途</td>
+            <td>完整桌面 UI（擺模／切片／調參）</td>
+            <td>只開 G-code 預覽器模式</td>
+            <td>CLI／腳本／agent 自動化</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="eq">
+      <div class="eq-card">判別式：subsystem=GUI ∧ ¬gcodeviewer → slicer UI</div>
+      <div class="eq-card">判別式：subsystem=GUI ∧ gcodeviewer → viewer 模式</div>
+      <div class="eq-card">判別式：subsystem=CUI → console / slicer-engine</div>
+    </div>
+  </section>
+
+  <section id="s2">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>本機 PE 實測證據</h2>
+    </div>
+    <p class="sub">來源：<code>C:\Program Files\Bundle Launcher\resources\bundle\third_party\prusaslicer_build\src\Release</code>（dumpbin + 字串掃描，2026-07-20）</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>檔案</th>
+            <th>Size</th>
+            <th>Subsystem</th>
+            <th>LoadLibrary</th>
+            <th>GetProcAddress</th>
+            <th>內嵌 --gcodeviewer</th>
+            <th>SHA256（前 16）</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">prusa-slicer.exe</td>
+            <td>137,216</td>
+            <td><span class="tag tag-gui">2 Windows GUI</span></td>
+            <td class="mono">PrusaSlicer.dll</td>
+            <td class="mono">slic3r_main</td>
+            <td class="no">False</td>
+            <td class="mono">26C67B39DD89C3FE…</td>
+          </tr>
+          <tr>
+            <td class="mono">prusa-gcodeviewer.exe</td>
+            <td>149,504</td>
+            <td><span class="tag tag-gui">2 Windows GUI</span></td>
+            <td class="mono">PrusaSlicer.dll</td>
+            <td class="mono">slic3r_main</td>
+            <td class="yes">True</td>
+            <td class="mono">F713E1589D1A1A64…</td>
+          </tr>
+          <tr>
+            <td class="mono">prusa-slicer-console.exe</td>
+            <td>137,216</td>
+            <td><span class="tag tag-console">3 Windows CUI</span></td>
+            <td class="mono">PrusaSlicer.dll</td>
+            <td class="mono">slic3r_main</td>
+            <td class="no">False</td>
+            <td class="mono">D8FB9F88C032C790…</td>
+          </tr>
+          <tr>
+            <td class="mono">PrusaSlicer.dll（核心）</td>
+            <td><strong style="color:var(--ink)">17,247,744</strong></td>
+            <td>DLL</td>
+            <td colspan="2">三個 shim 共同載入的核心</td>
+            <td class="no">—</td>
+            <td class="mono">4933539E045C91CF…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      三個 exe ≈ 134–146 KB；核心 DLL ≈ <strong style="color:var(--ink)">16.4 MB</strong>。體積本身即可證明「功能在 DLL，exe 只是啟動器」。
+      三個 exe 的 SHA256 不同（殼不同），但載入的 DLL 名與入口名相同。
+    </div>
+  </section>
+
+  <section id="s3">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>CMake 建置定義證據</h2>
+    </div>
+    <p class="sub">檔案：<code>web_slicer_core/third_party/prusaslicer_fork/src/CMakeLists.txt</code></p>
+<pre><span class="c"># GUI — 完整桌面</span>
+add_executable(PrusaSlicer_app_gui <span class="k">WIN32</span> PrusaSlicer_app_msvc.cpp ...)
+target_compile_definitions(... <span class="k">SLIC3R_WRAPPER_NOCONSOLE</span>)
+set_target_properties(... OUTPUT_NAME <span class="s">"prusa-slicer"</span>)
+add_dependencies(... <span class="k">PrusaSlicer</span>)   <span class="c"># 同一核心 DLL target</span>
+
+<span class="c"># Console — CLI（正式包 OUTPUT_NAME 已改）</span>
+add_executable(PrusaSlicer_app_console PrusaSlicer_app_msvc.cpp ...)
+target_compile_definitions(... <span class="k">SLIC3R_WRAPPER_CONSOLE</span>)
+set_target_properties(... OUTPUT_NAME <span class="s">"slicer-engine"</span>)
+add_dependencies(... <span class="k">PrusaSlicer</span>)
+
+<span class="c"># G-code viewer — GUI + 強制模式</span>
+add_executable(PrusaSlicer_app_gcodeviewer <span class="k">WIN32</span> PrusaSlicer_app_msvc.cpp ...)
+target_compile_definitions(... <span class="k">NOCONSOLE</span> + <span class="k">SLIC3R_WRAPPER_GCODEVIEWER</span>)
+set_target_properties(... OUTPUT_NAME <span class="s">"prusa-gcodeviewer"</span>)
+add_dependencies(... <span class="k">PrusaSlicer</span>)</pre>
+    <div class="callout">
+      三個 target 都編譯<strong style="color:var(--ink)">同一份</strong> <code>PrusaSlicer_app_msvc.cpp</code>，都 <code>add_dependencies(... PrusaSlicer)</code>。
+      這是「同源啟動器、同一核心」的建置級證明。
+    </div>
+  </section>
+
+  <section id="s4">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>啟動器原始碼證據</h2>
+    </div>
+    <p class="sub">檔案：<code>PrusaSlicer_app_msvc.cpp</code></p>
+<pre><span class="c">// 進入點：GUI／viewer 用 wWinMain；console 用 wmain</span>
+<span class="k">#ifdef</span> SLIC3R_WRAPPER_NOCONSOLE
+int APIENTRY <span class="k">wWinMain</span>(...) { ... }
+<span class="k">#else</span>
+int <span class="k">wmain</span>(...) { ... }
+<span class="k">#endif</span>
+
+<span class="c">// 只有 gcodeviewer target 會編譯進這段 → 「自動加參數」的精確定義</span>
+<span class="k">#ifdef</span> SLIC3R_WRAPPER_GCODEVIEWER
+    wchar_t gcodeviewer_param[] = L<span class="s">"--gcodeviewer"</span>;
+    argv_extended.emplace_back(gcodeviewer_param);
+<span class="k">#endif</span>
+
+<span class="c">// 三個 shim 共用：載入同一 DLL、同一入口、把 argv 交出去</span>
+wcscat(path_to_slic3r, L<span class="s">"slicer_core.dll"</span>);          <span class="c">// 舊包為 PrusaSlicer.dll</span>
+HINSTANCE h = LoadLibraryExW(path_to_slic3r, ...);
+slic3r_main = GetProcAddress(h, <span class="s">"slicer_run_cli"</span>);   <span class="c">// 舊包為 slic3r_main</span>
+return slic3r_main(argc, argv_extended.data());</pre>
+  </section>
+
+  <section id="s5">
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <h2>核心功能無差異 — 證明鏈</h2>
+    </div>
+    <p class="sub">命題：除 GUI／啟動模式外，沒有三套獨立切片核心。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>證據</th><th>說明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>A</td>
+            <td>同一 <code>.cpp</code> × 三 target</td>
+            <td>見 §03 CMake；殼不同、核心依賴相同</td>
+          </tr>
+          <tr>
+            <td>B</td>
+            <td>同一 <code>LoadLibrary</code> / <code>GetProcAddress</code></td>
+            <td>見 §04；不依 exe 檔名選不同引擎</td>
+          </tr>
+          <tr>
+            <td>C</td>
+            <td>PE：三 shim 皆指向 <code>PrusaSlicer.dll</code> + <code>slic3r_main</code></td>
+            <td>見 §02 本機掃描</td>
+          </tr>
+          <tr>
+            <td>D</td>
+            <td>體積比 ~135KB vs ~16MB</td>
+            <td>功能質量在 DLL，不在三個 exe</td>
+          </tr>
+          <tr>
+            <td>E</td>
+            <td>viewer 唯一增量 = <code>--gcodeviewer</code></td>
+            <td>PrintConfig：Visualize an already sliced and saved G-code</td>
+          </tr>
+          <tr>
+            <td>F</td>
+            <td>上游 Process.cpp 註解</td>
+            <td>Just run PrusaSlicer and give it a --gcodeviewer parameter.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+<pre style="margin-top:20px"><span class="c">// libslic3r/PrintConfig.cpp — 模式開關，不是另一套引擎</span>
+def = this->add(<span class="s">"gcodeviewer"</span>, coBool);
+def->tooltip = L<span class="s">"Visualize an already sliced and saved G-code"</span>;
+def->cli = <span class="s">"gcodeviewer"</span>;
+
+<span class="c">// slic3r/Utils/Process.cpp — 上游自己的等價定義</span>
+<span class="c">// Just run PrusaSlicer and give it a --gcodeviewer parameter.</span>
+if (instance_type == GCodeViewer)
+    args.emplace_back(<span class="s">"--gcodeviewer"</span>);</pre>
+    <div class="eq">
+      <div class="eq-card">等價式：prusa-gcodeviewer.exe  ≡  prusa-slicer.exe --gcodeviewer</div>
+      <div class="eq-card">等價式：prusa-slicer-console.exe（舊）  ≡  slicer-engine.exe（新，CUI console 線）</div>
+    </div>
+  </section>
+
+  <section id="s6">
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <h2>正式包保留哪一條線</h2>
+    </div>
+    <p class="sub">政策 + PE：保留的是 console 線，並改名。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>舊 console</th>
+            <th>正式包</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>檔名</td>
+            <td class="mono">prusa-slicer-console.exe</td>
+            <td class="mono">slicer-engine.exe</td>
+          </tr>
+          <tr>
+            <td>CMake target</td>
+            <td colspan="2" class="mono">PrusaSlicer_app_console（同一 target，OUTPUT_NAME 改名）</td>
+          </tr>
+          <tr>
+            <td>Subsystem</td>
+            <td><span class="tag tag-console">3 Windows CUI</span></td>
+            <td><span class="tag tag-console">3 Windows CUI</span></td>
+          </tr>
+          <tr>
+            <td>核心 DLL</td>
+            <td class="mono">PrusaSlicer.dll</td>
+            <td class="mono">slicer_core.dll</td>
+          </tr>
+          <tr>
+            <td>入口</td>
+            <td class="mono">slic3r_main</td>
+            <td class="mono">slicer_run_cli</td>
+          </tr>
+          <tr>
+            <td>本機 SHA256（前 16）</td>
+            <td class="mono">D8FB9F88C032C790…</td>
+            <td class="mono">58246E2F12708C0C…</td>
+          </tr>
+          <tr>
+            <td>--help 字樣</td>
+            <td>—</td>
+            <td class="mono">Slicer Engine … (without GUI support)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      政策（<code>windows-policy.md</code>）：正式包<strong style="color:var(--ink)">單一 headless shim</strong>
+      <code>slicer-engine.exe</code>，取代 <code>prusa-slicer.exe</code>／<code>prusa-slicer-console.exe</code>；
+      <code>prusa-gcodeviewer.exe</code> MUST NOT 作為引擎驗收路徑。
+      Agent 只呼叫 <code>SLICER_ENGINE_BIN</code> → <code>slicer-engine.exe</code>。
+    </div>
+  </section>
+
+  <section id="s7">
+    <div class="section-head">
+      <span class="section-num">07</span>
+      <h2>「自動加 --gcodeviewer」是什麼意思</h2>
+    </div>
+    <p class="sub">不是執行期偵測檔名；是編譯 gcodeviewer target 時用 <code>#ifdef</code> 把字串寫進程式。</p>
+    <div class="grid-3">
+      <div class="info-card">
+        <h3>手動加</h3>
+        <p>你在命令列輸入：<br><code>prusa-slicer.exe --gcodeviewer</code></p>
+      </div>
+      <div class="info-card">
+        <h3>自動加</h3>
+        <p>雙擊 <code>prusa-gcodeviewer.exe</code>；啟動器在呼叫核心前，自己把 <code>--gcodeviewer</code> 塞進 argv。</p>
+      </div>
+      <div class="info-card">
+        <h3>效果</h3>
+        <p>核心收到相同模式開關 → 開 G-code 預覽器，而非完整編輯預設流程。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s8">
+    <div class="section-head">
+      <span class="section-num">08</span>
+      <h2>建置 vs 打包 — 實際管線</h2>
+    </div>
+    <p class="sub">
+      問題：<code>web_slicer_core</code> 是完全不編譯 <code>prusa-slicer.exe</code>／<code>prusa-gcodeviewer.exe</code>，
+      還是會編譯、打包時再過濾？答案：<strong style="color:var(--ink)">預設不編譯 + 打包再擋一層</strong>。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>檔案／角色</th>
+            <th>官方建置腳本</th>
+            <th>打包</th>
+            <th>正式包結果</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">prusa-slicer-console → slicer-engine</td>
+            <td class="yes">會編（唯一 --target）</td>
+            <td>收進 bin</td>
+            <td class="mono">slicer-engine.exe</td>
+          </tr>
+          <tr>
+            <td class="mono">prusa-slicer.exe（GUI）</td>
+            <td class="no">不編</td>
+            <td>若出現則 SKIP</td>
+            <td class="no">不出貨</td>
+          </tr>
+          <tr>
+            <td class="mono">prusa-gcodeviewer.exe</td>
+            <td class="no">不編</td>
+            <td>若出現則 SKIP</td>
+            <td class="no">不出貨</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout" style="margin-top:20px">
+      <strong style="color:var(--ink)">不是</strong>「三個都編好，打包再刪」。
+      <strong style="color:var(--ink)">是</strong>「建置階段就只做 console；打包過濾是防舊檔／手動誤編」。
+      Program Files 裡的 <code>prusaslicer_build\src\Release\prusa-*.exe</code> 是<strong>舊全量樹殘留</strong>，不代表現行 bat 行為。
+    </div>
+
+    <h3 style="margin:28px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">證明 A — 官方 bat 只編 console</h3>
+    <p class="sub">檔案：<code>scripts/build_prusaslicer_fork_windows.bat</code></p>
+<pre><span class="c"># configure：關閉 GUI 本體</span>
+-DSLIC3R_GUI=<span class="k">OFF</span>
+
+<span class="c"># build：只指定一個 target</span>
+echo [PrusaSlicer] Building PrusaSlicer_app_console...
+cmake --build . --config Release --target <span class="k">PrusaSlicer_app_console</span>
+
+<span class="c"># 成功條件只認這兩個檔</span>
+%BUILD_DIR%\src\Release\<span class="s">slicer-engine.exe</span>
+%BUILD_DIR%\src\Release\<span class="s">slicer_core.dll</span>
+
+<span class="c"># 沒有：</span>
+<span class="c">#   --target PrusaSlicer_app_gui</span>
+<span class="c">#   --target PrusaSlicer_app_gcodeviewer</span></pre>
+
+    <h3 style="margin:28px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">證明 B — 本機 CMakeCache GUI=OFF</h3>
+    <p class="sub">檔案：<code>third_party/prusaslicer_build/CMakeCache.txt</code></p>
+<pre>SLIC3R_GUI:BOOL=<span class="k">OFF</span></pre>
+    <div class="callout">
+      <code>if (SLIC3R_GUI)</code> 區塊（<code>libslic3r_gui</code>／wx／libvgcode 等）<strong style="color:var(--ink)">整段不進</strong>目前 headless 建置 graph。
+    </div>
+
+    <h3 style="margin:28px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">證明 C — CMake 仍「宣告」三個 shim（可手動編，官方不編）</h3>
+    <p class="sub">檔案：<code>prusaslicer_fork/src/CMakeLists.txt</code>（<code>if (WIN32)</code>，不依 SLIC3R_GUI）</p>
+<pre>add_executable(PrusaSlicer_app_gui ... OUTPUT_NAME <span class="s">"prusa-slicer"</span>)
+add_executable(PrusaSlicer_app_console ... OUTPUT_NAME <span class="s">"slicer-engine"</span>)
+add_executable(PrusaSlicer_app_gcodeviewer ... OUTPUT_NAME <span class="s">"prusa-gcodeviewer"</span>)</pre>
+    <p class="sub" style="margin-top:12px">本機建置樹存在三個 vcxproj（專案檔在，不等於被 bat 編譯）：</p>
+    <div class="eq">
+      <div class="eq-card">prusaslicer_build/src/PrusaSlicer_app_console.vcxproj</div>
+      <div class="eq-card">prusaslicer_build/src/PrusaSlicer_app_gui.vcxproj</div>
+      <div class="eq-card">prusaslicer_build/src/PrusaSlicer_app_gcodeviewer.vcxproj</div>
+    </div>
+
+    <h3 style="margin:28px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">證明 D — 打包第二道過濾</h3>
+    <p class="sub">檔案：<code>scripts/package_slicer_engine_windows.ps1</code></p>
+<pre>if ($name -match <span class="s">'^(prusa-slicer|PrusaSlicer|prusa-gcodeviewer)'</span>) {
+    Write-Host <span class="s">"SKIP brand leftover: $name"</span>
+    return
+}
+if ($name -match <span class="s">'\.(exe|dll)$'</span>) {
+    Copy-Item ...   <span class="c"># 只有通過過濾的才進 slicer-engine/bin</span>
+}</pre>
+    <div class="callout">
+      這是<strong style="color:var(--ink)">防舊檔／手動誤編</strong>的保險，不是正常流程依賴的「刪 GUI 步驟」。
+      正常 bat 根本不會在 Release 產出 <code>prusa-slicer.exe</code>／<code>prusa-gcodeviewer.exe</code>。
+    </div>
+  </section>
+
+  <section id="s9">
+    <div class="section-head">
+      <span class="section-num">09</span>
+      <h2>bin/resources 研究紀錄</h2>
+    </div>
+    <p class="sub">
+      路徑：<code>slicer-engine/bin/resources</code> · 紀錄 2026-07-20 ·
+      含（1）runtime 必要性（2）品牌文字洩漏（3）對 agent 切片／支撐／鏤空／打洞的影響。
+    </p>
+
+    <h3 style="margin:8px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">9.1 Runtime 必要性（dental SLA / headless）</h3>
+    <p class="sub">
+      產品路徑：<code>slicer-engine.exe … --load &lt;job.ini&gt;</code>，建置 <code>SLIC3R_GUI=OFF</code>。
+      <strong style="color:var(--ink)">必須保留</strong>的是 <code>bin/resources</code> <em>目錄本身</em>（Setup.cpp 寫死 <code>exe_dir/resources</code>）；
+      底下內容幾乎都不是這條 SLA 路徑所需要的。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>資料夾</th>
+            <th>大小約</th>
+            <th>結論</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">resources/（空目錄亦可）</td>
+            <td>—</td>
+            <td class="yes"><strong>必須有</strong>（路徑契約）</td>
+          </tr>
+          <tr>
+            <td class="mono">profiles/</td>
+            <td>~46 MB</td>
+            <td>本產品可不需要（agent 不用系統 preset）；刪前建議 SLA smoke</td>
+          </tr>
+          <tr>
+            <td class="mono">fonts/</td>
+            <td>~20 MB</td>
+            <td class="no">可不需要（ImGui/GUI）</td>
+          </tr>
+          <tr>
+            <td class="mono">localization/</td>
+            <td>~12 MB</td>
+            <td class="no">可不需要</td>
+          </tr>
+          <tr>
+            <td class="mono">shapes/</td>
+            <td>~12 MB</td>
+            <td class="no">可不需要（內建模型庫）</td>
+          </tr>
+          <tr>
+            <td class="mono">icons/</td>
+            <td>~1.4 MB</td>
+            <td class="no">可不需要</td>
+          </tr>
+          <tr>
+            <td class="mono">shaders/</td>
+            <td>~0.1 MB</td>
+            <td class="no">可不需要</td>
+          </tr>
+          <tr>
+            <td class="mono">web/</td>
+            <td>~0.02 MB</td>
+            <td class="no">可不需要（Connect WebView）</td>
+          </tr>
+          <tr>
+            <td class="mono">udev/</td>
+            <td>~0</td>
+            <td class="no">可不需要（Linux）</td>
+          </tr>
+          <tr>
+            <td class="mono">data/</td>
+            <td>~0.08 MB</td>
+            <td class="no">可不需要（hints／emboss／gantry；sla_support.svg 旗標也關）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <strong style="color:var(--ink)">實務建議：</strong>
+      高信心可砍：<code>icons</code>／<code>shaders</code>／<code>fonts</code>／<code>localization</code>／<code>shapes</code>／<code>udev</code>／<code>web</code>／大部分 <code>data</code>。
+      <code>profiles/</code> 也可整包拿掉（約半數體積），但政策要求先跑
+      <code>--export-sla</code>／<code>--export-support-stl</code>（及 hollow）smoke。
+      現有 staging <strong>只做檔名去品牌</strong>，還沒做內容精簡。
+    </div>
+
+    <h3 style="margin:28px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">9.2 文字洩漏（prusa / slic3r / PrusaSlicer …）</h3>
+    <p class="sub">
+      掃描：<code>bin/resources</code>（不分大小寫；含 prusa、slic3r、PrusaSlicer、prusa slicer、prusa-slicer）。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>類型</th><th>結果</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>檔名／路徑</td>
+            <td class="yes"><strong>0</strong>（stage 已濾；scan <code>resource_brand_path_count: 0</code>）</td>
+          </tr>
+          <tr>
+            <td>二進位（.mo／.png／.ttf／.obj 等）</td>
+            <td class="yes"><strong>0</strong></td>
+          </tr>
+          <tr>
+            <td>文字內容</td>
+            <td class="no"><strong>76 個檔案仍有洩漏</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:16px">洩漏類型（檔案數，可重疊）：</p>
+    <div class="eq">
+      <div class="eq-card">PrusaSlicer：40</div>
+      <div class="eq-card">slic3r（多為 min_slic3r_version）：42</div>
+      <div class="eq-card">files.prusa3d.com／help URL：35</div>
+      <div class="eq-card">non-prusa-*：34</div>
+      <div class="eq-card">Prusament／Prusa Polymers：11</div>
+      <div class="eq-card">window._prusaSlicer：2 · prusa-slicer（連字）：0</div>
+    </div>
+    <div class="callout">
+      <strong style="color:var(--ink)">76 檔清單：</strong>
+      <code>profiles/</code> 70（幾乎所有 vendor .ini／.idx；含 ArchiveRepositoryManifest、Templates、Sovol、HartSmart…）—
+      典型：<code>repo_id = non-prusa-*</code>、<code>config_update_url = https://files.prusa3d.com/.../PrusaSlicer-settings-...</code>、
+      <code>min_slic3r_version</code>、Prusament、gcode 註解。
+      <br /><br />
+      其他 6：<code>data/hints.ini</code>、<code>data/printer_gantries/geometries.json</code>、
+      <code>localization/list.txt</code>、<code>localization/wx_locale/be.po</code>、
+      <code>web/connect_error.html</code>、<code>web/connect_loading.html</code>（+ udev 路徑字串）。
+      <br /><br />
+      <strong style="color:var(--ink)">重點：</strong>deid gate 只擋<strong>路徑品牌名</strong>，不擋<strong>檔案內容</strong> → scan 可 PASS，但 profiles 等仍大量殘留。
+      內容也要清：最快是砍整包 <code>profiles</code>（及 web／udev／localization／data 上述檔），且對齊 headless 可不需要這些資產。
+    </div>
+
+    <h3 style="margin:28px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">9.3 會不會影響切片／長支撐／鏤空／打洞？</h3>
+    <p class="sub">對照 <code>agent/jobs.py</code>、<code>agent/sla_operations.py</code> 實際 CLI／Python 路徑。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>功能</th>
+            <th>實際呼叫</th>
+            <th>依賴 bin/resources 內容？</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>切片（SLA）</td>
+            <td class="mono">slicer-engine --export-sla [--export-support-stl] --load config.ini model.stl</td>
+            <td class="yes"><strong>不依賴</strong> profiles／fonts／icons…（設定全來自 job INI）</td>
+          </tr>
+          <tr>
+            <td>長支撐</td>
+            <td class="mono">--export-support-stl --load config.ini</td>
+            <td class="yes"><strong>不依賴</strong></td>
+          </tr>
+          <tr>
+            <td>鏤空</td>
+            <td class="mono">--export-hollow-stl --load …</td>
+            <td class="yes"><strong>不依賴</strong></td>
+          </tr>
+          <tr>
+            <td>切割</td>
+            <td class="mono">--cut=Z --export-stl</td>
+            <td class="yes"><strong>不依賴</strong></td>
+          </tr>
+          <tr>
+            <td>打洞／蜂巢</td>
+            <td>agent 內 <code>trimesh</code> 產生 drain／hex，再 boolean</td>
+            <td class="yes"><strong>不依賴</strong>引擎 resources</td>
+          </tr>
+          <tr>
+            <td>Boolean</td>
+            <td>agent <code>trimesh</code>＋manifold3d</td>
+            <td class="yes"><strong>不依賴</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <strong style="color:var(--ink)">結論：</strong>牙科 SLA 主路徑（切片／支撐／鏤空／打洞／切割／boolean）
+      <strong>不讀</strong> <code>profiles/</code> 等 bundled 資產；參數來自 agent 產生的 <code>config.ini</code>。
+      精簡／刪除這些子資料夾<strong>理論上不影響</strong>上述功能。
+      仍建議：保留空的 <code>bin/resources/</code>（路徑契約）；砍內容前跑一輪
+      <code>--export-sla</code>／<code>--export-support-stl</code>／<code>--export-hollow-stl</code> smoke。
+    </div>
+
+    <h3 style="margin:28px 0 12px;font-size:15px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">證明 — Windows 路徑契約</h3>
+<pre><span class="k">#elif defined _WIN32</span>
+    boost::filesystem::path path_resources =
+        path_to_binary.parent_path() / <span class="s">"resources"</span>;
+    set_resources_dir(path_resources.string());</pre>
+  </section>
+
+  <footer>
+    <span>
+      Related · <a href="index.html">Before / After 去識別</a> ·
+      <a href="COMPARISON.md">COMPARISON.md</a>
+    </span>
+    <span>backend-slicer-engine-deidentification · Windows evidence</span>
+  </footer>
+    </div><!-- .main -->
+  </div><!-- .layout -->
+
+</div>
+<script>
+(function () {
+  const links = Array.from(document.querySelectorAll('#sideToc a'));
+  const sections = links.map(function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  }).filter(Boolean);
+
+  function setActive(id) {
+    links.forEach(function (a) {
+      a.classList.toggle('is-active', a.getAttribute('href') === '#' + id);
+    });
+  }
+
+  if ('IntersectionObserver' in window && sections.length) {
+    const io = new IntersectionObserver(function (entries) {
+      const visible = entries
+        .filter(function (e) { return e.isIntersecting; })
+        .sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; });
+      if (visible[0]) setActive(visible[0].target.id);
+    }, { rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] });
+    sections.forEach(function (s) { io.observe(s); });
+  } else if (sections[0]) {
+    setActive(sections[0].id);
+  }
+})();
+</script>
+</body>
+</html>

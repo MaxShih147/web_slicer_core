@@ -4,10 +4,11 @@
   Stage consumer slicer-engine layout for Windows (tasks 5.3 / 5.4 / D13).
 
 .DESCRIPTION
-  Copies slicer-engine.exe + slicer_core.dll (+ runtime DLLs) into
+  Copies slicer-engine.exe + slicer_core.dll + OCCTWrapper.dll (+ GMP/MPFR) into
   <RepoRoot>/slicer-engine/bin/, archives PDBs under symbols/, writes
   artifact-manifest.json with pre/post hashes, and verifies:
     - named exports == 1 (slicer_run_cli)
+    - OCCTWrapper.dll present (STEP/STP delay-load plugin)
     - no BUNDLE_QA_CRASH harness markers in consumer PE strings
     - no *.pdb in consumer staging
 #>
@@ -96,6 +97,26 @@ foreach ($depDll in @("libgmp-10.dll", "libmpfr-4.dll")) {
     }
 }
 
+# STEP/STP import plugin (delay-loaded by slicer_core via LoadLibrary("OCCTWrapper.dll"))
+# Required for dental CAD STEP interchange; must ship next to slicer-engine.exe.
+$occtDst = Join-Path $BinDir "OCCTWrapper.dll"
+if (-not (Test-Path -LiteralPath $occtDst)) {
+    $occtCandidates = @(
+        (Join-Path $BuildReleaseDir "OCCTWrapper.dll"),
+        (Join-Path $BuildReleaseDir "..\occt_wrapper\Release\OCCTWrapper.dll")
+    )
+    $occtSrc = $occtCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if ($occtSrc) {
+        Copy-Item -LiteralPath $occtSrc -Destination $occtDst -Force
+        Write-Host "Staged OCCTWrapper.dll from $occtSrc" -ForegroundColor Cyan
+    }
+}
+if (-not (Test-Path -LiteralPath $occtDst)) {
+    throw "Missing OCCTWrapper.dll in $BinDir — build target OCCTWrapper (SLIC3R_ENABLE_FORMAT_STEP=ON) then re-package. Required for .step/.stp import."
+}
+$preOcct = Get-Sha256 $occtDst
+$postOcct = $preOcct
+
 # Resources next to exe — de-branded filter (macOS parity: stage_slicer_engine_resources_*.sh/ps1)
 $stageResPs1 = Join-Path $PSScriptRoot "stage_slicer_engine_resources_windows.ps1"
 if (-not (Test-Path -LiteralPath $stageResPs1)) {
@@ -130,6 +151,42 @@ $exeDst = Join-Path $BinDir "slicer-engine.exe"
 $dllDst = Join-Path $BinDir "slicer_core.dll"
 if (-not (Test-Path $exeDst)) { throw "Staging missing slicer-engine.exe" }
 if (-not (Test-Path $dllDst)) { throw "Staging missing slicer_core.dll" }
+
+# Replace residual PrusaSlicer PE icon with Phrozen Control Server / PrinterControl icon
+function Find-SlicerEngineIcon {
+    $candidates = @(
+        (Join-Path $RepoRoot "..\WebSlicer_PrinterControl\assets\icon.ico"),
+        (Join-Path $RepoRoot "..\Bundle-Launcher\icon.ico"),
+        (Join-Path $RepoRoot "assets\slicer-engine.ico")
+    )
+    foreach ($c in $candidates) {
+        $full = [System.IO.Path]::GetFullPath($c)
+        if (Test-Path -LiteralPath $full) { return $full }
+    }
+    return $null
+}
+function Find-Rcedit {
+    $candidates = @(
+        (Join-Path $RepoRoot "..\WebSlicer_PrinterControl\node_modules\rcedit\bin\rcedit.exe"),
+        (Join-Path $RepoRoot "..\Bundle-Launcher\node_modules\rcedit\bin\rcedit.exe")
+    )
+    foreach ($c in $candidates) {
+        $full = [System.IO.Path]::GetFullPath($c)
+        if (Test-Path -LiteralPath $full) { return $full }
+    }
+    return $null
+}
+$iconPath = Find-SlicerEngineIcon
+$rceditPath = Find-Rcedit
+if ($iconPath -and $rceditPath) {
+    Write-Host "Setting slicer-engine.exe icon from $iconPath" -ForegroundColor Cyan
+    & $rceditPath $exeDst --set-icon $iconPath
+    if ($LASTEXITCODE -ne 0) { throw "rcedit --set-icon FAILED for $exeDst" }
+} elseif (-not $iconPath) {
+    Write-Host "WARN: no Phrozen icon.ico found (PrinterControl/Bundle-Launcher); PE icon may remain branded" -ForegroundColor Yellow
+} else {
+    Write-Host "WARN: rcedit.exe not found; PE icon not updated" -ForegroundColor Yellow
+}
 
 $postExe = Get-Sha256 $exeDst
 $postDll = Get-Sha256 $dllDst
@@ -224,6 +281,14 @@ $manifest = [ordered]@{
             sha256            = $postDll
             named_exports     = $exportCount
             export_entry      = "slicer_run_cli"
+        },
+        [ordered]@{
+            path              = "bin/OCCTWrapper.dll"
+            role              = "step_plugin"
+            pre_strip_sha256  = $preOcct
+            post_strip_sha256 = $postOcct
+            sha256            = $postOcct
+            notes             = "Delay-loaded for .step/.stp (load_step_internal)"
         }
     )
     symbol_archive = [ordered]@{

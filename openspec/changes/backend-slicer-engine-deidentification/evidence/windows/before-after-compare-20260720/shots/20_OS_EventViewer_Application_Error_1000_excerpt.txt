@@ -1,0 +1,28 @@
+﻿Event Viewer · Application · ID 1000 — live excerpt 2026-07-20T16:03:25.1144058+08:00
+
+======== 07/17/2026 16:32:58 ========
+失敗的應用程式名稱： slicer-engine.exe，版本： 2.9.4.0，時間戳記： 0x6a59e86d
+錯誤模組名稱： ucrtbase.dll， 版本： 10.0.26100.8521，時間戳記： 0xc38f7a35
+例外狀況代碼： 0xc0000409
+錯誤位移： 0x00000000000a527e
+錯誤處理常式識別碼： 0x1618
+失敗的應用程式開始時間： 0x1DD15C6DEF6B36C
+Faulting 應用程式路徑： C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer-engine.exe
+Faulting 模組路徑： C:\WINDOWS\System32\ucrtbase.dll
+Report 識別碼： eb278a04-0e3a-4369-a37e-71f976bc1101
+Faulting 套件完整名稱： 
+Faulting 套件相對應用程式識別碼： 
+
+======== 07/17/2026 16:32:50 ========
+失敗的應用程式名稱： slicer-engine.exe，版本： 2.9.4.0，時間戳記： 0x6a59e86d
+錯誤模組名稱： slicer_core.dll， 版本： 2.9.4.0，時間戳記： 0x6a59e867
+例外狀況代碼： 0xc0000005
+錯誤位移： 0x00000000000f10b0
+錯誤處理常式識別碼： 0x6B1C
+失敗的應用程式開始時間： 0x1DD15C6DA293687
+Faulting 應用程式路徑： C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer-engine.exe
+Faulting 模組路徑： C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer_core.dll
+Report 識別碼： beeb90ae-f2ca-4545-a75b-3c2b3df93531
+Faulting 套件完整名稱： 
+Faulting 套件相對應用程式識別碼： 
+
