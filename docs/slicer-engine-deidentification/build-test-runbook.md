@@ -190,6 +190,38 @@ export SLICER_ENGINE_BIN="$(pwd)/third_party/prusaslicer_build/src/slicer-engine
 ./scripts/run_agent.sh
 ```
 
+#### 3.1.1 直接對 build tree binary 下 CLI（開發煙測）
+
+不必經過 agent，可直接對 `third_party/prusaslicer_build/src/slicer-engine` 下指令，最快驗證「編出來的引擎能跑、且沒有品牌字串」。以下指令皆已實測可用（產物與 exit code 標於註解）。
+
+```bash
+BIN="$(pwd)/third_party/prusaslicer_build/src/slicer-engine"
+
+# 1) 版本 / 說明 —— 確認 binary 可執行且品牌已中性化
+"$BIN" --help | head -1
+#  → Slicer Engine 1.0.5 (without GUI support)   （不應出現 Prusa / Slic3r 字樣）
+
+# 品牌快掃：命中數應為 0
+"$BIN" --help 2>&1 | grep -Eic 'prusa|slic3r'
+#  → 0
+
+# 2) 實際切一顆 SLA（用 repo 內建測試 STL），確認能產出 .sl1
+STL="$(pwd)/third_party/prusaslicer_fork/tests/data/test_stl/ASCII/20mmbox-LF.stl"
+OUT=/tmp/deid-clitest && mkdir -p "$OUT"
+"$BIN" --export-sla -o "$OUT/box.sl1" "$STL"
+#  → 100% => Slicing done / Slicing result exported to .../box.sl1   （exit 0，產出 ~74 KB .sl1）
+
+# 3) 帶支撐再切一次（同時輸出支撐 STL）
+"$BIN" --export-sla --export-support-stl --support-material -o "$OUT/box2.sl1" "$STL"
+#  → 產出 box2.sl1 + box2_support.stl（exit 0）
+
+# 4) 錯誤路徑驗證：輸入不存在時應回非 0
+"$BIN" --export-sla -o "$OUT/none.sl1" "$OUT/__nope__.stl"; echo "exit=$?"
+#  → exit=1
+```
+
+> 說明：SLA 切片不帶 `--load` 也能用內建預設跑完煙測；正式功能回歸（量測 size ±5% / perf ×1.20）仍須帶對應 `--load config.ini`，見 §8。
+
 ### 3.2 情境 B — QA flavor 編譯
 
 ```bash
@@ -258,6 +290,38 @@ scripts\build_prusaslicer_fork_windows.bat full
 - CMake 關鍵旗標：`-DSLIC3R_GUI=OFF -DSLIC3R_BUILD_TESTS=OFF -DBUNDLE_QA_CRASH_HARNESS=OFF`，記憶體模式決定 `SLIC3R_MSVC_COMPILE_PARALLEL` 與 MSBuild `/m`。
 - 產物：`third_party\prusaslicer_build\src\Release\slicer-engine.exe` + `slicer_core.dll`（+ 自動複製 `libgmp-10.dll`、`libmpfr-4.dll`）。
 - 編譯 target 是 `PrusaSlicer_app_console`（CMake target 名內部仍叫 PrusaSlicer 屬正常，`OUTPUT_NAME` 已中性）。
+
+#### 4.1.1 直接對 build tree binary 下 CLI（開發煙測）
+
+Windows 的引擎與 macOS 同一份 codebase、同一組 CLI 旗標。`slicer-engine.exe` 依賴同目錄的 `slicer_core.dll`、`libgmp-10.dll`、`libmpfr-4.dll`，因此**直接在 `Release\` 目錄內執行**（或把該目錄加入 `PATH`）最穩：
+
+```powershell
+$Bin = "$PWD\third_party\prusaslicer_build\src\Release\slicer-engine.exe"
+
+# 1) 版本 / 說明 —— 確認可執行且品牌已中性化
+& $Bin --help | Select-Object -First 1
+#  → Slicer Engine 1.0.5 (without GUI support)
+
+# 品牌快掃：命中數應為 0
+(& $Bin --help 2>&1 | Select-String -Pattern 'prusa|slic3r' -AllMatches).Matches.Count
+#  → 0
+
+# 2) 實際切一顆 SLA，確認能產出 .sl1
+$Stl = "$PWD\third_party\prusaslicer_fork\tests\data\test_stl\ASCII\20mmbox-LF.stl"
+$Out = "$env:TEMP\deid-clitest"; New-Item -ItemType Directory -Force -Path $Out | Out-Null
+& $Bin --export-sla -o "$Out\box.sl1" $Stl
+#  → 100% => Slicing done（exit 0，產出 .sl1）
+
+# 3) 帶支撐再切一次
+& $Bin --export-sla --export-support-stl --support-material -o "$Out\box2.sl1" $Stl
+#  → 產出 box2.sl1 + box2_support.stl
+
+# 4) 錯誤路徑驗證：輸入不存在時 $LASTEXITCODE 應為非 0
+& $Bin --export-sla -o "$Out\none.sl1" "$Out\__nope__.stl"; "exit=$LASTEXITCODE"
+#  → exit=1
+```
+
+> cmd.exe 版：`set BIN=third_party\prusaslicer_build\src\Release\slicer-engine.exe` 後 `%BIN% --help`；離開 `Release\` 目錄執行需確保上述 DLL 在 `PATH` 或同目錄，否則會缺 DLL 無法啟動。
 
 ### 4.2 情境 B — QA flavor 編譯
 
