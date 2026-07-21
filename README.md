@@ -119,6 +119,8 @@ Frontend runs at `http://localhost:5174`
 
 > De-identification only applies to the **consumer artifact (the formal, shipped package)**: it renames the surfaces a user or support agent can see so no Prusa／slic3r brand fingerprint leaks. **Slicing behavior and parameters are unchanged.**
 >
+> **Build / test runbook (how to compile, package, scan, crash-test):** [`docs/slicer-engine-deidentification/build-test-runbook.md`](docs/slicer-engine-deidentification/build-test-runbook.md)
+>
 > Full spec: [`openspec/changes/backend-slicer-engine-deidentification/`](openspec/changes/backend-slicer-engine-deidentification/) (`naming-manifest.md`, `blacklist.md`, `acceptance-procedure.md`, and the before/after evidence reports).
 
 ### One-line positioning

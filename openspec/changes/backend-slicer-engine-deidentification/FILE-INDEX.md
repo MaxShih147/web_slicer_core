@@ -17,6 +17,7 @@
 | [`proposal.md`](./proposal.md) | 緣由、範圍、影響面 |
 | [`design.md`](./design.md) | 決策 D1–D13、L1／L2、**精簡版 C′**、D13 流水線與發布治理 |
 | [`tasks.md`](./tasks.md) | 實作與評估檢查清單 |
+| [`docs/slicer-engine-deidentification/build-test-runbook.md`](../../../docs/slicer-engine-deidentification/build-test-runbook.md) | **編譯與測試操作手冊**（去識別化各情境的 build／package／scan／crash／回歸一步步指令；彙整 `scripts/*`） |
 | [`effort-estimate.md`](./effort-estimate.md) | 人日草案 |
 | [`specs/slicer-engine-deidentification/spec.md`](./specs/slicer-engine-deidentification/spec.md) | Change 內需求稿 |
 | [`../../specs/slicer-engine-deidentification/spec.md`](../../specs/slicer-engine-deidentification/spec.md) | **正式規格（8.5 promote）** |
