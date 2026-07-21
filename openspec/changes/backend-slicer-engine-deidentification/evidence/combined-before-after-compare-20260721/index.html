@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>De-identification Evidence — macOS Before / After</title>
+  <title>De-identification Evidence — Windows ＋ macOS Before / After</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
@@ -777,6 +777,53 @@
     }
     .howto-effect strong { color: var(--after); font-weight: 650; }
 
+    /* —— platform badges & platform sub-headers —— */
+    .plat {
+      display: inline-block;
+      margin-right: 5px;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      vertical-align: baseline;
+    }
+    .plat.win {
+      color: #d8ecff;
+      background: rgba(100,160,220,.22);
+      border: 1px solid rgba(120,180,240,.35);
+    }
+    .plat.mac {
+      color: #e8fff5;
+      background: rgba(80,200,160,.18);
+      border: 1px solid rgba(126,235,196,.35);
+    }
+    .plat-h {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 30px 0 14px;
+    }
+    .section-head + .plat-h { margin-top: 0; }
+    .plat-h .plat {
+      margin-right: 0;
+      padding: 5px 14px;
+      font-size: 12px;
+    }
+    .plat-h .plat-h-note {
+      font-size: 12px;
+      letter-spacing: .06em;
+      color: var(--dim);
+      white-space: nowrap;
+    }
+    .plat-h::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
     /* —— 白話說明（給非技術背景讀者） —— */
     .howto-plain {
       margin: 0;
@@ -1180,30 +1227,27 @@
       .shell { padding-left: 196px; }
     }
   </style>
-
 </head>
-
 <body>
 <div class="shell">
 
   <nav class="side-toc" aria-label="區塊快速定錨">
     <span class="toc-label">跳至區塊</span>
     <a href="#install-folder"><span class="n">01</span><span class="t">Install folder</span></a>
-    <a href="#identity"><span class="n">02</span><span class="t">codesign identity</span></a>
+    <a href="#identity"><span class="n">02</span><span class="t">Identity</span></a>
     <a href="#crash-table"><span class="n">03</span><span class="t">Crash diagnostics</span></a>
     <a href="#fork-changes"><span class="n">04</span><span class="t">Fork changes</span></a>
     <a href="#pairs"><span class="n">05</span><span class="t">Individual captures</span></a>
-    <a href="#os-ips"><span class="n">06</span><span class="t">OS crash surfaces</span></a>
+    <a href="#os-surfaces"><span class="n">06</span><span class="t">OS crash surfaces</span></a>
     <a href="#optimization"><span class="n">07</span><span class="t">Optimization</span></a>
     <a href="#naming"><span class="n">08</span><span class="t">Naming rules</span></a>
   </nav>
-
   <nav class="site-switcher" aria-label="Evidence report pages">
     <span class="site-label">Reports</span>
-    <a href="index.html" class="is-active" aria-current="page">Before / After 去識別</a>
-    <a href="COMPARISON.md">COMPARISON.md</a>
-    <a href="../../windows/before-after-compare-20260720/index.html">Windows 對照報告</a>
-    <a href="../../combined-before-after-compare-20260721/index.html">整合報告 Win＋mac</a>
+    <a href="index.html" class="is-active" aria-current="page">整合報告 Win＋mac</a>
+    <a href="../windows/before-after-compare-20260720/index.html">Windows 報告</a>
+    <a href="../macos/before-after-compare-20260721/index.html">macOS 報告</a>
+    <a href="../windows/before-after-compare-20260720/shim-three-way-proof.html#s9">三啟動器差異證明</a>
   </nav>
 
   <div class="zoom-bar" role="toolbar" aria-label="Screenshot magnifier controls">
@@ -1230,34 +1274,41 @@
   </div>
 
   <header class="hero">
-    <div class="eyebrow">Evidence Report · macOS</div>
+    <div class="eyebrow">Evidence Report · Windows ＋ macOS</div>
     <h1>Before <em>→</em> After<br />De-identification</h1>
     <p class="hero-lede">
-      Crash diagnostics (<code style="color:var(--after)">.ips</code>／Console)、安裝路徑、codesign identity —
-      plus verified compiler optimization
-      (<code style="color:var(--after)">-O2</code> via RelWithDebInfo) from this machine’s CMake cache.
+      雙平台整合報告 — 安裝路徑、身分字串（PE VERSIONINFO／codesign）、崩潰診斷，
+      加上編譯優化驗證（Windows <code style="color:var(--after)">/O2</code>、macOS <code style="color:var(--after)">-O2</code>）。
+      每個區塊同時呈現 Windows 與 macOS 的 Before／After。
     </p>
     <div class="meta-row">
-      <span class="pill"><strong>2026-07-21</strong> capture</span>
+      <span class="pill"><strong>Win 2026-07-20</strong> refresh</span>
+      <span class="pill"><strong>mac 2026-07-21</strong> capture</span>
       <span class="pill">OpenSpec <strong>backend-slicer-engine-deidentification</strong></span>
-      <span class="pill">Live Finder／Console／Terminal</span>
-      <span class="pill"><strong>-O2</strong> RelWithDebInfo</span>
+      <span class="pill"><strong>/O2 · -O2</strong> confirmed</span>
     </div>
 
     <aside class="provenance">
       <p class="provenance-title">Provenance</p>
       <p>
-        <strong style="color:var(--ink)">AFTER</strong> — Finder、Console、Terminal、Get Info 皆為本機即時截圖；
-        crash 報告為真實 ReportCrash <code>.ips</code>（m1-close segfault＋5.1b exception）。
+        <span class="plat win">Win</span>
+        <strong style="color:var(--ink)">AFTER</strong> — Explorer、WinDbg、Properties 皆為本機即時截圖（consumer artifacts）。
+        <strong style="color:var(--ink)">BEFORE</strong> — baseline <code>win-baseline-20260717T055632Z</code>
+        ＋真實舊樹 <code>C:\Program Files\…\prusaslicer_build\src\Release</code>（含正版 PrusaSlicer PE 圖示，2026-07-20 refresh）。
+      </p>
+      <p>
+        <span class="plat mac">mac</span>
+        <strong style="color:var(--ink)">AFTER</strong> — Finder、Console、Terminal、Get Info 本機即時截圖；
+        crash 為真實 ReportCrash <code>.ips</code>（m1-close segfault＋5.1b exception）。
         <strong style="color:var(--ink)">BEFORE</strong> — 正式安裝樹
         <code>/Applications/Bundle Launcher.app/…/prusaslicer_build/src/</code>
         ＋ <code>~/Library/Logs/DiagnosticReports/Retired/PrusaSlicer-*.ips</code>。
       </p>
       <p>
-        <strong style="color:var(--accent)">對齊 Windows 報告</strong> —
-        安裝資料夾＝Explorer；Console <code>.ips</code> Translated Report＝WinDbg／WER；
-        <code>codesign -dv</code>＝VERSIONINFO；DiagnosticReports 檔名＝AppCrash_* 資料夾。
-        Hard-refresh <kbd style="font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:2px">⌘⇧R</kbd> if images are cached.
+        <strong style="color:var(--accent)">雙平台對齊</strong> —
+        安裝資料夾：Explorer＝Finder；崩潰報告：WinDbg／WER＝Console／<code>.ips</code>；
+        身分：PE VERSIONINFO＝<code>codesign -dv</code>；WER AppCrash_* 資料夾＝DiagnosticReports 檔名。
+        影像若被快取請 hard-refresh（<kbd style="font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:2px">Ctrl+F5</kbd>／<kbd style="font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:2px">⌘⇧R</kbd>）。
       </p>
     </aside>
   </header>
@@ -1268,12 +1319,22 @@
       <h2>Install folder &amp; paths</h2>
     </div>
 
+    <div class="plat-h"><span class="plat win">Windows</span></div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/COMPARE_01_install_folder_before_vs_after.png" alt="Install folder before vs after" loading="lazy" />
+        <img src="../windows/before-after-compare-20260720/shots/COMPARE_01_install_folder_before_vs_after.png" alt="Windows install folder before vs after" loading="lazy" />
+        <figcaption class="frame-cap"><span>Install folder filenames</span><span>01 · Explorer</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span></div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../macos/before-after-compare-20260721/shots/COMPARE_01_install_folder_before_vs_after.png" alt="macOS install folder before vs after" loading="lazy" />
         <figcaption class="frame-cap"><span>Install folder filenames · Before＝品牌執行檔＋aliases（非建置樹）</span><span>01 · Finder</span></figcaption>
       </figure>
     </div>
+
     <aside class="howto" aria-label="§01 修改說明">
       <div class="howto-head">
         <span class="htag">01 · Install folder &amp; paths</span>
@@ -1281,7 +1342,7 @@
       </div>
       <div class="howto-plain">
         <span class="plabel">白話說明</span>
-        <p><span class="q">這在做什麼？</span>把軟體「安裝到電腦後看得到的資料夾名稱、檔案名稱」全部換成中性名字。以前用 Finder 打開安裝資料夾，會看到 Prusa／slic3r 這些第三方品牌的字樣；現在都改成 <code>slicer-engine</code> 這種看不出來源的名字。</p>
+        <p><span class="q">這在做什麼？</span>把軟體「安裝到電腦後看得到的資料夾名稱、檔案名稱」全部換成中性名字。以前用檔案總管（Windows）或 Finder（Mac）打開安裝資料夾，會看到 Prusa／slic3r 這些第三方品牌的字樣；現在都改成 <code>slicer-engine</code> 這種看不出來源的名字。</p>
         <p><span class="q">會影響功能嗎？</span>不會。我們只改「名字和擺放位置」，軟體實際怎麼運算、怎麼切片完全沒動，功能和速度都一樣。</p>
         <p><span class="q">為什麼重要？</span>這是客戶最容易看到的地方——只要打開安裝資料夾就一目了然。清乾淨後，一般使用者從檔名看不出這是別家的軟體。</p>
       </div>
@@ -1308,6 +1369,23 @@
       <div class="howto-effect"><strong>一句話：</strong>使用者看到的「裝在哪、叫什麼」已去品牌，正式包只出中性引擎檔。</div>
     </aside>
 
+    <div class="plat-h"><span class="plat win">Windows</span><span class="plat-h-note">安裝清單對照</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>Before（舊清點）</th><th>After（正式包）</th></tr></thead>
+        <tbody>
+          <tr><td>Engine root</td><td class="before">…\third_party\prusaslicer_build\src\Release\</td><td class="after">…\slicer-engine\</td></tr>
+          <tr><td>CLI exe（agent 實際呼叫；唯一會編）</td><td class="before">prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
+          <tr><td>GUI（舊樹殘留；現行不編）</td><td class="before">prusa-slicer.exe</td><td class="after">(not shipped)</td></tr>
+          <tr><td>Core DLL</td><td class="before">PrusaSlicer.dll</td><td class="after">slicer_core.dll</td></tr>
+          <tr><td>Viewer（舊樹殘留；現行不編）</td><td class="before">prusa-gcodeviewer.exe</td><td class="after">(not shipped)</td></tr>
+          <tr><td>Build leftovers</td><td class="before">PrusaSlicer.exp / .lib</td><td class="after">(not shipped)</td></tr>
+          <tr><td>Deps</td><td>libgmp-10.dll, libmpfr-4.dll</td><td>libgmp-10.dll, libmpfr-4.dll</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span><span class="plat-h-note">安裝清單對照</span></div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Item</th><th>Before（舊安裝樹）</th><th>After（正式包）</th></tr></thead>
@@ -1326,25 +1404,41 @@
   <section id="identity">
     <div class="section-head">
       <span class="section-num">02</span>
-      <h2>codesign identity</h2>
+      <h2>Identity · <em style="font-style:italic;color:var(--muted);font-weight:500">PE VERSIONINFO ＋ codesign</em></h2>
     </div>
 
+    <div class="plat-h"><span class="plat win">Windows</span><span class="plat-h-note">real Properties Details</span></div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/COMPARE_03_codesign_identity_before_vs_after.png" alt="codesign identity before vs after" loading="lazy" />
+        <img src="../windows/before-after-compare-20260720/shots/COMPARE_03_VERSIONINFO_before_vs_after.png" alt="VERSIONINFO before vs after" loading="lazy" />
+        <figcaption class="frame-cap"><span>PE VERSIONINFO · real Properties Details</span><span>02 · Properties</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span><span class="plat-h-note">codesign identity</span></div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../macos/before-after-compare-20260721/shots/COMPARE_03_codesign_identity_before_vs_after.png" alt="codesign identity before vs after" loading="lazy" />
         <figcaption class="frame-cap"><span>codesign identity · <code>com.prusa3d.slic3r/</code> → <code>slicer-engine</code></span><span>02 · Terminal</span></figcaption>
       </figure>
     </div>
-    <aside class="howto" aria-label="§02 codesign identity 修改說明">
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../macos/before-after-compare-20260721/shots/COMPARE_05_GetInfo_before_vs_after.png" alt="Get Info before vs after" loading="lazy" />
+        <figcaption class="frame-cap"><span>Finder Get Info · filename surface</span><span>05 · Get Info</span></figcaption>
+      </figure>
+    </div>
+
+    <aside class="howto" aria-label="§02 Identity 修改說明">
       <div class="howto-head">
-        <span class="htag">02 · codesign identity</span>
-        <span class="htitle">身分字串去品牌</span>
+        <span class="htag">02 · Identity</span>
+        <span class="htitle">身分字串去品牌 — PE VERSIONINFO（Win）＋ codesign（mac）</span>
       </div>
       <div class="howto-plain">
         <span class="plabel">白話說明</span>
-        <p><span class="q">這在做什麼？</span>在 Mac 上，每個程式都有一組「數位簽章身分」與檔案資訊（用 Finder 顯示簡介或系統指令就能查到），裡面會標示這個程式屬於誰。以前寫的是 <code>com.prusa3d.slic3r</code> 這種 Prusa 的身分；現在改成中性的 <code>slicer-engine</code>。</p>
-        <p><span class="q">會影響功能嗎？</span>不會。這裡改的只是「程式對外自報的名字標籤」，就像換掉名片上的名字，程式怎麼運作完全不變。</p>
-        <p><span class="q">為什麼重要？</span>這是另一個客戶隨手就能查到的來源證據。改乾淨後，看程式身分也看不出是別家的產品。</p>
+        <p><span class="q">這在做什麼？</span>每個程式檔案都帶著一組「身分資訊」：Windows 上按右鍵「內容」→「詳細資料」會顯示公司名稱、產品名稱、版本；Mac 上則是數位簽章身分（codesign Identifier）與檔案資訊。以前這裡寫的是 Prusa Research／PrusaSlicer／<code>com.prusa3d.slic3r</code>；現在改成我們自己的名字（Phrozen／Slicer Engine／<code>slicer-engine</code>）。</p>
+        <p><span class="q">會影響功能嗎？</span>不會。這裡改的只是「檔案上顯示的文字標籤」，就像換掉名片上的名字，程式怎麼運作完全不變。</p>
+        <p><span class="q">為什麼重要？</span>這是另一個客戶隨手就能查到的來源證據。改乾淨後，看檔案內容或程式身分也看不出是別家的產品。</p>
       </div>
       <details class="howto-tech">
         <summary>技術細節（工程師檢視）</summary>
@@ -1367,13 +1461,6 @@
       </details>
       <div class="howto-effect"><strong>一句話：</strong>檔案屬性與簽署 Identifier 看起來已是中性引擎。</div>
     </aside>
-
-    <div class="showcase">
-      <figure class="frame">
-        <img src="shots/COMPARE_05_GetInfo_before_vs_after.png" alt="Get Info before vs after" loading="lazy" />
-        <figcaption class="frame-cap"><span>Finder Get Info · filename surface</span><span>05 · Get Info</span></figcaption>
-      </figure>
-    </div>
   </section>
 
   <section id="crash-table">
@@ -1382,15 +1469,36 @@
       <h2>Crash &amp; OS diagnostics</h2>
     </div>
 
+    <div class="plat-h"><span class="plat win">Windows</span><span class="plat-h-note">minidump ＋ WER</span></div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/COMPARE_02_crash_ips_stack_before_vs_after.png" alt="Crash .ips before vs after" loading="lazy" />
+        <img src="../windows/before-after-compare-20260720/shots/COMPARE_02_crash_minidump_stack_before_vs_after.png" alt="Crash stack before vs after" loading="lazy" />
+        <figcaption class="frame-cap"><span>Crash minidump — Before <code>lm</code>+<code>k</code> brand frames vs After AV + <code>slicer_run_cli</code></span><span>02 · PDB-free cdb</span></figcaption>
+      </figure>
+    </div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../windows/before-after-compare-20260720/shots/COMPARE_04_WER_surface_before_vs_after.png" alt="WER before vs after annotated" loading="lazy" />
+        <figcaption class="frame-cap"><span>WER surface · clean crop + prusa/slic3r annotations</span><span>04 · Error reporting</span></figcaption>
+      </figure>
+    </div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../windows/before-after-compare-20260720/shots/COMPARE_04b_WER_Report_wer_notepad_before_vs_after.png" alt="Report.wer identity annotated" loading="lazy" />
+        <figcaption class="frame-cap"><span>Report.wer identity · red=prusa/slic3r · green=slicer-engine</span><span>04b · annotated</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span><span class="plat-h-note">.ips ＋ DiagnosticReports</span></div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../macos/before-after-compare-20260721/shots/COMPARE_02_crash_ips_stack_before_vs_after.png" alt="Crash .ips before vs after" loading="lazy" />
         <figcaption class="frame-cap"><span>Crash .ips — Before <code>Slic3r::</code> brand frames vs After <code>imageOffset</code>＋<code>slicer-worker</code></span><span>02 · Console</span></figcaption>
       </figure>
     </div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/COMPARE_04_DiagnosticReports_before_vs_after.png" alt="DiagnosticReports before vs after" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/COMPARE_04_DiagnosticReports_before_vs_after.png" alt="DiagnosticReports before vs after" loading="lazy" />
         <figcaption class="frame-cap"><span>DiagnosticReports · <code>PrusaSlicer-*.ips</code> vs <code>slicer-engine-*.ips</code></span><span>04 · Finder</span></figcaption>
       </figure>
     </div>
@@ -1402,7 +1510,7 @@
       </div>
       <div class="howto-plain">
         <span class="plabel">白話說明</span>
-        <p><span class="q">這在做什麼？</span>程式萬一當掉，Mac 會自動在「主控台（Console）」與 <code>DiagnosticReports</code> 產生一份 <code>.ips</code> 當機報告，裡面記錄是哪個程式、哪一段出錯。客服、送修單位、甚至第三方都可能看到。以前報告裡會冒出 <code>Slic3r::</code>／Prusa 的字樣；現在連這些藏在技術細節裡的名字也一併清乾淨。做法之一是 <strong>strip</strong>——把編譯時附帶的「除錯名冊（符號表）」從程式檔中移除：功能完全不變，但外部工具再也讀不到原始函式名稱。</p>
+        <p><span class="q">這在做什麼？</span>程式萬一當掉，作業系統會自動生成一份「當機報告」（Windows 的 WER 報告、Mac 的 <code>.ips</code> 報告），裡面記錄是哪個程式、哪一段出錯。客服、送修單位、甚至第三方都可能看到這份報告。以前報告裡會冒出 Prusa／slic3r 的字樣；現在連這些藏在技術細節裡的名字也一併清乾淨。做法之一是 <strong>strip</strong>——把編譯時附帶的「除錯名冊（符號表）」從程式檔中移除：功能完全不變，但外部工具再也讀不到原始函式名稱。</p>
         <p><span class="q">會影響功能嗎？</span>不會。程式該怎麼跑還是怎麼跑，只是「當掉時報告上寫的名字」換成中性名稱。</p>
         <p><span class="q">為什麼重要？</span>當機報告是最不容易注意、卻最容易洩漏來源的地方。這是最深、最技術性的一層；連這裡都清掉，代表從一般使用者到工程師層級都查不出原始品牌。</p>
       </div>
@@ -1459,19 +1567,40 @@
       <div class="howto-effect"><strong>一句話：</strong>客服讀得到的堆疊與診斷欄位都已換成 slicer-engine 家族名稱。</div>
     </aside>
 
+    <div class="plat-h"><span class="plat mac">macOS</span><span class="plat-h-note">Strip 還原完整範例（內部除錯）</span></div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/DEMO_strip_restore_atos_before_vs_after.png" alt="Strip restore demo with atos" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/DEMO_strip_restore_atos_before_vs_after.png" alt="Strip restore demo with atos" loading="lazy" />
         <figcaption class="frame-cap"><span>Strip 還原完整範例 · 左＝只剩位址 · 右＝同版 .dSYM 還原函式名</span><span>Demo · atos</span></figcaption>
       </figure>
     </div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/DEMO_strip_restore_atos_Terminal.png" alt="Terminal atos strip restore" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/DEMO_strip_restore_atos_Terminal.png" alt="Terminal atos strip restore" loading="lazy" />
         <figcaption class="frame-cap"><span>真實 Terminal：同一組 imageOffset，有／無 .dSYM 的 atos 對照</span><span>Demo · Terminal</span></figcaption>
       </figure>
     </div>
 
+    <div class="plat-h"><span class="plat win">Windows</span><span class="plat-h-note">診斷表面總表</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Surface</th><th>Before</th><th>After</th></tr></thead>
+        <tbody>
+          <tr><td>Process / image</td><td class="before">prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
+          <tr><td>Core module</td><td class="before">PrusaSlicer.dll</td><td class="after">slicer_core.dll</td></tr>
+          <tr><td>Minidump modules</td><td class="before">prusa_slicer_console, PrusaSlicer</td><td class="after">slicer_engine, slicer_core</td></tr>
+          <tr><td>Stack frames</td><td class="before">prusa_slicer_console!wmain+…</td><td class="after">slicer_core!slicer_run_cli+…</td></tr>
+          <tr><td>Public export</td><td class="before">slic3r_main</td><td class="after">slicer_run_cli</td></tr>
+          <tr><td>WER AppCrash folder</td><td class="before">AppCrash_prusa-slicer-con…</td><td class="after">AppCrash_slicer-engine…</td></tr>
+          <tr><td>WER NsAppName / Sig[0]</td><td class="before">prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
+          <tr><td>WER AppName / Friendly</td><td class="before">PrusaSlicer</td><td class="after">Slicer Engine</td></tr>
+          <tr><td>Company / Product</td><td class="before">Prusa Research / PrusaSlicer</td><td class="after">Phrozen Technology / Slicer Engine</td></tr>
+          <tr><td>PDB path</td><td class="before">…\prusaslicer_build\…\prusa-slicer-console.pdb</td><td class="after">slicer-engine.pdb / slicer_core.pdb</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span><span class="plat-h-note">診斷表面總表</span></div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Surface</th><th>Before</th><th>After</th></tr></thead>
@@ -1580,88 +1709,192 @@
       <h2>Individual captures</h2>
     </div>
 
+    <div class="plat-h"><span class="plat win">Windows</span></div>
     <div class="pair">
       <figure class="card">
-        <img src="shots/01_BEFORE_finder_install_folder.png" alt="Before Finder" loading="lazy" />
+        <img src="../windows/before-after-compare-20260720/shots/01_BEFORE_explorer_install_folder.png" alt="Before explorer" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge before">Before</span> Explorer — branded Release filenames</figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/02_AFTER_explorer_install_folder.png" alt="After explorer" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">After</span> Explorer — slicer-engine\bin</figcaption>
+      </figure>
+    </div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/04_BEFORE_crash_minidump_stack.png" alt="Before crash" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge before">Before</span> Crash minidump — <code>lm</code> + <code>k</code> brand frames (<code>prusa_slicer_console</code> / <code>PrusaSlicer</code>)</figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/06_AFTER_crash_minidump_stack.png" alt="After crash" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">After</span> Crash minidump — AV <code>c0000005</code> + <code>slicer_core!slicer_run_cli</code></figcaption>
+      </figure>
+    </div>
+    <p class="note" style="margin:0.75rem 0 0.5rem;color:var(--muted);font-size:.92em;line-height:1.45">
+      COMPARE_02／shot <code>04</code>／<code>06</code> 已改為<strong style="color:var(--ink);font-weight:500">差異幀摘錄</strong>（省略兩邊相同的 WinDbg boilerplate）。
+      Before＝postload baseline；After＝segfault PoC。完整原文：
+      <code>BEFORE_crash_minidump_stack.txt</code>／<code>AFTER_crash_minidump_stack_segfault.txt</code>。
+      另見 proof crop <code>14</code> 與 live-modules shot <code>11</code>。
+    </p>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../windows/before-after-compare-20260720/shots/14_BEFORE_minidump_PrusaSlicer_module_proof.png" alt="BEFORE lm shows PrusaSlicer module" loading="lazy" />
+        <figcaption class="frame-cap"><span>BEFORE · full <code>lm</code> excerpt — <code>PrusaSlicer</code> on next line</span><span>14 · proof</span></figcaption>
+      </figure>
+    </div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../windows/before-after-compare-20260720/shots/11_BEFORE_process_modules.png" alt="BEFORE process modules PrusaSlicer.dll" loading="lazy" />
+        <figcaption class="frame-cap"><span>BEFORE · live process modules — <code>MODULE PrusaSlicer.dll</code></span><span>11 · modules</span></figcaption>
+      </figure>
+    </div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/08_BEFORE_VERSIONINFO.png" alt="Before VERSIONINFO" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge before">Before</span> Properties · 詳細資料 — Prusa Research / PrusaSlicer</figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/09_AFTER_VERSIONINFO.png" alt="After VERSIONINFO" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">After</span> Properties · 詳細資料 — Phrozen / Slicer Engine 1.0.5</figcaption>
+      </figure>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span></div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../macos/before-after-compare-20260721/shots/01_BEFORE_finder_install_folder.png" alt="Before Finder" loading="lazy" />
         <figcaption class="card-foot"><span class="badge before">Before</span> Finder — 安裝表面：<code>PrusaSlicer</code>＋品牌 aliases（無 Makefile／cmake）</figcaption>
       </figure>
       <figure class="card">
-        <img src="shots/02_AFTER_finder_install_folder.png" alt="After Finder bin" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/02_AFTER_finder_install_folder.png" alt="After Finder bin" loading="lazy" />
         <figcaption class="card-foot"><span class="badge after">After</span> Finder — <code>slicer-engine/bin</code>（僅 CLI；無 Info.plist，屬設計）</figcaption>
       </figure>
     </div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/03_AFTER_finder_slicer-engine_root.png" alt="After root" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/03_AFTER_finder_slicer-engine_root.png" alt="After root" loading="lazy" />
         <figcaption class="frame-cap"><span>AFTER · slicer-engine root（bin／legal／manifest）</span><span>03 · Finder</span></figcaption>
       </figure>
     </div>
     <div class="pair">
       <figure class="card">
-        <img src="shots/22_OS_ips_PrusaSlicer_Console.png" alt="Before Console ips" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/22_OS_ips_PrusaSlicer_Console.png" alt="Before Console ips" loading="lazy" />
         <figcaption class="card-foot"><span class="badge before">Before</span> Console — <code>Slic3r::</code>＋<code>slic3r_main</code>＋<code>com.prusa3d.slic3r/</code></figcaption>
       </figure>
       <figure class="card">
-        <img src="shots/18_OS_ips_slicer-engine_Console.png" alt="After Console ips" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/18_OS_ips_slicer-engine_Console.png" alt="After Console ips" loading="lazy" />
         <figcaption class="card-foot"><span class="badge after">After</span> Console — <code>imageOffset</code>＋<code>slicer-worker</code>＋Identifier <code>slicer-engine</code></figcaption>
       </figure>
     </div>
     <div class="pair">
       <figure class="card">
-        <img src="shots/08b_BEFORE_codesign_Terminal.png" alt="Before codesign" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/08b_BEFORE_codesign_Terminal.png" alt="Before codesign" loading="lazy" />
         <figcaption class="card-foot"><span class="badge before">Before</span> Terminal — <code>Identifier=com.prusa3d.slic3r/</code></figcaption>
       </figure>
       <figure class="card">
-        <img src="shots/09b_AFTER_codesign_Terminal.png" alt="After codesign" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/09b_AFTER_codesign_Terminal.png" alt="After codesign" loading="lazy" />
         <figcaption class="card-foot"><span class="badge after">After</span> Terminal — <code>Identifier=slicer-engine</code></figcaption>
       </figure>
     </div>
     <div class="pair">
       <figure class="card">
-        <img src="shots/08_BEFORE_GetInfo.png" alt="Before Get Info" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/08_BEFORE_GetInfo.png" alt="Before Get Info" loading="lazy" />
         <figcaption class="card-foot"><span class="badge before">Before</span> Get Info — <code>PrusaSlicer</code></figcaption>
       </figure>
       <figure class="card">
-        <img src="shots/09_AFTER_GetInfo.png" alt="After Get Info" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/09_AFTER_GetInfo.png" alt="After Get Info" loading="lazy" />
         <figcaption class="card-foot"><span class="badge after">After</span> Get Info — <code>slicer-engine</code></figcaption>
       </figure>
     </div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/10_BEFORE_Info_plist_Terminal.png" alt="BEFORE Info.plist" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/10_BEFORE_Info_plist_Terminal.png" alt="BEFORE Info.plist" loading="lazy" />
         <figcaption class="frame-cap"><span>BEFORE · Info.plist — <code>CFBundleIdentifier=com.prusa3d.slic3r/</code></span><span>10 · plutil</span></figcaption>
       </figure>
     </div>
   </section>
 
-  <section id="os-ips">
+  <section id="os-surfaces">
     <div class="section-head">
       <span class="section-num">06</span>
       <h2>OS crash surfaces · <em style="font-style:italic;color:var(--muted)">real system UI</em></h2>
     </div>
+
+    <div class="plat-h"><span class="plat win">Windows</span><span class="plat-h-note">CrashDumps ＋ WER ＋ Event Log</span></div>
+    <p class="note" style="margin:0 0 1rem;color:var(--muted);font-size:.92em;line-height:1.5">
+      Windows <strong style="color:var(--ink)">does not</strong> show a pretty built-in “minidump viewer”.
+      A <code>.dmp</code> is binary; the OS surfaces are folders + WER metadata + Event Log.
+      Opening the dump uses WinDbg (or VS).
+      <strong style="color:var(--ink)">WER before／after</strong> below are live Explorer + Notepad captures of authentic
+      <code>ReportArchive\AppCrash_*</code> folders（2026-07-20 night refresh — not cdb dump text）.
+    </p>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../windows/before-after-compare-20260720/shots/15_OS_CrashDumps_slicer-engine.png" alt="OS CrashDumps folder" loading="lazy" />
+        <figcaption class="frame-cap"><span>Explorer · <code>%LOCALAPPDATA%\CrashDumps</code> — <code>slicer-engine.exe.*.dmp</code></span><span>15 · OS</span></figcaption>
+      </figure>
+    </div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/21_OS_dmp_Properties_dialog.png" alt="dmp Properties" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">OS</span> <code>.dmp</code> Properties · opens with WinDbg · ~2.3&nbsp;MB mini dump</figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/19_OS_WinDbg_CrashDumps_slicer-engine.png" alt="WinDbg User Mini Dump" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">OS→WinDbg</span> Real CrashDumps dump · “User Mini Dump File”</figcaption>
+      </figure>
+    </div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/17_OS_WER_ReportArchive_prusa-slicer-console_annotated.png" alt="WER BEFORE annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge before">Before</span> Explorer crop · boxed <code>AppCrash_prusa-slicer-con…</code></figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/16_OS_WER_ReportArchive_slicer-engine_annotated.png" alt="WER AFTER annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">After</span> Explorer crop · boxed <code>AppCrash_slicer-engine…</code></figcaption>
+      </figure>
+    </div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/22_OS_WER_Report_wer_prusa-slicer-console_notepad_annotated.png" alt="BEFORE Report.wer annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge before">Before</span> identity fields · red boxes = prusa/slic3r（8 hits）</figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/shots/18_OS_WER_Report_wer_slicer-engine_notepad_annotated.png" alt="AFTER Report.wer annotated" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">After</span> identity fields · green boxes = slicer-engine（prusa/slic3r absent）</figcaption>
+      </figure>
+    </div>
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../windows/before-after-compare-20260720/shots/20b_OS_EventViewer_Application_Error_1000_notepad.png" alt="Event ID 1000" loading="lazy" />
+        <figcaption class="frame-cap"><span>Event Viewer Application Error 1000 excerpt</span><span>20b · OS</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span><span class="plat-h-note">DiagnosticReports ＋ Console</span></div>
     <p class="note" style="margin:0 0 1rem;color:var(--muted);font-size:.92em;line-height:1.5">
       macOS ReportCrash 寫入 <code>.ips</code>；系統表面＝DiagnosticReports 資料夾＋Console Translated Report。
       開啟 dump 用 Console（或 <code>lldb</code>）。以下皆為真實 OS UI 截圖。
     </p>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/15_OS_DiagnosticReports_Retired.png" alt="DiagnosticReports Retired" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/15_OS_DiagnosticReports_Retired.png" alt="DiagnosticReports Retired" loading="lazy" />
         <figcaption class="frame-cap"><span>Finder · <code>~/Library/Logs/DiagnosticReports/Retired</code></span><span>15 · OS</span></figcaption>
       </figure>
     </div>
     <div class="pair">
       <figure class="card">
-        <img src="shots/17_OS_DiagnosticReports_PrusaSlicer.png" alt="BEFORE ips filenames" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/17_OS_DiagnosticReports_PrusaSlicer.png" alt="BEFORE ips filenames" loading="lazy" />
         <figcaption class="card-foot"><span class="badge before">Before</span> <code>PrusaSlicer-*.ips</code> filenames</figcaption>
       </figure>
       <figure class="card">
-        <img src="shots/16_OS_DiagnosticReports_slicer-engine.png" alt="AFTER ips filenames" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/16_OS_DiagnosticReports_slicer-engine.png" alt="AFTER ips filenames" loading="lazy" />
         <figcaption class="card-foot"><span class="badge after">After</span> <code>slicer-engine-*.ips</code> filenames</figcaption>
       </figure>
     </div>
     <div class="showcase">
       <figure class="frame">
-        <img src="shots/18b_OS_ips_slicer-engine_exception_clean_Console.png" alt="AFTER clean exception" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/shots/18b_OS_ips_slicer-engine_exception_clean_Console.png" alt="AFTER clean exception" loading="lazy" />
         <figcaption class="frame-cap"><span>AFTER · 5.1b exception clean · Console（neutral terminate／無型別名）</span><span>18b · Console</span></figcaption>
       </figure>
     </div>
@@ -1670,17 +1903,108 @@
   <section id="optimization">
     <div class="section-head">
       <span class="section-num">07</span>
-      <h2>Compiler optimization · <em style="font-style:italic;color:var(--muted)">-O2 verified</em></h2>
+      <h2>Compiler optimization · <em style="font-style:italic;color:var(--muted)">/O2 ＋ -O2 verified</em></h2>
     </div>
 
+    <div class="plat-h"><span class="plat win">Windows</span><span class="plat-h-note">MSVC /O2</span></div>
     <div class="verdict">
-      <p class="verdict-kicker">Verdict · this machine</p>
+      <p class="verdict-kicker">Verdict · Windows machine</p>
+      <h3>CONFIRMED — Windows consumer build uses MSVC <code style="font-family:ui-monospace,Consolas,monospace;font-size:.85em">/O2</code></h3>
+      <p>
+        Literal <code style="color:var(--ink)">-O2</code> is a GCC/Clang spelling.
+        On this Windows MSVC toolchain the equivalent flag is <code style="color:var(--after)">/O2</code>,
+        wired through CMake <code style="color:var(--ink)">Release</code> →
+        <code style="color:var(--ink)">CMAKE_CXX_FLAGS_RELEASE</code> →
+        vcxproj <code style="color:var(--ink)">&lt;Optimization&gt;MaxSpeed&lt;/Optimization&gt;</code>.
+        Full notes: <a href="../windows/before-after-compare-20260720/optimization-evidence/SUMMARY.md" style="color:var(--accent)">optimization-evidence/SUMMARY.md</a>
+        · <a href="../windows/before-after-compare-20260720/optimization-evidence/VERDICT.json" style="color:var(--accent)">VERDICT.json</a>
+      </p>
+    </div>
+
+    <div class="flag-grid">
+      <div class="flag-card">
+        <span class="label">CMake Release (C++)</span>
+        <div class="value">/MD /O2 /Ob2 /DNDEBUG</div>
+      </div>
+      <div class="flag-card">
+        <span class="label">vcxproj Release|x64</span>
+        <div class="value">MaxSpeed → /O2</div>
+      </div>
+      <div class="flag-card contrast">
+        <span class="label">Contrast · Debug</span>
+        <div class="value">/Od (optimization off)</div>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:28px">
+      <table>
+        <thead><tr><th>Evidence</th><th>What it proves</th><th>Artifact</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>CMakeCache.txt</td>
+            <td class="after">CMAKE_CXX_FLAGS_RELEASE contains /O2</td>
+            <td><a href="../windows/before-after-compare-20260720/optimization-evidence/01_CMakeCache_flags.txt" style="color:var(--accent)">01_CMakeCache_flags.txt</a></td>
+          </tr>
+          <tr>
+            <td>PrusaSlicer_app_console.vcxproj</td>
+            <td class="after">Release|x64 Optimization=MaxSpeed (= /O2)</td>
+            <td><a href="../windows/before-after-compare-20260720/optimization-evidence/02_vcxproj_PrusaSlicer_app_console_Release_x64.txt" style="color:var(--accent)">02_…console…txt</a></td>
+          </tr>
+          <tr>
+            <td>libslic3r.vcxproj</td>
+            <td class="after">Same MaxSpeed /O2 on core library</td>
+            <td><a href="../windows/before-after-compare-20260720/optimization-evidence/03_vcxproj_libslic3r_Release_x64.txt" style="color:var(--accent)">03_…libslic3r…txt</a></td>
+          </tr>
+          <tr>
+            <td>build_prusaslicer_fork_windows.bat</td>
+            <td class="after">--config Release → outputs under src\Release\</td>
+            <td><a href="../windows/before-after-compare-20260720/optimization-evidence/04_build_script_windows_Release.txt" style="color:var(--accent)">04_build_script…txt</a></td>
+          </tr>
+          <tr>
+            <td>macOS script (doc only)</td>
+            <td>Default RelWithDebInfo ≈ Clang -O2 + debug info</td>
+            <td><a href="../windows/before-after-compare-20260720/optimization-evidence/05_build_script_macos_RelWithDebInfo.txt" style="color:var(--accent)">05_macos…txt</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="showcase">
+      <figure class="frame">
+        <img src="../windows/before-after-compare-20260720/optimization-evidence/shots/01_CMakeCache_flags.png" alt="CMakeCache /O2 evidence" loading="lazy" />
+        <figcaption class="frame-cap"><span>CMakeCache — CMAKE_CXX_FLAGS_RELEASE = /MD /O2 /Ob2 /DNDEBUG</span><span>Evidence 1</span></figcaption>
+      </figure>
+    </div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/optimization-evidence/shots/02_vcxproj_console_Release.png" alt="vcxproj console Release" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">/O2</span> slicer-engine.exe · MaxSpeed</figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/optimization-evidence/shots/03_vcxproj_libslic3r_Release.png" alt="vcxproj libslic3r Release" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">/O2</span> libslic3r · MaxSpeed</figcaption>
+      </figure>
+    </div>
+    <div class="pair">
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/optimization-evidence/shots/04_build_script_windows.png" alt="Windows build script Release" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">Release</span> build_prusaslicer_fork_windows.bat</figcaption>
+      </figure>
+      <figure class="card">
+        <img src="../windows/before-after-compare-20260720/optimization-evidence/shots/05_SUMMARY_verdict.png" alt="Verdict summary" loading="lazy" />
+        <figcaption class="card-foot"><span class="badge after">Verdict</span> SUMMARY.md</figcaption>
+      </figure>
+    </div>
+
+    <div class="plat-h"><span class="plat mac">macOS</span><span class="plat-h-note">Clang -O2（RelWithDebInfo）</span></div>
+    <div class="verdict">
+      <p class="verdict-kicker">Verdict · macOS machine</p>
       <h3>CONFIRMED — macOS engine build uses Clang <code style="font-family:ui-monospace,Consolas,monospace;font-size:.85em">-O2</code> via RelWithDebInfo</h3>
       <p>
         CMake <code style="color:var(--ink)">CMAKE_BUILD_TYPE=RelWithDebInfo</code> →
         <code style="color:var(--after)">CMAKE_CXX_FLAGS_RELWITHDEBINFO=-O2 -g -DNDEBUG</code>.
-        Full notes: <a href="optimization-evidence/SUMMARY.md" style="color:var(--accent)">optimization-evidence/SUMMARY.md</a>
-        · <a href="optimization-evidence/VERDICT.json" style="color:var(--accent)">VERDICT.json</a>
+        Full notes: <a href="../macos/before-after-compare-20260721/optimization-evidence/SUMMARY.md" style="color:var(--accent)">optimization-evidence/SUMMARY.md</a>
+        · <a href="../macos/before-after-compare-20260721/optimization-evidence/VERDICT.json" style="color:var(--accent)">VERDICT.json</a>
       </p>
     </div>
 
@@ -1701,7 +2025,7 @@
 
     <div class="showcase">
       <figure class="frame">
-        <img src="optimization-evidence/shots/01_CMakeCache_flags.png" alt="CMakeCache -O2 evidence" loading="lazy" />
+        <img src="../macos/before-after-compare-20260721/optimization-evidence/shots/01_CMakeCache_flags.png" alt="CMakeCache -O2 evidence" loading="lazy" />
         <figcaption class="frame-cap"><span>CMakeCache — RelWithDebInfo = -O2 -g -DNDEBUG</span><span>Evidence 1</span></figcaption>
       </figure>
     </div>
@@ -1720,7 +2044,7 @@
         去識別後的檔名／模組名／export／thread 名皆由統一原則生成：先取<strong>功能角色詞</strong>
         （slicer／engine／core／worker／cli），再依各載體（可執行檔、DLL、C 匯出符號、OS thread 名）
         適用的<strong>合法字元集與長度上限</strong>轉寫。四項 canonical 定案與簽核見
-        <a href="../../../naming-manifest.md" style="color:var(--accent)">naming-manifest.md</a>。
+        <a href="../../naming-manifest.md" style="color:var(--accent)">naming-manifest.md</a>。
       </p>
     </div>
 
@@ -1794,11 +2118,12 @@
 
   <footer>
     <span>
-      Full notes · <a href="COMPARISON.md">COMPARISON.md</a> ·
-      <a href="optimization-evidence/SUMMARY.md">-O2 evidence</a> ·
-      <a href="../../windows/before-after-compare-20260720/index.html">Windows Before/After</a>
+      Full notes ·
+      <a href="../windows/before-after-compare-20260720/COMPARISON.md">Windows COMPARISON.md</a> ·
+      <a href="../macos/before-after-compare-20260721/COMPARISON.md">macOS COMPARISON.md</a> ·
+      <a href="../windows/before-after-compare-20260720/shim-three-way-proof.html#s9">三啟動器差異證明</a>
     </span>
-    <span>backend-slicer-engine-deidentification · macOS evidence</span>
+    <span>backend-slicer-engine-deidentification · Windows ＋ macOS evidence</span>
   </footer>
 
 </div>

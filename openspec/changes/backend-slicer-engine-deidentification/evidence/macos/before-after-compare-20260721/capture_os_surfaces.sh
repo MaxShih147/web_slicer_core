@@ -8,8 +8,8 @@ SHOTS="$ROOT/shots"
 SOURCE="$ROOT/source"
 mkdir -p "$SHOTS"
 
-BEFORE_DIR="/Applications/Bundle Launcher.app/Contents/Resources/bundle/third_party/prusaslicer_build/src"
-AFTER_ROOT="/Users/sw-dev/repos/Bundle/Bundle-Launcher/dist/mac-arm64/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine"
+BEFORE_DIR="$ROOT/staging/BEFORE_install_surface/prusaslicer_build/src"  # install-surface only（no Makefile/cmake/libs）
+AFTER_ROOT="/Applications/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine"
 AFTER_BIN="$AFTER_ROOT/bin"
 DIAG_RETIRED="$HOME/Library/Logs/DiagnosticReports/Retired"
 BEFORE_BIN="$BEFORE_DIR/PrusaSlicer"

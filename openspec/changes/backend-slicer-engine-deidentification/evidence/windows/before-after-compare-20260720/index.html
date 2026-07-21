@@ -29,7 +29,8 @@
 
     *, *::before, *::after { box-sizing: border-box; }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+    section[id] { scroll-margin-top: 88px; }
 
     body {
       margin: 0;
@@ -295,6 +296,42 @@
     thead th:nth-child(2) { color: var(--before); }
     thead th:nth-child(3) { color: var(--after); }
 
+    table.howto-merge-tbl thead th:nth-child(2) {
+      color: #9ec8f0;
+      text-transform: none;
+      letter-spacing: .02em;
+      font-size: 13px;
+    }
+    table.howto-merge-tbl thead th:nth-child(3) {
+      color: #7eebc4;
+      text-transform: none;
+      letter-spacing: .02em;
+      font-size: 13px;
+    }
+    table.howto-merge-tbl tbody td[colspan] {
+      color: var(--muted);
+    }
+    table.howto-merge-tbl tbody td:first-child {
+      white-space: normal;
+      min-width: 7.5rem;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    table.howto-merge-tbl tbody td {
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .howto > .table-wrap {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      border-top: 1px solid var(--line);
+      background: transparent;
+    }
+
     tbody td {
       padding: 14px 18px;
       border-bottom: 1px solid var(--line);
@@ -462,6 +499,331 @@
 
     .flag-card.contrast .value { color: var(--before); }
 
+    /* —— method panels: kinds + scope/degree/qty —— */
+    .howto {
+      margin: 0 0 28px;
+      padding: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .howto-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px 16px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line-strong);
+      background: var(--surface-2);
+    }
+    .howto-head .htag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .howto-head .htitle {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .howto-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border-bottom: 1px solid var(--line-strong);
+      background: rgba(0,0,0,.18);
+    }
+    @media (max-width: 820px) {
+      .howto-meta { grid-template-columns: 1fr; }
+    }
+    .howto-meta .m {
+      padding: 12px 16px;
+      border-right: 1px solid var(--line);
+    }
+    .howto-meta .m:last-child { border-right: none; }
+    @media (max-width: 820px) {
+      .howto-meta .m { border-right: none; border-bottom: 1px solid var(--line); }
+      .howto-meta .m:last-child { border-bottom: none; }
+    }
+    .howto-meta .m .ml {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .howto-meta .m .mv {
+      font-size: 13.5px;
+      line-height: 1.45;
+      color: var(--ink);
+      font-weight: 550;
+    }
+    .howto-kinds {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-bottom: 1px solid var(--line-strong);
+    }
+    @media (max-width: 820px) {
+      .howto-kinds { grid-template-columns: 1fr; }
+    }
+    .howto-kinds .kind {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px 16px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .howto-kinds .kind:nth-child(2n) { border-right: none; }
+    @media (max-width: 820px) {
+      .howto-kinds .kind { border-right: none; }
+    }
+    .howto-kinds .kind .k {
+      flex-shrink: 0;
+      min-width: 4.8em;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--void);
+      background: var(--accent);
+      border-radius: 2px;
+      text-align: center;
+    }
+    .howto-kinds .kind .k.off {
+      color: var(--dim);
+      background: transparent;
+      border: 1px solid var(--line-strong);
+    }
+    .howto-kinds .kind code {
+      font-size: 12px;
+      padding: 1px 5px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      color: var(--ink);
+    }
+    .howto-kinds .kind .plat {
+      display: inline-block;
+      margin-right: 4px;
+      padding: 0 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-radius: 2px;
+    }
+    .howto-kinds .kind .plat.win {
+      color: #d8ecff;
+      background: rgba(100,160,220,.22);
+      border: 1px solid rgba(120,180,240,.35);
+    }
+    .howto-kinds .kind .plat.mac {
+      color: #e8fff5;
+      background: rgba(80,200,160,.18);
+      border: 1px solid rgba(126,235,196,.35);
+    }
+    .howto-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+    }
+    @media (max-width: 900px) {
+      .howto-grid { grid-template-columns: 1fr; }
+    }
+    .howto-col {
+      padding: 14px 16px 16px;
+      border-right: 1px solid var(--line);
+    }
+    .howto-col:last-child { border-right: none; }
+    @media (max-width: 900px) {
+      .howto-col {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+      .howto-col:last-child { border-bottom: none; }
+    }
+    .howto-col .clabel {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .howto-col ul {
+      margin: 0;
+      padding: 0 0 0 1.1em;
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .howto-col li { margin: 0 0 6px; }
+    .howto-col li:last-child { margin-bottom: 0; }
+    .howto-col code {
+      font-size: 12px;
+      padding: 1px 5px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      color: var(--ink);
+    }
+
+    .howto-merge {
+      display: grid;
+      grid-template-columns: 140px 1fr 1.2fr;
+      gap: 0;
+      border-top: 1px solid var(--line-strong);
+      background: rgba(224,192,112,.06);
+    }
+    @media (max-width: 900px) {
+      .howto-merge { grid-template-columns: 1fr; }
+    }
+    .howto-merge .mg {
+      padding: 12px 16px;
+      border-right: 1px solid var(--line);
+    }
+    .howto-merge .mg:last-child { border-right: none; }
+    @media (max-width: 900px) {
+      .howto-merge .mg { border-right: none; border-bottom: 1px solid var(--line); }
+      .howto-merge .mg:last-child { border-bottom: none; }
+    }
+    .howto-merge .ml {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .howto-merge .diff {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .howto-merge .badge-diff,
+    table.howto-merge-tbl .badge-diff {
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      border-radius: 2px;
+    }
+    .howto-merge .badge-diff.easy,
+    table.howto-merge-tbl .badge-diff.easy {
+      color: #06281c;
+      background: var(--after);
+    }
+    .howto-merge .badge-diff.mid,
+    table.howto-merge-tbl .badge-diff.mid {
+      color: #2a2208;
+      background: var(--accent);
+    }
+    .howto-merge .badge-diff.hard,
+    table.howto-merge-tbl .badge-diff.hard {
+      color: #fff;
+      background: rgba(255,100,80,.75);
+      border: 1px solid var(--before);
+    }
+    /* half-filled star: base outline ☆ + left-half solid ★ overlay */
+    .star-half {
+      position: relative;
+      display: inline-block;
+    }
+    .star-half > i {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 50%;
+      overflow: hidden;
+      font-style: normal;
+    }
+    .howto-merge .mv {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .howto-merge code {
+      font-size: 12px;
+      padding: 1px 5px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      color: var(--ink);
+    }
+
+    .howto-effect {
+      border-top: 1px solid var(--line);
+      padding: 12px 18px 14px;
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--muted);
+      background: linear-gradient(135deg, rgba(110,196,168,.08), rgba(201,169,98,.05));
+    }
+    .howto-effect strong { color: var(--after); font-weight: 650; }
+
+    /* —— 白話說明（給非技術背景讀者） —— */
+    .howto-plain {
+      margin: 0;
+      padding: 16px 18px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(110,196,168,.06);
+    }
+    .howto-plain .plabel {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      color: var(--after);
+      margin-bottom: 8px;
+    }
+    .howto-plain p {
+      margin: 0 0 8px;
+      font-size: 14.5px;
+      line-height: 1.75;
+      color: var(--ink);
+    }
+    .howto-plain p:last-child { margin-bottom: 0; }
+    .howto-plain .q {
+      color: var(--muted);
+      font-weight: 600;
+    }
+    details.howto-tech {
+      border-top: 1px solid var(--line);
+    }
+    details.howto-tech > summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 11px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      color: var(--muted);
+      user-select: none;
+    }
+    details.howto-tech > summary::-webkit-details-marker { display: none; }
+    details.howto-tech > summary::before {
+      content: "▸ ";
+      color: var(--accent);
+    }
+    details.howto-tech[open] > summary::before { content: "▾ "; }
+    details.howto-tech > summary:hover { color: var(--ink); }
+
     /* —— site switcher (shared with shim-three-way-proof.html) —— */
     .site-switcher {
       position: sticky;
@@ -620,7 +982,8 @@
     .zoom-bar .hint {
       flex: 1;
       min-width: 200px;
-      font-size: 13.5px;
+      font-size: 11px;
+      opacity: .72;
       color: var(--muted);
     }
 
@@ -664,6 +1027,22 @@
       background: var(--line-strong);
       margin: 0 4px;
     }
+
+    /* —— DOM loupe: magnify tables & text (mode 全頁) —— */
+    .dom-loupe .dom-loupe-view {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .dom-loupe .dom-loupe-canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform-origin: 0 0;
+      pointer-events: none;
+    }
+    .dom-loupe .loupe-hud { z-index: 2; }
 
     /* lightbox for presentation click */
     .lightbox {
@@ -709,10 +1088,113 @@
       .loupe { display: none !important; }
       .zoomable { cursor: pointer; }
     }
+
+    /* —— left section jump nav —— */
+    .side-toc {
+      position: fixed;
+      top: 50%;
+      left: 16px;
+      z-index: 60;
+      transform: translateY(-50%);
+      width: 168px;
+      padding: 12px 10px;
+      background: rgba(34,36,44,.92);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    }
+    .side-toc .toc-label {
+      display: block;
+      margin: 0 6px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .side-toc a {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 8px 8px;
+      margin: 0 0 2px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12.5px;
+      line-height: 1.3;
+      border-radius: 2px;
+      border: 1px solid transparent;
+      transition: color .2s, background .2s, border-color .2s;
+    }
+    .side-toc a:hover {
+      color: var(--ink);
+      background: rgba(255,255,255,.05);
+      border-color: var(--line);
+    }
+    .side-toc a.is-active {
+      color: var(--void);
+      background: var(--accent);
+      border-color: var(--accent);
+      font-weight: 650;
+    }
+    .side-toc a .n {
+      flex-shrink: 0;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 15px;
+      opacity: .85;
+      min-width: 1.4em;
+    }
+    .side-toc a.is-active .n { opacity: 1; }
+    .side-toc a .t {
+      flex: 1;
+      min-width: 0;
+    }
+    @media (max-width: 1180px) {
+      .side-toc {
+        top: auto;
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        transform: none;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 6px;
+        padding: 10px 12px;
+      }
+      .side-toc .toc-label {
+        width: 100%;
+        margin: 0 0 4px;
+      }
+      .side-toc a {
+        margin: 0;
+        padding: 6px 9px;
+        font-size: 12px;
+      }
+      .shell { padding-bottom: 140px; }
+    }
+    @media (min-width: 1181px) {
+      .shell { padding-left: 196px; }
+    }
   </style>
 </head>
 <body>
 <div class="shell">
+
+  <nav class="side-toc" aria-label="區塊快速定錨">
+    <span class="toc-label">跳至區塊</span>
+    <a href="#install-folder"><span class="n">01</span><span class="t">Install folder</span></a>
+    <a href="#identity"><span class="n">02</span><span class="t">VERSIONINFO</span></a>
+    <a href="#crash-table"><span class="n">03</span><span class="t">Crash diagnostics</span></a>
+    <a href="#fork-changes"><span class="n">04</span><span class="t">Fork changes</span></a>
+    <a href="#pairs"><span class="n">05</span><span class="t">Individual captures</span></a>
+    <a href="#os-minidump"><span class="n">06</span><span class="t">OS minidump</span></a>
+    <a href="#optimization"><span class="n">07</span><span class="t">Optimization</span></a>
+    <a href="#naming"><span class="n">08</span><span class="t">Naming rules</span></a>
+  </nav>
 
   <nav class="site-switcher" aria-label="Evidence report pages">
     <span class="site-label">Reports</span>
@@ -720,13 +1202,14 @@
     <a href="shim-three-way-proof.html#s9">三啟動器差異證明</a>
     <a href="COMPARISON.md">COMPARISON.md</a>
     <a href="../../macos/before-after-compare-20260721/index.html">macOS 對照報告</a>
+    <a href="../../combined-before-after-compare-20260721/index.html">整合報告 Win＋mac</a>
   </nav>
 
   <div class="zoom-bar" role="toolbar" aria-label="Screenshot magnifier controls">
     <div class="hint">
       簡報提示：滑鼠移到截圖上會出現<strong>放大鏡</strong> ·
       點擊截圖可<strong>全螢幕檢視</strong> ·
-      快捷鍵 <strong>[</strong> / <strong>]</strong> 調倍率 · <strong>Esc</strong> 關閉
+      快捷鍵 <strong>[</strong> / <strong>]</strong> 調倍率 · <strong>L</strong> 切換放大鏡模式 · <strong>Esc</strong> 關閉
     </div>
     <div class="controls">
       <button type="button" data-zoom="2" class="is-active">2×</button>
@@ -737,6 +1220,11 @@
       <button type="button" data-size="180">小鏡</button>
       <button type="button" data-size="220" class="is-active">中鏡</button>
       <button type="button" data-size="300">大鏡</button>
+      <button type="button" data-size="460">特大鏡</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" data-mode="img" class="is-active">鏡：截圖</button>
+      <button type="button" data-mode="all">鏡：全頁</button>
+      <button type="button" data-mode="off">鏡：關</button>
     </div>
   </div>
 
@@ -745,43 +1233,14 @@
     <h1>Before <em>→</em> After<br />De-identification</h1>
     <p class="hero-lede">
       Crash diagnostics, install paths, PE identity — plus verified compiler optimization
-      (<code style="color:var(--after)">/O2</code> on Windows) from this machine’s CMake cache and MSBuild projects.
+      (<code style="color:var(--after)">/O2</code>) from this machine’s CMake cache and MSBuild projects.
     </p>
-    <div class="meta-row">
-      <span class="pill"><strong>2026-07-20</strong> refresh</span>
-      <span class="pill">OpenSpec <strong>backend-slicer-engine-deidentification</strong></span>
-      <span class="pill">Live screenshots</span>
-      <span class="pill"><strong>/O2</strong> confirmed</span>
-    </div>
-
-    <aside class="provenance">
-      <p class="provenance-title">Provenance</p>
-      <p>
-        <strong style="color:var(--ink)">AFTER</strong> — Explorer, WinDbg, and Properties are live captures of consumer artifacts on this machine.
-        <strong style="color:var(--ink)">BEFORE</strong> — crash / VERSIONINFO / inventory text from baseline
-        <code>win-baseline-20260717T055632Z</code>.
-        <strong style="color:var(--ink)">BEFORE Explorer (section 01 left)</strong> —
-        real tree
-        <code>C:\Program Files\Bundle Launcher\resources\bundle\third_party\prusaslicer_build\src\Release</code>
-        with authentic PrusaSlicer PE icons（2026-07-20 refresh）.
-      </p>
-      <p>
-        <strong style="color:var(--accent)">2026-07-20 fixes</strong> —
-        (1) <code>slicer-engine.exe</code> icon → <code>WebSlicer_PrinterControl/assets/icon.ico</code> via rcedit;
-        (2) AFTER VERSIONINFO from consumer <code>slicer-engine\bin</code> — no <code>prusaslicer_build</code> in paths;
-        (3) <strong style="color:var(--ink)">WER surface</strong> rebuilt from live OS UI —
-        Explorer <code>AppCrash_prusa-slicer-con…</code> vs <code>AppCrash_slicer-engine…</code>
-        + identity fields annotated（red=prusa/slic3r，green=slicer-engine）；
-        cleaned ghosting／overlapping labels.
-        Hard-refresh <kbd style="font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:2px">Ctrl+F5</kbd> if images are cached.
-      </p>
-    </aside>
   </header>
 
-  <section id="composites">
+  <section id="install-folder">
     <div class="section-head">
       <span class="section-num">01</span>
-      <h2>Comparison composites</h2>
+      <h2>Install folder &amp; paths</h2>
     </div>
 
     <div class="showcase">
@@ -790,16 +1249,112 @@
         <figcaption class="frame-cap"><span>Install folder filenames</span><span>01 · Explorer</span></figcaption>
       </figure>
     </div>
+    <aside class="howto" aria-label="§01 修改說明">
+      <div class="howto-head">
+        <span class="htag">01 · Install folder &amp; paths</span>
+        <span class="htitle">安裝路徑／檔名去品牌＋正式包出貨清單</span>
+      </div>
+      <div class="howto-plain">
+        <span class="plabel">白話說明</span>
+        <p><span class="q">這在做什麼？</span>把軟體「安裝到電腦後看得到的資料夾名稱、檔案名稱」全部換成中性名字。以前用檔案總管打開安裝資料夾，會看到 Prusa／slic3r 這些第三方品牌的字樣；現在都改成 <code>slicer-engine</code> 這種看不出來源的名字。</p>
+        <p><span class="q">會影響功能嗎？</span>不會。我們只改「名字和擺放位置」，軟體實際怎麼運算、怎麼切片完全沒動，功能和速度都一樣。</p>
+        <p><span class="q">為什麼重要？</span>這是客戶最容易看到的地方——只要打開安裝資料夾就一目了然。清乾淨後，一般使用者從檔名看不出這是別家的軟體。</p>
+      </div>
+      <details class="howto-tech">
+        <summary>技術細節（工程師檢視）</summary>
+        <div class="table-wrap">
+          <table class="howto-merge-tbl">
+            <thead><tr><th>項目</th><th>Windows</th><th>macOS</th></tr></thead>
+            <tbody>
+              <tr><td>修改範圍</td><td colspan="2">fork 輸出名 → 打包目錄／出貨清單 → Launcher 複製路徑（不含切片演算法；開發機 <code>prusaslicer_build</code> 工作樹不強制改名）</td></tr>
+              <tr><td>修改程度</td><td colspan="2">必要 · 表面改名／重佈局＋出貨邊界收斂（不動程式內部命名；不編／不出貨 GUI·viewer）</td></tr>
+              <tr><td>修改數量</td><td>出貨核心：2 PE（exe＋DLL）＋deps；GUI·viewer·.exp·.lib = 0 出貨；agent 路徑 1 處</td><td>出貨核心：1 CLI；另＋manifest／legal；GUI·viewer = 0 出貨；agent 路徑 1 處</td></tr>
+              <tr><td>編譯建置</td><td>CMake／MSBuild <code>OUTPUT_NAME</code>（exe＋DLL），預設 <code>SLIC3R_GUI=OFF</code></td><td><code>OUTPUT_NAME=slicer-engine</code>，移除品牌 symlink</td></tr>
+              <tr><td>後處理／包版</td><td><code>package_slicer_engine_windows.ps1</code> → <code>slicer-engine\</code>；SKIP／不複製舊品牌檔</td><td><code>package_slicer_engine_macos.sh</code> → <code>slicer-engine/bin/</code>；SKIP／不複製舊品牌檔</td></tr>
+              <tr><td>設定／路徑</td><td colspan="2">agent <code>SLICER_ENGINE_BIN</code> 只指向 console／CLI；Launcher 驗證 hash 後簽署，不再二次 rename</td></tr>
+              <tr><td>程式碼邏輯</td><td colspan="2"><strong>不改</strong>切片演算法；僅產物檔名／目錄契約與「出什麼檔」</td></tr>
+              <tr><td>修改重點</td><td><code>prusa-slicer-console.exe</code>→<code>slicer-engine.exe</code>、<code>PrusaSlicer.dll</code>→<code>slicer_core.dll</code>；目錄改為 <code>slicer-engine\</code></td><td><code>PrusaSlicer</code>→<code>slicer-engine</code>；目錄改為 <code>slicer-engine/</code></td></tr>
+              <tr><td>達到效果</td><td>Explorer 安裝樹檔名無 Prusa／slic3r；「看得到的樹」＝「agent 真的呼叫的」；舊全量樹殘留不進正式包</td><td>Finder 安裝樹檔名無 Prusa／slic3r；「看得到的樹」＝「agent 真的呼叫的」；舊全量樹殘留不進正式包</td></tr>
+              <tr><td>上游 merge</td><td colspan="2"><span class="badge-diff easy">易</span> ★☆☆ · 改名＋腳本層為主；保留 <code>OUTPUT_NAME</code>、<code>GUI=OFF</code>、SKIP 規則與 Launcher／agent 路徑契約</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <div class="howto-effect"><strong>一句話：</strong>使用者看到的「裝在哪、叫什麼」已去品牌，正式包只出中性引擎檔。</div>
+    </aside>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>Before（舊清點）</th><th>After（正式包）</th></tr></thead>
+        <tbody>
+          <tr><td>Engine root</td><td class="before">…\third_party\prusaslicer_build\src\Release\</td><td class="after">…\slicer-engine\</td></tr>
+          <tr><td>CLI exe（agent 實際呼叫；唯一會編）</td><td class="before">prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
+          <tr><td>GUI（舊樹殘留；現行不編）</td><td class="before">prusa-slicer.exe</td><td class="after">(not shipped)</td></tr>
+          <tr><td>Core DLL</td><td class="before">PrusaSlicer.dll</td><td class="after">slicer_core.dll</td></tr>
+          <tr><td>Viewer（舊樹殘留；現行不編）</td><td class="before">prusa-gcodeviewer.exe</td><td class="after">(not shipped)</td></tr>
+          <tr><td>Build leftovers</td><td class="before">PrusaSlicer.exp / .lib</td><td class="after">(not shipped)</td></tr>
+          <tr><td>Deps</td><td>libgmp-10.dll, libmpfr-4.dll</td><td>libgmp-10.dll, libmpfr-4.dll</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="identity">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>PE VERSIONINFO · <em style="font-style:italic;color:var(--muted);font-weight:500">real Properties Details</em></h2>
+    </div>
+
+    <div class="showcase">
+      <figure class="frame">
+        <img src="shots/COMPARE_03_VERSIONINFO_before_vs_after.png" alt="VERSIONINFO before vs after" loading="lazy" />
+        <figcaption class="frame-cap"><span>PE VERSIONINFO · real Properties Details</span><span>02 · Properties</span></figcaption>
+      </figure>
+    </div>
+    <aside class="howto" aria-label="§02 PE VERSIONINFO 修改說明">
+      <div class="howto-head">
+        <span class="htag">02 · PE VERSIONINFO</span>
+        <span class="htitle">身分字串去品牌</span>
+      </div>
+      <div class="howto-plain">
+        <span class="plabel">白話說明</span>
+        <p><span class="q">這在做什麼？</span>每個程式檔案在 Windows 按右鍵「內容」→「詳細資料」時，會顯示「公司名稱、產品名稱、版本」等資訊。以前這裡寫的是 Prusa Research／PrusaSlicer；現在改成我們自己的公司與產品名（Phrozen／Slicer Engine）。</p>
+        <p><span class="q">會影響功能嗎？</span>不會。這裡改的只是「檔案上顯示的文字標籤」，就像換掉名片上的名字，程式怎麼運作完全不變。</p>
+        <p><span class="q">為什麼重要？</span>這是另一個客戶隨手就能查到的來源證據。改乾淨後，看檔案內容也看不出是別家的產品。</p>
+      </div>
+      <details class="howto-tech">
+        <summary>技術細節（工程師檢視）</summary>
+        <div class="table-wrap">
+          <table class="howto-merge-tbl">
+            <thead><tr><th>項目</th><th>Windows</th><th>macOS</th></tr></thead>
+            <tbody>
+              <tr><td>修改範圍</td><td>PE VERSIONINFO（抬頭身分，不含法遵 AGPL 檔）</td><td>codesign Identifier／Info.plist（抬頭身分，不含法遵 AGPL 檔）</td></tr>
+              <tr><td>修改程度</td><td colspan="2">必要 · 字串／資源置換（不改簽署法人鏈本身）</td></tr>
+              <tr><td>修改數量</td><td>VERSIONINFO 欄位約 6–8 項×（exe＋DLL）</td><td>Identifier 1＋plist 品牌鍵清除</td></tr>
+              <tr><td>資源／設定</td><td>exe／DLL <code>.rc</code> VERSIONINFO</td><td>刪除或中性化 <code>Info.plist</code>／<code>CFBundleIdentifier</code></td></tr>
+              <tr><td>後處理</td><td>Properties／WER 讀同一套 VERSIONINFO</td><td><code>codesign --identifier slicer-engine</code></td></tr>
+              <tr><td>編譯／邏輯</td><td colspan="2">本項以資源字串為主，不改切片流程；優化旗標（/O2、-O2）見 §07</td></tr>
+              <tr><td>修改重點</td><td>Company／Product：Prusa…→Phrozen／Slicer Engine</td><td><code>com.prusa3d.slic3r/</code>→<code>slicer-engine</code></td></tr>
+              <tr><td>達到效果</td><td>Properties 抬頭無 Prusa 產品名；不依賴堆疊即可通過身分檢查</td><td>codesign／.ips 抬頭無 Prusa 產品名；不依賴堆疊即可通過身分檢查</td></tr>
+              <tr><td>上游 merge</td><td colspan="2"><span class="badge-diff easy">易</span> ★☆☆ · 小檔常撞、好解；吃進上游版本號後重套中性 Company／Product／Identifier</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <div class="howto-effect"><strong>一句話：</strong>檔案屬性與簽署 Identifier 看起來已是中性引擎。</div>
+    </aside>
+  </section>
+
+  <section id="crash-table">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>Crash &amp; OS diagnostics</h2>
+    </div>
+
     <div class="showcase">
       <figure class="frame">
         <img src="shots/COMPARE_02_crash_minidump_stack_before_vs_after.png" alt="Crash stack before vs after" loading="lazy" />
         <figcaption class="frame-cap"><span>Crash minidump — Before <code>lm</code>+<code>k</code> brand frames vs After AV + <code>slicer_run_cli</code></span><span>02 · PDB-free cdb</span></figcaption>
-      </figure>
-    </div>
-    <div class="showcase">
-      <figure class="frame">
-        <img src="shots/COMPARE_03_VERSIONINFO_before_vs_after.png" alt="VERSIONINFO before vs after" loading="lazy" />
-        <figcaption class="frame-cap"><span>PE VERSIONINFO · real Properties Details</span><span>03 · Identity</span></figcaption>
       </figure>
     </div>
     <div class="showcase">
@@ -814,13 +1369,71 @@
         <figcaption class="frame-cap"><span>Report.wer identity · red=prusa/slic3r · green=slicer-engine</span><span>04b · annotated</span></figcaption>
       </figure>
     </div>
-  </section>
 
-  <section id="crash-table">
-    <div class="section-head">
-      <span class="section-num">02</span>
-      <h2>Crash &amp; OS diagnostics</h2>
-    </div>
+    <aside class="howto" aria-label="§03 Crash stack &amp; diagnostics 修改說明">
+      <div class="howto-head">
+        <span class="htag">03 · Crash &amp; diagnostics</span>
+        <span class="htitle">OS 可讀堆疊去品牌＋崩潰診斷表面總表</span>
+      </div>
+      <div class="howto-plain">
+        <span class="plabel">白話說明</span>
+        <p><span class="q">這在做什麼？</span>程式萬一當掉，作業系統（Windows／Mac）會自動生成一份「當機報告」，裡面記錄是哪個程式、哪一段出錯。客服、送修單位、甚至第三方都可能看到這份報告。以前報告裡會冒出 Prusa／slic3r 的字樣；現在連這些藏在技術細節裡的名字也一併清乾淨。做法之一是 <strong>strip</strong>——把編譯時附帶的「除錯名冊（符號表）」從程式檔中移除：功能完全不變，但外部工具再也讀不到原始函式名稱。</p>
+        <p><span class="q">會影響功能嗎？</span>不會。程式該怎麼跑還是怎麼跑，只是「當掉時報告上寫的名字」換成中性名稱。</p>
+        <p><span class="q">為什麼重要？</span>當機報告是最不容易注意、卻最容易洩漏來源的地方。這是最深、最技術性的一層；連這裡都清掉，代表從一般使用者到工程師層級都查不出原始品牌。</p>
+      </div>
+      <details class="howto-tech">
+        <summary>技術細節（工程師檢視）</summary>
+        <div class="table-wrap">
+          <table class="howto-merge-tbl">
+            <thead>
+              <tr>
+                <th>項目</th>
+                <th>Windows</th>
+                <th>macOS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>修改範圍</td>
+                <td>符號可見性／export／thread 名／排除 PDB；行程名＋模組＋stack＋WER 抬頭</td>
+                <td>符號可見性／thread 名／strip；行程名＋stack＋.ips 抬頭</td>
+              </tr>
+              <tr>
+                <td>修改程度</td>
+                <td colspan="2">必要 · 只清「OS 報告讀得到」的名字（<strong>不做</strong>全面改寫程式內部命名或加殼混淆）；雙平台皆必須，單平台通過不算完成</td>
+              </tr>
+              <tr>
+                <td>修改數量</td>
+                <td>公開 export ~470→<strong>1</strong>；thread 全 call site；下表約 8–10 個診斷表面欄位；QA crash 驗證</td>
+                <td>nm brand ~4959→<strong>0</strong>；thread 全 call site；下表約 8–10 個診斷表面欄位；QA crash 驗證</td>
+              </tr>
+              <tr>
+                <td>採用方式</td>
+                <td><strong>編譯</strong>收斂 export／visibility；<strong>後處理</strong>排除 PDB；<strong>程式碼</strong>改 thread 名；§01 改名＋WER 串成診斷全鏈</td>
+                <td><strong>編譯</strong>收斂 visibility；<strong>後處理</strong>strip；<strong>程式碼</strong>改 thread 名；§01 改名＋.ips 串成診斷全鏈</td>
+              </tr>
+              <tr>
+                <td>修改重點</td>
+                <td><code>slic3r_main</code>→唯一 <code>slicer_run_cli</code>；Process／DLL／stack／WER／PDB</td>
+                <td><code>Slic3r::</code>→僅 <code>imageOffset</code>；thread→中性名；procName／stack／.ips 檔名</td>
+              </tr>
+              <tr>
+                <td>達到效果</td>
+                <td>cdb／WER 無品牌模組幀；下表 Before→After 一一中性名</td>
+                <td>.ips 無 <code>Slic3r::</code>；下表 Before→After 一一中性名</td>
+              </tr>
+              <tr>
+                <td>上游 merge</td>
+                <td><span class="badge-diff easy">易～中</span> ★<span class="star-half">☆<i>★</i></span>☆ · 搜尋新 <code>slic3r_</code> thread；export 仍＝1；合完重跑 scanner＋至少一組 segfault／overflow</td>
+                <td><span class="badge-diff easy">易～中</span> ★<span class="star-half">☆<i>★</i></span>☆ · 搜尋新 <code>slic3r_</code> thread；.ips 無 <code>Slic3r::</code>；合完重跑 scanner＋至少一組 segfault／overflow</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <div class="howto-effect"><strong>一句話：</strong>客服讀得到的堆疊與診斷欄位都已換成 slicer-engine 家族名稱。</div>
+    </aside>
+
     <div class="table-wrap">
       <table>
         <thead><tr><th>Surface</th><th>Before</th><th>After</th></tr></thead>
@@ -840,30 +1453,86 @@
     </div>
   </section>
 
-  <section id="install-table">
+  <section id="fork-changes">
     <div class="section-head">
-      <span class="section-num">03</span>
-      <h2>Install folder &amp; paths</h2>
+      <span class="section-num">04</span>
+      <h2>prusaslicer_fork 去識別變更統計</h2>
     </div>
-    <p style="margin:0 0 16px;font-size:14px;line-height:1.55;color:var(--dim);max-width:72ch">
-      Before 欄是<strong style="color:var(--muted);font-weight:500">舊 unpack／Program Files 清點</strong>（見
-      <code>BEFORE_path_inventory.txt</code>），不是「現行官方 bat 會編出什麼」。
-      GUI／viewer 在 Before 出現＝舊全量樹殘留；agent 只呼叫 console。
-      現行管線：預設<strong style="color:var(--muted);font-weight:500">不編</strong> GUI／viewer，打包再 SKIP 防舊檔——
-      詳見 <a href="shim-three-way-proof.html#s8" style="color:var(--accent)">三啟動器證明 §08 建置 vs 打包</a>。
-      After 的「not shipped」＝正式包不出貨，不是「三個都編好再刪」。
-    </p>
-    <div class="table-wrap">
+
+    <div class="verdict">
+      <p class="verdict-kicker">Scope · third_party/prusaslicer_fork</p>
+      <h3>22 檔 · 7 commits · 主軸是改名／visibility／export／身分字串（非切片演算法）</h3>
+      <p>
+        統計範圍：去識別 commits <code style="color:var(--ink)">f04d17324</code> → <code style="color:var(--ink)">8d8746412</code>。
+        不含 deps／CMake 4.x 修補，也不含工作區未提交的 STEP／FORMAT 開關改動。
+        合計約 <code style="color:var(--after)">+397 / −114</code> 行。
+      </p>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:28px">
       <table>
-        <thead><tr><th>Item</th><th>Before（舊清點）</th><th>After（正式包）</th></tr></thead>
+        <thead><tr><th>分類</th><th>檔案數</th><th>行數變化（約）</th></tr></thead>
         <tbody>
-          <tr><td>Engine root</td><td class="before">…\third_party\prusaslicer_build\src\Release\</td><td class="after">…\slicer-engine\</td></tr>
-          <tr><td>CLI exe（agent 實際呼叫；唯一會編）</td><td class="before">prusa-slicer-console.exe</td><td class="after">slicer-engine.exe</td></tr>
-          <tr><td>GUI（舊樹殘留；現行不編）</td><td class="before">prusa-slicer.exe</td><td class="after">(not shipped)</td></tr>
-          <tr><td>Core DLL</td><td class="before">PrusaSlicer.dll</td><td class="after">slicer_core.dll</td></tr>
-          <tr><td>Viewer（舊樹殘留；現行不編）</td><td class="before">prusa-gcodeviewer.exe</td><td class="after">(not shipped)</td></tr>
-          <tr><td>Build leftovers</td><td class="before">PrusaSlicer.exp / .lib</td><td class="after">(not shipped)</td></tr>
-          <tr><td>Deps</td><td>libgmp-10.dll, libmpfr-4.dll</td><td>libgmp-10.dll, libmpfr-4.dll</td></tr>
+          <tr><td>CMake／建置系統</td><td class="after">7</td><td>+158 / −10</td></tr>
+          <tr><td>程式碼（.cpp／.hpp）</td><td class="after">10</td><td>+187 / −51</td></tr>
+          <tr><td>資源／版本／export／plist</td><td class="after">5</td><td>+52 / −53</td></tr>
+          <tr><td><strong>合計</strong></td><td class="after"><strong>22</strong></td><td><strong>+397 / −114</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <aside class="howto" aria-label="§04 fork 變更分類">
+      <div class="howto-head">
+        <span class="htag">04 · Fork changes</span>
+        <span class="htitle">CMake vs 程式碼 vs 資源</span>
+      </div>
+      <div class="howto-plain">
+        <span class="plabel">白話說明</span>
+        <p><span class="q">這在做什麼？</span>盤點 fork 裡為了去識別實際動過哪些檔。結論很清楚：幾乎都在「出貨名字、符號可見度、Windows export、檔案身分字串」；切片演算法本身幾乎沒動。</p>
+        <p><span class="q">會影響功能嗎？</span>正式 consumer 建置不開 QA crash harness。改的是檔名／入口名／顯示字串與符號收斂，不改切片結果。</p>
+        <p><span class="q">為什麼重要？</span>簡報時可直接回答「改了多少、改在哪一層」——CMake 7、程式碼 10、資源 5。</p>
+      </div>
+      <details class="howto-tech" open>
+        <summary>技術細節（檔案清單）</summary>
+        <div class="table-wrap">
+          <table class="howto-merge-tbl">
+            <thead><tr><th>分類</th><th>檔案</th><th>主要改什麼</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="7">CMake（7）</td><td><code>src/CMakeLists.txt</code></td><td><code>OUTPUT_NAME</code>→slicer-engine／slicer_core；.def；/PDBALTPATH；visibility；QA 開關；DLL .rc</td></tr>
+              <tr><td><code>src/libslic3r/CMakeLists.txt</code></td><td><code>-fvisibility=hidden</code>（配合 strip）</td></tr>
+              <tr><td><code>src/libseqarrange/CMakeLists.txt</code></td><td>同上 visibility</td></tr>
+              <tr><td><code>src/slic3r-arrange/CMakeLists.txt</code></td><td>同上</td></tr>
+              <tr><td><code>src/slic3r-arrange-wrapper/CMakeLists.txt</code></td><td>同上</td></tr>
+              <tr><td><code>CMakeLists.txt</code>（根）</td><td><code>BUNDLE_QA_CRASH_HARNESS</code>；<code>CEREAL_FORCE_STATIC</code>；MSVC <code>/FS</code></td></tr>
+              <tr><td><code>cmake/PatchCerealForceStatic.cmake</code></td><td><strong>新增</strong>：壓 cereal 多餘 dllexport，Win export 只剩 1 個</td></tr>
+              <tr><td rowspan="10">程式碼（10）</td><td><code>src/PrusaSlicer.cpp</code></td><td>export <code>slicer_run_cli</code>；啟動警告去品牌；接 QA probe</td></tr>
+              <tr><td><code>src/PrusaSlicer_app_msvc.cpp</code></td><td>shim 載 <code>slicer_core.dll</code>、解析 <code>slicer_run_cli</code></td></tr>
+              <tr><td><code>src/libslic3r/Thread.cpp</code></td><td>主執行緒名→<code>slicer-worker</code></td></tr>
+              <tr><td><code>src/CLI/Setup.cpp</code></td><td>thread／terminate 中性化</td></tr>
+              <tr><td><code>src/CLI/PrintHelp.cpp</code></td><td><code>--help</code> 顯示名去品牌</td></tr>
+              <tr><td><code>src/libslic3r/PrintConfig.cpp</code></td><td>PrintConfig 品牌字串清除</td></tr>
+              <tr><td><code>src/slic3r/GUI/BackgroundSlicingProcess.cpp</code></td><td>GUI thread 名→<code>slicer-bg</code></td></tr>
+              <tr><td><code>src/bundle_qa_crash_probe.cpp</code></td><td><strong>新增</strong>：compile-time QA crash（overflow／segfault／exception）</td></tr>
+              <tr><td><code>src/bundle_qa_crash_probe.hpp</code></td><td><strong>新增</strong>：QA probe 標頭</td></tr>
+              <tr><td><code>src/libslic3r/SLAPrint.cpp</code></td><td>runtime harness 已移出；淨變更幾乎只剩多餘 <code>#include</code></td></tr>
+              <tr><td rowspan="5">資源（5）</td><td><code>version.inc</code></td><td>Company／Product／版本字串（Phrozen／Slicer Engine）</td></tr>
+              <tr><td><code>src/platform/msw/PrusaSlicer.rc.in</code></td><td>exe VERSIONINFO 吃中性變數</td></tr>
+              <tr><td><code>src/platform/msw/slicer_core.rc.in</code></td><td><strong>新增</strong>：DLL 專用 VERSIONINFO</td></tr>
+              <tr><td><code>src/slicer_core.def</code></td><td><strong>新增</strong>：唯一 export <code>slicer_run_cli</code></td></tr>
+              <tr><td><code>src/platform/osx/Info.plist.in</code></td><td>品牌鍵清除／中性化</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <div class="howto-effect"><strong>一句話：</strong>fork 因去識別動了 22 檔（CMake 7、程式碼 10、資源 5）；主軸是輸出名／visibility／export／PDB／thread／身分字串，外加可關閉的 QA crash probe。</div>
+    </aside>
+
+    <div class="table-wrap" style="margin-top:8px">
+      <table>
+        <thead><tr><th>不計入本次去識別</th><th>原因</th></tr></thead>
+        <tbody>
+          <tr><td><code>deps/CMakeLists.txt</code></td><td>CMake 4.x POLICY 建置相容，非去品牌</td></tr>
+          <tr><td>工作區未提交 <code>STEP.cpp</code>／部分 CMake</td><td>FORMAT_STEP／OCCT 相關，與 deid 無關</td></tr>
         </tbody>
       </table>
     </div>
@@ -871,7 +1540,7 @@
 
   <section id="pairs">
     <div class="section-head">
-      <span class="section-num">04</span>
+      <span class="section-num">05</span>
       <h2>Individual captures</h2>
     </div>
 
@@ -927,7 +1596,7 @@
 
   <section id="os-minidump">
     <div class="section-head">
-      <span class="section-num">05</span>
+      <span class="section-num">06</span>
       <h2>OS minidump surfaces · <em style="font-style:italic;color:var(--muted)">real system UI</em></h2>
     </div>
     <p class="note" style="margin:0 0 1rem;color:var(--muted);font-size:.92em;line-height:1.5">
@@ -977,23 +1646,6 @@
       <figure class="frame">
         <img src="shots/20b_OS_EventViewer_Application_Error_1000_notepad.png" alt="Event ID 1000" loading="lazy" />
         <figcaption class="frame-cap"><span>Event Viewer Application Error 1000 excerpt</span><span>20b · OS</span></figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <section id="live">
-    <div class="section-head">
-      <span class="section-num">06</span>
-      <h2>Live AFTER captures</h2>
-    </div>
-    <div class="pair">
-      <figure class="card">
-        <img src="shots/12_AFTER_live_WinDbg_segfault_dump.png" alt="Live WinDbg" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge after">After</span> Live WinDbg · segfault.dmp</figcaption>
-      </figure>
-      <figure class="card">
-        <img src="shots/13_AFTER_exe_Properties.png" alt="Properties" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge after">After</span> slicer-engine.exe Properties</figcaption>
       </figure>
     </div>
   </section>
@@ -1094,6 +1746,91 @@
     </div>
   </section>
 
+  <section id="naming">
+    <div class="section-head">
+      <span class="section-num">08</span>
+      <h2>命名如何生成 · <em style="font-style:italic;color:var(--muted)">實務規範與佐證</em></h2>
+    </div>
+
+    <div class="verdict">
+      <p class="verdict-kicker">Naming provenance · slicer-engine 家族</p>
+      <h3>名稱＝「功能／角色描述」＋各載體合法字元規則；非行銷品牌、非偽第三方</h3>
+      <p>
+        去識別後的檔名／模組名／export／thread 名皆由統一原則生成：先取<strong>功能角色詞</strong>
+        （slicer／engine／core／worker／cli），再依各載體（可執行檔、DLL、C 匯出符號、OS thread 名）
+        適用的<strong>合法字元集與長度上限</strong>轉寫。四項 canonical 定案與簽核見
+        <a href="../../../naming-manifest.md" style="color:var(--accent)">naming-manifest.md</a>。
+      </p>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:28px">
+      <table>
+        <thead><tr><th>產物</th><th>定案名稱</th><th>生成規則（大小寫／字元／長度）</th><th>依據</th></tr></thead>
+        <tbody>
+          <tr><td>CLI 執行檔（Win／mac）</td><td class="after"><code>slicer-engine</code>／<code>slicer-engine.exe</code></td><td>kebab-case（小寫＋連字號）；使用者於命令列輸入的名稱</td><td>POSIX 可攜檔名字集 · FHS · CLI 慣例</td></tr>
+          <tr><td>核心 DLL（Win）</td><td class="after"><code>slicer_core.dll</code></td><td>snake_case；貼近「模組識別字」，避免連字號干擾匯入庫／工具鏈</td><td>Windows DLL 命名與載入慣例</td></tr>
+          <tr><td>公開 export（Win）</td><td class="after"><code>slicer_run_cli</code></td><td>須為合法 C 識別字 <code>[A-Za-z_][A-Za-z0-9_]*</code> → <strong>不可</strong>用連字號；<code>extern&nbsp;"C"</code> 去 mangling；<code>.def</code> 收斂為唯一 export</td><td>ISO C 識別字 · MSVC DEF／dllexport</td></tr>
+          <tr><td>Thread 名</td><td class="after"><code>slicer-worker</code>／<code>slicer-tbb-N</code>／<code>slicer-bg</code></td><td>≤15 字元（相容 Linux 16-byte 上限含 NUL）；三平台皆可設定</td><td>pthread_setname_np · SetThreadDescription</td></tr>
+          <tr><td>版本顯示字串</td><td class="after"><code>Slicer Engine &lt;MAJOR.MINOR.PATCH&gt;+&lt;build_id&gt;</code></td><td>SemVer 2.0.0＋build metadata（<code>+</code> 後段）</td><td>Semantic Versioning 2.0.0</td></tr>
+          <tr><td>PE VERSIONINFO</td><td class="after">Product＝<code>Slicer Engine</code>／Internal＝<code>slicer-engine</code>／Company＝法人正式名稱</td><td>欄位與 Authenticode 簽章主體一致，不含品牌 token</td><td>Microsoft VERSIONINFO resource</td></tr>
+          <tr><td>macOS 身分</td><td class="after"><code>codesign --identifier slicer-engine</code>；<code>CFBundleIdentifier</code> 刪除／中性化</td><td>headless CLI 非 <code>.app</code> bundle，不強制 reverse-DNS</td><td>Apple Code Signing · CFBundleIdentifier</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <aside class="howto" aria-label="§08 命名生成說明">
+      <div class="howto-head">
+        <span class="htag">08 · Naming rules</span>
+        <span class="htitle">名稱怎麼來的、為什麼合規</span>
+      </div>
+      <div class="howto-plain">
+        <span class="plabel">白話說明</span>
+        <p><span class="q">這在做什麼？</span>把「換什麼名字」講清楚：不是隨手取的，而是先決定要表達的<strong>功能角色</strong>（這是切片引擎、這是核心模組、這是背景執行緒），再按照每種東西各自的技術規則（能用什麼字元、最長幾個字）轉成正式名稱。</p>
+        <p><span class="q">會影響功能嗎？</span>不會。這一節只解釋命名的<strong>依據與可追溯性</strong>，不動任何程式邏輯。</p>
+        <p><span class="q">為什麼重要？</span>當有人問「這些名字怎麼來的、有沒有依據」，可以直接指出：每個決策都對應一條業界規範或作業系統限制，可稽核、可重現，而不是換一個新品牌。</p>
+      </div>
+      <details class="howto-tech" open>
+        <summary>技術細節（各載體的字元與長度規則）</summary>
+        <div class="table-wrap">
+          <table class="howto-merge-tbl">
+            <thead><tr><th>載體</th><th>合法字元／格式</th><th>長度上限</th><th>為何這樣選</th></tr></thead>
+            <tbody>
+              <tr><td>可執行檔名</td><td>小寫字母、數字、連字號（kebab-case）</td><td>檔名系統上限（實務遠小於）</td><td>命令列輸入友善；符合 POSIX 可攜檔名字集與 CLI 工具慣例（如 <code>clang-format</code>、<code>docker-compose</code>）</td></tr>
+              <tr><td>DLL 基底名</td><td>字母、數字、底線（snake_case）</td><td>路徑長度上限</td><td>模組名貼近識別字語意；避免連字號在匯入庫／建置腳本被誤解析</td></tr>
+              <tr><td>C 匯出符號</td><td><code>[A-Za-z_]</code> 開頭，其後 <code>[A-Za-z0-9_]*</code></td><td>連結器限制</td><td>語言規定：識別字<strong>不允許</strong>連字號 → 必用底線；<code>extern&nbsp;"C"</code> 讓名稱不被 C++ mangling，供 <code>GetProcAddress</code> 穩定解析</td></tr>
+              <tr><td>Thread 名</td><td>中性描述（kebab-case）</td><td><strong>15 字元</strong>（含 NUL 共 16 byte）</td><td>Linux <code>pthread_setname_np</code> 硬上限 16 byte 最嚴；取 ≤15 讓 Linux／macOS／Windows 同名可設，跨平台一致</td></tr>
+              <tr><td>版本字串</td><td><code>MAJOR.MINOR.PATCH</code>＋<code>+build</code></td><td>—</td><td>採 SemVer 2.0.0；build metadata 放 <code>+</code> 後段，不影響版本先後比較</td></tr>
+              <tr><td>身分欄位</td><td>自由字串（去品牌）</td><td>—</td><td>Win VERSIONINFO 與 Authenticode 主體一致；mac headless CLI 用中性 <code>codesign</code> identifier，不套用 <code>.app</code> 的 reverse-DNS Bundle ID</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <div class="howto-effect"><strong>一句話：</strong>每個名稱＝「功能角色詞」依「該載體的字元／長度規範」生成，條條可對回外部標準或 OS 限制。</div>
+    </aside>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>規範／參考文獻</th><th>對應命名決策</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><a href="https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_282" style="color:var(--accent)">POSIX Portable Filename Character Set（IEEE Std 1003.1）</a></td><td>執行檔／檔名可用字元（kebab-case 合法性）</td></tr>
+          <tr><td>2</td><td><a href="https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html" style="color:var(--accent)">Filesystem Hierarchy Standard 3.0 · /usr/bin</a></td><td>可執行檔命名與擺放慣例</td></tr>
+          <tr><td>3</td><td><a href="https://www.gnu.org/prep/standards/html_node/Command_002dLine-Interfaces.html" style="color:var(--accent)">GNU Coding Standards · Command-Line Interfaces</a></td><td>命令列程式命名（小寫、簡潔、功能性）</td></tr>
+          <tr><td>4</td><td><a href="https://en.cppreference.com/w/c/language/identifier" style="color:var(--accent)">ISO C — Identifiers（cppreference）</a></td><td>export 為何必用底線、不可連字號</td></tr>
+          <tr><td>5</td><td><a href="https://en.cppreference.com/w/cpp/language/language_linkage" style="color:var(--accent)">C++ Language linkage — <code>extern&nbsp;"C"</code></a></td><td>匯出符號去 name mangling，供穩定解析</td></tr>
+          <tr><td>6</td><td><a href="https://learn.microsoft.com/en-us/cpp/build/exporting-from-a-dll-using-def-files" style="color:var(--accent)">MSVC — Exporting from a DLL Using DEF Files</a></td><td><code>slicer_run_cli</code> 收斂為唯一 export</td></tr>
+          <tr><td>7</td><td><a href="https://learn.microsoft.com/en-us/cpp/cpp/dllexport-dllimport" style="color:var(--accent)">MSVC — <code>dllexport</code>／<code>dllimport</code></a></td><td>export table 最小化手段</td></tr>
+          <tr><td>8</td><td><a href="https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-best-practices" style="color:var(--accent)">Microsoft — Dynamic-Link Library Best Practices</a></td><td>DLL 命名／載入實務</td></tr>
+          <tr><td>9</td><td><a href="https://learn.microsoft.com/en-us/windows/win32/menurc/versioninfo-resource" style="color:var(--accent)">Microsoft — VERSIONINFO resource</a></td><td>PE 身分欄位（Product／Internal／OriginalFilename）</td></tr>
+          <tr><td>10</td><td><a href="https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription" style="color:var(--accent)">Microsoft — SetThreadDescription</a></td><td>Windows thread 命名 API</td></tr>
+          <tr><td>11</td><td><a href="https://man7.org/linux/man-pages/man3/pthread_setname_np.3.html" style="color:var(--accent)">Linux man — pthread_setname_np（16-byte 限制）</a></td><td>thread 名 ≤15 字元的來源</td></tr>
+          <tr><td>12</td><td><a href="https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundleidentifier" style="color:var(--accent)">Apple — CFBundleIdentifier</a></td><td>macOS 身分／為何 CLI 不強制 reverse-DNS</td></tr>
+          <tr><td>13</td><td><a href="https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Introduction/Introduction.html" style="color:var(--accent)">Apple — Code Signing Guide（codesign identifier）</a></td><td><code>codesign --identifier slicer-engine</code></td></tr>
+          <tr><td>14</td><td><a href="https://semver.org/" style="color:var(--accent)">Semantic Versioning 2.0.0</a></td><td>版本顯示字串格式</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <footer>
     <span>
       Full notes · <a href="COMPARISON.md">COMPARISON.md</a> ·
@@ -1106,6 +1843,7 @@
 </div>
 
 <div class="loupe" id="loupe" aria-hidden="true"><span class="loupe-hud" id="loupeHud">2×</span></div>
+<div class="loupe dom-loupe" id="domLoupe" aria-hidden="true"><div class="dom-loupe-view" id="domLoupeView"></div><span class="loupe-hud" id="domLoupeHud">2×</span></div>
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Screenshot fullscreen">
   <img alt="" />
   <div class="lightbox-meta">Click background or press Esc to close · scroll wheel zooms lightbox</div>
@@ -1117,13 +1855,20 @@
   const loupeHud = document.getElementById("loupeHud");
   const lightbox = document.getElementById("lightbox");
   const lightboxImg = lightbox.querySelector("img");
+  const domLoupe = document.getElementById("domLoupe");
+  const domLoupeView = document.getElementById("domLoupeView");
+  const domLoupeHud = document.getElementById("domLoupeHud");
+  const shell = document.querySelector(".shell");
   let zoom = 2;
   let loupeSize = 220;
   let lightboxScale = 1;
+  let loupeMode = "img"; // "img" = screenshots only · "all" = whole page incl. tables/text · "off" = disabled
+  let domCanvas = null;
 
   function setZoom(z) {
     zoom = z;
     loupeHud.textContent = z + "×";
+    domLoupeHud.textContent = z + "×";
     document.querySelectorAll(".zoom-bar [data-zoom]").forEach(function (btn) {
       btn.classList.toggle("is-active", Number(btn.dataset.zoom) === z);
     });
@@ -1133,6 +1878,8 @@
     loupeSize = px;
     loupe.style.width = px + "px";
     loupe.style.height = px + "px";
+    domLoupe.style.width = px + "px";
+    domLoupe.style.height = px + "px";
     document.querySelectorAll(".zoom-bar [data-size]").forEach(function (btn) {
       btn.classList.toggle("is-active", Number(btn.dataset.size) === px);
     });
@@ -1145,6 +1892,58 @@
     btn.addEventListener("click", function () { setLoupeSize(Number(btn.dataset.size)); });
   });
 
+  function setMode(m) {
+    loupeMode = m;
+    document.querySelectorAll(".zoom-bar [data-mode]").forEach(function (btn) {
+      btn.classList.toggle("is-active", btn.dataset.mode === m);
+    });
+    loupe.classList.remove("is-on");
+    domLoupe.classList.remove("is-on");
+    if (m === "all") buildDomCanvas();
+  }
+
+  // Snapshot the page into the loupe so tables/text render at native quality when zoomed
+  function buildDomCanvas() {
+    domLoupeView.innerHTML = "";
+    domCanvas = shell.cloneNode(true);
+    domCanvas.classList.add("dom-loupe-canvas");
+    domCanvas.querySelectorAll(".side-toc, .zoom-bar, script").forEach(function (n) { n.remove(); });
+    domCanvas.querySelectorAll("img[loading]").forEach(function (i) { i.loading = "eager"; });
+    domCanvas.style.width = shell.getBoundingClientRect().width + "px";
+    domLoupeView.style.background = getComputedStyle(document.body).backgroundColor;
+    domLoupeView.appendChild(domCanvas);
+  }
+
+  document.querySelectorAll(".zoom-bar [data-mode]").forEach(function (btn) {
+    btn.addEventListener("click", function () { setMode(btn.dataset.mode); });
+  });
+
+  document.addEventListener("pointermove", function (e) {
+    if (loupeMode !== "all" || lightbox.classList.contains("is-open")) {
+      domLoupe.classList.remove("is-on");
+      return;
+    }
+    if (e.target.closest && (e.target.closest(".zoom-bar") || e.target.closest(".side-toc") || e.target.closest(".site-switcher"))) {
+      domLoupe.classList.remove("is-on");
+      return;
+    }
+    if (!domCanvas) buildDomCanvas();
+    const rect = shell.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    domLoupe.classList.add("is-on");
+    domLoupe.style.left = e.clientX + "px";
+    domLoupe.style.top = e.clientY + "px";
+    domCanvas.style.transform =
+      "translate(" + (loupeSize / 2 - x * zoom) + "px, " + (loupeSize / 2 - y * zoom) + "px) scale(" + zoom + ")";
+  });
+
+  // Layout can change → refresh the snapshot
+  window.addEventListener("resize", function () { if (loupeMode === "all") buildDomCanvas(); });
+  document.addEventListener("toggle", function (e) {
+    if (loupeMode === "all" && e.target && e.target.tagName === "DETAILS") buildDomCanvas();
+  }, true);
+
   function enhance(img) {
     if (!img || img.dataset.zoomReady) return;
     img.dataset.zoomReady = "1";
@@ -1154,12 +1953,14 @@
     wrap.appendChild(img);
 
     wrap.addEventListener("pointerenter", function () {
+      if (loupeMode !== "img") return;
       loupe.classList.add("is-on");
     });
     wrap.addEventListener("pointerleave", function () {
       loupe.classList.remove("is-on");
     });
     wrap.addEventListener("pointermove", function (e) {
+      if (loupeMode !== "img") { loupe.classList.remove("is-on"); return; }
       const rect = img.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -1218,6 +2019,7 @@
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeLightbox();
+    if (e.key === "l" || e.key === "L") setMode(loupeMode === "img" ? "all" : loupeMode === "all" ? "off" : "img");
     if (e.key === "[") setZoom(Math.max(1.5, Math.round((zoom - 0.5) * 2) / 2));
     if (e.key === "]") setZoom(Math.min(5, Math.round((zoom + 0.5) * 2) / 2));
   });
@@ -1229,6 +2031,28 @@
     if (!img.closest(".zoomable")) enhance(img);
   });
 })();
+
+  // Side TOC: highlight current section
+  (function () {
+    const links = Array.prototype.slice.call(document.querySelectorAll('.side-toc a[href^="#"]'));
+    if (!links.length) return;
+    const map = new Map();
+    links.forEach(function (a) {
+      const id = a.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) map.set(el, a);
+    });
+    if (!map.size || !('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        links.forEach(function (a) { a.classList.remove('is-active'); });
+        const a = map.get(entry.target);
+        if (a) a.classList.add('is-active');
+      });
+    }, { rootMargin: '-25% 0px -55% 0px', threshold: 0.01 });
+    map.forEach(function (_a, el) { io.observe(el); });
+  })();
 </script>
 </body>
 </html>

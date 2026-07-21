@@ -9,8 +9,8 @@
 
 | Side | Crash / `.ips` | Install folder filenames | Identity |
 |------|----------------|--------------------------|----------|
-| **BEFORE** | Authentic OS ReportCrash `.ips` from `~/Library/Logs/DiagnosticReports/Retired/PrusaSlicer-*.ips`（2026-07-14／07-17）；stack copy also in PoC `ips-clean/baseline-overflow.ips` | Live Finder of installed Bundle Launcher **pre-deid** tree：`/Applications/Bundle Launcher.app/…/third_party/prusaslicer_build/src/`（`PrusaSlicer` + `prusa-slicer` symlink） | `codesign -dv` → `Identifier=com.prusa3d.slic3r/`；`Info.plist` → `CFBundleIdentifier=com.prusa3d.slic3r/` |
-| **AFTER** | Authentic stripped PoC `.ips` `m1-close-…/ips/segfault.ips`（Console Translated Report；`imageOffset` only＋`slicer-worker`）＋ 5.1b clean exception `.ips` | Live Finder of signed-equivalent consumer：`Bundle-Launcher/dist/mac-arm64/…/bundle/slicer-engine/` | `codesign -dv` → `Identifier=slicer-engine`；`Info.plist=not bound` |
+| **BEFORE** | Authentic OS ReportCrash `.ips` from `~/Library/Logs/DiagnosticReports/Retired/PrusaSlicer-*.ips`（2026-07-14／07-17）；stack copy also in PoC `ips-clean/baseline-overflow.ips` | Live Finder of **install-surface** filenames（`PrusaSlicer`＋品牌 aliases／`Info.plist` only — 對齊 Windows Release PE 清單；**不含** Makefile／cmake／`libslic3r` 建置殘留）。舊正式包路徑曾為 `/Applications/Bundle Launcher.app/…/prusaslicer_build/src/` | `codesign -dv` → `Identifier=com.prusa3d.slic3r/`；`Info.plist` → `CFBundleIdentifier=com.prusa3d.slic3r/` |
+| **AFTER** | Authentic stripped PoC `.ips` `m1-close-…/ips/segfault.ips`（Console Translated Report；`imageOffset` only＋`slicer-worker`）＋ 5.1b clean exception `.ips` | Live Finder of consumer install：`/Applications/Bundle Launcher.app/…/bundle/slicer-engine/bin/` | `codesign -dv` → `Identifier=slicer-engine`；`Info.plist=not bound` |
 
 > **Real OS UI rule：** Finder／Console／Terminal／Get Info are live captures on this Mac.  
 > Shots `16`／`17` place authentic OS-generated `.ips` files into small Finder folders so the **filename surface**（`PrusaSlicer-*.ips` vs `slicer-engine-*.ips`）is readable — same intent as Windows cropping `AppCrash_*` folders. Shot `15` is the live `DiagnosticReports/Retired` folder.
@@ -29,7 +29,7 @@
 
 | Shot | Description |
 |------|-------------|
-| `01_BEFORE_finder_install_folder.png` | Finder BEFORE — `PrusaSlicer`／`prusa-slicer`／`libslic3r` |
+| `01_BEFORE_finder_install_folder.png` | Finder BEFORE — 安裝表面：`PrusaSlicer`＋品牌 aliases（無建置樹雜訊） |
 | `02_AFTER_finder_install_folder.png` | Finder AFTER — `slicer-engine/bin/slicer-engine` only |
 | `03_AFTER_finder_slicer-engine_root.png` | Finder AFTER — `slicer-engine/` root（manifest／legal／bin） |
 | `08_BEFORE_GetInfo.png`／`09_AFTER_GetInfo.png` | Finder Get Info |
