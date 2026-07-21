@@ -1190,6 +1190,7 @@
     <span class="toc-label">跳至區塊</span>
     <a href="#install-folder"><span class="n">01</span><span class="t">Install folder</span></a>
     <a href="#identity"><span class="n">02</span><span class="t">codesign identity</span></a>
+    <a href="#filesize-why"><span class="n">02b</span><span class="t">Get Info 大小差異</span></a>
     <a href="#crash-table"><span class="n">03</span><span class="t">Crash diagnostics</span></a>
     <a href="#fork-changes"><span class="n">04</span><span class="t">Fork changes</span></a>
     <a href="#pairs"><span class="n">05</span><span class="t">Individual captures</span></a>
@@ -1374,6 +1375,26 @@
         <figcaption class="frame-cap"><span>Finder Get Info · filename surface</span><span>05 · Get Info</span></figcaption>
       </figure>
     </div>
+
+    <aside class="howto" aria-label="Get Info 檔案大小差異說明（牙科週會）" id="filesize-why">
+      <div class="howto-head">
+        <span class="htag">02b · Get Info 檔案大小</span>
+        <span class="htitle">為什麼去識別化前後大小不一樣？</span>
+      </div>
+      <div class="howto-plain">
+        <span class="plabel">牙科週會備註</span>
+        <p><span class="q">現象：</span>Finder「顯示簡介」可見 macOS 引擎執行檔前後大小不同（實測約 <strong>88.3 MB → 58.9 MB</strong>，約小 30 MB／約 −30%）。作用對象是單一 Mach-O：<code>slicer-engine</code>（舊名 <code>PrusaSlicer</code>），不是整個 Launcher.app／DMG。</p>
+        <p><span class="q">主要原因：</span>為了去識別化，建置／打包時對<strong>同一支執行檔</strong>做了兩件事（拿掉的是「函式名對照資料」，不是切片功能）：</p>
+        <ol style="margin:.4rem 0 .8rem 1.2rem;padding:0;color:var(--muted);line-height:1.65">
+          <li style="margin-bottom:.5rem"><strong style="color:var(--ink)">編譯時收斂對外可見符號</strong>（約 <strong>−6～−10 MB</strong>）<br />只保留程式啟動必要的入口（<code>_main</code>），其他函式名不對外公開（<code>-fvisibility=hidden</code> ＋ <code>-Wl,-exported_symbol,_main</code>）。</li>
+          <li style="margin-bottom:.5rem"><strong style="color:var(--ink)">打包時移除執行檔中的符號表（strip）</strong>（約 <strong>−19 MB</strong>）<br />把編譯後附帶的「函式名對照表」從出貨檔刪掉；完整符號改封存在內部 <code>.dSYM</code>，不隨正式包出貨。</li>
+        </ol>
+        <p><span class="q">背景補充：</span>大型 C++ 程式（大量 template：Eigen／boost／cereal／libslic3r）編譯後會附帶一份很長的「函式名對照表」（符號表），方便除錯與看 crash 堆疊；這份表本身就很大，原本就存放在<strong>同一個執行檔內部</strong>（Mach-O <code>__LINKEDIT</code>），不是少包了別的套件。</p>
+        <p><span class="q">會影響功能嗎？</span><strong>不會。</strong>不改演算法、不刪執行碼；CLI／切片照常跑。改變的是可觀測表面：對外 crash 只剩位址（<code>imageOffset</code>），看不到品牌／函式名——這正是去識別 L2 目標。內部除錯用匹配的私有 <code>.dSYM</code> 即可還原。</p>
+        <p style="margin-bottom:0;font-size:.9em;opacity:.85"><span class="q">易混淆點：</span>這組 Get Info 對照的兩邊都是 headless CLI（本來就沒編進 wxWidgets／GUI）；大小差來自符號收斂＋strip，<strong>不是</strong>「AFTER 少包了 GUI」。</p>
+      </div>
+      <div class="howto-effect"><strong>一句話：</strong>變小 ≠ 功能變少；是把除錯用的函式名冊移出正式包（約 88 MB → 約 59 MB）。</div>
+    </aside>
   </section>
 
   <section id="crash-table">
@@ -1619,11 +1640,11 @@
     <div class="pair">
       <figure class="card">
         <img src="shots/08_BEFORE_GetInfo.png" alt="Before Get Info" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge before">Before</span> Get Info — <code>PrusaSlicer</code></figcaption>
+        <figcaption class="card-foot"><span class="badge before">Before</span> Get Info — <code>PrusaSlicer</code> · ≈88.3 MB</figcaption>
       </figure>
       <figure class="card">
         <img src="shots/09_AFTER_GetInfo.png" alt="After Get Info" loading="lazy" />
-        <figcaption class="card-foot"><span class="badge after">After</span> Get Info — <code>slicer-engine</code></figcaption>
+        <figcaption class="card-foot"><span class="badge after">After</span> Get Info — <code>slicer-engine</code> · ≈58.9 MB · <a href="#filesize-why" style="color:var(--accent)">為何變小？</a></figcaption>
       </figure>
     </div>
     <div class="showcase">
