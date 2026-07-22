@@ -196,6 +196,9 @@ export SLICER_ENGINE_BIN="$(pwd)/third_party/prusaslicer_build/src/slicer-engine
 
 ```bash
 BIN="$(pwd)/third_party/prusaslicer_build/src/slicer-engine"
+INI="$(pwd)/third_party/prusaslicer_fork/tests/data/default_fff.ini"
+STL="$(pwd)/third_party/prusaslicer_fork/tests/data/test_stl/ASCII/20mmbox-LF.stl"
+OUT=/tmp/deid-clitest && mkdir -p "$OUT"
 
 # 1) 版本 / 說明 —— 確認 binary 可執行且品牌已中性化
 "$BIN" --help | head -1
@@ -205,22 +208,21 @@ BIN="$(pwd)/third_party/prusaslicer_build/src/slicer-engine"
 "$BIN" --help 2>&1 | grep -Eic 'prusa|slic3r'
 #  → 0
 
-# 2) 實際切一顆 SLA（用 repo 內建測試 STL），確認能產出 .sl1
-STL="$(pwd)/third_party/prusaslicer_fork/tests/data/test_stl/ASCII/20mmbox-LF.stl"
-OUT=/tmp/deid-clitest && mkdir -p "$OUT"
-"$BIN" --export-sla -o "$OUT/box.sl1" "$STL"
-#  → 100% => Slicing done / Slicing result exported to .../box.sl1   （exit 0，產出 ~74 KB .sl1）
+# 2) 實際切一顆 FDM（--load FFF ini + --export-gcode），確認能產出 .gcode
+"$BIN" --load "$INI" --export-gcode -o "$OUT/box.gcode" "$STL"
+#  → Exporting G-code / Slicing result exported to .../box.gcode
+#  → exit 0，產出 ~600 KB .gcode（含 ;LAYER_CHANGE、;TYPE:Perimeter 等）
 
-# 3) 帶支撐再切一次（同時輸出支撐 STL）
-"$BIN" --export-sla --export-support-stl --support-material -o "$OUT/box2.sl1" "$STL"
-#  → 產出 box2.sl1 + box2_support.stl（exit 0）
+# 3) 等價短寫（-g 同 --export-gcode / --gcode）
+"$BIN" --load "$INI" -g -o "$OUT/box2.gcode" "$STL"
+#  → exit 0，產出 .gcode
 
 # 4) 錯誤路徑驗證：輸入不存在時應回非 0
-"$BIN" --export-sla -o "$OUT/none.sl1" "$OUT/__nope__.stl"; echo "exit=$?"
+"$BIN" --load "$INI" --export-gcode -o "$OUT/none.gcode" "$OUT/__nope__.stl"; echo "exit=$?"
 #  → exit=1
 ```
 
-> 說明：SLA 切片不帶 `--load` 也能用內建預設跑完煙測；正式功能回歸（量測 size ±5% / perf ×1.20）仍須帶對應 `--load config.ini`，見 §8。
+> 說明：FDM 煙測須 `--load` 一份 FFF 設定（repo 內建 `tests/data/default_fff.ini`）；`--export-gcode`／`-g` 才會輸出 G-code。正式功能回歸（量測 size ±5% / perf ×1.20）見 §8。
 
 ### 3.2 情境 B — QA flavor 編譯
 
@@ -297,6 +299,9 @@ Windows 的引擎與 macOS 同一份 codebase、同一組 CLI 旗標。`slicer-e
 
 ```powershell
 $Bin = "$PWD\third_party\prusaslicer_build\src\Release\slicer-engine.exe"
+$Ini = "$PWD\third_party\prusaslicer_fork\tests\data\default_fff.ini"
+$Stl = "$PWD\third_party\prusaslicer_fork\tests\data\test_stl\ASCII\20mmbox-LF.stl"
+$Out = "$env:TEMP\deid-clitest"; New-Item -ItemType Directory -Force -Path $Out | Out-Null
 
 # 1) 版本 / 說明 —— 確認可執行且品牌已中性化
 & $Bin --help | Select-Object -First 1
@@ -306,18 +311,16 @@ $Bin = "$PWD\third_party\prusaslicer_build\src\Release\slicer-engine.exe"
 (& $Bin --help 2>&1 | Select-String -Pattern 'prusa|slic3r' -AllMatches).Matches.Count
 #  → 0
 
-# 2) 實際切一顆 SLA，確認能產出 .sl1
-$Stl = "$PWD\third_party\prusaslicer_fork\tests\data\test_stl\ASCII\20mmbox-LF.stl"
-$Out = "$env:TEMP\deid-clitest"; New-Item -ItemType Directory -Force -Path $Out | Out-Null
-& $Bin --export-sla -o "$Out\box.sl1" $Stl
-#  → 100% => Slicing done（exit 0，產出 .sl1）
+# 2) 實際切一顆 FDM（--load FFF ini + --export-gcode），確認能產出 .gcode
+& $Bin --load $Ini --export-gcode -o "$Out\box.gcode" $Stl
+#  → Exporting G-code / Slicing result exported（exit 0，產出 .gcode）
 
-# 3) 帶支撐再切一次
-& $Bin --export-sla --export-support-stl --support-material -o "$Out\box2.sl1" $Stl
-#  → 產出 box2.sl1 + box2_support.stl
+# 3) 等價短寫（-g）
+& $Bin --load $Ini -g -o "$Out\box2.gcode" $Stl
+#  → exit 0，產出 .gcode
 
 # 4) 錯誤路徑驗證：輸入不存在時 $LASTEXITCODE 應為非 0
-& $Bin --export-sla -o "$Out\none.sl1" "$Out\__nope__.stl"; "exit=$LASTEXITCODE"
+& $Bin --load $Ini --export-gcode -o "$Out\none.gcode" "$Out\__nope__.stl"; "exit=$LASTEXITCODE"
 #  → exit=1
 ```
 
