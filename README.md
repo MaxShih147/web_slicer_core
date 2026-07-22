@@ -118,10 +118,22 @@ Frontend runs at `http://localhost:5174`
 ## De-identification notes
 
 > De-identification only applies to the **consumer artifact (the formal, shipped package)**: it renames the surfaces a user or support agent can see so no Prusa／slic3r brand fingerprint leaks. **Slicing behavior and parameters are unchanged.**
+
+### Dev-branch handoff (read this first)
+
+De-identification is landed on the **`dev` branches** of both **`web_slicer_core`** and **`prusaslicer_fork`**. Pull both to latest before continuing development.
+
+1. **Local build & run are unchanged** — no extra manual steps for day-to-day work:
+   - macOS: `./scripts/build_prusaslicer_fork_macos.sh` (build) + `./scripts/run_agent.sh` (run)
+   - Windows: `scripts\build_prusaslicer_fork_windows.bat` (build) + `scripts\run_agent.bat` (run)
+2. **Direct CLI** — same native PrusaSlicer flag grammar; only the executable name is neutral (`slicer-engine` / `slicer-engine.exe`). Example: `--load config.ini --export-gcode -o out.gcode model.stl` (or `--export-sla` for SLA). Prefer `SLICER_ENGINE_BIN` over legacy `PRUSA_SLICER_BIN`.
+3. **Scenarios & copy-paste commands** — [`docs/slicer-engine-deidentification/build-test-runbook.md`](docs/slicer-engine-deidentification/build-test-runbook.md) (safe to feed to an AI assistant for guidance).
+4. **Full R&D record** — [`openspec/changes/backend-slicer-engine-deidentification/`](openspec/changes/backend-slicer-engine-deidentification/) (`design.md`, `naming-manifest.md`, `blacklist.md`, `acceptance-procedure.md`, evidence, etc.).
+5. **Pre-merge retest (both platforms):** clean build → dental workflow smoke (one-click process + long supports + slice) → CLI slice smoke.
+
+> **Build / test runbook:** [`docs/slicer-engine-deidentification/build-test-runbook.md`](docs/slicer-engine-deidentification/build-test-runbook.md)
 >
-> **Build / test runbook (how to compile, package, scan, crash-test):** [`docs/slicer-engine-deidentification/build-test-runbook.md`](docs/slicer-engine-deidentification/build-test-runbook.md)
->
-> Full spec: [`openspec/changes/backend-slicer-engine-deidentification/`](openspec/changes/backend-slicer-engine-deidentification/) (`naming-manifest.md`, `blacklist.md`, `acceptance-procedure.md`, and the before/after evidence reports).
+> Full spec: [`openspec/changes/backend-slicer-engine-deidentification/`](openspec/changes/backend-slicer-engine-deidentification/)
 
 ### One-line positioning
 
