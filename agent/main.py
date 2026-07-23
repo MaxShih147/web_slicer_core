@@ -67,7 +67,8 @@ app = FastAPI(
 # - hosted UI origin for local-agent bridge
 # - optional comma-separated overrides via CORS_ALLOWED_ORIGINS env var
 _cors_origins = {
-    "https://d2l9lf8waxt8pb.cloudfront.net",
+    "https://dev.dsonline.phrozen3d.info",
+    "https://dsonline.phrozen3d.info",
     "https://dentalslice.onrender.com",
     "https://dental-testing.onrender.com",
     "https://ya-ke-nei-bu-ce-shi.onrender.com",
