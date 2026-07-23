@@ -191,22 +191,22 @@ def open_boundary_stats(mesh: "trimesh.Trimesh") -> dict:
         adj[int(a)].append(i)
         adj[int(b)].append(i)
 
-    seen: set = set()
+    seen = np.zeros(open_edge_count, dtype=bool)
     component_lengths = []
     for start_ei in range(open_edge_count):
-        if start_ei in seen:
+        if seen[start_ei]:
             continue
         stack = [start_ei]
         comp_len = 0.0
         while stack:
             ei = stack.pop()
-            if ei in seen:
+            if seen[ei]:
                 continue
-            seen.add(ei)
+            seen[ei] = True
             comp_len += float(edge_lens[ei])
             for v in (int(bd_edges[ei, 0]), int(bd_edges[ei, 1])):
                 for nei_ei in adj[v]:
-                    if nei_ei not in seen:
+                    if not seen[nei_ei]:
                         stack.append(nei_ei)
         component_lengths.append(comp_len)
 
@@ -240,14 +240,15 @@ def large_outer_flat_plane_stats(mesh: "trimesh.Trimesh") -> dict:
         "wn": np.zeros(3, dtype=np.float64),
         "wc": np.zeros(3, dtype=np.float64),
     })
+    weighted_normals   = normals   * areas[:, None]   # (M, 3) — computed once
+    weighted_centroids = centroids * areas[:, None]   # (M, 3) — computed once
     for i in range(len(normals)):
         key = (float(qn[i, 0]), float(qn[i, 1]), float(qn[i, 2]), float(qo[i]))
         g = groups[key]
-        a = float(areas[i])
-        g["area"]  += a
+        g["area"]  += float(areas[i])
         g["count"] += 1
-        g["wn"]    += normals[i] * a
-        g["wc"]    += centroids[i] * a
+        g["wn"]    += weighted_normals[i]
+        g["wc"]    += weighted_centroids[i]
 
     if not groups:
         return {}
@@ -328,6 +329,9 @@ def projection_shape_gap_stats(mesh: "trimesh.Trimesh", pca_axes: np.ndarray) ->
     if nx * ny > MAX_CELLS:
         return {"error": "grid_too_large", "cells": nx * ny}
 
+    cx_arr = x_min + (np.arange(nx) + 0.5) * GRID_SIZE   # (nx,) X cell centres
+    cy_arr = y_min + (np.arange(ny) + 0.5) * GRID_SIZE   # (ny,) Y cell centres
+
     # ----- 2D convex hull mask (vectorised via Delaunay) -----
     try:
         hull2d = _Hull2D(pts2d)
@@ -340,11 +344,7 @@ def projection_shape_gap_stats(mesh: "trimesh.Trimesh", pca_axes: np.ndarray) ->
     except Exception:
         return {"error": "hull_delaunay_failed"}
 
-    CI, CJ = np.meshgrid(np.arange(nx), np.arange(ny))
-    grid_pts = np.column_stack([
-        x_min + (CI.ravel() + 0.5) * GRID_SIZE,
-        y_min + (CJ.ravel() + 0.5) * GRID_SIZE,
-    ])
+    grid_pts = np.column_stack([np.tile(cx_arr, ny), np.repeat(cy_arr, nx)])
     hull_mask = (hull_tri.find_simplex(grid_pts) >= 0).reshape(ny, nx)
 
     # ----- Occupied mask: tiered by 3D triangle size proxy -----
@@ -395,9 +395,7 @@ def projection_shape_gap_stats(mesh: "trimesh.Trimesh", pca_axes: np.ndarray) ->
         cj1 = min(ny - 1, int(gy.max()) + 2)
         if ci0 > ci1 or cj0 > cj1:
             continue
-        CI_l, CJ_l = np.meshgrid(np.arange(ci0, ci1 + 1), np.arange(cj0, cj1 + 1))
-        px = x_min + (CI_l + 0.5) * GRID_SIZE
-        py = y_min + (CJ_l + 0.5) * GRID_SIZE
+        px, py = np.meshgrid(cx_arr[ci0:ci1 + 1], cy_arr[cj0:cj1 + 1])
         p0, p1, p2 = tri
         d1 = p1 - p0
         d2 = p2 - p0
@@ -409,7 +407,8 @@ def projection_shape_gap_stats(mesh: "trimesh.Trimesh", pca_axes: np.ndarray) ->
         s = (dx * d2[1] - dy * d2[0]) * inv
         t = (dy * d1[0] - dx * d1[1]) * inv
         inside = (s >= 0) & (t >= 0) & (s + t <= 1)
-        occupied[CJ_l[inside], CI_l[inside]] = True
+        _rr, _cc = np.where(inside)
+        occupied[_rr + cj0, _cc + ci0] = True
 
     # ----- Gap connected components (8-neighbour) -----
     gap_mask = hull_mask & ~occupied
@@ -421,28 +420,32 @@ def projection_shape_gap_stats(mesh: "trimesh.Trimesh", pca_axes: np.ndarray) ->
     gap_area       = int(gap_mask.sum())  * cell_area
 
     # Largest gap component (track id for boundary-contact pass below)
-    largest_cells = 0
-    largest_gap_id = 0
-    largest_cx = largest_cy = 0.0
-    for _cid in range(1, n_comp + 1):
-        _comp = labeled == _cid
-        _n = int(_comp.sum())
-        if _n > largest_cells:
-            largest_cells = _n
-            largest_gap_id = _cid
-            _cj, _ci = np.where(_comp)
-            largest_cx = float(_ci.mean())
-            largest_cy = float(_cj.mean())
+    comp_counts = np.bincount(labeled.ravel())          # index 0 = background
+    if n_comp > 0:
+        largest_gap_id = int(np.argmax(comp_counts[1:n_comp + 1])) + 1
+        largest_cells  = int(comp_counts[largest_gap_id])
+    else:
+        largest_gap_id = 0
+        largest_cells  = 0
+    largest_gap_mask = (labeled == largest_gap_id) if largest_gap_id > 0 \
+                       else np.zeros_like(labeled, dtype=bool)
+    if largest_cells > 0:
+        _cj, _ci = np.where(largest_gap_mask)
+        largest_cx = float(_ci.mean())
+        largest_cy = float(_cj.mean())
+    else:
+        largest_cx = largest_cy = 0.0
 
     largest_gap_area = largest_cells * cell_area
 
     # Hull bbox centre and span for offset normalisation
-    hull_cj_idx, hull_ci_idx = np.where(hull_mask)
-    if len(hull_ci_idx) > 0:
-        hull_cx = (int(hull_ci_idx.min()) + int(hull_ci_idx.max())) / 2.0
-        hull_cy = (int(hull_cj_idx.min()) + int(hull_cj_idx.max())) / 2.0
-        hull_w  = (int(hull_ci_idx.max()) - int(hull_ci_idx.min())) * GRID_SIZE
-        hull_h  = (int(hull_cj_idx.max()) - int(hull_cj_idx.min())) * GRID_SIZE
+    _hci = np.flatnonzero(np.any(hull_mask, axis=0))   # columns with hull cells
+    _hcj = np.flatnonzero(np.any(hull_mask, axis=1))   # rows    with hull cells
+    if len(_hci) > 0:
+        hull_cx = (int(_hci[0]) + int(_hci[-1])) / 2.0
+        hull_cy = (int(_hcj[0]) + int(_hcj[-1])) / 2.0
+        hull_w  = (int(_hci[-1]) - int(_hci[0])) * GRID_SIZE
+        hull_h  = (int(_hcj[-1]) - int(_hcj[0])) * GRID_SIZE
     else:
         hull_cx = nx / 2.0; hull_cy = ny / 2.0
         hull_w  = nx * GRID_SIZE; hull_h = ny * GRID_SIZE
@@ -460,8 +463,8 @@ def projection_shape_gap_stats(mesh: "trimesh.Trimesh", pca_axes: np.ndarray) ->
     large_holes  = 0;  large_hole_area  = 0.0
 
     for _cid in range(1, n_comp + 1):
-        _comp  = labeled == _cid
-        _area  = int(_comp.sum()) * cell_area
+        _comp  = largest_gap_mask if _cid == largest_gap_id else (labeled == _cid)
+        _area  = int(comp_counts[_cid]) * cell_area
         # Contact: dilate component 1 cell, intersect with hull boundary
         _contact_cells = int((_bdil(_comp, structure=_structure) & hull_boundary_mask).sum())
         _contact_mm    = _contact_cells * GRID_SIZE
@@ -1350,6 +1353,13 @@ def classify_dental_model(mesh: "trimesh.Trimesh") -> DentalModelType:
 # May also be called independently by tests or other callers.
 # ---------------------------------------------------------------------------
 
+# Drill-hole ring size standards (updated from auto_orient_surg_guide.py).
+# Outer diameter is measured on the PCA major axis (not a fixed-axis bbox).
+_DRILL_RING_OUTER_DIAM_MIN = 5.5   # mm
+_DRILL_RING_OUTER_DIAM_MAX = 14.0  # mm
+_DRILL_RING_MAX_ASPECT     = 1.5   # PCA long / short  (true rings ≈ 1)
+
+
 @dataclass
 class _DrillPatchInfo:
     """Flat face-group data for drill-hole candidate search."""
@@ -1359,6 +1369,7 @@ class _DrillPatchInfo:
     area: float = 0.0
     max_angle_deg: float = 0.0
     center: "np.ndarray" = field(default_factory=lambda: np.zeros(3, dtype=np.float64))
+    fi_arr: "Optional[np.ndarray]" = field(default=None)   # cached by _drill_compute_patch_stats
 
 
 def _drill_build_orthonormal_basis(n: "np.ndarray") -> "Tuple[np.ndarray, np.ndarray]":
@@ -1395,8 +1406,8 @@ def _drill_prepare_faces(
     verts: "np.ndarray",
     faces_raw: "np.ndarray",
     rep: "np.ndarray",
-) -> "Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]":
-    """Build (face_v, face_n, face_c, face_patch_id) arrays (Step 2)."""
+) -> "Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]":
+    """Build (face_v, face_n, face_c, face_patch_id, face_area) arrays (Step 2)."""
     face_v = rep[faces_raw].astype(np.int32)            # (M, 3) merged indices
     p0 = verts[face_v[:, 0]]
     p1 = verts[face_v[:, 1]]
@@ -1405,9 +1416,10 @@ def _drill_prepare_faces(
     crosses = np.cross(e1, e2)                          # (M, 3)
     lengths = np.linalg.norm(crosses, axis=1, keepdims=True)
     face_n = np.where(lengths > 1e-30, crosses / np.maximum(lengths, 1e-30), 0.0)
+    face_area = 0.5 * lengths.squeeze(axis=1)           # (M,) — reused in patch stats
     face_c = (p0 + p1 + p2) / 3.0
     face_patch_id = np.full(len(faces_raw), -1, dtype=np.int32)
-    return face_v, face_n, face_c, face_patch_id
+    return face_v, face_n, face_c, face_patch_id, face_area
 
 
 def _drill_build_edge_adj(
@@ -1483,17 +1495,19 @@ def _drill_compute_patch_stats(
     face_c: "np.ndarray",
     verts: "np.ndarray",
     patches: "List[_DrillPatchInfo]",
+    face_area: "np.ndarray",
 ) -> None:
-    """Fill area, avg_normal, center, max_angle_deg per patch in-place (Step 5)."""
+    """Fill area, avg_normal, center per patch in-place; cache fi_arr (Step 5).
+
+    Reuses face_area from _drill_prepare_faces to avoid a second cross-product
+    computation. max_angle_deg is not computed (unused by caller; field kept).
+    """
     for P in patches:
         if not P.faces:
             continue
         fi = np.asarray(P.faces, dtype=np.int32)
-        p0 = verts[face_v[fi, 0]]
-        p1 = verts[face_v[fi, 1]]
-        p2 = verts[face_v[fi, 2]]
-        e1 = p1 - p0; e2 = p2 - p0
-        areas = 0.5 * np.linalg.norm(np.cross(e1, e2), axis=1)   # (K,)
+        P.fi_arr = fi                                              # cache for later reuse
+        areas = face_area[fi]                                      # (K,) — no recompute
         area_sum = float(areas.sum())
         P.area = area_sum
         if area_sum < 1e-12:
@@ -1504,35 +1518,24 @@ def _drill_compute_patch_stats(
         n_len = float(np.linalg.norm(sum_n))
         P.avg_normal = sum_n / n_len if n_len > 1e-9 else np.zeros(3)
         P.center = (face_c[fi] * areas[:, None]).sum(axis=0) / area_sum
-        dots = np.clip(face_n[fi] @ P.avg_normal, -1.0, 1.0)
-        P.max_angle_deg = float(np.degrees(np.arccos(dots)).max())
 
 
 def _drill_patch_has_hole_by_scanlines(
-    verts: "np.ndarray",
-    face_v: "np.ndarray",
-    P: "_DrillPatchInfo",
-    ex: "np.ndarray",
-    ey: "np.ndarray",
+    u0a: "np.ndarray",
+    v0a: "np.ndarray",
+    u1a: "np.ndarray",
+    v1a: "np.ndarray",
+    u2a: "np.ndarray",
+    v2a: "np.ndarray",
 ) -> bool:
     """2D voxel rasterisation + scanline hole test (patch_has_hole_by_scanlines).
 
-    Thresholds preserved from C++:
+    Accepts per-face projected coordinates already computed by the caller,
+    avoiding a second projection pass. Thresholds preserved from C++:
       voxelSize=0.3 mm, emptyMinLen=2.4 mm, solidMinLen=0.6 mm.
     """
-    if not P.faces:
+    if len(u0a) == 0:
         return False
-
-    origin = P.center
-    fi = np.asarray(P.faces, dtype=np.int32)
-
-    def _proj(vids: "np.ndarray") -> "Tuple[np.ndarray, np.ndarray]":
-        q = verts[vids] - origin
-        return (q @ ex).astype(np.float64), (q @ ey).astype(np.float64)
-
-    u0a, v0a = _proj(face_v[fi, 0])
-    u1a, v1a = _proj(face_v[fi, 1])
-    u2a, v2a = _proj(face_v[fi, 2])
 
     umin = float(min(u0a.min(), u1a.min(), u2a.min()))
     umax = float(max(u0a.max(), u1a.max(), u2a.max()))
@@ -1555,7 +1558,7 @@ def _drill_patch_has_hole_by_scanlines(
     occ = np.zeros((ny, nx), dtype=bool)
 
     # Rasterise each triangle onto the occupancy grid (vectorised per triangle)
-    nf_patch = len(fi)
+    nf_patch = len(u0a)
     for t in range(nf_patch):
         ax = float(u0a[t]); ay = float(v0a[t])
         bx = float(u1a[t]); by = float(v1a[t])
@@ -1649,7 +1652,6 @@ def _drill_is_drill_patch(
     """Stage-2 drill patch filter (isDrillPatchByEdges).
 
     Preserved thresholds:
-      patch bbox: longEdge ∈ [6.5,35] mm, shortEdge ∈ [4,35] mm, ratio ≤ 4×
       perpendicular wall angle: 87° ± 3°  (cos threshold = cos 87°)
       connEdge bbox: minDim ∈ [3,35] mm
       accumulated turn angle threshold: 220°
@@ -1665,32 +1667,49 @@ def _drill_is_drill_patch(
 
     ex, ey = _drill_build_orthonormal_basis(n_patch)
 
-    def _proj2d(vid: int) -> "Tuple[float, float]":
-        q = verts[vid] - P.center
-        return float(q @ ex), float(q @ ey)
+    # Project all patch vertices to (ex, ey) once; reuse for PCA, scanline,
+    # edge-bbox, and turn-angle chain.
+    fi_arr = P.fi_arr if P.fi_arr is not None else np.asarray(P.faces, dtype=np.int32)
+    vids_flat = face_v[fi_arr].reshape(-1)                        # (3*M_patch,)
+    vids_unique, vids_inv = np.unique(vids_flat, return_inverse=True)
+    q = (verts[vids_unique] - P.center)
+    u_uniq = (q @ ex).astype(np.float64)                         # (K,)
+    v_uniq = (q @ ey).astype(np.float64)                         # (K,)
 
-    # Patch 2D bounding box
-    uvals: List[float] = []; vvals: List[float] = []
-    for fi in P.faces:
-        for vid in (int(face_v[fi, 0]), int(face_v[fi, 1]), int(face_v[fi, 2])):
-            u, v = _proj2d(vid)
-            uvals.append(u); vvals.append(v)
-    umin_p = min(uvals); umax_p = max(uvals)
-    vmin_p = min(vvals); vmax_p = max(vvals)
-    width = umax_p - umin_p; height = vmax_p - vmin_p
-    if not (width > 0.0 and height > 0.0):
+    # Per-face projected coordinates for scanline (same basis as PCA and edge bbox)
+    uv_inv = vids_inv.reshape(-1, 3)                              # (M_patch, 3)
+    u0a = u_uniq[uv_inv[:, 0]]; v0a = v_uniq[uv_inv[:, 0]]
+    u1a = u_uniq[uv_inv[:, 1]]; v1a = v_uniq[uv_inv[:, 1]]
+    u2a = u_uniq[uv_inv[:, 2]]; v2a = v_uniq[uv_inv[:, 2]]
+
+    # PCA-based patch extent — major axis ≈ ring outer diameter.
+    # Using PCA rather than a fixed-axis bbox means a tilted ring is measured
+    # along its own axes; a rectangular slab cannot slip past the aspect gate.
+    pts2d = np.column_stack([u_uniq, v_uniq])                    # (K, 2)
+    if pts2d.shape[0] < 3:
+        return False
+    _centered = pts2d - pts2d.mean(axis=0)
+    _, _eigvecs = np.linalg.eigh(np.cov(_centered.T))
+    _proj_pca = _centered @ _eigvecs
+    _extents = _proj_pca.max(axis=0) - _proj_pca.min(axis=0)
+    long_e = float(_extents.max())
+    short_e = float(_extents.min())
+    if not (long_e > 0.0 and short_e > 0.0):
+        return False
+    if long_e < _DRILL_RING_OUTER_DIAM_MIN or long_e > _DRILL_RING_OUTER_DIAM_MAX:
+        return False
+    if long_e > _DRILL_RING_MAX_ASPECT * short_e:
         return False
 
-    long_e = max(width, height); short_e = min(width, height)
-    if long_e < 6.5 or long_e > 35.0:
-        return False
-    if short_e < 4.0 or short_e > 35.0:
-        return False
-    if long_e > 4.0 * short_e:
+    # Scanline hole test reuses the per-face projections already computed above
+    if not _drill_patch_has_hole_by_scanlines(u0a, v0a, u1a, v1a, u2a, v2a):
         return False
 
-    if not _drill_patch_has_hole_by_scanlines(verts, face_v, P, ex, ey):
-        return False
+    # Lookup table vid → (u, v) for connection-edge bbox and chain turn-angle
+    vid_to_uv: "dict[int, Tuple[float, float]]" = {
+        int(vids_unique[i]): (float(u_uniq[i]), float(v_uniq[i]))
+        for i in range(len(vids_unique))
+    }
 
     # Collect edges connecting this patch to near-perpendicular neighbour faces
     COS_PERP = math.cos(87.0 * math.pi / 180.0)   # ≈ 0.05234
@@ -1725,10 +1744,10 @@ def _drill_is_drill_patch(
             if d > COS_PERP:
                 continue
             conn_edges.append((a, b))
-            for vid in (a, b):
-                u, v = _proj2d(vid)
-                umin_e = min(umin_e, u); umax_e = max(umax_e, u)
-                vmin_e = min(vmin_e, v); vmax_e = max(vmax_e, v)
+            ua, va = vid_to_uv[a]
+            ub, vb = vid_to_uv[b]
+            umin_e = min(umin_e, ua, ub); umax_e = max(umax_e, ua, ub)
+            vmin_e = min(vmin_e, va, vb); vmax_e = max(vmax_e, va, vb)
 
     if len(conn_edges) < 4:
         return False
@@ -1740,10 +1759,17 @@ def _drill_is_drill_patch(
     if min_d < 3.0 or max_d > 35.0:
         return False
 
-    # Walk connected edge chains; accumulate turn angle (≥220° → drill candidate)
+    # Walk connected edge chains; accumulate turn angle (≥220° → drill candidate).
+    # Pre-build vertex→edge-index map so each step is O(degree) not O(n_edges).
+    # Edges are stored in original append order → first-match semantics preserved.
     ANGLE_THR = 220.0 * math.pi / 180.0
     n_edges = len(conn_edges)
     edge_used = [False] * n_edges
+
+    vert_to_edge_idxs: "dict[int, List[int]]" = {}
+    for ei, (ea, eb) in enumerate(conn_edges):
+        vert_to_edge_idxs.setdefault(ea, []).append(ei)
+        vert_to_edge_idxs.setdefault(eb, []).append(ei)
 
     for start in range(n_edges):
         if edge_used[start]:
@@ -1757,14 +1783,13 @@ def _drill_is_drill_patch(
         cur = sv1
         while True:
             found = -1
-            for ei in range(n_edges):
+            for ei in vert_to_edge_idxs.get(cur, []):
                 if edge_used[ei]:
                     continue
                 ea, eb = conn_edges[ei]
-                if ea == cur:
-                    nxt = eb; found = ei; break
-                if eb == cur:
-                    nxt = ea; found = ei; break
+                nxt = eb if ea == cur else ea
+                found = ei
+                break
             if found < 0:
                 break
             edge_used[found] = True
@@ -1777,14 +1802,13 @@ def _drill_is_drill_patch(
         cur = sv0
         while True:
             found = -1
-            for ei in range(n_edges):
+            for ei in vert_to_edge_idxs.get(cur, []):
                 if edge_used[ei]:
                     continue
                 ea, eb = conn_edges[ei]
-                if ea == cur:
-                    prv = eb; found = ei; break
-                if eb == cur:
-                    prv = ea; found = ei; break
+                prv = eb if ea == cur else ea
+                found = ei
+                break
             if found < 0:
                 break
             edge_used[found] = True
@@ -1796,9 +1820,9 @@ def _drill_is_drill_patch(
 
         accum = 0.0
         for i in range(len(seq) - 2):
-            p0u, p0v = _proj2d(seq[i])
-            p1u, p1v = _proj2d(seq[i + 1])
-            p2u, p2v = _proj2d(seq[i + 2])
+            p0u, p0v = vid_to_uv[seq[i]]
+            p1u, p1v = vid_to_uv[seq[i + 1]]
+            p2u, p2v = vid_to_uv[seq[i + 2]]
             t0 = np.array([p1u - p0u, p1v - p0v], dtype=np.float64)
             t1 = np.array([p2u - p1u, p2v - p1v], dtype=np.float64)
             l0 = float(np.linalg.norm(t0)); l1 = float(np.linalg.norm(t1))
@@ -1838,8 +1862,8 @@ def detect_drill_holes(mesh: "trimesh.Trimesh") -> dict:
         # Step 1: merge near-duplicate vertices (1e-4 mm grid)
         rep = _drill_merge_vertices(verts)
 
-        # Step 2: build per-face arrays (merged indices, normals, centroids)
-        face_v, face_n, face_c, face_patch_id = _drill_prepare_faces(verts, faces_raw, rep)
+        # Step 2: build per-face arrays (merged indices, normals, centroids, areas)
+        face_v, face_n, face_c, face_patch_id, face_area = _drill_prepare_faces(verts, faces_raw, rep)
 
         # Step 3: build edge map and face adjacency
         edge_map, adj_faces = _drill_build_edge_adj(face_v, nf)
@@ -1849,8 +1873,8 @@ def detect_drill_holes(mesh: "trimesh.Trimesh") -> dict:
         if not patches:
             return {"valid": True, "found": False, "candidate_count": 0}
 
-        # Step 5: compute patch statistics
-        _drill_compute_patch_stats(face_v, face_n, face_c, verts, patches)
+        # Step 5: compute patch statistics (reuses face_area; caches fi_arr per patch)
+        _drill_compute_patch_stats(face_v, face_n, face_c, verts, patches, face_area)
 
         # Step 6: filter drill hole candidates
         candidate_count = 0
