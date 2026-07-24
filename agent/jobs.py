@@ -42,18 +42,29 @@ def job_exists(job_id: str) -> bool:
 
 
 def read_job_status(job_id: str) -> dict:
-    """Read the job status from disk."""
+    """Read the job status from disk.
+
+    Older status.json files predate the ``error_code`` / ``support_outcome``
+    fields. They are normalized to ``None`` on read so every consumer sees a
+    consistent shape: a FAILED job without ``error_code`` falls back to the
+    generic JOB_FAILED, and a COMPLETED job without ``support_outcome`` simply
+    carries no neutral hint.
+    """
     status_file = get_job_status_file(job_id)
     if status_file.exists():
         with open(status_file, "r") as f:
-            return json.load(f)
-    return {
-        "status": JobStatus.PENDING,
-        "error": None,
-        "layer_count": None,
-        "estimated_print_time": None,
-        "resin_volume_ml": None,
-    }
+            data = json.load(f)
+    else:
+        data = {
+            "status": JobStatus.PENDING,
+            "error": None,
+            "layer_count": None,
+            "estimated_print_time": None,
+            "resin_volume_ml": None,
+        }
+    data.setdefault("error_code", None)
+    data.setdefault("support_outcome", None)
+    return data
 
 
 def write_job_status(
@@ -61,6 +72,7 @@ def write_job_status(
     status: JobStatus,
     error: Optional[str] = None,
     error_code: Optional[str] = None,
+    support_outcome: Optional[str] = None,
     layer_count: Optional[int] = None,
     estimated_print_time: Optional[float] = None,
     resin_volume_ml: Optional[float] = None,
@@ -68,12 +80,19 @@ def write_job_status(
     has_hollow_mesh: bool = False,
     has_cut_mesh: bool = False,
 ):
-    """Write the job status to disk."""
+    """Write the job status to disk.
+
+    ``error_code`` carries the specific failure code for FAILED jobs;
+    ``support_outcome`` carries a neutral marker (e.g. ``SUPPORT_NOT_NEEDED``)
+    on a COMPLETED job. Both are optional and absent from older status.json
+    files, which readers treat as "no specific code" / "no neutral outcome".
+    """
     status_file = get_job_status_file(job_id)
     data = {
         "status": status.value,
         "error": error,
         "error_code": error_code,
+        "support_outcome": support_outcome,
         "layer_count": layer_count,
         "estimated_print_time": estimated_print_time,
         "resin_volume_ml": resin_volume_ml,
@@ -372,12 +391,35 @@ async def run_support_generation(job_id: str, config: Optional[SLAConfig] = None
             config = SLAConfig(supports_enable=True)
 
         result = await generate_supports(job_dir, config)
+        classification = result.classification
 
-        if result.success:
+        if classification is not None:
+            # Drive status entirely from the classifier's structured verdict
+            # (design D1/D4): failures carry the specific error_code; neutral
+            # results ride on COMPLETED with a support_outcome; real success
+            # sets has_support_mesh.
+            if classification.status == JobStatus.FAILED:
+                write_job_status(
+                    job_id,
+                    JobStatus.FAILED,
+                    error=result.error,
+                    error_code=classification.error_code,
+                )
+            else:
+                write_job_status(
+                    job_id,
+                    JobStatus.COMPLETED,
+                    layer_count=0,  # No layers extracted for support-only
+                    support_outcome=classification.support_outcome,
+                    has_support_mesh=classification.has_support_mesh,
+                )
+        elif result.success:
+            # Defensive fallback: generate_supports always classifies, but keep
+            # a safe path so a missing classification never silently drops status.
             write_job_status(
                 job_id,
                 JobStatus.COMPLETED,
-                layer_count=0,  # No layers extracted for support-only
+                layer_count=0,
                 has_support_mesh=True,
             )
         else:

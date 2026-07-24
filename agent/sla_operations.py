@@ -28,7 +28,8 @@ from typing import Optional, Dict, Any, List
 import struct
 
 from .config import SLICER_ENGINE_CLI
-from .models import BooleanOperation, CutConfig, CutMode, SLAConfig
+from .models import BooleanOperation, CutConfig, CutMode, JobStatus, SLAConfig
+from .support_classifier import SupportClassification, classify_support_result
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,26 @@ def notify_launcher_if_prusa_crashed(returncode: Optional[int]) -> None:
 # detected support points. See generate_supports().
 SUPPORT_DETECTION_LAYER_HEIGHT = 0.15
 
+# Locale forced to English (the C locale) whenever the engine CLI runs, so the
+# classifier's Step 1 validate() substring comparison stays reliable (design D5).
+# PrusaSlicer's validate() messages are wrapped in _u8L()/I18N::translate, which
+# falls back to the source English strings when the active locale has no matching
+# catalog; pinning C locale removes any chance a translated message slips past
+# the English substring match. The stdout markers are raw literals and unaffected,
+# but we pin unconditionally for determinism.
+ENGINE_LOCALE_ENV = {
+    "LC_ALL": "C",
+    "LANG": "C",
+    "LANGUAGE": "C",
+}
+
+
+def _english_locale_env() -> dict:
+    """Return the current environment with the locale pinned to English (design D5)."""
+    env = os.environ.copy()
+    env.update(ENGINE_LOCALE_ENV)
+    return env
+
 
 def load_trimesh(path) -> "trimesh.Trimesh":
     """Load an STL file as a single trimesh.Trimesh."""
@@ -113,6 +134,9 @@ class OperationResult:
     layer_count: int = 0
     # Metadata
     metadata: Optional[Dict[str, Any]] = None
+    # Structured verdict from the support-generation classifier (design D1).
+    # Only populated by generate_supports(); other operations leave it None.
+    classification: Optional[SupportClassification] = None
 
     def to_dict(self) -> dict:
         return {
@@ -150,10 +174,17 @@ def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
 
 async def run_prusa_cli(
     cmd: List[str],
-    stderr_file: Optional[Path] = None
+    stderr_file: Optional[Path] = None,
+    stdout_file: Optional[Path] = None,
 ) -> tuple[int, bytes, bytes]:
     """
     Run PrusaSlicer CLI command.
+
+    Both streams are captured in full and returned. Key result signals are
+    split across the two streams (validate errors on stderr; "model out of
+    bounds" and the support/pad markers on stdout), so callers that classify
+    the result MUST read both. Pass ``stdout_file`` / ``stderr_file`` to also
+    persist the raw bytes to disk for debugging.
 
     Returns:
         Tuple of (return_code, stdout, stderr)
@@ -162,8 +193,13 @@ async def run_prusa_cli(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
+        env=_english_locale_env(),  # pin English locale so validate() stays English (D5)
     )
     stdout, stderr = await process.communicate()
+
+    if stdout_file:
+        with open(stdout_file, "wb") as f:
+            f.write(stdout)
 
     if stderr_file:
         with open(stderr_file, "wb") as f:
@@ -199,6 +235,7 @@ async def generate_supports(
     support_stl = job_dir / "output" / "model_support.stl"
     config_file = job_dir / "config.ini"
     stderr_file = job_dir / "stderr_support.log"
+    stdout_file = job_dir / "stdout_support.log"
 
     # Ensure supports are enabled
     config.supports_enable = True
@@ -229,32 +266,38 @@ async def generate_supports(
         str(input_file),
     ]
 
-    returncode, stdout, stderr = await run_prusa_cli(cmd, stderr_file)
+    returncode, stdout, stderr = await run_prusa_cli(cmd, stderr_file, stdout_file)
 
-    if returncode != 0:
-        error_msg = stderr.decode("utf-8", errors="replace")
+    # Classify purely from the CLI text output — never the exit code. The fork's
+    # validate() failures exit 0 (design D1), so returncode is not trusted here;
+    # notify_launcher_if_prusa_crashed (inside run_prusa_cli) still watches it for
+    # genuine signal-death, decoupled from this classification.
+    classification = classify_support_result(
+        stdout=stdout,
+        stderr=stderr,
+        support_stl_exists=support_stl.exists(),
+    )
+
+    if classification.status == JobStatus.FAILED:
         return OperationResult(
             success=False,
             operation=OperationType.GENERATE_SUPPORTS,
             job_id=job_id,
-            error=f"Slicing engine failed (exit {returncode}): {error_msg}",
+            error=classification.detail or "Support generation failed",
+            classification=classification,
         )
 
-    if not support_stl.exists():
-        return OperationResult(
-            success=False,
-            operation=OperationType.GENERATE_SUPPORTS,
-            job_id=job_id,
-            error="Support mesh was not generated. Model may not need supports.",
-        )
-
+    # COMPLETED: either a real support mesh (has_support_mesh) or a neutral
+    # "no supports needed" result. Only expose the STL as a support mesh when the
+    # classifier confirms real pillars — a pad-only STL is not a support mesh.
     return OperationResult(
         success=True,
         operation=OperationType.GENERATE_SUPPORTS,
         job_id=job_id,
-        support_mesh_path=support_stl,
+        support_mesh_path=support_stl if classification.has_support_mesh else None,
         sl1_path=output_file if output_file.exists() else None,
         metadata={"config": config.model_dump()},
+        classification=classification,
     )
 
 

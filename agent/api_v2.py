@@ -37,8 +37,15 @@ from .errors import (
     job_still_processing,
     missing_body,
     model_not_found,
+    model_out_of_bounds,
     no_drain_holes,
     no_hex_grid_cells,
+    support_elevation_too_low,
+    support_generation_failed,
+    support_head_penetration_invalid,
+    support_head_too_wide,
+    support_pad_gap_conflict,
+    support_points_required,
     validation_error,
 )
 from .jobs import (
@@ -205,6 +212,13 @@ def _save_model_to_job(model_data: dict, input_path) -> None:
 
 _ERROR_CODE_FACTORIES = {
     "HOLLOW_GENERATION_FAILED": hollow_generation_failed,
+    "SUPPORT_HEAD_TOO_WIDE": support_head_too_wide,
+    "SUPPORT_HEAD_PENETRATION_INVALID": support_head_penetration_invalid,
+    "SUPPORT_ELEVATION_TOO_LOW": support_elevation_too_low,
+    "SUPPORT_POINTS_REQUIRED": support_points_required,
+    "SUPPORT_PAD_GAP_CONFLICT": support_pad_gap_conflict,
+    "MODEL_OUT_OF_BOUNDS": model_out_of_bounds,
+    "SUPPORT_GENERATION_FAILED": support_generation_failed,
 }
 
 
@@ -1406,6 +1420,10 @@ async def get_slice_job_status(job_id: str):
                 "estimatedPrintTime": status_data.get("estimated_print_time"),
                 "resinVolumeMl": status_data.get("resin_volume_ml"),
                 "error": status_data.get("error"),
+                # Neutral support outcome (e.g. SUPPORT_NOT_NEEDED) rides on the
+                # success:true path — a "no supports needed" result is NOT a
+                # failure and must not block downstream slicing.
+                "supportOutcome": status_data.get("support_outcome"),
                 "hasSupportMesh": status_data.get("has_support_mesh", False),
                 "hasHollowMesh": status_data.get("has_hollow_mesh", False),
                 "hasCutMesh": status_data.get("has_cut_mesh", False),

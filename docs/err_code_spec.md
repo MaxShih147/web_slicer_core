@@ -32,6 +32,13 @@
 | `NO_DRAIN_HOLES` | 422 | false | 在目前幾何中找不到可放置 drain hole 的 wall edge |
 | `NO_HEX_GRID_CELLS` | 422 | false | Hex grid 演算法未產生任何 cell，參數可能超出 hollow mesh 範圍 |
 | `HOLLOW_GENERATION_FAILED` | 422 | false | PrusaSlicer 無法產生 hollow interior mesh（幾何太薄、太複雜等） |
+| `SUPPORT_HEAD_TOO_WIDE` | 422 | false | 支撐 pinhead 直徑對此幾何無效（`Invalid pinhead diameter`） |
+| `SUPPORT_HEAD_PENETRATION_INVALID` | 422 | false | 支撐 head penetration 值無效（`Invalid Head penetration`） |
+| `SUPPORT_ELEVATION_TOO_LOW` | 422 | false | 物件抬升高度過低，無法產生支撐（`Elevation is too low for object`） |
+| `SUPPORT_POINTS_REQUIRED` | 422 | false | 缺少必要支撐點（`Cannot proceed without support points`） |
+| `SUPPORT_PAD_GAP_CONFLICT` | 422 | false | 支撐柱底部落於物件與 pad 的間隙（pillar/pad gap 衝突） |
+| `MODEL_OUT_OF_BOUNDS` | 422 | false | 沒有物件完全落在成型體積內（`no object is fully inside the print volume`） |
+| `SUPPORT_GENERATION_FAILED` | 422 | false | 支撐生成失敗且無法歸因至更具體代碼（fail-closed fallback，附原始 stdout/stderr） |
 
 ---
 
@@ -120,12 +127,31 @@
 
 僅產生支撐 mesh（背景執行），不切片。完成後可透過 `GET /api/jobs/{job_id}/support.stl` 下載。
 
-錯誤：
+結果分類完全依 CLI 的 stdout/stderr 文字標記判定，不依賴 exit code（見 openspec/changes/add-support-generation-error-codes）。
+
+**建立/排程階段錯誤：**
 
 - JOB_NOT_FOUND
 - MODEL_NOT_FOUND // 這個 job id 沒有模型
 - INVALID_MODEL // 模型 data 無效
 - INTERNAL_ERROR
+
+**支撐生成失敗（背景執行，透過 `GET /api/v2/slices/{job_id}` 以 HTTP 200 + `success:false` 回傳具體 code）：**
+
+- SUPPORT_HEAD_TOO_WIDE // pinhead 直徑無效
+- SUPPORT_HEAD_PENETRATION_INVALID // head penetration 值無效
+- SUPPORT_ELEVATION_TOO_LOW // 抬升高度過低
+- SUPPORT_POINTS_REQUIRED // 缺少必要支撐點
+- SUPPORT_PAD_GAP_CONFLICT // 支撐柱底與 pad 間隙衝突
+- MODEL_OUT_OF_BOUNDS // 沒有物件完全落在成型體積內
+- SUPPORT_GENERATION_FAILED // 無法歸因的 fail-closed fallback（附原始 stdout/stderr）
+
+**中性結果（非錯誤，job 狀態為 `COMPLETED`）：**
+
+- 當 stdout 標記為 `(pad only)` 或 `No support/pad mesh generated` 時，代表模型實質零支撐柱。此時 job 以 `COMPLETED` 完成，`success:true`，並在狀態回應帶出 `supportOutcome: "SUPPORT_NOT_NEEDED"`、`hasSupportMesh: false`，不阻擋後續切片。
+- 當 stdout 標記為 `(supports only)` 或 `(includes supports and pad)` 時為正式成功，`hasSupportMesh: true`。
+
+> `supportOutcome` 欄位語意：`SUPPORT_NOT_NEEDED` 為目前唯一的中性值，僅出現在 `COMPLETED` 且無實際支撐柱的情況；屬 `success:true` 路徑，不進錯誤字典。缺此欄位時視為無中性提示（向後相容）。
 
 ---
 

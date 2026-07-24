@@ -133,3 +133,72 @@ def hollow_generation_failed(detail: str = None) -> APIError:
         422,
         retryable=False,
     )
+
+
+# ─── support generation error codes ───────────────────────────────────────────
+# 對應 generate-supports 的 SLAPrint::validate() 失敗與結果分類（見
+# openspec/changes/add-support-generation-error-codes）。沿用 geometry 失敗家族
+# 的 422 / retryable=False 慣例；SUPPORT_NOT_NEEDED 屬中性 supportOutcome，非
+# 錯誤，不在此註冊。
+
+def support_head_too_wide(detail: str = None) -> APIError:
+    return APIError(
+        "SUPPORT_HEAD_TOO_WIDE",
+        detail or "Support pinhead diameter is invalid for the given geometry",
+        422,
+        retryable=False,
+    )
+
+
+def support_head_penetration_invalid(detail: str = None) -> APIError:
+    return APIError(
+        "SUPPORT_HEAD_PENETRATION_INVALID",
+        detail or "Support head penetration value is invalid",
+        422,
+        retryable=False,
+    )
+
+
+def support_elevation_too_low(detail: str = None) -> APIError:
+    return APIError(
+        "SUPPORT_ELEVATION_TOO_LOW",
+        detail or "Object elevation is too low for support generation",
+        422,
+        retryable=False,
+    )
+
+
+def support_points_required(detail: str = None) -> APIError:
+    return APIError(
+        "SUPPORT_POINTS_REQUIRED",
+        detail or "Cannot proceed without support points",
+        422,
+        retryable=False,
+    )
+
+
+def support_pad_gap_conflict(detail: str = None) -> APIError:
+    return APIError(
+        "SUPPORT_PAD_GAP_CONFLICT",
+        detail or "Support pillar endings conflict with the object/pad gap",
+        422,
+        retryable=False,
+    )
+
+
+def model_out_of_bounds(detail: str = None) -> APIError:
+    return APIError(
+        "MODEL_OUT_OF_BOUNDS",
+        detail or "No object is fully inside the print volume",
+        422,
+        retryable=False,
+    )
+
+
+def support_generation_failed(detail: str = None) -> APIError:
+    return APIError(
+        "SUPPORT_GENERATION_FAILED",
+        detail or "Support mesh generation failed",
+        422,
+        retryable=False,
+    )

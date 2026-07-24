@@ -24,6 +24,10 @@ class JobStatusResponse(BaseModel):
     estimated_print_time: Optional[float] = None
     resin_volume_ml: Optional[float] = None
     error: Optional[str] = None
+    # Neutral support-generation outcome (e.g. "SUPPORT_NOT_NEEDED") on a
+    # COMPLETED job. Optional/absent for jobs that predate the field or that
+    # produced a real support mesh.
+    support_outcome: Optional[str] = None
     has_support_mesh: bool = False
     has_hollow_mesh: bool = False
     has_cut_mesh: bool = False
