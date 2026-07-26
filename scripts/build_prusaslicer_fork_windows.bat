@@ -260,14 +260,33 @@ if !errorlevel! neq 0 (
     exit /b 1
 )
 
+:: Windows: OCCTWrapper is a delay-loaded MODULE (not linked into slicer_core), so it is
+:: not built as a dependency of PrusaSlicer_app_console. Build it explicitly for STEP/STP.
+echo [PrusaSlicer] Building OCCTWrapper ^(STEP/STP plugin^)...
+"%CMAKE_BIN%" --build . --config Release --target OCCTWrapper -- !MSBUILD_ARGS!
+
+if !errorlevel! neq 0 (
+    echo [ERROR] OCCTWrapper build failed
+    echo [HINT] Ensure deps include OpenCASCADE ^(SLIC3R_ENABLE_FORMAT_STEP=ON^)
+    exit /b 1
+)
+
 set SLICER_BIN=%BUILD_DIR%\src\Release\slicer-engine.exe
 set SLICER_DLL=%BUILD_DIR%\src\Release\slicer_core.dll
+set OCCT_DLL=%BUILD_DIR%\src\Release\OCCTWrapper.dll
+if not exist "%OCCT_DLL%" if exist "%BUILD_DIR%\src\occt_wrapper\Release\OCCTWrapper.dll" (
+    copy /Y "%BUILD_DIR%\src\occt_wrapper\Release\OCCTWrapper.dll" "%OCCT_DLL%" >nul
+)
 if not exist "%SLICER_BIN%" (
     echo [ERROR] Build finished but binary not found at %SLICER_BIN%
     exit /b 1
 )
 if not exist "%SLICER_DLL%" (
     echo [ERROR] Build finished but DLL not found at %SLICER_DLL%
+    exit /b 1
+)
+if not exist "%OCCT_DLL%" (
+    echo [ERROR] Build finished but OCCTWrapper.dll not found at %OCCT_DLL%
     exit /b 1
 )
 
@@ -283,6 +302,7 @@ echo [PrusaSlicer] ==========================================
 echo.
 echo [PrusaSlicer] Binary: %SLICER_BIN%
 echo [PrusaSlicer] DLL:    %SLICER_DLL%
+echo [PrusaSlicer] OCCT:   %OCCT_DLL%
 echo [PrusaSlicer] Flavor: !BUILD_FLAVOR! ^(BUNDLE_QA_CRASH_HARNESS=!QA_HARNESS_BOOL!^)
 if /i "!BUILD_FLAVOR!"=="qa" (
     echo [PrusaSlicer] QA mode: set BUNDLE_QA_CRASH_MODE=overflow^|segfault^|exception
