@@ -9,6 +9,7 @@
   artifact-manifest.json with pre/post hashes, and verifies:
     - named exports == 1 (slicer_run_cli)
     - OCCTWrapper.dll present (STEP/STP delay-load plugin)
+    - PE icon matches fork SoT (resources/icons/slicer-engine.ico)
     - no BUNDLE_QA_CRASH harness markers in consumer PE strings
     - no *.pdb in consumer staging
 #>
@@ -152,19 +153,31 @@ $dllDst = Join-Path $BinDir "slicer_core.dll"
 if (-not (Test-Path $exeDst)) { throw "Staging missing slicer-engine.exe" }
 if (-not (Test-Path $dllDst)) { throw "Staging missing slicer_core.dll" }
 
-# Replace residual PrusaSlicer PE icon with Phrozen Control Server / PrinterControl icon
-function Find-SlicerEngineIcon {
-    $candidates = @(
-        (Join-Path $RepoRoot "..\WebSlicer_PrinterControl\assets\icon.ico"),
-        (Join-Path $RepoRoot "..\Bundle-Launcher\icon.ico"),
-        (Join-Path $RepoRoot "assets\slicer-engine.ico")
-    )
-    foreach ($c in $candidates) {
-        $full = [System.IO.Path]::GetFullPath($c)
-        if (Test-Path -LiteralPath $full) { return $full }
-    }
-    return $null
+# PE icon SoT: embedded at MSVC link via PrusaSlicer.rc.in (@SLIC3R_APP_ICON@).
+# Package verifies ExtractAssociatedIcon hash matches canonical .ico (fail-closed).
+# Optional emergency patch only: SLICER_ENGINE_ALLOW_RCEDIT_ICON=1 (then re-verify).
+$CanonicalIcon = Join-Path $RepoRoot "third_party\prusaslicer_fork\resources\icons\slicer-engine.ico"
+if (-not (Test-Path -LiteralPath $CanonicalIcon)) {
+    throw "Missing PE icon SoT: $CanonicalIcon (required for slicer-engine.exe)"
 }
+
+function Get-ExtractedIconSha256([string]$Path) {
+    Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+    $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($Path)
+    if ($null -eq $icon) {
+        throw "ExtractAssociatedIcon returned null for $Path"
+    }
+    try {
+        $ms = New-Object System.IO.MemoryStream
+        $icon.Save($ms)
+        $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($ms.ToArray())
+        return ([System.BitConverter]::ToString($hash) -replace '-', '').ToLowerInvariant()
+    } finally {
+        $icon.Dispose()
+        if ($ms) { $ms.Dispose() }
+    }
+}
+
 function Find-Rcedit {
     $candidates = @(
         (Join-Path $RepoRoot "..\WebSlicer_PrinterControl\node_modules\rcedit\bin\rcedit.exe"),
@@ -176,17 +189,27 @@ function Find-Rcedit {
     }
     return $null
 }
-$iconPath = Find-SlicerEngineIcon
-$rceditPath = Find-Rcedit
-if ($iconPath -and $rceditPath) {
-    Write-Host "Setting slicer-engine.exe icon from $iconPath" -ForegroundColor Cyan
-    & $rceditPath $exeDst --set-icon $iconPath
+
+if ($env:SLICER_ENGINE_ALLOW_RCEDIT_ICON -eq "1") {
+    $rceditPath = Find-Rcedit
+    if (-not $rceditPath) {
+        throw "SLICER_ENGINE_ALLOW_RCEDIT_ICON=1 but rcedit.exe not found"
+    }
+    Write-Host "EMERGENCY: rcedit --set-icon from SoT $CanonicalIcon" -ForegroundColor Yellow
+    & $rceditPath $exeDst --set-icon $CanonicalIcon
     if ($LASTEXITCODE -ne 0) { throw "rcedit --set-icon FAILED for $exeDst" }
-} elseif (-not $iconPath) {
-    Write-Host "WARN: no Phrozen icon.ico found (PrinterControl/Bundle-Launcher); PE icon may remain branded" -ForegroundColor Yellow
-} else {
-    Write-Host "WARN: rcedit.exe not found; PE icon not updated" -ForegroundColor Yellow
 }
+
+$canonicalIconHash = Get-ExtractedIconSha256 $CanonicalIcon
+$exeIconHash = Get-ExtractedIconSha256 $exeDst
+if ($exeIconHash -ne $canonicalIconHash) {
+    throw ("PE icon gate FAILED: slicer-engine.exe embedded icon does not match SoT.`n" +
+        "  SoT:  $CanonicalIcon`n" +
+        "  SoT ExtractAssociatedIcon SHA256: $canonicalIconHash`n" +
+        "  EXE ExtractAssociatedIcon SHA256: $exeIconHash`n" +
+        "  Fix: rebuild with SLIC3R_APP_ICON (PrusaSlicer.rc.in), or set SLICER_ENGINE_ALLOW_RCEDIT_ICON=1 once as emergency.")
+}
+Write-Host "PE icon gate OK (ExtractAssociatedIcon SHA256=$exeIconHash)" -ForegroundColor Green
 
 $postExe = Get-Sha256 $exeDst
 $postDll = Get-Sha256 $dllDst

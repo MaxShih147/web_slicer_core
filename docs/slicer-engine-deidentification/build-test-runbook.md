@@ -56,9 +56,9 @@
 | B | QA flavor 編譯（含三種 crash） | mac | `SLICER_ENGINE_FLAVOR=qa ./scripts/build_prusaslicer_fork_macos.sh` | qa build tree binary（§3.2） |
 | B | QA flavor 編譯 | win | `scripts\build_prusaslicer_fork_windows.bat low qa` | qa build tree exe+dll（§4.2） |
 | C | 產正式 consumer 包（strip+sign+manifest+scan） | mac | `PACKAGE_SLICER_ENGINE=1 ./scripts/build_prusaslicer_fork_macos.sh` | `third_party/slicer-engine/`（§3.3） |
-| C | 產正式 consumer staging | win | `powershell -File scripts\package_slicer_engine_windows.ps1` | `slicer-engine\`（§4.3） |
+| C | 產正式 consumer staging | win | `scripts\build_prusaslicer_fork_windows.bat low package`（或先 build 再 `package_…_windows.ps1`） | `slicer-engine\`（§4.3） |
 | D | 產 QA 包 | mac | `SLICER_ENGINE_FLAVOR=qa PACKAGE_SLICER_ENGINE=1 ./scripts/build_prusaslicer_fork_macos.sh` | `third_party/slicer-engine-qa/`（§3.3） |
-| D | 產 QA staging | win | `package_…_windows.ps1 -Flavor qa -OutRoot …\slicer-engine-qa`（**必分目錄**） | `slicer-engine-qa\`（§4.3） |
+| D | 產 QA staging | win | `scripts\build_prusaslicer_fork_windows.bat qa package`（自動 `-OutRoot slicer-engine-qa`）或手動 `package_… -Flavor qa -OutRoot …\slicer-engine-qa` | `slicer-engine-qa\`（§4.3） |
 | E | 只跑掃描閘（fail-closed） | mac | `./scripts/scan_slicer_engine_macos.sh` | `scan-report.json`（§5） |
 | E | 只跑掃描閘 | win | `powershell -File scripts\scan_slicer_engine_windows.ps1` | `scan-report.json`（§5） |
 | F | 三種 crash 動態驗證 | mac | `BUNDLE_QA_CRASH_MODE=overflow <qa-bin>`（§6） | `.ips`（§6） |
@@ -124,16 +124,20 @@ SLICER_ENGINE_FLAVOR=qa ./scripts/package_slicer_engine_macos.sh
 ```bat
 cd third_party\prusaslicer_build
 cmake --build . --config Release --target PrusaSlicer_app_console -- /m:1
-:: binary: third_party\prusaslicer_build\src\Release\slicer-engine.exe
+cmake --build . --config Release --target OCCTWrapper -- /m:1
+:: binaries: …\src\Release\slicer-engine.exe + slicer_core.dll + OCCTWrapper.dll
 ```
 
-或再跑一次建置腳本（會沿用既有 cache；改 flavor／export／VERSIONINFO 時仍用 `clean`）：
+或再跑一次建置腳本（會沿用既有 cache；改 flavor／export／VERSIONINFO／icon 時仍用 `clean`）：
 
 ```bat
 scripts\build_prusaslicer_fork_windows.bat low
+:: optional D13 staging after build:
+scripts\build_prusaslicer_fork_windows.bat low package
 ```
 
-> 碰到 `OUTPUT_NAME`、visibility、`BUNDLE_QA_CRASH_HARNESS`、`.def`、VERSIONINFO／`version.inc` → **必須 clean**（mac：`rm -rf third_party/prusaslicer_build`；Win：`…bat low clean`），不可只靠增量。
+> 碰到 `OUTPUT_NAME`、visibility、`BUNDLE_QA_CRASH_HARNESS`、`.def`、VERSIONINFO／`version.inc`、**`SLIC3R_APP_ICON`／`slicer-engine.ico`** → **必須 clean**（mac：`rm -rf third_party/prusaslicer_build`；Win：`…bat low clean`），不可只靠增量。
+> Windows 只建 `PrusaSlicer_app_console` **不會**帶出 `OCCTWrapper`（獨立 MODULE）；官方 bat 會在 console 之後明確 `--target OCCTWrapper`。手動增量時兩 target 都要建。
 
 ### 2.5 Agent／TLS（跑本機後端）
 
@@ -288,14 +292,19 @@ scripts\build_prusaslicer_fork_windows.bat
 scripts\build_prusaslicer_fork_windows.bat full
 ```
 
-- 位置引數：`[full|low|qa] [clean|qa]`。
+- 位置引數：`[full|low|qa] [clean|qa|package] [qa|package] [package]`。
+- **Package 預設 OFF。** 編譯後要接續 D13 staging：傳 `package`，或設 `PACKAGE_SLICER_ENGINE=1`（與 macOS 同名環境變數）。
 - CMake 關鍵旗標：`-DSLIC3R_GUI=OFF -DSLIC3R_BUILD_TESTS=OFF -DBUNDLE_QA_CRASH_HARNESS=OFF`，記憶體模式決定 `SLIC3R_MSVC_COMPILE_PARALLEL` 與 MSBuild `/m`。
-- 產物：`third_party\prusaslicer_build\src\Release\slicer-engine.exe` + `slicer_core.dll`（+ 自動複製 `libgmp-10.dll`、`libmpfr-4.dll`）。
-- 編譯 target 是 `PrusaSlicer_app_console`（CMake target 名內部仍叫 PrusaSlicer 屬正常，`OUTPUT_NAME` 已中性）。
+- 產物：`third_party\prusaslicer_build\src\Release\` 下：
+  - `slicer-engine.exe` + `slicer_core.dll`
+  - **`OCCTWrapper.dll`**（STEP/STP；bat 在 console 之後明確 `--target OCCTWrapper`）
+  - 自動複製 `libgmp-10.dll`、`libmpfr-4.dll`
+- 編譯 target：`PrusaSlicer_app_console`（內部仍叫 PrusaSlicer 屬正常，`OUTPUT_NAME` 已中性）+ **`OCCTWrapper`**。
+- PE icon：link 時由 `SLIC3R_APP_ICON`（`resources/icons/slicer-engine.ico`）寫入 RC；改 icon 需 clean 重編 console。
 
 #### 4.1.1 直接對 build tree binary 下 CLI（開發煙測）
 
-Windows 的引擎與 macOS 同一份 codebase、同一組 CLI 旗標。`slicer-engine.exe` 依賴同目錄的 `slicer_core.dll`、`libgmp-10.dll`、`libmpfr-4.dll`，因此**直接在 `Release\` 目錄內執行**（或把該目錄加入 `PATH`）最穩：
+Windows 的引擎與 macOS 同一份 codebase、同一組 CLI 旗標。`slicer-engine.exe` 依賴同目錄的 `slicer_core.dll`、`OCCTWrapper.dll`、`libgmp-10.dll`、`libmpfr-4.dll`，因此**直接在 `Release\` 目錄內執行**（或把該目錄加入 `PATH`）最穩：
 
 ```powershell
 $Bin = "$PWD\third_party\prusaslicer_build\src\Release\slicer-engine.exe"
@@ -338,20 +347,26 @@ scripts\build_prusaslicer_fork_windows.bat qa
 
 ### 4.3 情境 C/D — consumer / qa staging（D13）
 
-先編譯（§4.1 或 §4.2），再打包：
+先編譯再打包（兩種等效路徑）：
 
-```powershell
-# Consumer → repo-root\slicer-engine\
+```bat
+:: A) One-shot：build + package（package 預設 OFF，需明確開啟）
+scripts\build_prusaslicer_fork_windows.bat low package
+scripts\build_prusaslicer_fork_windows.bat qa package
+::    qa package 會自動 -OutRoot …\slicer-engine-qa（不會蓋掉 consumer）
+
+:: B) 分開跑
+scripts\build_prusaslicer_fork_windows.bat low
 powershell -File scripts\package_slicer_engine_windows.ps1
 
-# QA — MUST use a separate -OutRoot (default also writes to slicer-engine\ and OVERWRITES consumer)
+scripts\build_prusaslicer_fork_windows.bat qa
 powershell -File scripts\package_slicer_engine_windows.ps1 `
   -Flavor qa `
-  -OutRoot "$PWD\slicer-engine-qa" `
+  -OutRoot "%CD%\slicer-engine-qa" `
   -ConsumerEquivalentBuildId <consumer_build_id>
 ```
 
-> ⚠️ **Win QA 踩雷：** `-Flavor qa` **不會**自動換目錄；預設 `-OutRoot` 與 consumer 相同（`slicer-engine\`）。驗收時務必 `-OutRoot …\slicer-engine-qa`，否則會蓋掉 consumer staging。掃描時也要對同一目錄：
+> ⚠️ **Win QA 踩雷（手動 package）：** `-Flavor qa` **不會**自動換目錄；預設 `-OutRoot` 與 consumer 相同（`slicer-engine\`）。手動打包務必 `-OutRoot …\slicer-engine-qa`。用 bat 的 `qa package` 則已自動分開目錄。掃描時也要對同一目錄：
 > ```powershell
 > $env:SLICER_ENGINE_EXPECT_FLAVOR='qa'
 > powershell -File scripts\scan_slicer_engine_windows.ps1 -ArtifactRoot "$PWD\slicer-engine-qa"
@@ -359,23 +374,24 @@ powershell -File scripts\package_slicer_engine_windows.ps1 `
 
 `package_slicer_engine_windows.ps1` 做：
 
-1. 複製 `slicer-engine.exe` + `slicer_core.dll` + `OCCTWrapper.dll`（.step/.stp 需要）+ GMP/MPFR 到 `slicer-engine\bin\`，**排除 `*.pdb` 與品牌殘檔**。
-2. Stage 去品牌 resources（`stage_slicer_engine_resources_windows.ps1`）。
-3. 把中性 PDB（`slicer-engine.pdb` / `slicer_core.pdb`）封存到 `symbols\`（不進 bin）。
-4. Stage AGPL 法遵包（`legal\`：LICENSE / NOTICE.md / SOURCE_OFFER.md）。
-5. 用 `rcedit` 把 PE icon 換成非品牌 icon（找不到會 warn）。
-6. **Export 閘**：`dumpbin /EXPORTS` 必須 **恰好 1 個** named export = `slicer_run_cli`，且不得出現 `slic3r_main`/品牌 token。
-7. consumer flavor：靜態稽核 DLL 不得含 harness marker。
-8. 寫 `engine-artifact-manifest.json`（+ `artifact-manifest.json` alias）、build ID sidecar、SPDX 2.3 SBOM + source-chain。
-9. 呼叫 `scan_slicer_engine_windows.ps1`（§5）fail-closed。
+1. **若 `OutRoot` 已存在 → 整棵刪除再重建**（非原地覆蓋；避免舊殘檔）。
+2. 複製 `slicer-engine.exe` + `slicer_core.dll` + `OCCTWrapper.dll`（.step/.stp 需要）+ GMP/MPFR 到 `…\bin\`，**排除 `*.pdb` 與品牌殘檔**。
+3. Stage 去品牌 resources（`stage_slicer_engine_resources_windows.ps1`）。
+4. 把中性 PDB（`slicer-engine.pdb` / `slicer_core.pdb`）封存到 `symbols\`（不進 bin）。
+5. Stage AGPL 法遵包（`legal\`：LICENSE / NOTICE.md / SOURCE_OFFER.md）。
+6. **PE icon 閘（fail-closed）：** `ExtractAssociatedIcon` hash 必須等於 fork SoT `resources/icons/slicer-engine.ico`（link 時已嵌；**預設不再跑 rcedit**）。急救：`SLICER_ENGINE_ALLOW_RCEDIT_ICON=1` 才允許 rcedit 後再驗一次。
+7. **Export 閘**：`dumpbin /EXPORTS` 必須 **恰好 1 個** named export = `slicer_run_cli`，且不得出現 `slic3r_main`/品牌 token。
+8. consumer flavor：靜態稽核 DLL 不得含 harness marker。
+9. 寫 `engine-artifact-manifest.json`（+ `artifact-manifest.json` alias）、build ID sidecar、SPDX 2.3 SBOM + source-chain。
+10. 呼叫 `scan_slicer_engine_windows.ps1`（§5）fail-closed。
 
-輸出：`slicer-engine\`（`bin\`、`symbols\`、`legal\`、`engine-artifact-manifest.json`、`EXPORTS.txt`、`scan-report.json`、`sbom`）。
+輸出：`slicer-engine\` 或 `slicer-engine-qa\`（`bin\`、`symbols\`、`legal\`、`engine-artifact-manifest.json`、`EXPORTS.txt`、`scan-report.json`、`sbom`）。
 
-> ⚠️ **clean rebuild 時機（Windows 有 `clean` 參數）：** 碰到 `OUTPUT_NAME`、visibility、`BUNDLE_QA_CRASH_HARNESS`、`.def` export、VERSIONINFO/`version.inc` 任一改動，一律 clean 重編避免 stale cache 留品牌：
+> ⚠️ **clean rebuild 時機（Windows 有 `clean` 參數）：** 碰到 `OUTPUT_NAME`、visibility、`BUNDLE_QA_CRASH_HARNESS`、`.def` export、VERSIONINFO/`version.inc`、**PE icon / `slicer-engine.ico`** 任一改動，一律 clean 重編避免 stale cache：
 > ```bat
 > scripts\build_prusaslicer_fork_windows.bat low clean
 > ```
-> 另 LNK2001/LNK1136（0-byte obj）也用 clean 重試。
+> 另 LNK2001/LNK1136（0-byte obj）也用 clean 重試。Explorer 清單小圖可能因 Shell icon cache 仍顯示舊圖；以預覽窗格／`PE icon gate OK` 為準。
 
 ---
 
@@ -707,9 +723,10 @@ CLI 參數與 PrusaSlicer 完全相同（`--export-sla` / `--export-support-stl`
 | `nm` brand ≠ 0 | mac | 確認有經 `package` 的 strip 步驟；不可拿 build tree 未 strip binary 當正式包 |
 | dSYM/PDB 洩漏進包 | 雙 | 走 package 腳本（會 fail-closed）；不要手動 cp 整個 build tree |
 | 磁碟 sha256 ≠ manifest（Developer ID 重簽後） | mac | 正常；掃描設 `SLICER_ENGINE_SKIP_HASH=1` 改記 post-sign hash |
-| `LoadLibrary` error 126 | win | `slicer_core.dll` 旁缺 `libgmp-10.dll`/`libmpfr-4.dll`/OCCT；打包腳本會帶，手動跑要補齊 |
+| `LoadLibrary` error 126 | win | `slicer_core.dll` 旁缺 `libgmp-10.dll`/`libmpfr-4.dll`/`OCCTWrapper.dll`；bat 會編 OCCT＋copy GMP/MPFR，打包腳本也會帶；手動跑要補齊 |
+| PE icon gate FAIL | win | 確認 SoT `resources/icons/slicer-engine.ico` 存在且 clean 重編過 console；勿只改 package／rcedit。Explorer 清單舊圖≠PE 錯（Shell cache） |
 | agent 找不到 CLI | 雙 | 設 `SLICER_ENGINE_BIN` 指向 build tree 或正式包 binary |
-| Win QA 蓋掉 consumer staging | win | `-Flavor qa` 務必加 `-OutRoot …\slicer-engine-qa`（見 §4.3） |
+| Win QA 蓋掉 consumer staging | win | 用 bat `qa package`，或手動 `-OutRoot …\slicer-engine-qa`（見 §4.3） |
 | TLS／cert 找不到 | 雙 | 跑 `trust_dev_tls_*`；或準備 `agent/tls/localhost.crt|key`（§2.5） |
 | crash 報告抓錯檔 | 雙 | 用 pid＋時間對應；勿只取最新 `.ips`／`.dmp`（§6.1） |
 | atos／cdb 還原出亂名或失敗 | 雙 | UUID／GUID 與 `engine_build_id` 不一致；換對次 symbols（§6.2） |
@@ -742,9 +759,9 @@ CLI 參數與 PrusaSlicer 完全相同（`--export-sla` / `--export-support-stl`
 | 腳本 | 平台 | 用途 |
 |------|------|------|
 | `scripts/build_prusaslicer_fork_macos.sh` | mac | 編譯（可選 `PACKAGE_SLICER_ENGINE=1`） |
-| `scripts/build_prusaslicer_fork_windows.bat` | win | 編譯（`low`／`full`／`qa`／`clean`） |
+| `scripts/build_prusaslicer_fork_windows.bat` | win | 編譯 `console`+`OCCTWrapper`（`low`／`full`／`qa`／`clean`；可選 `package` 或 `PACKAGE_SLICER_ENGINE=1`，**預設 OFF**） |
 | `scripts/package_slicer_engine_macos.sh` | mac | D13 package：dSYM→strip→codesign→manifest→scan |
-| `scripts/package_slicer_engine_windows.ps1` | win | D13 staging：copy PE、封 PDB、export 閘、scan |
+| `scripts/package_slicer_engine_windows.ps1` | win | D13 staging：整樹刪再建、copy PE（含 OCCT）、封 PDB、PE icon 閘、export 閘、scan |
 | `scripts/stage_slicer_engine_resources_macos.sh` | mac | 去品牌 Resources 進 artifact（package 自動呼叫） |
 | `scripts/stage_slicer_engine_resources_windows.ps1` | win | 去品牌 `bin\resources`（package 自動呼叫） |
 | `scripts/stage_slicer_engine_agpl_macos.sh` | mac | AGPL `legal/` 進 artifact（package 自動呼叫） |

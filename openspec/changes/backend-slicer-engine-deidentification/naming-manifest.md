@@ -72,6 +72,7 @@
 | InternalName | `slicer-engine` |
 | OriginalFilename | `slicer-engine.exe`／`slicer_core.dll` |
 | ProductVersion／FileVersion | 與 internal build ID 對齊，不含品牌 token |
+| PE icon（exe） | SoT：`resources/icons/slicer-engine.ico`；MSVC link 經 `SLIC3R_APP_ICON` 嵌入（見 [`windows-policy.md`](./windows-policy.md) §4.1） |
 
 ### 2.3 精簡版 C′（L2）建置約束
 

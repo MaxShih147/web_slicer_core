@@ -156,6 +156,16 @@ Launcher **MUST** 驗證 `post_strip_sha256` 與磁碟一致後才 Authenticode�
 | OriginalFilename | `slicer-engine.exe`／`slicer_core.dll` |
 | ProductVersion／FileVersion | 含 build ID；**無** `PrusaSlicer`／`prusa`／`slic3r` token |
 
+### 4.1 PE icon（Windows L1 — 與 VERSIONINFO 同層）
+
+| 項目 | 定案 |
+|------|------|
+| SoT | `third_party/prusaslicer_fork/resources/icons/slicer-engine.ico` |
+| 嵌入時機 | MSVC **link**（`SLIC3R_APP_ICON` → `PrusaSlicer.rc.in` `2 ICON "@SLIC3R_APP_ICON@"`） |
+| Package | **驗證** `ExtractAssociatedIcon` hash 與 SoT 一致（fail-closed）；**不得**長期依賴 packaging `rcedit` 當唯一真相 |
+| 急救 | 僅允許 `SLICER_ENGINE_ALLOW_RCEDIT_ICON=1` 後再跑同一閘門 |
+| 驗收注意 | Explorer 清單小圖可能受 Shell icon cache 影響；以 preview／icon gate 為準 |
+
 ---
 
 ## 5. 與 2.5 PoC／正式落地的分界
@@ -182,6 +192,7 @@ Windows consumer（或 release-equivalent qa 之靜態面）**FAIL** 若任一�
 4. Bundle 內存在 `*.pdb`  
 5. PE debug directory／RSDS 字串含品牌或建置樹路徑  
 6. Shim 錯誤字串含舊 DLL／export 品牌名  
+7. `slicer-engine.exe` 嵌入 PE icon 與 SoT `slicer-engine.ico` 的 `ExtractAssociatedIcon` hash 不一致  
 
 ---
 
@@ -195,5 +206,6 @@ Windows consumer（或 release-equivalent qa 之靜態面）**FAIL** 若任一�
 | W-PDB-1 | 顯式 `/DEBUG`＋`/PDB:`＋**`/PDBALTPATH:` 短中性名** | 2026-07-17 |
 | W-PDB-2 | 否決「只 XF pdb」；先封存再交付 consumer PE | 2026-07-17 |
 | W-VER-1 | DLL VERSIONINFO 不得再空；與 exe 同中性政策 | 2026-07-17 |
+| W-ICO-1 | PE icon SoT＝`slicer-engine.ico`；link 時嵌 RC；package fail-closed 驗證；rcedit 僅急救 | 2026-07-26 |
 
 **批准角色（政策）：** Backend／Release Engineering（本 change 工程定案）。產品 canonical 名已於 naming-manifest approved；本文件不變更四項 canonical。

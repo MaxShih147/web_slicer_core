@@ -44,7 +44,7 @@
 | [`evidence/macos-productize-5.4-5.6-5.7.md`](./evidence/macos-productize-5.4-5.6-5.7.md) | macOS 5.4／5.6／5.7 正式 scan／qa_delta／consumer harness OFF |
 | `scripts/package_slicer_engine_macos.sh` | **D13 產品化**（dSYM→strip→manifest；tasks 5.1） |
 | `scripts/scan_slicer_engine_macos.sh` | **正式掃描閘**（tasks 5.4／5.6／5.7；packager fail-closed） |
-| `scripts/package_slicer_engine_windows.ps1` | **Win D13 package**（PDB 封存、manifest、export／harness 閘） |
+| `scripts/package_slicer_engine_windows.ps1` | **Win D13 package**（整樹刪再建、PDB 封存、manifest、OCCT／PE icon／export／harness 閘） |
 | `scripts/scan_slicer_engine_windows.ps1` | **Win 正式掃描閘**（tasks 4.4／4.5／5.4；fail closed；Authenticode 不要求） |
 | [`evidence/windows-launcher-section4-20260719.md`](./evidence/windows-launcher-section4-20260719.md) | Win Launcher §4 unsigned gate PASS |
 | [`evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md`](./evidence/windows/launcher-1.0.0-postsign-20260719/SUMMARY.md) | **已簽 Setup** post-sign／lifecycle／scan PASS |
@@ -71,7 +71,7 @@
 |------|------|
 | `web_slicer_core/third_party/prusaslicer_fork/` | 引擎原始碼與建置 |
 | `web_slicer_core/scripts/build_prusaslicer_fork_macos.sh` | macOS 建置 |
-| `web_slicer_core/scripts/build_prusaslicer_fork_windows.bat` | Windows 建置 |
+| `web_slicer_core/scripts/build_prusaslicer_fork_windows.bat` | Windows 建置（`console`+`OCCTWrapper`；可選 `package`／`PACKAGE_SLICER_ENGINE=1`，預設 OFF） |
 | `web_slicer_core/agent/config.py` | CLI 路徑 |
 | `web_slicer_core/agent/sla_operations.py`／`jobs.py` | subprocess 呼叫 |
 | `web_slicer_core/docs/single-node-cloud/agpl-boundary.md` | AGPL 邊界（不得破壞） |

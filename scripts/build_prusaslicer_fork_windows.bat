@@ -2,17 +2,25 @@
 setlocal enabledelayedexpansion
 
 :: ============================================
-:: Memory Mode / Flavor Configuration
-:: Usage: build_prusaslicer_fork_windows.bat [full|low|qa] [clean|qa]
-::   full  - 4 parallel projects, /MP enabled (32GB+ RAM)
-::   low   - 1 parallel project, /MP disabled (16GB RAM) [default]
-::   qa    - same as low but BUNDLE_QA_CRASH_HARNESS=ON
-::   clean - optional; delete build dir and rebuild from scratch
+:: Memory Mode / Flavor / Package Configuration
+:: Usage: build_prusaslicer_fork_windows.bat [full|low|qa] [clean|qa|package] [qa|package] [package]
+::   full     - 4 parallel projects, /MP enabled (32GB+ RAM)
+::   low      - 1 parallel project, /MP disabled (16GB RAM) [default]
+::   qa       - same as low but BUNDLE_QA_CRASH_HARNESS=ON
+::   clean    - optional; delete build dir and rebuild from scratch
+::   package  - optional; after build, run package_slicer_engine_windows.ps1
+:: Env (same as macOS): PACKAGE_SLICER_ENGINE=1 also enables packaging [default: off]
 :: ============================================
 set MEMORY_MODE=%1
 if "%MEMORY_MODE%"=="" set MEMORY_MODE=low
 set DO_CLEAN_BUILD=0
 set BUILD_FLAVOR=consumer
+set DO_PACKAGE=0
+if /i "%PACKAGE_SLICER_ENGINE%"=="1" set DO_PACKAGE=1
+if /i "%1"=="package" set DO_PACKAGE=1
+if /i "%2"=="package" set DO_PACKAGE=1
+if /i "%3"=="package" set DO_PACKAGE=1
+if /i "%4"=="package" set DO_PACKAGE=1
 if /i "%2"=="clean" set DO_CLEAN_BUILD=1
 if /i "%2"=="qa" set BUILD_FLAVOR=qa
 if /i "%3"=="qa" set BUILD_FLAVOR=qa
@@ -24,6 +32,8 @@ if /i "%1"=="qa" (
     set BUILD_FLAVOR=qa
     set MEMORY_MODE=low
 )
+:: "package" as sole/first token is not a memory mode
+if /i "%MEMORY_MODE%"=="package" set MEMORY_MODE=low
 if /i "%MEMORY_MODE%"=="full" (
     set "MSBUILD_ARGS=/m:4"
     set "SLIC3R_PARALLEL_FLAG=-DSLIC3R_MSVC_COMPILE_PARALLEL=ON"
@@ -33,6 +43,11 @@ if /i "%MEMORY_MODE%"=="full" (
     set "MSBUILD_ARGS=/m:1 /p:CL_MPCount=1 /p:UseMultiToolTask=false"
     set "SLIC3R_PARALLEL_FLAG=-DSLIC3R_MSVC_COMPILE_PARALLEL=OFF"
     echo [CONFIG] Memory mode: LOW - 1 parallel project, /MP disabled ^(16GB RAM^)
+)
+if "!DO_PACKAGE!"=="1" (
+    echo [CONFIG] Package after build: ON
+) else (
+    echo [CONFIG] Package after build: OFF ^(pass 'package' or set PACKAGE_SLICER_ENGINE=1^)
 )
 echo.
 
@@ -310,10 +325,54 @@ if /i "!BUILD_FLAVOR!"=="qa" (
     echo [PrusaSlicer] Consumer: static harness symbols must be absent ^(tasks 5.6/5.7^)
 )
 echo.
-echo [PrusaSlicer] Package consumer staging:
-echo   powershell -File scripts\package_slicer_engine_windows.ps1
+
+set PACKAGED=0
+if "!DO_PACKAGE!"=="1" (
+    echo [PrusaSlicer] ==========================================
+    echo [PrusaSlicer] Step 3: Packaging slicer-engine ^(!BUILD_FLAVOR!^)...
+    echo [PrusaSlicer] ==========================================
+    echo.
+    if /i "!BUILD_FLAVOR!"=="qa" (
+        set "PKG_OUT=%ROOT_DIR%\slicer-engine-qa"
+        set "PKG_EQ="
+        if exist "%ROOT_DIR%\slicer-engine\engine_build_id.txt" (
+            set /p PKG_EQ=<"%ROOT_DIR%\slicer-engine\engine_build_id.txt"
+        )
+        if defined PKG_EQ (
+            powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT_DIR%\scripts\package_slicer_engine_windows.ps1" -Flavor qa -OutRoot "!PKG_OUT!" -ConsumerEquivalentBuildId "!PKG_EQ!"
+        ) else (
+            powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT_DIR%\scripts\package_slicer_engine_windows.ps1" -Flavor qa -OutRoot "!PKG_OUT!"
+        )
+    ) else (
+        powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT_DIR%\scripts\package_slicer_engine_windows.ps1" -Flavor consumer
+    )
+    if !errorlevel! neq 0 (
+        echo [ERROR] Packaging failed
+        exit /b 1
+    )
+    set PACKAGED=1
+)
+
+if "!PACKAGED!"=="1" (
+    if /i "!BUILD_FLAVOR!"=="qa" (
+        echo [PrusaSlicer] Packaged QA: %ROOT_DIR%\slicer-engine-qa\bin\slicer-engine.exe
+        echo [PrusaSlicer] To use packaged agent binary:
+        echo   set SLICER_ENGINE_BIN=%ROOT_DIR%\slicer-engine-qa\bin\slicer-engine.exe
+    ) else (
+        echo [PrusaSlicer] Packaged: %ROOT_DIR%\slicer-engine\bin\slicer-engine.exe
+        echo [PrusaSlicer] To use packaged agent binary:
+        echo   set SLICER_ENGINE_BIN=%ROOT_DIR%\slicer-engine\bin\slicer-engine.exe
+    )
+) else (
+    echo [PrusaSlicer] Packaging skipped ^(default OFF^). Enable with:
+    echo   %~nx0 %MEMORY_MODE% package
+    echo   or: set PACKAGE_SLICER_ENGINE=1 ^&^& %~nx0
+    echo.
+    echo [PrusaSlicer] Manual package:
+    echo   powershell -File scripts\package_slicer_engine_windows.ps1
+)
 echo.
-echo [PrusaSlicer] To use with the agent:
+echo [PrusaSlicer] Dev build tree binary:
 echo   set SLICER_ENGINE_BIN=%SLICER_BIN%
 echo   scripts\run_agent.bat
 echo.

@@ -55,7 +55,12 @@ After cloning (and [initializing submodules](#after-clone-init-submodules)), run
 git submodule update --init --recursive
 
 :: 2. Build PrusaSlicer CLI (requires CMake, Visual Studio; 16GB RAM use default, 32GB+ use full)
+::    Builds PrusaSlicer_app_console + OCCTWrapper (STEP plugin). Package is OFF by default.
 scripts\build_prusaslicer_fork_windows.bat
+
+:: Optional: build then package consumer staging in one step
+:: scripts\build_prusaslicer_fork_windows.bat low package
+:: or: set PACKAGE_SLICER_ENGINE=1 && scripts\build_prusaslicer_fork_windows.bat low
 
 :: 3. Python 3.12 venv (recommended so manifold3d installs from wheel)
 py -3.12 -m venv .venv312
@@ -66,9 +71,9 @@ scripts\run_agent.bat
 
 Backend runs at `https://127.0.0.1:5179`. Then start the frontend (see step 3 below).
 
-> **Due to de-identification, the new build output on Windows is `third_party\prusaslicer_build\src\Release\slicer-engine.exe` plus `slicer_core.dll`** (the console shim loads the neutral core DLL). Point the agent at it with `set SLICER_ENGINE_BIN=%CD%\third_party\prusaslicer_build\src\Release\slicer-engine.exe`. See [De-identification notes](#de-identification-notes).
+> **Due to de-identification, the new build output on Windows is `third_party\prusaslicer_build\src\Release\slicer-engine.exe` plus `slicer_core.dll` and `OCCTWrapper.dll`** (the console shim loads the neutral core DLL; STEP/STP uses the OCCT plugin). Point the agent at it with `set SLICER_ENGINE_BIN=%CD%\third_party\prusaslicer_build\src\Release\slicer-engine.exe`. See [De-identification notes](#de-identification-notes).
 
-**Prerequisites for Windows:** Python 3.12 (or 3.11), Node.js 18+, CMake, Visual Studio 2017+ (2019/2022/2026). Low RAM (16GB): use default; 32GB+: run `scripts\build_prusaslicer_fork_windows.bat full`.
+**Prerequisites for Windows:** Python 3.12 (or 3.11), Node.js 18+, CMake, Visual Studio 2017+ (2019/2022/2026). Low RAM (16GB): use default; 32GB+: run `scripts\build_prusaslicer_fork_windows.bat full`. Args: `[full|low|qa] [clean|qa|package] …` — pass `package` or set `PACKAGE_SLICER_ENGINE=1` to run D13 staging after build (default **off**).
 
 ### 1. Build PrusaSlicer Fork (macOS / Linux)
 
@@ -126,6 +131,7 @@ De-identification is landed on the **`dev` branches** of both **`web_slicer_core
 1. **Local build & run are unchanged** — no extra manual steps for day-to-day work:
    - macOS: `./scripts/build_prusaslicer_fork_macos.sh` (build) + `./scripts/run_agent.sh` (run)
    - Windows: `scripts\build_prusaslicer_fork_windows.bat` (build) + `scripts\run_agent.bat` (run)
+   - Windows packaging is **opt-in** (same idea as macOS): pass `package` or `PACKAGE_SLICER_ENGINE=1` after a successful build when you need `slicer-engine\` staging.
 2. **Direct CLI** — same native PrusaSlicer flag grammar; only the executable name is neutral (`slicer-engine` / `slicer-engine.exe`). Example: `--load config.ini --export-gcode -o out.gcode model.stl` (or `--export-sla` for SLA). Prefer `SLICER_ENGINE_BIN` over legacy `PRUSA_SLICER_BIN`.
 3. **Scenarios & copy-paste commands** — [`docs/slicer-engine-deidentification/build-test-runbook.md`](docs/slicer-engine-deidentification/build-test-runbook.md) (safe to feed to an AI assistant for guidance).
 4. **Full R&D record** — [`openspec/changes/backend-slicer-engine-deidentification/`](openspec/changes/backend-slicer-engine-deidentification/) (`design.md`, `naming-manifest.md`, `blacklist.md`, `acceptance-procedure.md`, evidence, etc.).
@@ -149,18 +155,20 @@ De-identification is landed on the **`dev` branches** of both **`web_slicer_core
 
 - For normal development, debugging, and running the CLI, **just use PrusaSlicer as before** — de-identification does not affect the dev workflow.
 - Output **filenames** become neutral right after compilation (CMake `OUTPUT_NAME`):
-  - macOS: `third_party/prusaslicer_build/src/slicer-engine`
-  - Windows: `…\src\Release\slicer-engine.exe` + `slicer_core.dll`
+  - macOS: `third_party/prusaslicer_build/src/slicer-engine` (OCCT linked statically into the binary on Apple)
+  - Windows: `…\src\Release\slicer-engine.exe` + `slicer_core.dll` + **`OCCTWrapper.dll`** (delay-loaded MODULE; the build script builds it explicitly after `PrusaSlicer_app_console`)
   - The CMake target is still internally named `PrusaSlicer` — that is expected, leave it.
-- Run a **clean build** when you touch any of these, so stale cache doesn't leave brand names behind (`build_...windows.bat clean`, or delete `prusaslicer_build` first on mac): `OUTPUT_NAME`, visibility flags, `BUNDLE_QA_CRASH_HARNESS`, exports (`.def`), VERSIONINFO / `version.inc`.
+- PE icon on Windows is embedded at **link time** from SoT `third_party/prusaslicer_fork/resources/icons/slicer-engine.ico` (`SLIC3R_APP_ICON` → `PrusaSlicer.rc.in`). Changing the `.ico` requires a clean rebuild of the console shim. Do **not** rely on Explorer list-view icons (shell cache); packaging verifies `ExtractAssociatedIcon` against the SoT (fail-closed).
+- Run a **clean build** when you touch any of these, so stale cache doesn't leave brand names behind (`build_...windows.bat clean`, or delete `prusaslicer_build` first on mac): `OUTPUT_NAME`, visibility flags, `BUNDLE_QA_CRASH_HARNESS`, exports (`.def`), VERSIONINFO / `version.inc`, **`SLIC3R_APP_ICON` / `.ico`**.
 - The **QA crash harness (the three intentional crashes) is compiled only when `flavor=qa`**; consumer builds default to OFF, and no runtime-triggerable crash path may be compiled into the formal package.
 - **Do not** touch slicing algorithms or do a wide C++ namespace rename for the sake of de-branding (`Slic3r::` → `slice::` is L3 and out of scope for this round).
 
 ### Build / packaging
 
-- Plain compilation does **not** strip or seal PDBs; the formal package requires a separate package step:
+- Plain compilation does **not** strip or seal PDBs; the formal package requires a separate package step (opt-in on both platforms):
   - macOS: `PACKAGE_SLICER_ENGINE=1 ./scripts/build_prusaslicer_fork_macos.sh` → `third_party/slicer-engine/bin/`
-  - Windows: `powershell -File scripts\package_slicer_engine_windows.ps1` → `slicer-engine\bin\`
+  - Windows: `scripts\build_prusaslicer_fork_windows.bat low package` **or** `set PACKAGE_SLICER_ENGINE=1` then build **or** `powershell -File scripts\package_slicer_engine_windows.ps1` → `slicer-engine\bin\`
+  - Packaging **deletes** the previous staging root then recopies (no leftover files from older packages).
 - The consumer package **must not contain**: `.pdb` (Win), `.dSYM` / `*.unstripped` (mac), the QA harness, or brand leftovers like `prusa-slicer*` / `PrusaSlicer.dll`.
 - **Keep symbols internally**: archive the mac `.dSYM` and the Win `.pdb` in a private symbol store (their UUID / GUID must match that build) so function names can be restored for debugging later.
 - After stripping on macOS you **must re-`codesign`**; Windows uses Authenticode. Do not strip / rename / patch after signing.
@@ -169,7 +177,7 @@ De-identification is landed on the **`dev` branches** of both **`web_slicer_core
 
 - The agent binary path is driven by **`SLICER_ENGINE_BIN`**; `PRUSA_SLICER_BIN` is a local legacy fallback only — do not rely on it as the shipped default.
 - When invoking the CLI directly, the formal package calls `slicer-engine(.exe)`; the arguments are identical to PrusaSlicer (`--export-sla`, `--export-support-stl`, `--help`, etc.).
-- Running `slicer-engine.exe` on Windows requires `slicer_core.dll` plus the runtime (gmp / mpfr / OCCT) in the same directory; missing files cause a LoadLibrary failure.
+- Running `slicer-engine.exe` on Windows requires `slicer_core.dll`, **`OCCTWrapper.dll`**, and GMP/MPFR (`libgmp-10.dll` / `libmpfr-4.dll`) in the same directory; missing files cause a LoadLibrary failure (error 126).
 
 ### Quick self-check before acceptance
 
@@ -594,9 +602,9 @@ If you need to modify the PrusaSlicer fork:
 
 ### "PrusaSlicer CLI not found" (Windows)
 
-Build the fork first: `scripts\build_prusaslicer_fork_windows.bat`. Ensure you ran `git submodule update --init --recursive` after clone. The binary will be at `third_party\prusaslicer_build\src\Release\prusa-slicer.exe`.
+Build the fork first: `scripts\build_prusaslicer_fork_windows.bat`. Ensure you ran `git submodule update --init --recursive` after clone. The binary will be at `third_party\prusaslicer_build\src\Release\slicer-engine.exe` (with `slicer_core.dll` and `OCCTWrapper.dll` beside it).
 
-> **Due to de-identification, the new Windows binary is `third_party\prusaslicer_build\src\Release\slicer-engine.exe`** (with `slicer_core.dll` beside it), not `prusa-slicer.exe`.
+> **Due to de-identification, do not look for `prusa-slicer.exe`.** Use `slicer-engine.exe` + runtime DLLs in the same folder.
 
 ### "tbb was not found" when installing dependencies (Windows)
 

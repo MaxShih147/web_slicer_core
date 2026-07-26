@@ -38,8 +38,11 @@ OneDrive\...\slicer-engine-symbols\windows\
 
 ```bat
 cd web_slicer_core
-scripts\build_prusaslicer_fork_windows.bat low
-powershell -File scripts\package_slicer_engine_windows.ps1
+:: Package is OFF by default; either pass "package" or set PACKAGE_SLICER_ENGINE=1
+scripts\build_prusaslicer_fork_windows.bat low package
+:: equivalent two-step:
+:: scripts\build_prusaslicer_fork_windows.bat low
+:: powershell -File scripts\package_slicer_engine_windows.ps1
 ```
 
 ```powershell
