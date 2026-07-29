@@ -97,7 +97,7 @@ def _make_sl1(num_layers: int = 1, width: int = 8, height: int = 8) -> Path:
             img = Image.fromarray(np.zeros((height, width), dtype=np.uint8), mode="L")
             png_buf = io.BytesIO()
             img.save(png_buf, format="PNG")
-            zf.writestr(f"{i:08d}.png", png_buf.getvalue())
+            zf.writestr(f"model{i:05d}.png", png_buf.getvalue())
     fd, path = tempfile.mkstemp(suffix=".sl1")
     os.close(fd)
     with open(path, "wb") as f:

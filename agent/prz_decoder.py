@@ -13,6 +13,7 @@ from __future__ import annotations  # 3.9-compat for `bytes | memoryview` hints
 
 import struct
 from dataclasses import dataclass, field
+from io import BytesIO
 from typing import Optional
 
 import numpy as np
@@ -553,3 +554,48 @@ def parse_prz(data: bytes) -> PrzFile:
         _data=memoryview(data) if not isinstance(data, memoryview) else data,
         _layer_rle_slices=rle_slices,
     )
+
+
+# ---------- .sl1 RLE-layer → PNG (single-layer decode, shared) ----------
+
+def sl1_display_resolution(zf) -> Optional[tuple[int, int]]:
+    """從已開啟的 .sl1 ZipFile 的 prusaslicer.ini 取得 (width, height) 像素解析度。
+
+    prusaslicer.ini 缺失或 display_pixels_x / display_pixels_y 無法解析時回傳 None
+    （由呼叫端決定 raise 或降級為 404，見 design D3）。
+    """
+    try:
+        ini = zf.read("prusaslicer.ini").decode("utf-8", "ignore")
+    except Exception:
+        return None
+    width = height = None
+    for line in ini.splitlines():
+        try:
+            if line.startswith("display_pixels_x"):
+                width = int(line.split("=")[1])
+            elif line.startswith("display_pixels_y"):
+                height = int(line.split("=")[1])
+        except (IndexError, ValueError):
+            continue
+    if not (width and height):
+        return None
+    return width, height
+
+
+def rle_layer_to_png(zf, layer_name: str) -> Optional[bytes]:
+    """將 .sl1 內單一 RLE 層檔解碼為 PNG bytes（單一真值解碼路徑，design D3）。
+
+    回傳 Optional[bytes]：當 prusaslicer.ini 缺失或 display_pixels 解析失敗（無法
+    取得解析度）時回傳 None，由呼叫端決定失敗語意——單層端點回 None → 404、
+    整包 layers.zip 於 None 時 raise。
+    """
+    from PIL import Image  # lazy import（與既有 _rle_sl1_to_png_zip 一致）
+
+    res = sl1_display_resolution(zf)
+    if res is None:
+        return None
+    width, height = res
+    gray = _rle_decode_layer(zf.read(layer_name), width, height)
+    buf = BytesIO()
+    Image.fromarray(gray, "L").save(buf, format="PNG")
+    return buf.getvalue()

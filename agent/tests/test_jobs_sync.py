@@ -13,17 +13,22 @@ No mocks: all assertions exercise the real pure functions against real dicts /
 real files under tmp_path.
 """
 
+import io
 import json
 import math
+import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
+from PIL import Image
 
 # Under test (NOT yet implemented — import is expected to fail until Section 3).
-from agent.jobs import resolve_estimated_print_time, _load_prz_config
+from agent.jobs import resolve_estimated_print_time, _load_prz_config, parse_sl1_metadata
 
 # Real collaborators reused as the single source of truth for the expected value.
-from agent.prz_encoder import _compute_print_time
+from agent.prz_encoder import _compute_print_time, encode_prz
+from agent.prz_decoder import parse_prz
 from agent.models import _extract_prz_timing_config
 
 
@@ -165,3 +170,82 @@ class TestLoadPrzConfig:
         config = _valid_prz_config()
         (tmp_path / "prz_config.json").write_text(json.dumps(config), encoding="utf-8")
         assert _load_prz_config(tmp_path) == config
+
+
+# ---------------------------------------------------------------------------
+# 2.6  端到端 — RLE .sl1 經 parse_sl1_metadata → resolve 得物理值而非 fallback
+#      （回歸保證：修復前 layer_count 恆 0，同步靜默失效退回 fork 估值）
+# ---------------------------------------------------------------------------
+
+def _write_rle_sl1(path: Path, n: int, fork_print_time: float) -> Path:
+    """Build a minimal RLE-mode .sl1 with n layer entries + fork printTime."""
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("config.ini", f"printTime = {fork_print_time}\nusedMaterial = 1.0\n")
+        zf.writestr("prusaslicer.ini", "display_pixels_x = 100\ndisplay_pixels_y = 100\n")
+        for i in range(n):
+            zf.writestr(f"model{i:05d}.rle", b"\x00")
+    return path
+
+
+class TestEndToEndRleSync:
+    def test_rle_sl1_syncs_to_physical_formula_not_fork(self, tmp_path: Path):
+        config = _valid_prz_config()
+        fork_print_time = 1544.0  # fork SL1 估值（面積相關），刻意與物理公式不同
+
+        sl1 = _write_rle_sl1(tmp_path / "model.sl1", 200, fork_print_time)
+        layer_count, parsed_fork, _ = parse_sl1_metadata(sl1)
+
+        # 前置：層數正確（非 0）、fork fallback 值正確解析
+        assert layer_count == 200
+        assert parsed_fork == fork_print_time
+
+        expected = _compute_print_time(
+            config, layer_count, _extract_prz_timing_config(config)
+        )
+        result = resolve_estimated_print_time(config, layer_count, parsed_fork)
+
+        # 同步後 SHALL 等於物理公式值，且 SHALL NOT 退回 fork 估值
+        assert result == pytest.approx(expected)
+        assert result != pytest.approx(fork_print_time)
+
+
+# ---------------------------------------------------------------------------
+# 2.7  精度選項 A — status.json 存 float、PRZ header 存 int()，兩者差 0 ≤ 差 < 1
+#      （spec print-time-sync：「與 PRZ binary 列印時間同源一致」，差額僅來自 int 截斷）
+# ---------------------------------------------------------------------------
+
+def _write_png_sl1(path: Path, n: int) -> Path:
+    """Build a real PNG-layer .sl1 (production naming) that encode_prz can encode."""
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("config.ini", "printTime = 1544.0\nusedMaterial = 1.0\n")
+        zf.writestr("prusaslicer.ini", "display_pixels_x = 8\ndisplay_pixels_y = 4\n")
+        for i in range(n):
+            gray = np.zeros((4, 8), dtype=np.uint8)
+            gray[1, 2:5] = 255
+            buf = io.BytesIO()
+            Image.fromarray(gray, "L").save(buf, format="PNG")
+            zf.writestr(f"model{i:05d}.png", buf.getvalue())
+    return path
+
+
+class TestPrecisionOptionA:
+    def test_status_float_vs_prz_header_int_within_one_second(self, tmp_path: Path):
+        config = _valid_prz_config()
+        n = 20
+        sl1 = _write_png_sl1(tmp_path / "model.sl1", n)
+
+        layer_count, fork, _ = parse_sl1_metadata(sl1)
+        timing = _extract_prz_timing_config(config)
+
+        # status.json 端：保存 float 原值
+        status_float = resolve_estimated_print_time(config, layer_count, fork)
+        assert isinstance(status_float, float)
+
+        # PRZ header 端：由相同公式計算後 int() 截斷寫入
+        prz = parse_prz(encode_prz(config=config, sl1_path=sl1, timing=timing))
+        header_int = prz.header.print_time
+        assert isinstance(header_int, int)
+
+        # 選項 A：兩者同源，差額僅來自 int() 截斷 → 0 ≤ 差 < 1
+        assert header_int == int(status_float)
+        assert 0.0 <= status_float - header_int < 1.0

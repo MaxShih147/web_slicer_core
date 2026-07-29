@@ -20,12 +20,13 @@ Accepted config keys added in fix-prz-output-correctness (2026-05-21):
   See _resolve_retract_pair() for the 4-case override logic (design.md D2).
 """
 
+import re
 import struct
 import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from .models import PrzPrintTimingConfig
 
@@ -56,6 +57,29 @@ RLE_GRAY = 0x40
 
 
 # ---------- Helpers ----------
+
+# 層檔命名嚴格比對（design D2）：model#####.rle / model#####.png。
+# 只認頂層、5 位零填充序號的層檔，藉此排除子目錄縮圖（thumbnail/thumbnailNNNxNNN.png）
+# 與任何非層檔（config.ini / prusaslicer.ini / config.json）污染層數統計。
+# 注意：前綴 "model" 綁定固定輸出檔名 output/model.sl1（其 stem 即層檔前綴，見
+# fork Format/SL1.cpp export_print 的 project 命名）；若日後改輸出檔名，須同步更新此正則。
+_LAYER_NAME_RE = re.compile(r"^model\d{5}\.(rle|png)$")
+
+
+def sl1_layer_names(names: Iterable[str]) -> list[str]:
+    """回傳 .sl1 內的層檔名，作為層數統計 / 單層取用 / PRZ 編碼的單一真值來源。
+
+    行為（design D1 / D2）：
+      - 以 `_LAYER_NAME_RE` 嚴格比對 model#####.{rle,png}，排除縮圖與設定檔。
+      - 同一 .sl1 內若存在 .rle 層檔則優先採用 .rle（PRZ 快路徑），否則採用 .png。
+      - 以檔名 `sorted()` 排序；5 位零填充下字典序即層索引升冪序。
+    """
+    layer_names = [n for n in names if _LAYER_NAME_RE.match(n)]
+    rle_names = sorted(n for n in layer_names if n.endswith(".rle"))
+    if rle_names:
+        return rle_names
+    return sorted(n for n in layer_names if n.endswith(".png"))
+
 
 def _pack_str(s: str, size: int) -> bytes:
     """Pack a string into a fixed-size field with a guaranteed trailing NUL.
@@ -798,9 +822,11 @@ def encode_prz(
     Returns:
         Complete PRZ binary data as bytes.
     """
-    # Count layers and collect PNG names from .sl1
+    # Count layers via the single source of truth (sl1_layer_names). encode_prz
+    # assumes PNG layers (it PNG-decodes each entry below); on a PNG-mode .sl1
+    # this selects the same set as the old endswith(".png") filter.
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        png_names = sorted(n for n in zf.namelist() if n.endswith(".png"))
+        png_names = sl1_layer_names(zf.namelist())
 
     total_layers = len(png_names)
 
@@ -869,13 +895,12 @@ def encode_prz_streaming(
     with zipfile.ZipFile(sl1_path, "r") as zf:
         names = zf.namelist()
 
-    # [layer-rle] If PrusaSlicer already emitted PRZ-RLE layers (.rle), use them
-    # directly — skip the PNG decode + re-RLE round-trip. Falls back to the PNG
-    # path (decode + RLE) for standard sl1 archives.
-    rle_names = sorted(n for n in names if n.endswith(".rle"))
-    png_names = sorted(n for n in names if n.endswith(".png"))
-    is_rle = bool(rle_names)
-    layer_names = rle_names if is_rle else png_names
+    # [layer-rle] Enumerate layer files via the single source of truth
+    # (sl1_layer_names): .rle takes priority over .png. When .rle layers are
+    # present we use them directly — skip the PNG decode + re-RLE round-trip;
+    # otherwise fall back to the PNG decode path for standard sl1 archives.
+    layer_names = sl1_layer_names(names)
+    is_rle = bool(layer_names) and layer_names[0].endswith(".rle")
 
     total_layers = len(layer_names)
 

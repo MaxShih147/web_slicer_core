@@ -62,7 +62,7 @@ def _make_sl1(num_layers: int, width: int = 8, height: int = 8) -> Path:
             )
             png_buf = io.BytesIO()
             img.save(png_buf, format="PNG")
-            zf.writestr(f"{i:08d}.png", png_buf.getvalue())
+            zf.writestr(f"model{i:05d}.png", png_buf.getvalue())
     # Write to a temp file that encode_prz can open
     import tempfile, os
     fd, path = tempfile.mkstemp(suffix=".sl1")

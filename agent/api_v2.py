@@ -986,33 +986,22 @@ def _rle_sl1_to_png_zip(sl1_path) -> bytes:
     import io
     import zipfile
 
-    from PIL import Image
-
-    from .prz_decoder import _rle_decode_layer
+    from .prz_decoder import rle_layer_to_png
+    from .prz_encoder import sl1_layer_names
 
     with zipfile.ZipFile(sl1_path) as zf:
         names = zf.namelist()
-        width = height = None
-        try:
-            ini = zf.read("prusaslicer.ini").decode("utf-8", "ignore")
-            for line in ini.splitlines():
-                if line.startswith("display_pixels_x"):
-                    width = int(line.split("=")[1])
-                elif line.startswith("display_pixels_y"):
-                    height = int(line.split("=")[1])
-        except Exception:
-            pass
-        if not (width and height):
-            raise validation_error("cannot determine layer resolution for RLE->PNG")
-
-        rle_names = sorted(n for n in names if n.endswith(".rle"))
+        # 層檔列舉統一走 sl1_layer_names（單一真值來源）。此路徑僅在 RLE 模式被呼叫，
+        # 故選出的即 .rle 層檔（.rle 優先）。
+        rle_names = [n for n in sl1_layer_names(names) if n.endswith(".rle")]
         out = io.BytesIO()
         with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as oz:
             for name in rle_names:
-                gray = _rle_decode_layer(zf.read(name), width, height)
-                buf = io.BytesIO()
-                Image.fromarray(gray, "L").save(buf, format="PNG")
-                oz.writestr(name[:-4] + ".png", buf.getvalue())
+                # 共用單層解碼 helper；整包語意：解析度缺失（helper 回 None）即整包無效 → raise。
+                png = rle_layer_to_png(zf, name)
+                if png is None:
+                    raise validation_error("cannot determine layer resolution for RLE->PNG")
+                oz.writestr(name[:-4] + ".png", png)
         return out.getvalue()
 
 

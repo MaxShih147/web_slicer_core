@@ -14,7 +14,7 @@ from typing import Optional
 
 from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
-from .prz_encoder import _compute_print_time
+from .prz_encoder import _compute_print_time, sl1_layer_names
 from .sla_operations import generate_config_ini, notify_launcher_if_prusa_crashed
 
 logger = logging.getLogger(__name__)
@@ -340,22 +340,35 @@ def parse_sl1_metadata(sl1_file: Path) -> tuple[int, Optional[float], Optional[f
                 estimated_print_time = None
                 resin_volume_ml = None
 
-        layer_count = sum(1 for name in zf.namelist() if name.endswith(".png"))
+        # 層數以 sl1_layer_names() 統計（單一真值來源）：涵蓋 .rle（PRZ 快路徑）與
+        # .png 兩種輸出，並排除縮圖污染。切片器改以 SLA_LAYER_RLE 輸出 .rle 後，
+        # 舊的 endswith(".png") 會恆為 0，使 print-time 同步靜默失效。
+        layer_count = len(sl1_layer_names(zf.namelist()))
 
     return layer_count, estimated_print_time, resin_volume_ml
 
 
 def get_layer_png_from_sl1(job_id: str, layer_idx: int) -> Optional[bytes]:
-    """Read a single layer PNG directly from the .sl1 archive."""
+    """Read a single layer as PNG bytes directly from the .sl1 archive.
+
+    層檔以 sl1_layer_names() 定位（.rle 優先，否則 .png），涵蓋 RLE 與 PNG 兩種輸出。
+    選中檔為 .rle 時以 rle_layer_to_png() 即時解碼。索引越界或解碼失敗（如缺解析度）
+    皆回 None，由上層端點轉為 HTTP 404（維持既有契約，design D3）。
+    """
+    from .prz_decoder import rle_layer_to_png
+
     sl1_path = get_job_dir(job_id) / "output" / "model.sl1"
     if not sl1_path.exists():
         return None
 
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        png_names = sorted(n for n in zf.namelist() if n.endswith(".png"))
-        if 0 <= layer_idx < len(png_names):
-            return zf.read(png_names[layer_idx])
-    return None
+        layer_names = sl1_layer_names(zf.namelist())
+        if not (0 <= layer_idx < len(layer_names)):
+            return None
+        name = layer_names[layer_idx]
+        if name.endswith(".rle"):
+            return rle_layer_to_png(zf, name)  # None on missing resolution → 404
+        return zf.read(name)
 
 
 def get_support_mesh_path(job_id: str) -> Optional[Path]:
