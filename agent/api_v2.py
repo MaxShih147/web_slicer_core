@@ -1378,6 +1378,61 @@ async def auto_orient_endpoint(
     return V2Response(success=True, data=data)
 
 
+@router.post("/classify-model", response_model=V2Response)
+async def classify_model_endpoint(file: UploadFile = File(...)):
+    """
+    Classify an uploaded dental STL model and return its type.
+
+    Accepts multipart/form-data with a single 'file' field (STL).
+    Returns data.model_type as a string code (e.g. "other", "crown").
+    """
+    import os
+    import tempfile
+
+    from .model_classifier import classify_dental_model
+
+    if not file or not file.filename:
+        raise missing_body("No file provided")
+
+    if not file.filename.lower().endswith(".stl"):
+        raise validation_error("Only .stl files are supported")
+
+    try:
+        content = await file.read()
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded file: {exc}")
+
+    if not content:
+        raise missing_body("Uploaded file is empty")
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        try:
+            mesh = load_trimesh(tmp_path)
+            if len(mesh.faces) == 0:
+                raise ValueError("empty mesh")
+        except APIError:
+            raise
+        except Exception as exc:
+            raise invalid_model(f"STL content is corrupted or format is invalid: {exc}")
+
+        try:
+            model_type = await asyncio.to_thread(classify_dental_model, mesh)
+        except APIError:
+            raise
+        except Exception as exc:
+            raise internal_error(f"Classification failed unexpectedly: {exc}")
+    finally:
+        os.unlink(tmp_path)
+
+    return V2Response(success=True, data={"model_type": model_type.value})
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
