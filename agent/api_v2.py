@@ -55,6 +55,7 @@ from .jobs import (
     get_hollow_mesh_path,
     get_input_model_path,
     get_job_dir,
+    get_job_progress,
     job_exists,
     read_job_status,
     run_slicing,
@@ -1420,6 +1421,16 @@ async def get_slice_job_status(job_id: str):
             }
             if "ortho_progress" in status_data:
                 response_data["orthoProgress"] = status_data["ortho_progress"]
+
+            # Slice progress (percent + STAGE_* identifier) lives in the agent's
+            # in-memory store, not status.json. The field is OMITTED entirely when
+            # unavailable — never 0 or null, which a polling client would read as
+            # the progress going backwards. Terminal jobs have already had their
+            # entry cleared, so a COMPLETED response carries no progress.
+            progress = get_job_progress(job_id)
+            if progress is not None:
+                response_data["progress"] = progress
+
             return V2Response(success=True, data=response_data)
 
     # Check pending jobs (not yet executed)
