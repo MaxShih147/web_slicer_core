@@ -1,7 +1,7 @@
 # boolean-non-manifold-tolerance Specification
 
 ## Purpose
-定義 `boolean_operation()` 對非流型網格的容錯修補序列——Manifold 靜默失敗的偵測方式、非 volume 分支中退化面清理的執行時機、manifold3d Mesh.merge() 作為輕量修補路徑的採用條件、seam 焊接與平面邊界封蓋的 transactional 採用條件（任一結構條件未通過即完全回退），以及修補不適用時維持原有失敗行為、不留部分修改的語意保證。
+定義 `boolean_operation()` 對非流型網格的容錯修補序列——Manifold 靜默失敗的偵測方式、非 volume 分支中退化面清理的執行時機、manifold3d Mesh.merge() 作為輕量修補路徑的採用條件、seam 焊接與平面邊界封蓋的 transactional 採用條件（任一結構條件未通過即完全回退），以及修補不適用時維持原有失敗行為、不留部分修改的語意保證。亦定義 `boolean_operation()` 的回傳型別 `(bool, Optional[str], Optional[str])` 與 `error_code` 的設定條件。
 ## Requirements
 ### Requirement: 靜默的 Manifold 轉換失敗必須被偵測
 
@@ -142,21 +142,40 @@
 
 ---
 
+### Requirement: `boolean_operation()` 回傳型別
+
+`boolean_operation()` 的回傳型別 SHALL 為 `tuple[bool, Optional[str], Optional[str]]`，格式為 `(success, error_message, error_code)`。成功路徑 SHALL 回傳 `(True, None, None)`。`error_code` 在多數失敗路徑為 `None`；僅在「幾何問題無法修復」的四個出口設為 `"BOOLEAN_INVALID_MESH"`（定義於下方 Requirement）。
+
+#### Scenario: 成功時回傳三元素 tuple
+- **WHEN** 布林運算完成並成功匯出結果 STL
+- **THEN** `boolean_operation()` SHALL 回傳 `(True, None, None)`
+
+#### Scenario: 幾何問題無法修復時回傳 BOOLEAN_INVALID_MESH
+- **WHEN** 修補序列後 mesh 仍無效，或防禦性核查發現無效 Manifold
+- **THEN** 回傳的第三元素 `error_code` SHALL 為 `"BOOLEAN_INVALID_MESH"`
+
+#### Scenario: 其他失敗路徑的 error_code 為 None
+- **WHEN** 失敗原因為 trimesh 未安裝、退化面清理後無 faces、未知 operation、布林結果為空或未預期例外
+- **THEN** 回傳的第三元素 `error_code` SHALL 為 `None`
+
+---
+
 ### Requirement: 修補後必須驗證 Manifold 有效性再進行布林運算
 
 修補序列執行後，系統 SHALL 重試 Manifold 轉換並以 `_is_valid_manifold()` 核查，任一網格仍無效時 SHALL 提前回傳失敗，MUST NOT 讓無效 Manifold 進入布林運算。
 
 #### Scenario: mesh_a 修補後仍無效時提前失敗
 - **WHEN** 修補序列完成後 `_is_valid_manifold(man_a)` 為 False
-- **THEN** 系統 SHALL 回傳 `(False, "mesh_a repair failed: still invalid after repair")`
+- **THEN** 系統 SHALL 回傳 `(False, "mesh_a repair failed: still invalid after repair", "BOOLEAN_INVALID_MESH")`
 
 #### Scenario: mesh_b 修補後仍無效時提前失敗
 - **WHEN** 修補序列完成後 `_is_valid_manifold(man_b)` 為 False
-- **THEN** 系統 SHALL 回傳 `(False, "mesh_b repair failed: still invalid after repair")`
+- **THEN** 系統 SHALL 回傳 `(False, "mesh_b repair failed: still invalid after repair", "BOOLEAN_INVALID_MESH")`
 
 #### Scenario: 布林運算前的防禦性核查
 - **WHEN** 任何路徑的 Manifold 在進入布林運算前被偵測為無效
 - **THEN** 系統 SHALL 提前回傳失敗，MUST NOT 執行布林運算
+- **AND** 回傳的 `error_code` SHALL 為 `"BOOLEAN_INVALID_MESH"`
 
 ---
 

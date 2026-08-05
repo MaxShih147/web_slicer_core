@@ -124,6 +124,7 @@ class OperationResult:
     operation: OperationType
     job_id: str
     error: Optional[str] = None
+    error_code: Optional[str] = None
     # Output paths
     support_mesh_path: Optional[Path] = None
     hollow_mesh_path: Optional[Path] = None
@@ -824,7 +825,7 @@ def boolean_operation(
     mesh_b_path: Path,
     operation: BooleanOperation,
     output_path: Path,
-) -> tuple[bool, Optional[str]]:
+) -> tuple[bool, Optional[str], Optional[str]]:
     """
     Perform boolean operation on two meshes using trimesh + manifold3d.
 
@@ -835,12 +836,12 @@ def boolean_operation(
         output_path: Path to write result STL
 
     Returns:
-        Tuple of (success, error_message)
+        Tuple of (success, error_message, error_code)
     """
     try:
         import trimesh
     except ImportError:
-        return False, "trimesh not installed. Run: pip install trimesh manifold3d"
+        return False, "trimesh not installed. Run: pip install trimesh manifold3d", None
 
     _stage = "init"
     try:
@@ -1992,7 +1993,7 @@ def boolean_operation(
                         if len(mesh_a.faces) == 0:
                             return False, (
                                 "mesh_a has no faces remaining after repeated-index cleanup"
-                            )
+                            ), None
                         # Remove exact-duplicate faces (same winding, cyclic-rotation equal).
                         _edf_result = _remove_exact_duplicate_faces(mesh_a, "mesh_a")
                         # Attempt manifold3d Mesh.merge() as an additional structural fix.
@@ -2044,7 +2045,7 @@ def boolean_operation(
                         if len(mesh_b.faces) == 0:
                             return False, (
                                 "mesh_b has no faces remaining after repeated-index cleanup"
-                            )
+                            ), None
                         trimesh.repair.fill_holes(mesh_b)
                         trimesh.repair.fix_winding(mesh_b)
                         trimesh.repair.fix_normals(mesh_b)
@@ -2059,21 +2060,21 @@ def boolean_operation(
             else:
                 man_a = trimesh_to_manifold(mesh_a)
             if not _is_valid_manifold(man_a):
-                return False, "mesh_a repair failed: still invalid after repair"
+                return False, "mesh_a repair failed: still invalid after repair", "BOOLEAN_INVALID_MESH"
 
             # Retry mesh_b — exceptions propagate to the outer try/except
             _stage = "retrying mesh_b conversion"
             man_b = trimesh_to_manifold(mesh_b)
             if not _is_valid_manifold(man_b):
-                return False, "mesh_b repair failed: still invalid after repair"
+                return False, "mesh_b repair failed: still invalid after repair", "BOOLEAN_INVALID_MESH"
 
         # --- Defensive union pre-check ---
         # Guards against any future code path that could reach here with an invalid Manifold.
         _stage = f"{operation.value}"
         if not _is_valid_manifold(man_a):
-            return False, "union pre-check: mesh_a is invalid"
+            return False, "union pre-check: mesh_a is invalid", "BOOLEAN_INVALID_MESH"
         if not _is_valid_manifold(man_b):
-            return False, "union pre-check: mesh_b is invalid"
+            return False, "union pre-check: mesh_b is invalid", "BOOLEAN_INVALID_MESH"
 
         # --- Union ---
         if operation == BooleanOperation.UNION:
@@ -2083,20 +2084,20 @@ def boolean_operation(
         elif operation == BooleanOperation.INTERSECTION:
             result_man = man_a ^ man_b
         else:
-            return False, f"Unknown operation: {operation}"
+            return False, f"Unknown operation: {operation}", None
 
         _stage = "converting result"
         result = manifold_to_trimesh(result_man)
 
         _stage = "checking result"
         if result is None or (hasattr(result, 'is_empty') and result.is_empty):
-            return False, "Boolean operation resulted in empty mesh"
+            return False, "Boolean operation resulted in empty mesh", None
 
         _log.info(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
 
         # Export result
         result.export(str(output_path))
-        return True, None
+        return True, None, None
 
     except Exception as e:
         import traceback as _tb_mod
@@ -2107,7 +2108,7 @@ def boolean_operation(
         except Exception:
             pass
         print(err, flush=True)
-        return False, err
+        return False, err, None
 
 
 def generate_drain_holes(
@@ -2413,7 +2414,7 @@ async def perform_boolean(
     # Run boolean operation in thread pool to avoid blocking the event loop
     import asyncio
     loop = asyncio.get_event_loop()
-    success, error = await loop.run_in_executor(
+    success, error, error_code = await loop.run_in_executor(
         None, boolean_operation, mesh_a_path, mesh_b_path, operation, output_path
     )
 
@@ -2423,6 +2424,7 @@ async def perform_boolean(
             operation=OperationType.BOOLEAN,
             job_id=job_id,
             error=error,
+            error_code=error_code,
         )
 
     return OperationResult(

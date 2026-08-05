@@ -27,6 +27,7 @@ from pydantic import BaseModel, ValidationError
 from .errors import (
     APIError,
     boolean_failed,
+    boolean_invalid_mesh,
     file_not_found,
     hollow_generation_failed,
     internal_error,
@@ -927,6 +928,8 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
 
     if not result.success:
         write_job_status(job_id, JobStatus.FAILED, error=result.error)
+        if result.error_code == "BOOLEAN_INVALID_MESH":
+            raise boolean_invalid_mesh()
         raise boolean_failed(result.error)
 
     if debug_dir and result.boolean_mesh_path and result.boolean_mesh_path.exists():

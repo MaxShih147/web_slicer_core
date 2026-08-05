@@ -108,6 +108,15 @@ def boolean_failed(detail: str = None) -> APIError:
     )
 
 
+def boolean_invalid_mesh() -> APIError:
+    return APIError(
+        "BOOLEAN_INVALID_MESH",
+        "The model mesh contains geometry errors and could not be processed.",
+        422,
+        retryable=False,
+    )
+
+
 def no_drain_holes() -> APIError:
     return APIError(
         "NO_DRAIN_HOLES",
