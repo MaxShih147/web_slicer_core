@@ -842,12 +842,1078 @@ def boolean_operation(
     except ImportError:
         return False, "trimesh not installed. Run: pip install trimesh manifold3d"
 
+    _stage = "init"
     try:
         import logging
-        logger = logging.getLogger(__name__)
+        _log = logging.getLogger(__name__)
 
-        # Load meshes
+        def _manifold_props(man):
+            """Return (status_str, num_tri, is_empty, valid_bool); never raises.
+            valid is always bool: False when any property read fails (conservative)."""
+            try:
+                st = str(man.status())
+            except Exception:
+                st = "error"
+            try:
+                nt = man.num_tri()
+            except Exception:
+                nt = "error"
+            try:
+                ie = man.is_empty()
+            except Exception:
+                ie = "error"
+            try:
+                valid = (st == "Error.NoError" and isinstance(nt, int) and nt > 0 and ie is False)
+            except Exception:
+                valid = False
+            return st, nt, ie, valid
+
+        def _is_valid_manifold(man):
+            """Return True only when status==NoError, num_tri>0, not empty; False on any read error."""
+            _, _, _, v = _manifold_props(man)
+            return v
+
+        def _remove_repeated_index_faces(mesh, label):
+            """Remove faces where any two vertex indices are equal (repeated-index faces).
+
+            Only removes faces where face[i] == face[j] for i≠j.
+            Does not use area or coordinate thresholds.
+            Calls remove_unreferenced_vertices() after deletion so Trimesh cache
+            is invalidated via the standard _data hash path.
+
+            Returns a dict: removed_faces, faces_before, faces_after,
+                            vertices_before, vertices_after.
+            Returns removed_faces=0 (no-op) if none found.
+            Returns removed_faces=-1 on unexpected error.
+            """
+            try:
+                _fa = np.asarray(mesh.faces)
+                _verts_before = len(mesh.vertices)
+                _faces_before = len(_fa)
+
+                _ri_mask = (
+                    (_fa[:, 0] == _fa[:, 1]) |
+                    (_fa[:, 1] == _fa[:, 2]) |
+                    (_fa[:, 0] == _fa[:, 2])
+                )
+                _removed = int(np.sum(_ri_mask))
+
+                if _removed == 0:
+                    return {
+                        "removed_faces": 0,
+                        "faces_before": _faces_before,
+                        "faces_after": _faces_before,
+                        "vertices_before": _verts_before,
+                        "vertices_after": _verts_before,
+                    }
+
+                # Assign via property setter — triggers _data hash change,
+                # which auto-invalidates all Trimesh topology caches.
+                mesh.faces = _fa[~_ri_mask]
+                mesh.remove_unreferenced_vertices()
+
+                _faces_after = len(mesh.faces)
+                _verts_after = len(mesh.vertices)
+
+                return {
+                    "removed_faces": _removed,
+                    "faces_before": _faces_before,
+                    "faces_after": _faces_after,
+                    "vertices_before": _verts_before,
+                    "vertices_after": _verts_after,
+                }
+
+            except Exception as _exc:
+                return {"removed_faces": -1, "error": str(_exc)}
+
+        def _remove_exact_duplicate_faces(mesh, label):
+            """Remove exact-duplicate faces that share the same winding via cyclic rotation.
+
+            Two faces are same-winding duplicates when one is a cyclic rotation of the
+            other: (a,b,c), (b,c,a), (c,a,b) are the same face.  One representative per
+            group is kept; the rest are removed.
+
+            Faces with identical vertex sets but opposite winding, e.g. (a,b,c) and
+            (a,c,b), are counted and logged but are NOT removed.
+
+            Assumes repeated-index faces have already been removed.
+            Calls remove_unreferenced_vertices() after deletion to invalidate Trimesh cache.
+
+            Returns a dict: removed_faces, faces_before, faces_after,
+                            same_winding_groups, opposite_winding_pairs.
+            removed_faces==0 means no-op; removed_faces==-1 means unexpected error.
+            """
+            try:
+                _fa = np.asarray(mesh.faces, dtype=np.int64)
+                _faces_before = len(_fa)
+                _verts_before = len(mesh.vertices)
+                if _faces_before == 0:
+                    return {
+                        "removed_faces": 0, "faces_before": 0, "faces_after": 0,
+                        "vertices_before": _verts_before, "vertices_after": _verts_before,
+                        "same_winding_groups": 0, "opposite_winding_pairs": 0,
+                    }
+
+                # Canonical (min-cyclic) rotation: rotate so the smallest vertex index
+                # comes first.  Assumes all 3 indices in each face are distinct (guaranteed
+                # after repeated-index cleanup), so argmin gives a unique position.
+                _N = len(_fa)
+                _min_pos = np.argmin(_fa, axis=1)          # (N,) position of min vertex
+                _idx = np.arange(_N)
+                _canon = np.stack([
+                    _fa[_idx, _min_pos % 3],
+                    _fa[_idx, (_min_pos + 1) % 3],
+                    _fa[_idx, (_min_pos + 2) % 3],
+                ], axis=1)                                  # (N, 3) canonical rows
+
+                # First occurrences of each unique canonical form → keep those faces.
+                _, _u_first = np.unique(_canon, axis=0, return_index=True)
+                _keep_mask = np.zeros(_N, dtype=bool)
+                _keep_mask[_u_first] = True
+                _removed = _N - int(_u_first.size)
+
+                # Count canonical-form groups that had more than one member.
+                _, _canon_counts = np.unique(_canon, axis=0, return_counts=True)
+                _same_winding_groups = int(np.sum(_canon_counts > 1))
+
+                # Opposite-winding detection: among the kept representatives, two faces
+                # with identical sorted vertex sets but different canonical forms are
+                # coincident with opposite winding.
+                _sorted_kept = np.sort(_fa[_keep_mask], axis=1)
+                _, _vs_counts = np.unique(_sorted_kept, axis=0, return_counts=True)
+                _opp_winding_pairs = int(np.sum(_vs_counts > 1))
+
+                if _removed > 0:
+                    mesh.faces = _fa[_keep_mask]
+                    mesh.remove_unreferenced_vertices()
+                    _faces_after = len(mesh.faces)
+                    _verts_after = len(mesh.vertices)
+                else:
+                    _faces_after = _faces_before
+                    _verts_after = _verts_before
+
+                return {
+                    "removed_faces": _removed,
+                    "faces_before": _faces_before, "faces_after": _faces_after,
+                    "vertices_before": _verts_before, "vertices_after": _verts_after,
+                    "same_winding_groups": _same_winding_groups,
+                    "opposite_winding_pairs": _opp_winding_pairs,
+                }
+
+            except Exception as _exc:
+                return {"removed_faces": -1, "error": str(_exc)}
+
+        def _compute_boundary_seam_pairs(mesh, match_factor=0.1, len_rel_tol=0.3,
+                                          eps_floor=1e-7):
+            """Core seam pairing logic. Returns a data dict; never logs, never raises.
+
+            Extracts directed boundary edges and finds mutual-best anti-parallel pairs
+            using a 6-D KD-tree (stores (pos[d],pos[c]) for edge (c,d); queries at
+            (pos[a],pos[b]) for edge (a,b) to satisfy a↔d, b↔c).
+
+            Returns dict with keys: ok, error, boundary_edges, be, pa, pb, elen,
+            median_L, actual_tol, match_factor, eps_floor, matched_pairs, matched_set,
+            has_candidate, n_ambiguous, n_unmatched, coverage.
+            """
+            try:
+                from scipy.spatial import cKDTree as _BSPKDT
+                _fa = np.asarray(mesh.faces, dtype=np.int64)
+                _va = np.asarray(mesh.vertices, dtype=np.float64)
+                if len(_fa) == 0 or len(_va) == 0:
+                    return {"ok": False, "error": "empty_mesh", "boundary_edges": 0}
+
+                _ed = np.asarray(mesh.edges, dtype=np.int64)
+                _es = np.ascontiguousarray(mesh.edges_sorted)
+                _esv = _es.view(np.dtype((np.void, _es.dtype.itemsize * 2))).ravel()
+                _, _inv, _cnts = np.unique(_esv, return_inverse=True, return_counts=True)
+                _be = _ed[_cnts[_inv] == 1]
+                _B = len(_be)
+
+                _empty_ret = {
+                    "ok": True, "error": None, "boundary_edges": 0,
+                    "be": _be, "pa": None, "pb": None, "elen": None,
+                    "median_L": 0.0, "actual_tol": eps_floor,
+                    "match_factor": match_factor, "eps_floor": eps_floor,
+                    "matched_pairs": [], "matched_set": set(),
+                    "has_candidate": set(), "n_ambiguous": 0,
+                    "n_unmatched": 0, "coverage": 0.0,
+                }
+                if _B == 0:
+                    return _empty_ret
+
+                _pa = _va[_be[:, 0]]
+                _pb = _va[_be[:, 1]]
+                _elen = np.linalg.norm(_pb - _pa, axis=1)
+                _median_L = float(np.median(_elen))
+                _actual_tol = max(match_factor * _median_L, eps_floor)
+
+                _kdt = _BSPKDT(np.concatenate([_pb, _pa], axis=1))
+                _kd_r = max(_actual_tol * 3.0 * 1.415, eps_floor)
+                _cand_lists = _kdt.query_ball_point(
+                    np.concatenate([_pa, _pb], axis=1), r=_kd_r
+                )
+
+                _best_for = {}
+                _has_candidate = set()
+                for _i, _cands in enumerate(_cand_lists):
+                    _li = _elen[_i]
+                    _best_j = None
+                    _best_d = float("inf")
+                    for _j in _cands:
+                        if _j == _i:
+                            continue
+                        _lj = _elen[_j]
+                        _tol_ij = max(match_factor * max(_li, _lj, _median_L), eps_floor)
+                        _d_ad = float(np.linalg.norm(_pa[_i] - _pb[_j]))
+                        if _d_ad > _tol_ij:
+                            continue
+                        _d_bc = float(np.linalg.norm(_pb[_i] - _pa[_j]))
+                        if _d_bc > _tol_ij:
+                            continue
+                        _lmax = max(_li, _lj)
+                        if _lmax > 0 and abs(_li - _lj) / _lmax > len_rel_tol:
+                            continue
+                        _d_sum = _d_ad + _d_bc
+                        if _d_sum < _best_d:
+                            _best_d = _d_sum
+                            _best_j = _j
+                    if _best_j is not None:
+                        _best_for[_i] = (_best_j, _best_d)
+                        _has_candidate.add(_i)
+
+                _matched_pairs = []
+                _matched_set = set()
+                for _i in sorted(_best_for):
+                    if _i in _matched_set:
+                        continue
+                    _j, _d_sum = _best_for[_i]
+                    if _j in _matched_set:
+                        continue
+                    if _j in _best_for and _best_for[_j][0] == _i:
+                        _matched_pairs.append((_i, _j, _d_sum))
+                        _matched_set.add(_i)
+                        _matched_set.add(_j)
+
+                _n_matched = len(_matched_pairs)
+                _n_has_cand = len(_has_candidate)
+                return {
+                    "ok": True, "error": None, "boundary_edges": _B,
+                    "be": _be, "pa": _pa, "pb": _pb, "elen": _elen,
+                    "median_L": _median_L, "actual_tol": _actual_tol,
+                    "match_factor": match_factor, "eps_floor": eps_floor,
+                    "matched_pairs": _matched_pairs, "matched_set": _matched_set,
+                    "has_candidate": _has_candidate,
+                    "n_ambiguous": max(0, _n_has_cand - 2 * _n_matched),
+                    "n_unmatched": _B - 2 * _n_matched,
+                    "coverage": (2 * _n_matched) / _B,
+                }
+            except Exception as _exc:
+                return {"ok": False, "error": f"{type(_exc).__name__}: {_exc}",
+                        "boundary_edges": 0}
+
+        def _ei_stats(faces):
+            """Return (boundary_edges, non_manifold_edges, same_dir_edges) from a face array.
+            Returns (-1,-1,-1) on error."""
+            try:
+                _fa = np.asarray(faces, dtype=np.int64)
+                if len(_fa) == 0:
+                    return 0, 0, 0
+                _ed = np.concatenate(
+                    [_fa[:, [0, 1]], _fa[:, [1, 2]], _fa[:, [2, 0]]], axis=0
+                )
+                _es = np.sort(_ed, axis=1)
+                _esv = np.ascontiguousarray(_es).view(
+                    np.dtype((np.void, _es.dtype.itemsize * 2))
+                ).ravel()
+                _, _inv, _cnts = np.unique(_esv, return_inverse=True, return_counts=True)
+                _be = int(np.sum(_cnts == 1))
+                _nme = int(np.sum(_cnts >= 3))
+                _two_keys = np.where(_cnts == 2)[0]
+                _sde = 0
+                if len(_two_keys) > 0:
+                    _occ = np.where(np.isin(_inv, _two_keys))[0]
+                    _k2 = _inv[_occ]
+                    _sk = np.argsort(_k2, kind="stable")
+                    _pairs2 = _ed[_occ][_sk].reshape(-1, 2, 2)
+                    _sde = int(np.sum(_pairs2[:, 0, 0] == _pairs2[:, 1, 0]))
+                return _be, _nme, _sde
+            except Exception:
+                return -1, -1, -1
+
+        def _count_multi_fan(faces):
+            """Count vertices whose incident faces form >1 fan (topologically non-manifold).
+            Returns -1 on error."""
+            try:
+                _fa = np.asarray(faces, dtype=np.int64)
+                _N = len(_fa)
+                if _N == 0:
+                    return 0
+                _sv = np.concatenate([_fa[:, 0], _fa[:, 1], _fa[:, 2]])
+                _dv = np.concatenate([_fa[:, 1], _fa[:, 2], _fa[:, 0]])
+                _fv = np.tile(np.arange(_N, dtype=np.int64), 3)
+                _hed = {}
+                _vfi = {}
+                for _s, _d, _f in zip(_sv.tolist(), _dv.tolist(), _fv.tolist()):
+                    _hed[(_s, _d)] = _f
+                    _vfi.setdefault(_s, []).append((_f, _d))
+                _multi = 0
+                for _v, _fi in _vfi.items():
+                    if len(_fi) < 2:
+                        continue
+                    _inc = {f for f, _ in _fi}
+                    _adj = {f: [] for f in _inc}
+                    for _fi2, _u in _fi:
+                        _nb = _hed.get((_u, _v), -1)
+                        if _nb != -1 and _nb in _inc:
+                            if _nb not in _adj[_fi2]:
+                                _adj[_fi2].append(_nb)
+                            if _fi2 not in _adj[_nb]:
+                                _adj[_nb].append(_fi2)
+                    _vis = set()
+                    _nc = 0
+                    for _s2 in _inc:
+                        if _s2 in _vis:
+                            continue
+                        _nc += 1
+                        _q = [_s2]
+                        while _q:
+                            _cur = _q.pop()
+                            if _cur in _vis:
+                                continue
+                            _vis.add(_cur)
+                            for _n2 in _adj[_cur]:
+                                if _n2 not in _vis:
+                                    _q.append(_n2)
+                    if _nc > 1:
+                        _multi += 1
+                return _multi
+            except Exception:
+                return -1
+
+        def _count_components(m):
+            """Count connected face components via adjacency. Returns -1 on error."""
+            try:
+                from scipy.sparse import csr_matrix as _csr
+                from scipy.sparse.csgraph import connected_components as _scc
+                _nf = len(m.faces)
+                if _nf == 0:
+                    return 0
+                _fad = np.asarray(m.face_adjacency)
+                if len(_fad) == 0:
+                    return _nf
+                _r = np.concatenate([_fad[:, 0], _fad[:, 1]])
+                _c = np.concatenate([_fad[:, 1], _fad[:, 0]])
+                _adj = _csr(
+                    (np.ones(len(_r), dtype=np.int8), (_r, _c)), shape=(_nf, _nf)
+                )
+                _nc, _ = _scc(_adj, directed=False)
+                return int(_nc)
+            except Exception:
+                return -1
+
+        def _transactional_seam_weld(mesh, label):
+            """Transactional boundary seam welding on a working copy of mesh.
+
+            Uses conservative pairing thresholds (2 % endpoint distance, 5 % length ratio,
+            zero ambiguous).  Builds vertex equivalence classes via union-find, computes
+            class-mean positions, remaps faces, validates pre- and post-weld structure,
+            and adopts the result only when all structural conditions pass.
+
+            Returns dict: adopted (bool), mesh (welded copy or original), manifold
+            (Manifold if conversion succeeded, else None), reason (str).
+            """
+            def _bail(reason):
+                return {"adopted": False, "mesh": mesh, "manifold": None, "reason": reason}
+
+            try:
+                _weld_mf  = 0.02   # 2 % endpoint tolerance for welding
+                _weld_lr  = 0.05   # 5 % edge-length ratio tolerance for welding
+                _eps_floor = 1e-7
+
+                _pd = _compute_boundary_seam_pairs(mesh, _weld_mf, _weld_lr, _eps_floor)
+                if not _pd["ok"]:
+                    return _bail(_pd["error"])
+
+                _B = _pd["boundary_edges"]
+                if _B == 0:
+                    return _bail("no_boundary_edges")
+
+                _pairs = _pd["matched_pairs"]
+                _n_pairs = len(_pairs)
+                if _n_pairs == 0:
+                    return _bail("no_conservative_pairs")
+
+                if _pd["n_ambiguous"] > 0:
+                    return _bail(f"ambiguous_pairs={_pd['n_ambiguous']}")
+
+                _be = _pd["be"]
+
+                # Endpoint correspondences: pair (i,j) means edge i=(a,b) and edge j=(c,d)
+                # with pos[a]≈pos[d] and pos[b]≈pos[c], so merge a↔d and b↔c.
+                _correspondences = []
+                for _pi, _pj, _ in _pairs:
+                    _correspondences.append((int(_be[_pi, 0]), int(_be[_pj, 1])))
+                    _correspondences.append((int(_be[_pi, 1]), int(_be[_pj, 0])))
+                _n_corr = len(_correspondences)
+
+                # Union-Find to build vertex equivalence classes.
+                _n_v = len(mesh.vertices)
+                _uf_p = list(range(_n_v))
+                _uf_r = [0] * _n_v
+
+                def _uf_find(x):
+                    while _uf_p[x] != x:
+                        _uf_p[x] = _uf_p[_uf_p[x]]
+                        x = _uf_p[x]
+                    return x
+
+                def _uf_union(x, y):
+                    rx, ry = _uf_find(x), _uf_find(y)
+                    if rx == ry:
+                        return
+                    if _uf_r[rx] < _uf_r[ry]:
+                        rx, ry = ry, rx
+                    _uf_p[ry] = rx
+                    if _uf_r[rx] == _uf_r[ry]:
+                        _uf_r[rx] += 1
+
+                for _va_v, _vb_v in _correspondences:
+                    _uf_union(_va_v, _vb_v)
+
+                # Seam vertices and remap array (non-seam vertices map to themselves).
+                _seam_verts = set()
+                for _a, _b in _correspondences:
+                    _seam_verts.add(_a)
+                    _seam_verts.add(_b)
+                _remap = np.arange(_n_v, dtype=np.int64)
+                for _sv in _seam_verts:
+                    _remap[_sv] = _uf_find(_sv)
+
+                # Collect equivalence classes (root → frozenset of members).
+                _classes = {}
+                for _sv in _seam_verts:
+                    _root = int(_uf_find(_sv))
+                    _classes.setdefault(_root, set()).add(_sv)
+                for _root in list(_classes.keys()):
+                    _classes[_root].add(_root)
+                _n_classes = len(_classes)
+                _n_welded_v = sum(len(m) for m in _classes.values())
+
+                # Pre-validation: check tentative remapped faces for NME and SDE.
+                # Reject the whole welding attempt if either would be introduced.
+                _orig_faces = np.asarray(mesh.faces, dtype=np.int64)
+                _tent = _remap[_orig_faces]
+                _degen_tent = (
+                    (_tent[:, 0] == _tent[:, 1]) |
+                    (_tent[:, 1] == _tent[:, 2]) |
+                    (_tent[:, 0] == _tent[:, 2])
+                )
+                _t_be, _t_nme, _t_sde = _ei_stats(_tent[~_degen_tent])
+                if _t_nme > 0 or _t_sde > 0:
+                    return _bail(f"pre_validation_nme={_t_nme}_sde={_t_sde}")
+
+                # Before-weld structural stats.
+                _be_before, _nme_before, _sde_before = _ei_stats(_orig_faces)
+                _mf_before = _count_multi_fan(_orig_faces)
+                _comps_before = _count_components(mesh)
+
+                # Build working copy: update representative vertex positions to class mean.
+                _orig_verts = np.asarray(mesh.vertices, dtype=np.float64)
+                _wc_verts = _orig_verts.copy()
+                for _root, _members in _classes.items():
+                    _wc_verts[_root] = np.mean([_orig_verts[m] for m in _members], axis=0)
+
+                # Remap faces; remove any that became degenerate after merging.
+                _wc_faces = _remap[_orig_faces]
+                _degen_mask = (
+                    (_wc_faces[:, 0] == _wc_faces[:, 1]) |
+                    (_wc_faces[:, 1] == _wc_faces[:, 2]) |
+                    (_wc_faces[:, 0] == _wc_faces[:, 2])
+                )
+                _n_degen_rm = int(np.sum(_degen_mask))
+                _wc_faces_clean = _wc_faces[~_degen_mask]
+                if len(_wc_faces_clean) == 0:
+                    return _bail("all_faces_degenerate_after_weld")
+
+                _wc = trimesh.Trimesh(
+                    vertices=_wc_verts, faces=_wc_faces_clean, process=False
+                )
+                _wc.remove_unreferenced_vertices()
+                trimesh.repair.fix_winding(_wc)
+                trimesh.repair.fix_normals(_wc)
+
+                # Vertex displacement stats (all seam vertices, including representatives).
+                _disp_vals = []
+                for _root, _members in _classes.items():
+                    _np2 = _wc_verts[_root]
+                    for _m in _members:
+                        _disp_vals.append(float(np.linalg.norm(_orig_verts[_m] - _np2)))
+                _disp_arr = np.asarray(_disp_vals) if _disp_vals else np.array([0.0])
+                _disp_med = float(np.median(_disp_arr))
+                _disp_max = float(np.max(_disp_arr))
+
+                # After-weld structural stats.
+                _wc_faces_arr = np.asarray(_wc.faces, dtype=np.int64)
+                _be_after, _nme_after, _sde_after = _ei_stats(_wc_faces_arr)
+                _mf_after = _count_multi_fan(_wc_faces_arr)
+                _comps_after = _count_components(_wc)
+                _wc_winding = _wc.is_winding_consistent
+
+                # Attempt Manifold conversion from welded copy.
+                try:
+                    _wm_cand = trimesh_to_manifold(_wc)
+                    _wm_st, _wm_nt, _wm_ie, _wm_valid = _manifold_props(_wm_cand)
+                except Exception:
+                    _wm_cand = None
+                    _wm_st, _wm_nt, _wm_ie, _wm_valid = "error", 0, True, False
+
+                # Adoption conditions (all proportional/structural; no fixed coordinates).
+                _adopt = True
+                _reject_reason = None
+                _nme_b = _nme_before if isinstance(_nme_before, int) else 0
+                _sde_b = _sde_before if isinstance(_sde_before, int) else 0
+                _cc_b  = _comps_before if isinstance(_comps_before, int) else 0
+                _cc_a  = _comps_after  if isinstance(_comps_after, int) else 0
+
+                if not (isinstance(_be_after, int) and isinstance(_be_before, int)):
+                    _adopt = False
+                    _reject_reason = "be_stats_error"
+                elif _be_after >= _be_before:
+                    _adopt = False
+                    _reject_reason = (
+                        f"boundary_not_reduced  be_before={_be_before}  be_after={_be_after}"
+                    )
+                elif isinstance(_nme_after, int) and _nme_after > _nme_b:
+                    _adopt = False
+                    _reject_reason = (
+                        f"nme_increased  before={_nme_before}  after={_nme_after}"
+                    )
+                elif isinstance(_sde_after, int) and _sde_after > _sde_b:
+                    _adopt = False
+                    _reject_reason = (
+                        f"sde_increased  before={_sde_before}  after={_sde_after}"
+                    )
+                elif not _wc_winding:
+                    _adopt = False
+                    _reject_reason = "winding_inconsistent_after_weld"
+                elif _cc_a > _cc_b + 1:
+                    _adopt = False
+                    _reject_reason = (
+                        f"components_increased  before={_comps_before}  after={_comps_after}"
+                    )
+
+                if _adopt:
+                    return {
+                        "adopted": True,
+                        "mesh": _wc,
+                        "manifold": _wm_cand if _wm_valid else None,
+                        "reason": "all_conditions_passed",
+                    }
+                return _bail(_reject_reason)
+
+            except Exception as _exc:
+                return {
+                    "adopted": False, "mesh": mesh, "manifold": None,
+                    "reason": f"error_{type(_exc).__name__}",
+                }
+
+        def _try_repair_planar_boundary(mesh, label):
+            """Attempt to close a planar boundary network by cap-triangulation.
+
+            Transactional: all geometric modifications operate on a working copy
+            of the input mesh.  The original mesh is never modified.
+
+            Preconditions (evaluated in order; eligibility log is emitted once):
+              1. mesh has faces and vertices
+              2. no degenerate faces (repeated-index | coord-collapsed | near-collinear)
+              3. non_manifold_edges == 0  AND  same_direction_shared_edges == 0
+              4. boundary_edges > 0
+              5. no degree-1 boundary vertices (no open-chain endpoints)
+              6. boundary vertices nearly coplanar (SVD best-fit plane, scale-relative tol)
+              7. boundary plane lies near one extreme of the mesh along the plane normal
+
+            Pipeline (only runs when all preconditions pass):
+              shapely.polygonize_full  →  mapbox_earcut  →  winding orient
+              →  working-copy validation  →  manifold3d validation
+
+            Returns dict:
+                applied          : bool
+                reason           : str
+                mesh             : repaired Trimesh if applied, else original mesh unchanged
+                boundary_edges_before, boundary_edges_after
+                new_vertices, new_faces, polygon_regions, cap_area, elapsed_ms
+
+            Never raises; unexpected exceptions are caught and logged.
+            """
+            import time as _pbrt
+            _t_start = _pbrt.perf_counter()
+
+            def _ms():
+                return round((_pbrt.perf_counter() - _t_start) * 1000, 1)
+
+            def _base_ret(applied, reason, wmesh, **kw):
+                return {
+                    "applied": applied, "reason": reason, "mesh": wmesh,
+                    "boundary_edges_before": kw.get("be_before", "unknown"),
+                    "boundary_edges_after": kw.get("be_after", "unknown"),
+                    "new_vertices": kw.get("new_vertices", 0),
+                    "new_faces": kw.get("new_faces", 0),
+                    "polygon_regions": kw.get("polygon_regions", 0),
+                    "cap_area": kw.get("cap_area", 0.0),
+                    "elapsed_ms": _ms(),
+                }
+
+            # ── PRECONDITION 1: mesh has faces and vertices ───────────────
+            try:
+                _n_faces = len(mesh.faces)
+                _n_verts = len(mesh.vertices)
+            except Exception as _e0:
+                return _base_ret(False, "cannot_read_mesh_geometry", mesh)
+
+            if _n_faces == 0 or _n_verts == 0:
+                return _base_ret(False, "empty_mesh", mesh)
+
+            # ── PRECONDITION 2: no degenerate faces ──────────────────────
+            # Same classification as _mesh_topology_info: A | B-tol | C
+            _degen_total = 0
+            try:
+                _fa = np.asarray(mesh.faces)
+                _mv = np.asarray(mesh.vertices)
+                _tol_mg = 1e-8
+                _ri_m = (
+                    (_fa[:, 0] == _fa[:, 1]) |
+                    (_fa[:, 1] == _fa[:, 2]) |
+                    (_fa[:, 0] == _fa[:, 2])
+                )
+                _fv = _mv[_fa]
+                _cc_m = (
+                    (np.max(np.abs(_fv[:, 0] - _fv[:, 1]), axis=1) <= _tol_mg) |
+                    (np.max(np.abs(_fv[:, 1] - _fv[:, 2]), axis=1) <= _tol_mg) |
+                    (np.max(np.abs(_fv[:, 0] - _fv[:, 2]), axis=1) <= _tol_mg)
+                ) & ~_ri_m
+                try:
+                    _nd_m = mesh.nondegenerate_faces(height=_tol_mg)
+                    _nc_m = ~_nd_m & ~_ri_m & ~_cc_m
+                except Exception:
+                    _nc_m = (np.asarray(mesh.area_faces) == 0.0) & ~_ri_m & ~_cc_m
+                _degen_total = (
+                    int(np.sum(_ri_m)) + int(np.sum(_cc_m)) + int(np.sum(_nc_m))
+                )
+            except Exception as _e1:
+                return _base_ret(False, "degenerate_check_error", mesh)
+
+            if _degen_total > 0:
+                return _base_ret(False, "precondition_degenerate_faces", mesh)
+
+            # ── PRECONDITION 3+4: NME=0, SDE=0, boundary_edges > 0 ──────
+            _n_be = 0
+            _bep = None
+            _nme_pre = _sde_pre = 0
+            try:
+                _es_pre = np.ascontiguousarray(mesh.edges_sorted)
+                _dirs_pre = np.ascontiguousarray(mesh.edges)
+                _esv_pre = _es_pre.view(
+                    np.dtype((np.void, _es_pre.dtype.itemsize * 2))
+                ).ravel()
+                _, _inv_pre, _cnts_pre = np.unique(
+                    _esv_pre, return_inverse=True, return_counts=True
+                )
+                _nme_pre = int(np.sum(_cnts_pre >= 3))
+                _be_mask_pre = _cnts_pre[_inv_pre] == 1
+                _n_be = int(np.sum(_be_mask_pre))
+                _bep = _es_pre[_be_mask_pre]      # (n_be, 2)
+
+                _two_keys_pre = np.where(_cnts_pre == 2)[0]
+                if len(_two_keys_pre) > 0:
+                    _tf_occ_pre = np.where(np.isin(_inv_pre, _two_keys_pre))[0]
+                    _tf_k_pre = _inv_pre[_tf_occ_pre]
+                    _sk_pre = np.argsort(_tf_k_pre, kind="stable")
+                    _td_pre = _dirs_pre[_tf_occ_pre][_sk_pre].reshape(-1, 2, 2)
+                    _sde_pre = int(np.sum(_td_pre[:, 0, 0] == _td_pre[:, 1, 0]))
+                else:
+                    _sde_pre = 0
+            except Exception as _e2:
+                return _base_ret(False, "edge_incidence_error", mesh)
+
+            if _nme_pre > 0 or _sde_pre > 0:
+                return _base_ret(False, "precondition_nme_or_sde", mesh,
+                                 be_before=_n_be)
+
+            if _n_be == 0:
+                return _base_ret(False, "no_boundary_edges", mesh)
+
+            # ── PRECONDITION 5: no degree-1 boundary vertices ─────────────
+            _d1 = _d3p = 0
+            _bvu = _remap_bv = _bepr = _bdeg = None
+            _n_bv = 0
+            try:
+                _bvu = np.unique(_bep.ravel())
+                _n_bv = len(_bvu)
+                _remap_bv = np.full(len(mesh.vertices), -1, dtype=np.int64)
+                _remap_bv[_bvu] = np.arange(_n_bv, dtype=np.int64)
+                _bepr = _remap_bv[_bep]
+                _bdeg = np.bincount(_bepr.ravel(), minlength=_n_bv)
+                _d1 = int(np.sum(_bdeg == 1))
+                _d3p = int(np.sum(_bdeg >= 3))
+            except Exception as _e3:
+                return _base_ret(False, "boundary_degree_error", mesh,
+                                 be_before=_n_be)
+
+            if _d1 > 0:
+                return _base_ret(False, "boundary_has_open_chain_endpoints", mesh,
+                                 be_before=_n_be)
+
+            # ── PRECONDITION 6: boundary vertices nearly coplanar (SVD) ──
+            _plane_normal = _u_axis = _v_axis = None
+            _bverts_3d = _bv_centroid = _bv_centered = None
+            _max_dev = _med_dev = _p95_dev = _bv_diag = _planarity_tol = 0.0
+            try:
+                _bverts_3d = _mv[_bvu]
+                _bv_centroid = _bverts_3d.mean(axis=0)
+                _bv_centered = _bverts_3d - _bv_centroid
+                _bv_bbox_d = _bverts_3d.max(axis=0) - _bverts_3d.min(axis=0)
+                _bv_diag = float(np.linalg.norm(_bv_bbox_d))
+                if _bv_diag < 1e-12:
+                    return _base_ret(False, "boundary_vertices_degenerate_bbox", mesh,
+                                     be_before=_n_be)
+                _, _svals, _Vt = np.linalg.svd(_bv_centered, full_matrices=False)
+                _plane_normal = _Vt[-1]
+                _u_axis = _Vt[0]
+                _v_axis = _Vt[1]
+                _deviations = np.abs(_bv_centered @ _plane_normal)
+                _max_dev = float(np.max(_deviations))
+                _med_dev = float(np.median(_deviations))
+                _p95_dev = float(np.percentile(_deviations, 95))
+                _planarity_tol = max(_bv_diag * 1e-3, 1e-6)
+            except Exception as _e4:
+                return _base_ret(False, "planarity_svd_error", mesh,
+                                 be_before=_n_be)
+
+            # ── PRECONDITION 7: boundary plane at mesh extreme ────────────
+            _dist_to_min = _dist_to_max = _extreme_tol = _mesh_diag_3d = 0.0
+            try:
+                _all_mv_proj = _mv @ _plane_normal
+                _bv_proj_mean = float((_bverts_3d @ _plane_normal).mean())
+                _dist_to_min = abs(_bv_proj_mean - float(_all_mv_proj.min()))
+                _dist_to_max = abs(_bv_proj_mean - float(_all_mv_proj.max()))
+                _mesh_bbox_d = _mv.max(axis=0) - _mv.min(axis=0)
+                _mesh_diag_3d = float(np.linalg.norm(_mesh_bbox_d))
+                _extreme_tol = max(_mesh_diag_3d * 0.05, _planarity_tol)
+            except Exception as _e5:
+                return _base_ret(False, "extreme_check_error", mesh, be_before=_n_be)
+
+            _not_planar = _max_dev > _planarity_tol
+            _not_extreme = min(_dist_to_min, _dist_to_max) > _extreme_tol
+            _eligible = not _not_planar and not _not_extreme
+            _elig_reason = (
+                "boundary_not_planar" if _not_planar else
+                "boundary_plane_not_at_mesh_extreme" if _not_extreme else
+                "ok"
+            )
+
+            if not _eligible:
+                return _base_ret(False, _elig_reason, mesh, be_before=_n_be)
+
+            # ── PROJECT boundary vertices to 2D ───────────────────────────
+            _bverts_2d = None
+            try:
+                _basis_2d = np.column_stack([_u_axis, _v_axis])   # (3, 2)
+                _bverts_2d = _bv_centered @ _basis_2d             # (n_bv, 2)
+            except Exception as _e6:
+                return _base_ret(False, "projection_error", mesh, be_before=_n_be)
+
+            # ── BUILD MultiLineString ─────────────────────────────────────
+            _mls = None
+            try:
+                from shapely.geometry import MultiLineString as _MLS
+                _lines = []
+                for _ei in range(len(_bep)):
+                    _ia = int(_remap_bv[_bep[_ei, 0]])
+                    _ib = int(_remap_bv[_bep[_ei, 1]])
+                    _lines.append((
+                        (float(_bverts_2d[_ia, 0]), float(_bverts_2d[_ia, 1])),
+                        (float(_bverts_2d[_ib, 0]), float(_bverts_2d[_ib, 1])),
+                    ))
+                _mls = _MLS(_lines)
+            except Exception as _e7:
+                return _base_ret(False, "multilinestring_build_error", mesh,
+                                 be_before=_n_be)
+
+            # ── POLYGONIZE ────────────────────────────────────────────────
+            _poly_list = []
+            _n_regions = _n_holes_total = _n_dangles = _n_cuts = _n_invalid = 0
+            _total_proj_area = 0.0
+            try:
+                from shapely.ops import polygonize_full as _pgfull
+                _polys, _cuts, _dangs, _inv_rings = _pgfull(_mls)
+                _poly_list = list(_polys.geoms) if not _polys.is_empty else []
+                _n_regions = len(_poly_list)
+                _n_holes_total = sum(len(list(p.interiors)) for p in _poly_list)
+                _n_dangles = len(list(_dangs.geoms)) if not _dangs.is_empty else 0
+                _n_cuts = len(list(_cuts.geoms)) if not _cuts.is_empty else 0
+                _n_invalid = len(list(_inv_rings.geoms)) if not _inv_rings.is_empty else 0
+                _total_proj_area = sum(p.area for p in _poly_list)
+            except Exception as _e8:
+                return _base_ret(False, "polygonize_error", mesh, be_before=_n_be)
+
+            if _n_regions == 0:
+                return _base_ret(False, "polygonization_no_bounded_regions", mesh,
+                                 be_before=_n_be)
+            if _n_dangles > 0:
+                return _base_ret(False, "polygonization_has_dangles", mesh,
+                                 be_before=_n_be)
+            if _n_invalid > 0:
+                return _base_ret(False, "polygonization_has_invalid_rings", mesh,
+                                 be_before=_n_be)
+
+            # ── BUILD COORD→VERTEX LOOKUP (scipy KDTree on 2D proj) ───────
+            _lookup_tol = max(_bv_diag * 1e-6, 1e-10)
+            try:
+                from scipy.spatial import cKDTree as _KDT
+                _kdtree = _KDT(_bverts_2d)
+            except Exception as _e9:
+                return _base_ret(False, "kdtree_build_error", mesh, be_before=_n_be)
+
+            def _ring_to_bv_indices(ring_coords):
+                """Map shapely ring coord list to bvu-space indices.
+                Strips the closing duplicate.  Returns None on any lookup miss."""
+                _pts = np.array(ring_coords, dtype=np.float64)
+                if (len(_pts) >= 2 and
+                        np.allclose(_pts[0], _pts[-1], atol=_lookup_tol * 100)):
+                    _pts = _pts[:-1]
+                if len(_pts) < 3:
+                    return None
+                _dists, _idxs = _kdtree.query(_pts, k=1)
+                if np.any(_dists > _lookup_tol):
+                    return None
+                return _idxs   # indices into _bverts_2d / _bvu
+
+            # ── TRIANGULATE each polygon region with earcut ───────────────
+            _all_cap_faces = []
+            _n_new_verts = 0
+            _n_new_faces_total = 0
+            _n_discarded_degen = 0
+            _cap_area = 0.0
+
+            try:
+                import mapbox_earcut as _earcut
+
+                for _poly in _poly_list:
+                    _ext_bv_idx = _ring_to_bv_indices(list(_poly.exterior.coords))
+                    if _ext_bv_idx is None:
+                        return _base_ret(False, "coord_mapping_failed_exterior", mesh,
+                                         be_before=_n_be)
+
+                    _ring_bv = list(_ext_bv_idx)         # indices into _bverts_2d/_bvu
+                    _ring_ends = [len(_ring_bv)]          # ring_end_indices for earcut
+
+                    for _hole in _poly.interiors:
+                        _h_bv_idx = _ring_to_bv_indices(list(_hole.coords))
+                        if _h_bv_idx is None:
+                            return _base_ret(False, "coord_mapping_failed_hole", mesh,
+                                             be_before=_n_be)
+                        _ring_bv.extend(_h_bv_idx)
+                        _ring_ends.append(len(_ring_bv))
+
+                    _ring_bv_arr = np.array(_ring_bv, dtype=np.int64)
+                    _earcut_pts = _bverts_2d[_ring_bv_arr].astype(np.float32)
+                    _earcut_rings = np.array(_ring_ends, dtype=np.uint32)
+                    _tris_flat = _earcut.triangulate_float32(_earcut_pts, _earcut_rings)
+
+                    if len(_tris_flat) == 0:
+                        return _base_ret(False, "earcut_no_triangles", mesh,
+                                         be_before=_n_be)
+
+                    # earcut indices → bvu-space → original mesh vertex indices
+                    _tris_local = _tris_flat.reshape(-1, 3).astype(np.int64)
+                    _tris_3d = _bvu[_ring_bv_arr[_tris_local]]   # (T, 3) orig idx
+
+                    # Discard repeated-index triangles (earcut may produce them for
+                    # degenerate rings; safe to remove here)
+                    _rdeg = (
+                        (_tris_3d[:, 0] == _tris_3d[:, 1]) |
+                        (_tris_3d[:, 1] == _tris_3d[:, 2]) |
+                        (_tris_3d[:, 0] == _tris_3d[:, 2])
+                    )
+                    _n_discarded_degen += int(np.sum(_rdeg))
+                    _tris_3d = _tris_3d[~_rdeg]
+
+                    if len(_tris_3d) == 0:
+                        return _base_ret(False, "all_triangles_degenerate_after_map", mesh,
+                                         be_before=_n_be)
+
+                    _all_cap_faces.append(_tris_3d)
+                    _n_new_faces_total += len(_tris_3d)
+
+            except Exception as _e10:
+                return _base_ret(False, "triangulation_error", mesh, be_before=_n_be)
+
+            # ── CAP AREA + WINDING ORIENTATION ────────────────────────────
+            _all_cap_arr = np.concatenate(_all_cap_faces, axis=0)   # (N_cap, 3)
+
+            try:
+                _v0c = _mv[_all_cap_arr[:, 0]]
+                _v1c = _mv[_all_cap_arr[:, 1]]
+                _v2c = _mv[_all_cap_arr[:, 2]]
+                _cap_area = float(
+                    np.sum(np.linalg.norm(np.cross(_v1c - _v0c, _v2c - _v0c), axis=1)) / 2.0
+                )
+            except Exception:
+                pass
+
+            # Orient cap: outward direction = away from mesh interior
+            try:
+                _all_mv_proj = _mv @ _plane_normal
+                _bv_proj_mean = float((_bverts_3d @ _plane_normal).mean())
+                _interior_proj = float(np.median(_all_mv_proj))
+                # interior on + side → outward = -normal; interior on - side → outward = +normal
+                _outward_n = -_plane_normal if _interior_proj > _bv_proj_mean else _plane_normal
+
+                _t0c = _all_cap_arr[0]
+                _e1c = _mv[_t0c[1]] - _mv[_t0c[0]]
+                _e2c = _mv[_t0c[2]] - _mv[_t0c[0]]
+                _sample_n = np.cross(_e1c, _e2c)
+                _sn_len = np.linalg.norm(_sample_n)
+                if _sn_len > 1e-14:
+                    _sample_n /= _sn_len
+                    if np.dot(_sample_n, _outward_n) < 0:
+                        _all_cap_arr = _all_cap_arr[:, ::-1]
+            except Exception:
+                pass   # winding errors: fall through, fix_winding handles it
+
+            # ── BUILD WORKING COPY ────────────────────────────────────────
+            try:
+                import copy as _copy
+                _wmesh = _copy.deepcopy(mesh)
+                _wfaces_orig = np.asarray(_wmesh.faces, dtype=np.int64)
+                _combined = np.concatenate(
+                    [_wfaces_orig, _all_cap_arr.astype(np.int64)], axis=0
+                )
+                _wmesh.faces = _combined.astype(np.int32)
+            except Exception as _e11:
+                return _base_ret(False, "working_copy_error", mesh, be_before=_n_be)
+
+            try:
+                trimesh.repair.fix_winding(_wmesh)
+                trimesh.repair.fix_normals(_wmesh)
+                _wmesh.merge_vertices()
+                _wmesh.remove_unreferenced_vertices()
+            except Exception as _e12:
+                pass
+
+            # ── VALIDATE WORKING COPY ─────────────────────────────────────
+            _w_be = _w_nme = _w_sde = _w_degen = "error"
+            _w_wt = _w_vol = "error"
+
+            try:
+                _wfa = np.asarray(_wmesh.faces)
+                _wvt = np.asarray(_wmesh.vertices)
+
+                # Degenerate check (same classification as precondition 2)
+                _w_ri = (
+                    (_wfa[:, 0] == _wfa[:, 1]) |
+                    (_wfa[:, 1] == _wfa[:, 2]) |
+                    (_wfa[:, 0] == _wfa[:, 2])
+                )
+                _w_fv = _wvt[_wfa]
+                _w_cc = (
+                    (np.max(np.abs(_w_fv[:, 0] - _w_fv[:, 1]), axis=1) <= 1e-8) |
+                    (np.max(np.abs(_w_fv[:, 1] - _w_fv[:, 2]), axis=1) <= 1e-8) |
+                    (np.max(np.abs(_w_fv[:, 0] - _w_fv[:, 2]), axis=1) <= 1e-8)
+                ) & ~_w_ri
+                try:
+                    _w_nd = _wmesh.nondegenerate_faces(height=1e-8)
+                    _w_nc = ~_w_nd & ~_w_ri & ~_w_cc
+                except Exception:
+                    _w_nc = (np.asarray(_wmesh.area_faces) == 0.0) & ~_w_ri & ~_w_cc
+                _w_degen = (
+                    int(np.sum(_w_ri)) + int(np.sum(_w_cc)) + int(np.sum(_w_nc))
+                )
+
+                # Edge incidence on working copy
+                _w_es = np.ascontiguousarray(_wmesh.edges_sorted)
+                _w_esv = _w_es.view(
+                    np.dtype((np.void, _w_es.dtype.itemsize * 2))
+                ).ravel()
+                _, _w_inv, _w_cnts = np.unique(
+                    _w_esv, return_inverse=True, return_counts=True
+                )
+                _w_be = int(np.sum(_w_cnts == 1))
+                _w_nme = int(np.sum(_w_cnts >= 3))
+
+                _w_dirs = np.ascontiguousarray(_wmesh.edges)
+                _w2keys = np.where(_w_cnts == 2)[0]
+                if len(_w2keys) > 0:
+                    _wtf_occ = np.where(np.isin(_w_inv, _w2keys))[0]
+                    _wtf_k = _w_inv[_wtf_occ]
+                    _wsk = np.argsort(_wtf_k, kind="stable")
+                    _wtd = _w_dirs[_wtf_occ][_wsk].reshape(-1, 2, 2)
+                    _w_sde = int(np.sum(_wtd[:, 0, 0] == _wtd[:, 1, 0]))
+                else:
+                    _w_sde = 0
+
+                _w_wt = _wmesh.is_watertight
+                _w_vol = _wmesh.is_volume
+
+            except Exception as _ve:
+                pass
+
+            # Manifold validation
+            _w_man_st = _w_man_nt = _w_man_ie = _w_man_valid = "error"
+            try:
+                _w_man = trimesh_to_manifold(_wmesh)
+                _w_man_st, _w_man_nt, _w_man_ie, _w_man_valid = _manifold_props(_w_man)
+            except Exception as _me:
+                _w_man_valid = False
+                _w_man_st = f"exception:{type(_me).__name__}"
+                _w_man_nt = 0
+                _w_man_ie = True
+
+            _v_ok = (
+                isinstance(_w_be, int) and _w_be == 0 and
+                isinstance(_w_nme, int) and _w_nme == 0 and
+                isinstance(_w_sde, int) and _w_sde == 0 and
+                isinstance(_w_degen, int) and _w_degen == 0 and
+                _w_wt is True and
+                _w_vol is True and
+                _w_man_valid is True
+            )
+
+            if _v_ok:
+                return _base_ret(
+                    True, "ok", _wmesh,
+                    be_before=_n_be, be_after=_w_be,
+                    new_vertices=_n_new_verts,
+                    new_faces=_n_new_faces_total,
+                    polygon_regions=_n_regions,
+                    cap_area=_cap_area,
+                )
+
+            _fail_reason = (
+                "boundary_not_closed"
+                if isinstance(_w_be, int) and _w_be > 0 else
+                "nme_remaining"
+                if isinstance(_w_nme, int) and _w_nme > 0 else
+                "sde_remaining"
+                if isinstance(_w_sde, int) and _w_sde > 0 else
+                "degenerate_faces_remaining"
+                if isinstance(_w_degen, int) and _w_degen > 0 else
+                "not_watertight"
+                if _w_wt is not True else
+                "not_volume"
+                if _w_vol is not True else
+                "manifold_invalid"
+            )
+            return _base_ret(
+                False, _fail_reason, mesh,
+                be_before=_n_be, be_after=_w_be,
+                polygon_regions=_n_regions,
+            )
+
+        _stage = "loading mesh_a"
         mesh_a = trimesh.load(str(mesh_a_path))
+
+        _stage = "loading mesh_b"
         mesh_b = trimesh.load(str(mesh_b_path))
 
         # Ensure we have Trimesh objects (not Scene)
@@ -856,7 +1922,7 @@ def boolean_operation(
         if isinstance(mesh_b, trimesh.Scene):
             mesh_b = trimesh.util.concatenate(mesh_b.dump())
 
-        logger.info(f"Boolean {operation.value}: A={len(mesh_a.faces)} faces, B={len(mesh_b.faces)} faces")
+        _log.info(f"Boolean {operation.value}: A={len(mesh_a.faces)} faces, B={len(mesh_b.faces)} faces")
 
         # Use manifold3d directly to bypass trimesh's volume check.
         # Manifold can handle non-volume meshes by forcing them through
@@ -881,22 +1947,135 @@ def boolean_operation(
             )
             return result_mesh
 
-        try:
-            man_a = trimesh_to_manifold(mesh_a)
-            man_b = trimesh_to_manifold(mesh_b)
-        except Exception as e:
-            logger.warning(f"  Manifold conversion failed: {e}, falling back to trimesh repair")
-            # Fallback: try trimesh repair + trimesh boolean
-            for label, mesh in [("A", mesh_a), ("B", mesh_b)]:
-                if not mesh.is_volume:
-                    trimesh.repair.fill_holes(mesh)
-                    trimesh.repair.fix_winding(mesh)
-                    trimesh.repair.fix_normals(mesh)
-                    mesh.merge_vertices()
-            man_a = trimesh_to_manifold(mesh_a)
-            man_b = trimesh_to_manifold(mesh_b)
+        # --- Primary conversion ---
+        # Track whether fallback is needed and why; initialise valid flags to False
+        # so any early exception leaves them conservative.
+        _a_valid = False
+        _b_valid = False
+        _need_fallback = False
+        _fallback_reason = None
 
-        # Perform boolean operation via manifold3d
+        try:
+            _stage = "converting mesh_a (primary)"
+            man_a = trimesh_to_manifold(mesh_a)
+            _a_st, _a_nt, _a_ie, _a_valid = _manifold_props(man_a)
+
+            _stage = "converting mesh_b (primary)"
+            man_b = trimesh_to_manifold(mesh_b)
+            _b_st, _b_nt, _b_ie, _b_valid = _manifold_props(man_b)
+
+        except Exception as e:
+            _need_fallback = True
+            _fallback_reason = "exception"
+
+        # manifold3d.Manifold() can silently return an invalid object (Error.NotManifold,
+        # num_tri=0, is_empty=True) without raising.  Treat that as a conversion failure.
+        if not _need_fallback and (not _a_valid or not _b_valid):
+            _need_fallback = True
+            _fallback_reason = "invalid_manifold"
+
+        # --- Fallback repair + retry ---
+        if _need_fallback:
+            _stage = "fallback repair"
+
+            # Holds a validated Manifold from Mesh.merge() if that path succeeds,
+            # allowing the retry block to skip trimesh_to_manifold(mesh_a).
+            _merge_man_a = None
+
+            for _rlabel, _rmesh in [("mesh_a", mesh_a), ("mesh_b", mesh_b)]:
+                _actual_mesh = mesh_a if _rlabel == "mesh_a" else mesh_b
+                if not _rmesh.is_volume:
+                    if _rlabel == "mesh_a":
+                        # Remove repeated-index faces before fill_holes so that
+                        # fill_holes does not treat garbage-component boundaries as holes.
+                        _ri_result = _remove_repeated_index_faces(mesh_a, "mesh_a")
+                        if len(mesh_a.faces) == 0:
+                            return False, (
+                                "mesh_a has no faces remaining after repeated-index cleanup"
+                            )
+                        # Remove exact-duplicate faces (same winding, cyclic-rotation equal).
+                        _edf_result = _remove_exact_duplicate_faces(mesh_a, "mesh_a")
+                        # Attempt manifold3d Mesh.merge() as an additional structural fix.
+                        # If it yields a valid Manifold, adopt it directly and skip the
+                        # planar repair / fill_holes path.  Any failure falls through to
+                        # the existing repair sequence.
+                        try:
+                            if hasattr(manifold3d.Mesh, "merge"):
+                                _verts_m = np.array(mesh_a.vertices, dtype=np.float32)
+                                _faces_m = np.array(mesh_a.faces, dtype=np.int32)
+                                _raw_mesh_m = manifold3d.Mesh(
+                                    vert_properties=_verts_m, tri_verts=_faces_m
+                                )
+                                _raw_mesh_m.merge()
+                                _merged_man = manifold3d.Manifold(_raw_mesh_m)
+                                if _is_valid_manifold(_merged_man):
+                                    _merge_man_a = _merged_man
+                        except Exception:
+                            pass
+                        if _merge_man_a is None:
+                            # Transactional seam welding: close boundary by merging
+                            # geometrically near-coincident anti-parallel edge endpoint
+                            # pairs.  Conservative thresholds (2 % tol, 5 % length ratio,
+                            # zero ambiguous).  All work on a working copy; adopted only
+                            # when structure validates.  Even if Manifold conversion still
+                            # fails due to multi-fan vertices, the welded copy is kept so
+                            # the next stage can handle post-weld fan splitting.
+                            _weld_result = _transactional_seam_weld(mesh_a, "mesh_a")
+                            if _weld_result["adopted"]:
+                                mesh_a = _weld_result["mesh"]
+                                if _weld_result["manifold"] is not None:
+                                    _merge_man_a = _weld_result["manifold"]
+                        if _merge_man_a is None:
+                            # Attempt transactional planar-boundary cap repair.
+                            # All modifications run on a working copy; original mesh_a
+                            # is only replaced if the repaired copy passes full Manifold
+                            # validation.  On any failure the existing fill_holes path runs.
+                            _planar_result = _try_repair_planar_boundary(mesh_a, "mesh_a")
+                            if _planar_result["applied"]:
+                                mesh_a = _planar_result["mesh"]
+                            else:
+                                trimesh.repair.fill_holes(mesh_a)
+                                trimesh.repair.fix_winding(mesh_a)
+                                trimesh.repair.fix_normals(mesh_a)
+                                mesh_a.merge_vertices()
+                    else:
+                        # mesh_b also needs repair; apply the same cleanup first.
+                        _remove_repeated_index_faces(mesh_b, "mesh_b")
+                        if len(mesh_b.faces) == 0:
+                            return False, (
+                                "mesh_b has no faces remaining after repeated-index cleanup"
+                            )
+                        trimesh.repair.fill_holes(mesh_b)
+                        trimesh.repair.fix_winding(mesh_b)
+                        trimesh.repair.fix_normals(mesh_b)
+                        mesh_b.merge_vertices()
+
+            # Retry mesh_a — exceptions propagate to the outer try/except
+            _stage = "retrying mesh_a conversion"
+            if _merge_man_a is not None:
+                # Mesh.merge() already produced a validated Manifold; use it directly
+                # without re-running trimesh_to_manifold so merge info is preserved.
+                man_a = _merge_man_a
+            else:
+                man_a = trimesh_to_manifold(mesh_a)
+            if not _is_valid_manifold(man_a):
+                return False, "mesh_a repair failed: still invalid after repair"
+
+            # Retry mesh_b — exceptions propagate to the outer try/except
+            _stage = "retrying mesh_b conversion"
+            man_b = trimesh_to_manifold(mesh_b)
+            if not _is_valid_manifold(man_b):
+                return False, "mesh_b repair failed: still invalid after repair"
+
+        # --- Defensive union pre-check ---
+        # Guards against any future code path that could reach here with an invalid Manifold.
+        _stage = f"{operation.value}"
+        if not _is_valid_manifold(man_a):
+            return False, "union pre-check: mesh_a is invalid"
+        if not _is_valid_manifold(man_b):
+            return False, "union pre-check: mesh_b is invalid"
+
+        # --- Union ---
         if operation == BooleanOperation.UNION:
             result_man = man_a + man_b
         elif operation == BooleanOperation.DIFFERENCE:
@@ -906,21 +2085,27 @@ def boolean_operation(
         else:
             return False, f"Unknown operation: {operation}"
 
+        _stage = "converting result"
         result = manifold_to_trimesh(result_man)
 
-        # Check result
+        _stage = "checking result"
         if result is None or (hasattr(result, 'is_empty') and result.is_empty):
             return False, "Boolean operation resulted in empty mesh"
 
-        logger.info(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
+        _log.info(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
 
         # Export result
         result.export(str(output_path))
         return True, None
 
     except Exception as e:
-        import traceback
-        err = f"Boolean operation failed: {str(e)}\n{traceback.format_exc()}"
+        import traceback as _tb_mod
+        _tb = _tb_mod.format_exc()
+        err = f"Boolean operation failed: {str(e)}\n{_tb}"
+        try:
+            _log.error(f"Boolean {operation.value} failed at {_stage}: {type(e).__name__}: {e}")
+        except Exception:
+            pass
         print(err, flush=True)
         return False, err
 

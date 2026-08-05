@@ -50,7 +50,7 @@ if "!VENV_DIR!"==".venv312" (
     pip install -q -r requirements.txt
 ) else if defined VCPKG_ROOT (
     pip install -q scikit-build-core cmake 2>nul
-    pip install -q fastapi "uvicorn[standard]" python-multipart pydantic trimesh rtree numpy Pillow
+    pip install -q fastapi "uvicorn[standard]" python-multipart pydantic trimesh "networkx>=3.0" rtree numpy Pillow
     pip install -q --no-build-isolation "manifold3d>=2.3.0" -C "cmake.define.MANIFOLD_PYBIND_STUBGEN=OFF"
 ) else (
     pip install -q -r requirements.txt
