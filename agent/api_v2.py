@@ -65,7 +65,7 @@ from .jobs import (
     run_cut_operation,
     write_job_status,
 )
-from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config
+from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config, gate_blur
 from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
 
 logger = logging.getLogger(__name__)
@@ -1688,33 +1688,10 @@ def _inject_retract_overrides(config: Dict[str, Any]) -> None:
             print_section[mechado_key] = config[sla_key]
 
 
-def _gate_blur(blur_enabled: Any, blur_pixel: Any) -> Any:
-    """依 `Image Blur` 開關閘控 blur 強度，回傳最終的 `blur` 值。
-
-    `Image Blur` 是**啟用與否**的開關，`Image Blur Pixel` 是**強度刻度**。閘控只決定
-    「要不要套用」，MUST NOT 被解讀為對刻度做任何轉換——開關為 true 或缺失時，強度值
-    原封不動直接複製，「不得二次刻度轉換」的既有約定完全不變。
-
-    三態語意：
-
-        開關 falsy（False / 0）  -> 0            使用者已關閉，不得執行
-        開關 truthy             -> blur_pixel   直接複製
-        開關不存在（None）        -> blur_pixel   向後相容：舊 config 不含此鍵，行為不變
-
-    `None` 同時代表「鍵不存在」與「值為 JSON null」，兩者都退回直接複製。
-
-    這是兩個轉換器（`_convert_v2_config_to_sla` 與 `_extract_sla_from_mechado`）共用的
-    單一真值來源：兩者對同一語意必須產生相同的 `blur`，否則 `execute_slice_job` 的
-    「base(mechado) ← override(snake)」合併會依請求順序產生不可預期的結果。抽成共用函式
-    是讓這件事在結構上成立，而不是靠兩處各自維護的巧合。
-
-    背景：前端在使用者未勾選 blur 時仍會送出 `Image Blur Pixel = 1`，而本函式導入前
-    後端完全沒有讀取開關，於是切片一律以 blur 啟用執行。以 16K 幅面實測，該狀態下
-    光柵化耗時是關閉時的 5.9 倍（262 秒 vs 40 秒）。
-    """
-    if blur_enabled is None:
-        return blur_pixel
-    return blur_pixel if blur_enabled else 0
+# blur 閘控的真值來源已移至 `models.gate_blur`，因為 `prz_encoder` 也要用它，而
+# prz_encoder 是本模組的下游——留在這裡會迫使它反向匯入整個路由模組。此別名保留
+# 既有呼叫點與測試中的 `_gate_blur` 名稱。
+_gate_blur = gate_blur
 
 
 def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:

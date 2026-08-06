@@ -235,6 +235,41 @@ def _extract_prz_timing_config(config: Dict[str, Any]) -> PrzPrintTimingConfig:
     return PrzPrintTimingConfig(**timing_dict)
 
 
+def gate_blur(blur_enabled: Any, blur_pixel: Any) -> Any:
+    """依 `Image Blur` 開關閘控 blur 強度，回傳最終的 `blur` 值。
+
+    `Image Blur` 是**啟用與否**的開關，`Image Blur Pixel` 是**強度刻度**。閘控只決定
+    「要不要套用」，MUST NOT 被解讀為對刻度做任何轉換——開關為 true 或缺失時，強度值
+    原封不動直接複製，「不得二次刻度轉換」的既有約定完全不變。
+
+    三態語意：
+
+        開關 falsy（False / 0）  -> 0            使用者已關閉，不得執行
+        開關 truthy             -> blur_pixel   直接複製
+        開關不存在（None）        -> blur_pixel   向後相容：舊 config 不含此鍵，行為不變
+
+    `None` 同時代表「鍵不存在」與「值為 JSON null」，兩者都退回直接複製。
+
+    **這是全系統唯一的 blur 閘控真值來源**，目前有三個消費端：
+
+      * `api_v2._extract_sla_from_mechado()` —— mechado config → SLAConfig
+      * `api_v2._convert_v2_config_to_sla()` —— 舊版扁平 config → SLAConfig
+      * `prz_encoder._write_header()`        —— PRZ header 的 `blur_level` 欄位
+
+    前兩者若不一致，`execute_slice_job` 的「base(mechado) ← override(snake)」合併會依
+    請求順序產生不可預期的 `blur`；第三者若不一致，PRZ 會宣稱一個與層圖不符的模糊強度。
+    住在 `models.py` 而非 `api_v2.py` 是因為 `prz_encoder` 是 `api_v2` 的**下游**——把閘控
+    留在 api_v2 會迫使低階編碼器反向匯入整個 FastAPI 路由模組。
+
+    背景：前端在使用者未勾選 blur 時仍會送出 `Image Blur Pixel = 1`，而本函式導入前
+    後端完全沒有讀取開關，於是切片一律以 blur 啟用執行。以 16K 幅面實測，該狀態下
+    光柵化耗時是關閉時的 5.9 倍（262 秒 vs 40 秒）。
+    """
+    if blur_enabled is None:
+        return blur_pixel
+    return blur_pixel if blur_enabled else 0
+
+
 class BooleanOperation(str, Enum):
     """Boolean operation type."""
     UNION = "union"

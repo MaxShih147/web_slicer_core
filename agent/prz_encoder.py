@@ -28,7 +28,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-from .models import PrzPrintTimingConfig
+from .models import PrzPrintTimingConfig, gate_blur
 
 import numpy as np
 from PIL import Image
@@ -538,8 +538,14 @@ def _write_header(
     # Grey Level (2B short BE)
     buf.write(struct.pack(">H", _get_int(config, "Advanced.Grey Level")))
 
-    # Blur Level (2B short BE)
-    buf.write(struct.pack(">H", _get_int(config, "Advanced.Image Blur Pixel")))
+    # Blur Level (2B short BE) — 受 `Advanced."Image Blur"` 開關閘控，與切片端共用
+    # models.gate_blur 這個唯一真值來源。少了閘控，使用者關掉 blur 時層圖會以
+    # blur = 0 光柵化，header 卻仍宣稱 `Image Blur Pixel` 的強度，PRZ 的自述與它
+    # 自己夾帶的層圖互相矛盾。開關讀原始值而非走 _get_int：後者會把「鍵不存在」
+    # 與「值為 false」一起壓成 0，正好抹掉閘控要區分的兩態。
+    _, blur_enabled = _traverse_dotpath(config, "Advanced.Image Blur")
+    buf.write(struct.pack(">H", int(gate_blur(
+        blur_enabled, _get_int(config, "Advanced.Image Blur Pixel")))))
 
     # Preview 116x116 (26912B RGB565 BE)
     expected_small = PREVIEW_SMALL_SIZE * PREVIEW_SMALL_SIZE * 2
