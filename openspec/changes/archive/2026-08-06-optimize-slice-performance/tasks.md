@@ -76,11 +76,17 @@
 
 ## 6. 預覽縮放比降至 0.10（受跨 repo 硬閘門管制）
 
+> ### 🚚 本階段整批移交至下一個變更
+>
+> **閘門條件 6.1～6.3 於本變更結束時全數未達成**（DS-Online 的 WASM PRZ fallback 三處呼叫點皆未移除），因此 6.4～6.11 一項未做。本節**不視為本變更的未完成工作，而是明確移交**：`slice-preview-export` 能力的縮放比 requirement 已改以現行值 `0.25` 立約，並在該處記載升級到 `0.10` 的三項落地條件，故封存後 spec 與程式碼一致，不留懸空需求。下一個變更承接時可直接把本節搬過去。
+>
 > ### ⛔ 硬閘門
 >
 > **本階段不得在下列條件全部成立之前開始。**
 >
 > 現行 DS-Online 在 `downloadPrz` 失敗時，會以 1/4 尺寸的預覽圖**上採樣 4 倍**生成列印用 PRZ，且僅有一行 `logger.warn`。若在移除該路徑之前把縮放比降到 0.10，上採樣倍率將由 4× 惡化為 **10×**——這不是優化，是加深既有的坑。
+>
+> **閘門的理由需要修正（實測發現，保留原文以誌其誤）**：前端靜態檢查顯示 `pngRleWorker.js` 在尺寸不符時直接 `throw`，而 `paramsStore.resolution` 是整機解析度——該 fallback 在**任何**預覽縮放比下都必然失敗，不會真的產出上採樣的 PRZ，只會拋錯。因此「4× 惡化為 10×」的推論不成立。閘門本身仍應保留，但正確理由是「未移除的死路徑會把真實錯誤遮蔽成一次無聲的降級」，而非上採樣品質。
 
 - [ ] 6.1 **閘門條件**：DS-Online 已移除 `slicingService.js` 的 WASM PRZ fallback，`downloadPrz` 失敗改為明確拋錯（已確認既有 `toast.errorKey('errors.slices.sliceFailed')` 與 `retrySlice()` 可承接）
 - [ ] 6.2 **閘門條件**：DS-Online 該變更已合併並部署至與本變更相同的發版通道
@@ -109,21 +115,26 @@
 ## 8. 整合驗證與收尾
 
 - [x] 8.1 fork 的所有改動整理為獨立 commit；父 repo 的 submodule 指標更新獨立成另一個 commit，使 Python 與 fork 可分別回滾
-- [x] 8.2 **驗證**：`pytest agent/tests/` 全數通過
+- [x] 8.2 **驗證**：`pytest agent/tests/` —— 484 passed / 2 failed，**兩筆失敗皆非本變更所致，且在本變更之前即已存在**：`test_prz_print_time.py::test_6_11`（`_compute_print_time()` 少算 drop2，屬 `release/v1.0.5` 既有缺陷；該測試與其相依模組的 `git diff HEAD` 為空）與 `test_subprocess_boundary_5_11.py::test_engine_runs_as_separate_process`（環境未安裝 `pytest-asyncio`）。本變更直接相關的 `test_extract_sla_from_mechado.py`、`test_slice_config_merge.py` 全數通過。兩筆失敗**不列為本變更的驗收阻擋，但也不視為已解決**——`_compute_print_time` 的 drop2 需另行處理
 - [x] 8.3 **驗證**：端到端經 agent API 實跑一次完整流程（建立 job → 上傳模型與支撐 → execute → 輪詢 → `download.prz` → `preview.zip` → `layers.zip`），全部成功
 - [x] 8.4 **驗證**：端到端產出的 PRZ 之 `layer_count`、`estimated_print_time`、`resin_volume_ml` 與階段 0 的基準一致（blur 差異造成的檔案大小變化除外）
 - [x] 8.5 彙整量測表：對照階段 0 的基準，列出總耗時、峰值 RSS、`.sl1` 體積、`preview.zip` 體積的前後變化
 - [x] 8.6 將實測結果與階段 0.8 的決策結論回填 `design.md` 的 Open Questions；若實測推翻原估計比例，於該處記錄實際數字
 - [x] 8.7 確認 DS-Online 的三項跨 repo 項目狀態（stencil pass 子節點過濾＝5× 根因、WASM fallback 移除、`unzipPreviewFrames` 移除），將未完成者移交該 repo 的變更追蹤
 
-## 9. 不在本變更範圍（僅記錄，不執行）
+## 9. 不在本變更範圍（僅記錄）
 
-- [ ] 9.1 記錄：DS-Online `MeshManager.exportSupportOnlySTL()` 缺少子節點過濾為 5× 重複之**根因**，後端去重僅為防禦網
-- [ ] 9.2 記錄：dirty-tile 稀疏化為唯一能吃到九成空白畫布的手段，是否另開變更需依階段 5、6 完成後的剩餘 headroom 決定
-- [ ] 9.3 記錄：blur deadband（`≤T → 0`、`≥255−T → 255`）在 blur 啟用時可省約三分之一 `.sl1` 體積，改變輸出像素，待產品端決策
-- [ ] 9.4 記錄：`agent/jobs/` 目前累積逾 1 GB 且無清理邏輯，保留策略需另開變更
-- [ ] 9.5 記錄：`RLERasterEncoder` 的 `out.reserve(n / 8 + 64)`（16K 幅面為 11.23 MB/層）在編碼結果 move 進 `m_layers` 後**容量被完整保留**，實際只用約 150 KB。632 層即提交約 7.1 GB 且不隨用量收斂，是階段 0 觀測到「commit 單調成長至 9,167 MB」的真正成因（原先誤判為每層新建 raster，已於量測記錄更正）。一次 `shrink_to_fit()` 或改為兩段式編碼即可回收，屬既有缺陷，不在本變更範圍
-- [ ] 9.6 記錄：**本變更引入的 metadata 不一致（於 Task 8.4 發現）**。`agent/prz_encoder.py:542` 把 `Advanced."Image Blur Pixel"` 直接寫進 PRZ header 的 `blur_level`，**未經 `_gate_blur` 閘控**。階段 1 之前這是正確的（blur 本來就被強制啟用，header 寫 1 屬實）；階段 1 之後層檔以 `blur = 0` 光柵化，header 卻仍宣稱 `blur_level = 1`（端到端實測確認）。層點陣圖不受影響、列印結果正確，但 PRZ 的自述與實際產出不符。修法是在該處套用同一個 `_gate_blur`，屬單行改動，但已超出本變更的收尾範圍，另記於此
+> 本節是**記錄本身即為交付物**，不是待辦清單——寫下來就完成了，因此不使用 checkbox。
+> 先前以 `- [ ]` 呈現會讓「所有任務完成」在定義上永遠無法達成。
+
+- **9.1** DS-Online `MeshManager.exportSupportOnlySTL()` 缺少子節點過濾為 5× 重複之**根因**，後端去重僅為防禦網。詳細的可驗證事實與尚未閉合之處見「階段 8 驗證結果」的 8.7 移交事項第 1 點
+- **9.2** dirty-tile 稀疏化為唯一能吃到九成空白畫布的手段。本變更完成後的剩餘 headroom 已於 design.md Open Questions 回填：核心光柵化 28.96 秒仍佔最終總耗時的 66.6%，建議另開變更
+- **9.3** blur deadband（`≤T → 0`、`≥255−T → 255`）在 blur 啟用時可省約三分之一 `.sl1` 體積，改變輸出像素，待產品端決策。其價值取決於 blur 的真實啟用率
+- **9.4** `agent/jobs/` 目前累積逾 1 GB 且無清理邏輯，保留策略需另開變更
+- **9.5** `RLERasterEncoder` 的 `out.reserve(n / 8 + 64)`（16K 幅面為 11.23 MB/層）在編碼結果 move 進 `m_layers` 後**容量被完整保留**，實際只用約 150 KB。632 層即提交約 7.1 GB 且不隨用量收斂，是階段 0 觀測到「commit 單調成長至 9,167 MB」的真正成因（原先誤判為每層新建 raster，已於量測記錄更正）。一次 `shrink_to_fit()` 或改為兩段式編碼即可回收，屬既有缺陷，不在本變更範圍
+- **9.6** ~~本變更引入的 metadata 不一致~~ **已於封存前修復**。`agent/prz_encoder.py` 原本把 `Advanced."Image Blur Pixel"` 直接寫進 PRZ header 的 `blur_level`，未經閘控——階段 1 之前這是正確的（blur 本就被強制啟用），階段 1 之後層檔以 `blur = 0` 光柵化，header 卻仍宣稱 `blur_level = 1`（端到端實測確認）。**這是本變更自己造成的**，不屬既有缺陷，因此不適合當作「僅記錄」項目留下。修法為套用同一個閘控函式；連帶把 `_gate_blur` 由 `api_v2.py` 移至 `models.py` 並更名為 `gate_blur`，因為 `prz_encoder` 是 `api_v2` 的**下游**，留在原處會迫使低階編碼器反向匯入整個 FastAPI 路由模組。`api_v2` 內保留 `_gate_blur = gate_blur` 別名以維持既有呼叫點與測試
+- **9.7** `slice-config-intake` 能力**尚未涵蓋 PRZ header 這條輸出路徑**。9.6 修好了實作，但 spec 層面仍只約束 `SLAConfig` 與 `generate_config_ini()` 兩個消費端，沒有任何 requirement 說「閘控後的 `blur` 是所有下游的唯一來源」。若日後再新增一個讀 `Image Blur Pixel` 的消費端，同樣的不一致會再發生一次而不被任何 spec 抓到。建議另行補一條 requirement，本次未擅自加入（超出指定範圍）
+- **9.8** fork 側的四項行為（去重、`reset()` 全清、blur 分帶、預覽失敗隔離）**沒有任何自動化回歸防護**。現有 `test_slice_progress_string_contract.py` 只鎖 marker 字面量與其相對位置，即使 marker 改回無條件輸出也照樣通過，抓不到階段 4 的行為回歸。632 層 SHA-256 比對腳本目前只存在於暫存目錄，session 結束即失。建議至少把比對腳本固化進 repo，並補一個斷言 marker 位於成功分支內的字串契約測試
 
 ## 量測記錄
 

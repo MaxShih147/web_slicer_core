@@ -203,15 +203,25 @@ fork 為 submodule，需獨立 commit 並更新父 repo 的指標；後端 Pytho
 
 分四階段，每階段可獨立驗證與回滾：
 
-| 階段 | 內容 | 回滾方式 |
-|---|---|---|
-| 0 | A/B 量測（D10），無程式碼改動 | — |
-| 1 | 後端 Python：blur 開關閘控（D1） | 單一 commit revert |
-| 2 | fork：支撐去重（D2）、preview 編碼器（D5 之 2、3）、raster 重用（D6） | submodule 指標回退 |
-| 3 | 後端 Python：preview scale → 0.10（D4） | 單一 commit revert；**受 D8 閘門管制** |
-| 4 | fork：blur 分帶重寫（D7） | submodule 指標回退 |
+階段編號與 [tasks.md](tasks.md) 完全一致（0～9），量測記錄亦以同一套編號引用。
 
-階段 2 與 4 的每一項都必須通過 SHA-256 逐層比對才可合併。階段 1 與 3 會改變輸出，改以目視比對與產品端確認為準。
+| 階段 | 內容 | 決策 | 回滾方式 |
+|---|---|---|---|
+| 0 | A/B 基準量測，無程式碼改動 | D10 | — |
+| 1 | 後端 Python：blur 開關閘控 | D1 | 單一 commit revert |
+| 2 | fork：匯入支撐網格去重（作法 A） | D2、D3 | submodule 指標回退 |
+| 3 | fork：預覽編碼器（壓縮等級 6→1、整數倍快路徑） | D5 之 2、3 | submodule 指標回退 |
+| 4 | fork：預覽產出失敗不得使切片失敗 | D9 | submodule 指標回退 |
+| 5 | fork：raster 每執行緒重用 | D6 | submodule 指標回退 |
+| 6 | 後端 Python：preview scale 0.25 → 0.10 | D4、D5 之 1 | 單一 commit revert；**受 D8 閘門管制** |
+| 7 | fork：blur 後處理分帶重寫 | D7 | submodule 指標回退 |
+| 8 | 整合驗證與收尾（commit 切分、端到端、量測彙整、跨 repo 移交） | D8 | — |
+| 9 | 不在本變更範圍的記錄事項 | — | — |
+
+- **階段 2、3、4、5、7 為純效能／可用性改動**，每一項都必須通過 SHA-256 逐層比對才可合併（D6 的驗收線）。
+- **階段 1 與 6 會改變輸出**，改以目視比對與產品端確認為準。
+- **階段 3～5、7 同屬 fork，落在同一個 submodule commit 內**，因此指標回退是整組退掉；若要單獨退某一項，需先在 fork 內 revert 該項再更新指標。
+- **階段 6 於本變更未執行**：D8 閘門的三項條件全數未達成，已整批移交至下一個變更。`slice-preview-export` 能力的縮放比 requirement 因此以現行值 `0.25` 立約，避免 spec 描述系統沒有的行為。
 
 ## Open Questions
 
