@@ -32,6 +32,10 @@ def _mechado():
             "Anti-aliasing": True,
             "Anti-aliasing Level": 2,
             "Grey Level": 0,
+            # 刻意不帶 `Image Blur` 開關：本 fixture 代表舊 config，用來鎖住
+            # `_gate_blur` 三態語意中的「鍵不存在 → 直接複製」向後相容態。
+            # 補上開關會讓這裡改測「開啟」態，反而失去這層保護。
+            # 三態的完整覆蓋見 test_extract_sla_from_mechado.py::TestBlurSwitchGating。
             "Image Blur Pixel": 1,
         },
     }

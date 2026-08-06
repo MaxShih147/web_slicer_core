@@ -171,3 +171,106 @@ class TestRoundTripEquivalence:
                 f"欄位 '{field}' 不一致：new={getattr(new_sla, field)} "
                 f"old={getattr(old_sla, field)}（profile={profile[0]}）"
             )
+
+
+# 哨兵：代表「開關鍵完全不存在」，與 False / None 明確區分（三態語意的第三態）。
+_ABSENT = object()
+
+
+def _mechado_with_blur_switch(blur_enabled, blur_pixel):
+    """在標準 mechado 之上加掛 `Advanced."Image Blur"` 開關。
+
+    `blur_enabled` 傳入 `_ABSENT` 時完全不寫入該鍵（模擬舊 config）。
+    """
+    mechado = _make_mechado(
+        "sonic_4k_2022", [3840, 2160], [0.0, 0.0, 134.0, 75.0],
+        0.05, True, 2, 0, blur_pixel,
+    )
+    if blur_enabled is not _ABSENT:
+        mechado["Advanced"]["Image Blur"] = blur_enabled
+    return mechado
+
+
+class TestBlurSwitchGating:
+    """spec「後端從完整 mechado config 萃取 SLAConfig 切片參數」的 blur 三態閘控。
+
+    背景：前端在使用者未勾選 blur 時仍送出 `Image Blur Pixel = 1`，本閘控導入前後端
+    完全沒讀開關，導致切片一律以 blur 啟用執行。
+    """
+
+    def test_switch_false_zeroes_blur(self):
+        """開關 false + 強度 1 → blur 為 0。"""
+        out = _extract_sla_from_mechado(_mechado_with_blur_switch(False, 1))
+        assert out["blur"] == 0
+
+    def test_switch_false_ignores_any_intensity(self):
+        """開關優先於強度：false + 強度 3 仍為 0，不得取 3。"""
+        out = _extract_sla_from_mechado(_mechado_with_blur_switch(False, 3))
+        assert out["blur"] == 0
+
+    def test_switch_true_copies_intensity(self):
+        """開關 true → 強度直接複製，不得套用任何刻度轉換。"""
+        out = _extract_sla_from_mechado(_mechado_with_blur_switch(True, 2))
+        assert out["blur"] == 2
+
+    def test_missing_switch_preserves_legacy_behaviour(self):
+        """開關鍵不存在 → 直接複製（向後相容，舊 config 行為不得改變）。"""
+        out = _extract_sla_from_mechado(_mechado_with_blur_switch(_ABSENT, 1))
+        assert out["blur"] == 1
+
+    def test_switch_does_not_touch_anti_aliasing_fields(self):
+        """開關與 AA 正交：關閉 blur MUST NOT 影響 AA 相關欄位。"""
+        out = _extract_sla_from_mechado(_mechado_with_blur_switch(False, 1))
+        assert out["anti_aliasing"] is True
+        assert out["anti_aliasing_level"] == 2
+        assert out["gray_level"] == 0
+
+    def test_switch_false_writes_blur_zero_to_ini(self, tmp_path):
+        """開關 false 時 generate_config_ini() 寫出的 INI 含 `blur = 0`。"""
+        from agent.sla_operations import generate_config_ini
+
+        sla = SLAConfig(**_extract_sla_from_mechado(_mechado_with_blur_switch(False, 1)))
+        ini_path = tmp_path / "config.ini"
+        generate_config_ini(sla, ini_path)
+        assert "blur = 0" in ini_path.read_text().splitlines()
+
+
+class TestBlurSwitchGatingLegacyFlatConfig:
+    """spec「舊版扁平 config 轉換亦須尊重 Image Blur 開關」。
+
+    兩個轉換器對同一語意產生不一致的 blur，會讓 execute 階段的
+    「base(mechado) ← override(snake)」合併依請求順序產生不可預期的結果。
+    """
+
+    def test_flat_switch_false_zeroes_blur(self):
+        sla = _convert_v2_config_to_sla({"Image Blur": False, "Image Blur Pixel": 1})
+        assert sla.blur == 0
+
+    def test_flat_missing_switch_preserves_legacy_behaviour(self):
+        sla = _convert_v2_config_to_sla({"Image Blur Pixel": 1})
+        assert sla.blur == 1
+
+    def test_flat_switch_true_copies_intensity(self):
+        sla = _convert_v2_config_to_sla({"Image Blur": True, "Image Blur Pixel": 2})
+        assert sla.blur == 2
+
+    def test_flat_switch_gates_snake_blur_too(self):
+        """開關也必須閘控 snake `blur` 鍵，而非只閘控 DS-Online 的強度鍵。"""
+        sla = _convert_v2_config_to_sla({"Image Blur": False, "blur": 3})
+        assert sla.blur == 0
+
+    @pytest.mark.parametrize(
+        "enabled,pixel",
+        [(False, 1), (False, 3), (True, 2), (_ABSENT, 1)],
+        ids=["off-1", "off-3", "on-2", "absent-1"],
+    )
+    def test_both_converters_agree(self, enabled, pixel):
+        """同一語意餵給兩個轉換器，blur 必須相等（結構上共用 _gate_blur）。"""
+        mechado_out = _extract_sla_from_mechado(_mechado_with_blur_switch(enabled, pixel))
+
+        flat = {"Image Blur Pixel": pixel}
+        if enabled is not _ABSENT:
+            flat["Image Blur"] = enabled
+        flat_sla = _convert_v2_config_to_sla(flat)
+
+        assert SLAConfig(**mechado_out).blur == flat_sla.blur
