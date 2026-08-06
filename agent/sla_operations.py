@@ -2111,12 +2111,92 @@ def boolean_operation(
         return False, err, None
 
 
+class HexGridLayout:
+    """Shared hex grid geometry — compute once, pass to both generate_hex_grid and generate_drain_holes."""
+
+    def __init__(
+        self,
+        center_x: float,
+        center_y: float,
+        n_cols: int,
+        n_rows: int,
+        col_step: float,
+        row_step: float,
+        wall_thickness: float,
+    ):
+        self.center_x = center_x
+        self.center_y = center_y
+        self.n_cols = n_cols
+        self.n_rows = n_rows
+        self.col_step = col_step
+        self.row_step = row_step
+        self.wall_thickness = wall_thickness
+
+
+def compute_hex_grid_layout(
+    radius: float,
+    wall_thickness: float,
+    grid_count: int,
+    hollow_mesh=None,
+) -> "HexGridLayout":
+    """
+    Compute the shared hex grid geometry layout.
+
+    Centralises the centre-and-size calculation so that generate_hex_grid()
+    and generate_drain_holes() always operate on an identical grid rather than
+    each re-deriving these values independently.
+
+    Args:
+        radius: Hex cell radius (mm)
+        wall_thickness: Gap between cells (mm)
+        grid_count: Minimum number of cells per axis
+        hollow_mesh: Optional trimesh used to set the grid centre and expand
+                     n_cols/n_rows to cover the hollow's XY bounding box.
+                     When None the grid is centred at (0, 0) with grid_count
+                     cells on each axis — matching the legacy behaviour.
+
+    Returns:
+        HexGridLayout with centre, dimensions, and cell spacing.
+    """
+    import math
+
+    spacing = radius + wall_thickness / 2
+    col_step = spacing * math.sqrt(3)
+    row_step = spacing * 1.5
+
+    if hollow_mesh is not None:
+        bmin = hollow_mesh.bounds[0]
+        bmax = hollow_mesh.bounds[1]
+        center_x = float((bmin[0] + bmax[0]) / 2.0)
+        center_y = float((bmin[1] + bmax[1]) / 2.0)
+        span_x = float(bmax[0] - bmin[0])
+        span_y = float(bmax[1] - bmin[1])
+        n_cols = max(grid_count, int(math.ceil(span_x / col_step)) + 3)
+        n_rows = max(grid_count, int(math.ceil(span_y / row_step)) + 3)
+    else:
+        center_x = 0.0
+        center_y = 0.0
+        n_cols = grid_count
+        n_rows = grid_count
+
+    return HexGridLayout(
+        center_x=center_x,
+        center_y=center_y,
+        n_cols=n_cols,
+        n_rows=n_rows,
+        col_step=col_step,
+        row_step=row_step,
+        wall_thickness=wall_thickness,
+    )
+
+
 def generate_drain_holes(
     hex_cell_radius: float = 5.0,
     wall_thickness: float = 1.0,
     grid_count: int = 10,
     drain_radius: float = 1.5,
     bottom_z: float = 0.0,
+    layout: "HexGridLayout" = None,
 ):
     """
     Generate drain hole cylinders at hex grid wall edge midpoints.
@@ -2128,9 +2208,15 @@ def generate_drain_holes(
     Args:
         hex_cell_radius: Hex cell radius (mm)
         wall_thickness: Gap between cells (mm)
-        grid_count: Number of cells per row
+        grid_count: Number of cells per row (used only when layout is None)
         drain_radius: Drain hole cylinder radius (mm)
         bottom_z: Z position of the print bed
+        layout: Pre-computed HexGridLayout from compute_hex_grid_layout().
+                When provided the individual geometry parameters (hex_cell_radius,
+                wall_thickness, grid_count) are ignored for grid construction so
+                that this function uses an identical grid to generate_hex_grid().
+                When None a layout is derived from the individual parameters,
+                centred at (0, 0) — legacy behaviour for standalone API calls.
 
     Returns:
         trimesh.Trimesh mesh of all drain cylinders, or None if no walls found
@@ -2140,17 +2226,24 @@ def generate_drain_holes(
     import trimesh
     from trimesh import transformations
 
-    spacing = hex_cell_radius + wall_thickness / 2
-    col_step = spacing * math.sqrt(3)
-    row_step = spacing * 1.5
-    half_cols = (grid_count - 1) / 2
-    half_rows = (grid_count - 1) / 2
+    if layout is None:
+        layout = compute_hex_grid_layout(
+            radius=hex_cell_radius,
+            wall_thickness=wall_thickness,
+            grid_count=grid_count,
+        )
+    col_step = layout.col_step
+    row_step = layout.row_step
+    center_x = layout.center_x
+    center_y = layout.center_y
+    half_cols = (layout.n_cols - 1) / 2
+    half_rows = (layout.n_rows - 1) / 2
 
     def cell_center(row, col):
         x_offset = (row % 2) * (col_step / 2)
         return (
-            (col - half_cols) * col_step + x_offset,
-            (row - half_rows) * row_step,
+            (col - half_cols) * col_step + x_offset + center_x,
+            (row - half_rows) * row_step + center_y,
         )
 
     walls = []
@@ -2161,8 +2254,8 @@ def generate_drain_holes(
         b = r2 * 1000 + c2
         return (min(a, b), max(a, b))
 
-    for row in range(grid_count):
-        for col in range(grid_count):
+    for row in range(layout.n_rows):
+        for col in range(layout.n_cols):
             neighbors = [
                 (row, col + 1),
                 (row + 1, (col - 1) if (row % 2 == 0) else col),
@@ -2170,7 +2263,7 @@ def generate_drain_holes(
             ]
 
             for nr, nc in neighbors:
-                if nr < 0 or nr >= grid_count or nc < 0 or nc >= grid_count:
+                if nr < 0 or nr >= layout.n_rows or nc < 0 or nc >= layout.n_cols:
                     continue
                 key = edge_key(row, col, nr, nc)
                 if key in seen:
@@ -2187,7 +2280,7 @@ def generate_drain_holes(
     if not walls:
         return None
 
-    cyl_length = wall_thickness * 3
+    cyl_length = layout.wall_thickness * 3
     cylinders = []
 
     for mid_x, mid_y, angle in walls:
@@ -2217,6 +2310,7 @@ def generate_hex_grid(
     grid_count: int = 5,
     bottom_z: float = 0.0,
     hollow_mesh=None,
+    layout: "HexGridLayout" = None,
 ):
     """
     Generate a honeycomb hex grid mesh with heights adapted to hollow mesh ceiling.
@@ -2244,39 +2338,28 @@ def generate_hex_grid(
     base_idx = 0
     vertices_per_cell = 14  # 1 bottom center + 6 bottom ring + 6 top ring + 1 apex
 
-    # Honeycomb spacing (flat-top hex)
-    spacing = radius + wall_thickness / 2
-    col_step = spacing * math.sqrt(3)
-    row_step = spacing * 1.5
+    # Use provided layout or compute from parameters. Sharing the layout with
+    # generate_drain_holes() guarantees both functions operate on the same grid
+    # centre, dimensions, and cell spacing.
+    if layout is None:
+        layout = compute_hex_grid_layout(
+            radius=radius,
+            wall_thickness=wall_thickness,
+            grid_count=grid_count,
+            hollow_mesh=hollow_mesh,
+        )
+    col_step = layout.col_step
+    row_step = layout.row_step
+    center_x = layout.center_x
+    center_y = layout.center_y
+    n_cols = layout.n_cols
+    n_rows = layout.n_rows
 
     # Setup raycasting for finding hollow mesh ceiling
     has_hollow = hollow_mesh is not None
     inner_max_z = fallback_height
     if has_hollow:
         inner_max_z = hollow_mesh.bounds[1][2] + 5  # max Z + 5
-
-    # Grid placement: anchor the lattice to the model's XY centre and size it to
-    # fully cover the model's XY bounding box. Cells that miss the hollow are
-    # culled by the raycast below, so over-provisioning is safe. This fixes the
-    # off-centre case: the hollow is aligned to the input model's centre, so the
-    # hex must be too — anchoring to (0,0) left off-centre models only partially
-    # covered. Falls back to an origin-centred grid_count x grid_count grid when
-    # no hollow mesh is available.
-    if has_hollow:
-        bmin = hollow_mesh.bounds[0]
-        bmax = hollow_mesh.bounds[1]
-        center_x = (bmin[0] + bmax[0]) / 2.0
-        center_y = (bmin[1] + bmax[1]) / 2.0
-        span_x = bmax[0] - bmin[0]
-        span_y = bmax[1] - bmin[1]
-        # +3 cells of margin so the grid overruns the model edges before culling
-        n_cols = max(grid_count, int(math.ceil(span_x / col_step)) + 3)
-        n_rows = max(grid_count, int(math.ceil(span_y / row_step)) + 3)
-    else:
-        center_x = 0.0
-        center_y = 0.0
-        n_cols = grid_count
-        n_rows = grid_count
 
     half_cols = (n_cols - 1) / 2
     half_rows = (n_rows - 1) / 2

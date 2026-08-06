@@ -31,6 +31,7 @@ from .jobs import get_job_dir, write_job_status
 from .models import BooleanOperation, JobStatus, SLAConfig
 from .sla_operations import (
     boolean_meshes,
+    compute_hex_grid_layout,
     generate_drain_holes,
     generate_hex_grid,
     generate_hollow,
@@ -1038,6 +1039,16 @@ async def run_ortho_pipeline(
         # Get bounding box for bottom_z
         bottom_z = float(input_mesh.bounds[0][2])
 
+        # Compute grid layout once so hex grid and drain holes share the same
+        # centre, column/row count, and cell spacing. hollow_mesh is already
+        # translated to the input model's centre at this point.
+        grid_layout = compute_hex_grid_layout(
+            radius=hex_cell_radius,
+            wall_thickness=hex_wall_thickness,
+            grid_count=hex_grid_count,
+            hollow_mesh=hollow_mesh,
+        )
+
         # ===== Step 4: Generate hex grid =====
         _update_progress(job_id, 4, total_steps, "Generating hex grid...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 4: Generating hex grid")
@@ -1050,6 +1061,7 @@ async def run_ortho_pipeline(
             grid_count=hex_grid_count,
             bottom_z=bottom_z,
             hollow_mesh=hollow_mesh,
+            layout=grid_layout,
         )
         if hex_mesh is None:
             raise RuntimeError("Step 4: Hex grid generation failed - no cells built")
@@ -1064,6 +1076,7 @@ async def run_ortho_pipeline(
             grid_count=hex_grid_count,
             drain_radius=drain_hole_radius,
             bottom_z=bottom_z,
+            layout=grid_layout,
         )
 
         # ===== Step 6: Generate side wall drains =====
