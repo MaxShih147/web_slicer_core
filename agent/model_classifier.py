@@ -171,8 +171,9 @@ def open_boundary_stats(mesh: "trimesh.Trimesh") -> dict:
     Returns open_edge_count, boundary_loop_count,
     total_open_edge_length_mm, largest_loop_length_mm.
     """
-    unique_edges, counts = np.unique(mesh.edges_sorted, axis=0, return_counts=True)
-    bd_edges = unique_edges[counts == 1]  # used by exactly one face → boundary
+    unique_edges = mesh.edges_unique
+    counts       = np.bincount(mesh.edges_unique_inverse, minlength=len(unique_edges))
+    bd_edges     = unique_edges[counts == 1]  # used by exactly one face → boundary
 
     open_edge_count = len(bd_edges)
     if open_edge_count == 0:
@@ -235,30 +236,42 @@ def large_outer_flat_plane_stats(mesh: "trimesh.Trimesh") -> dict:
     qn = np.round(normals, 2)
     qo = np.round(offsets / OFFSET_STEP) * OFFSET_STEP
 
-    groups: dict = defaultdict(lambda: {
-        "area": 0.0, "count": 0,
-        "wn": np.zeros(3, dtype=np.float64),
-        "wc": np.zeros(3, dtype=np.float64),
-    })
     weighted_normals   = normals   * areas[:, None]   # (M, 3) — computed once
     weighted_centroids = centroids * areas[:, None]   # (M, 3) — computed once
-    for i in range(len(normals)):
-        key = (float(qn[i, 0]), float(qn[i, 1]), float(qn[i, 2]), float(qo[i]))
-        g = groups[key]
-        g["area"]  += float(areas[i])
-        g["count"] += 1
-        g["wn"]    += weighted_normals[i]
-        g["wc"]    += weighted_centroids[i]
 
-    if not groups:
+    # Vectorized grouping: replaces Python for-loop (M dict ops) with NumPy unique+bincount
+    keys_matrix = np.column_stack([qn, qo[:, None]])          # (M, 4)
+    _, inv, group_counts = np.unique(keys_matrix, axis=0,
+                                      return_inverse=True, return_counts=True)
+    n_groups = len(group_counts)
+    if n_groups > 0:
+        group_areas = np.bincount(inv, weights=areas, minlength=n_groups)
+        group_wn = np.column_stack([
+            np.bincount(inv, weights=weighted_normals[:, d], minlength=n_groups)
+            for d in range(3)
+        ])
+        group_wc = np.column_stack([
+            np.bincount(inv, weights=weighted_centroids[:, d], minlength=n_groups)
+            for d in range(3)
+        ])
+        # Preserve first-seen tie-breaking: matches original dict insertion order + max()
+        # first_seen[g] = lowest original face index belonging to group g
+        first_seen = np.full(n_groups, len(normals), dtype=np.int64)
+        np.minimum.at(first_seen, inv, np.arange(len(normals), dtype=np.int64))
+
+    if n_groups == 0:
         return {}
 
-    best = max(groups.values(), key=lambda g: g["area"])
-    group_area = best["area"]
-    face_count = best["count"]
+    best_area_val      = float(group_areas.max())
+    tie_mask           = group_areas == best_area_val
+    tied_group_indices = np.where(tie_mask)[0]
+    best_idx           = int(tied_group_indices[first_seen[tied_group_indices].argmin()])
 
-    avg_normal   = best["wn"] / group_area
-    avg_centroid = best["wc"] / group_area
+    group_area = best_area_val
+    face_count = int(group_counts[best_idx])
+
+    avg_normal   = group_wn[best_idx] / group_area
+    avg_centroid = group_wc[best_idx] / group_area
     n_norm = np.linalg.norm(avg_normal)
     if n_norm < 1e-9:
         return {}
