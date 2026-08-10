@@ -1028,6 +1028,19 @@ def _is_one_sided_base_candidate(signals: "_ClassificationSignals") -> bool:
     )
 
 
+def _p_base_decide(sig: "_ClassificationSignals") -> "DentalModelType":
+    """Return dental_model or u_shaped_dental_model for the P_base / P5.2A branch.
+
+    Shared by _decide_model_type_with_details() and confirm_dental_model_type() so
+    both paths always use the same u_shape split logic.
+    """
+    dental_model_score   = (sig.base_model_size_score + sig.one_sided_flat_plane_score + (1.0 - sig.u_shape_score)) / 3.0
+    u_shaped_model_score = (sig.base_model_size_score + sig.one_sided_flat_plane_score + sig.u_shape_score) / 3.0
+    if u_shaped_model_score > dental_model_score:
+        return DentalModelType.U_SHAPED_DENTAL_MODEL
+    return DentalModelType.DENTAL_MODEL
+
+
 def _get_drill_detection_plan(
     features: ModelFeatures,
     signals: _ClassificationSignals,
@@ -1098,9 +1111,9 @@ def _decide_model_type_with_details(features: ModelFeatures) -> ClassificationDe
 
     # ---- P_base: One-sided flat plane + base-model footprint (drill was skipped) ----
     if features.drill_detection_skip_reason == "單側大平面且符合基座尺寸":
-        dental_model_score = (sig.base_model_size_score + sig.one_sided_flat_plane_score + (1.0 - sig.u_shape_score)) / 3.0
+        dental_model_score   = (sig.base_model_size_score + sig.one_sided_flat_plane_score + (1.0 - sig.u_shape_score)) / 3.0
         u_shaped_model_score = (sig.base_model_size_score + sig.one_sided_flat_plane_score + sig.u_shape_score) / 3.0
-        if u_shaped_model_score > dental_model_score:
+        if _p_base_decide(sig) == DentalModelType.U_SHAPED_DENTAL_MODEL:
             conf = round(_clamp(u_shaped_model_score), 3)
             return ClassificationDecision(
                 model_type=DentalModelType.U_SHAPED_DENTAL_MODEL,
@@ -1165,9 +1178,9 @@ def _decide_model_type_with_details(features: ModelFeatures) -> ClassificationDe
 
             # A: Large base dental model (one-sided flat plane + base-model footprint)
             if _is_one_sided_base_candidate(sig):
-                dental_model_score = (sig.base_model_size_score + sig.one_sided_flat_plane_score + (1.0 - sig.u_shape_score)) / 3.0
+                dental_model_score   = (sig.base_model_size_score + sig.one_sided_flat_plane_score + (1.0 - sig.u_shape_score)) / 3.0
                 u_shaped_model_score = (sig.base_model_size_score + sig.one_sided_flat_plane_score + sig.u_shape_score) / 3.0
-                if u_shaped_model_score > dental_model_score:
+                if _p_base_decide(sig) == DentalModelType.U_SHAPED_DENTAL_MODEL:
                     conf = round(_clamp(u_shaped_model_score), 3)
                     return ClassificationDecision(
                         model_type=DentalModelType.U_SHAPED_DENTAL_MODEL,
@@ -1345,6 +1358,67 @@ def classify_dental_model(mesh: "trimesh.Trimesh") -> DentalModelType:
     decision = _decide_model_type_with_details(features)
 
     return decision.model_type
+
+
+def confirm_dental_model_type(mesh: "trimesh.Trimesh", target: DentalModelType) -> bool:
+    """Return True if this mesh would be classified as *target* by classify_dental_model().
+
+    Guarantees: confirm(mesh, t) == (classify_dental_model(mesh) == t) for all t,
+    with no exceptions.
+
+    Performance: types that can be determined before drill detection (dental_model,
+    u_shaped_dental_model, intraoral_scan, other) are short-circuited at the P_base /
+    P2 / P3 branches, avoiding the expensive detect_drill_holes() call.  For crown,
+    bridge, splint, and surgical_guide the drill step is still required when none of
+    those early branches fires.
+
+    Implementation note: when drill detection is required this function reuses the
+    already-computed features object and calls _decide_model_type_with_details()
+    directly — it does NOT re-invoke classify_dental_model(mesh) from scratch.
+    """
+    features = extract_model_features(mesh)
+
+    # ---- P0: PCA failed ----
+    if features.axis_l1_mm is None:
+        return target == DentalModelType.OTHER
+
+    sig = _compute_signals(features)
+    needs_drill, skip_reason = _get_drill_detection_plan(features, sig)
+
+    if not needs_drill:
+        # ---- P_base ----
+        if skip_reason == "單側大平面且符合基座尺寸":
+            if target in (DentalModelType.DENTAL_MODEL, DentalModelType.U_SHAPED_DENTAL_MODEL):
+                return _p_base_decide(sig) == target
+            return False
+
+        # ---- P2 ----
+        if skip_reason in ("明確牙冠尺寸", "小尺寸交界且比例偏向牙冠"):
+            return target == DentalModelType.CROWN
+
+        # ---- P3 ----
+        if skip_reason == "大型開放邊界":
+            return target == DentalModelType.INTRAORAL_SCAN
+
+    # needs_drill=True: types that cannot appear in P5 → early false
+    if target in (
+        DentalModelType.DENTAL_MODEL,
+        DentalModelType.U_SHAPED_DENTAL_MODEL,
+        DentalModelType.INTRAORAL_SCAN,
+        DentalModelType.OTHER,
+    ):
+        return False
+
+    # ---- P5: run drill detection, then compare (crown / bridge / splint / surgical_guide) ----
+    _drill_result = detect_drill_holes(mesh)
+    features.drill_detection_ran         = True
+    features.drill_detection_skip_reason = None
+    features.drill_detection_valid       = _drill_result["valid"]
+    features.drill_hole_found            = _drill_result["found"]
+    features.drill_candidate_count       = _drill_result["candidate_count"]
+
+    final_type = _decide_model_type_with_details(features).model_type
+    return final_type == target
 
 
 # ---------------------------------------------------------------------------

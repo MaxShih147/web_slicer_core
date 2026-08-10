@@ -1433,6 +1433,73 @@ async def classify_model_endpoint(file: UploadFile = File(...)):
     return V2Response(success=True, data={"model_type": model_type.value})
 
 
+@router.post("/confirm-model-type", response_model=V2Response)
+async def confirm_model_type_endpoint(
+    file: UploadFile = File(...),
+    target_type: str = Form(...),
+):
+    """
+    Confirm whether an uploaded dental STL model is of a specified type.
+
+    Accepts multipart/form-data with a 'file' field (STL) and a 'target_type' field
+    (one of the DentalModelType string values).  Returns data.confirmed as a boolean.
+    The actual model type is never revealed in the response.
+    """
+    import os
+    import tempfile
+
+    from .model_classifier import DentalModelType, confirm_dental_model_type
+
+    if not file or not file.filename:
+        raise missing_body("No file provided")
+
+    if not file.filename.lower().endswith(".stl"):
+        raise validation_error("Only .stl files are supported")
+
+    try:
+        parsed_target = DentalModelType(target_type)
+    except ValueError:
+        raise validation_error(
+            f"Invalid target_type '{target_type}'. "
+            f"Must be one of: {', '.join(t.value for t in DentalModelType)}"
+        )
+
+    try:
+        content = await file.read()
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded file: {exc}")
+
+    if not content:
+        raise missing_body("Uploaded file is empty")
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        try:
+            mesh = load_trimesh(tmp_path)
+            if len(mesh.faces) == 0:
+                raise ValueError("empty mesh")
+        except APIError:
+            raise
+        except Exception as exc:
+            raise invalid_model(f"STL content is corrupted or format is invalid: {exc}")
+
+        try:
+            confirmed = await asyncio.to_thread(confirm_dental_model_type, mesh, parsed_target)
+        except APIError:
+            raise
+        except Exception as exc:
+            raise internal_error(f"Confirmation failed unexpectedly: {exc}")
+    finally:
+        os.unlink(tmp_path)
+
+    return V2Response(success=True, data={"confirmed": confirmed})
+
+
 @router.get("/slices/{job_id}", response_model=V2Response)
 async def get_slice_job_status(job_id: str):
     """
