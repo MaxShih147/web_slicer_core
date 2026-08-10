@@ -16,6 +16,7 @@ from typing import Optional
 
 from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
+from .preview_scale import preview_scale_for
 from .prz_encoder import _compute_print_time, sl1_layer_names
 from .sla_operations import generate_config_ini, notify_launcher_if_prusa_crashed
 
@@ -430,12 +431,25 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         with open(job_dir / "config.json", "w") as f:
             json.dump(config.model_dump(), f, indent=2)
 
+    # Preview downscale ratio is derived from the printer format rather than
+    # fixed: the consumer needs an absolute pixel width, so no single ratio can
+    # serve 2560 and 15120 at once. The long side is max(x, y), not x, because
+    # the engine swaps the pixel dimensions in portrait orientation.
+    #
+    # No config means no --load below, so the engine falls back to its built-in
+    # preset and the real format is unknowable from here. preview_scale_for()
+    # then yields the ceiling — which is exactly today's 0.25, so this path
+    # keeps its current behaviour rather than guessing.
+    preview_scale, _ = preview_scale_for(
+        max(config.display_pixels_x, config.display_pixels_y) if config else 0
+    )
+
     try:
         # Run PrusaSlicer CLI
         cmd = [
             str(SLICER_ENGINE_CLI),
             "--export-sla",
-            "--export-preview-pngs", "0.25",
+            "--export-preview-pngs", preview_scale,
             "--output", str(output_file),
         ]
 

@@ -29,6 +29,7 @@ import struct
 
 from .config import SLICER_ENGINE_CLI
 from .models import BooleanOperation, CutConfig, CutMode, JobStatus, SLAConfig
+from .preview_scale import preview_scale_for
 from .support_classifier import SupportClassification, classify_support_result
 
 logger = logging.getLogger(__name__)
@@ -332,11 +333,19 @@ async def slice_model(
     with open(job_dir / "config.json", "w") as f:
         json.dump(config.model_dump(), f, indent=2)
 
+    # Preview downscale ratio is derived from the printer format, not fixed:
+    # the consumer needs an absolute pixel width, so a constant ratio cannot
+    # serve 2560 and 15120 at once. max() rather than display_pixels_x because
+    # the engine swaps the pixel dimensions in portrait orientation.
+    preview_scale, _ = preview_scale_for(
+        max(config.display_pixels_x, config.display_pixels_y)
+    )
+
     # Build command
     cmd = [
         str(SLICER_ENGINE_CLI),
         "--export-sla",
-        "--export-preview-pngs", "0.25",
+        "--export-preview-pngs", preview_scale,
         "--output", str(output_file),
         "--load", str(config_file),
     ]
