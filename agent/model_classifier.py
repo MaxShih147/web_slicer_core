@@ -1460,17 +1460,45 @@ class _DrillPatchInfo:
 
 
 def _drill_build_orthonormal_basis(n: "np.ndarray") -> "Tuple[np.ndarray, np.ndarray]":
-    """Build two orthonormal vectors ex, ey perpendicular to n (buildOrthonormalBasis)."""
-    n_len = float(np.linalg.norm(n))
-    if n_len < 1e-9:
+    """Build ex, ey perpendicular to n using scalar math (no intermediate arrays).
+
+    n is expected to be a unit vector; the caller (_drill_is_drill_patch) verifies
+    n_len >= 0.5 before calling.  The n_sq < 1e-18 guard handles degenerate input
+    from any external caller.
+    """
+    nx = float(n[0]); ny = float(n[1]); nz = float(n[2])
+    n_sq = nx*nx + ny*ny + nz*nz
+    if n_sq < 1e-18:
         return np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])
-    n = n / n_len
-    t = np.array([0.0, 0.0, 1.0]) if abs(n[2]) < 0.9 else np.array([0.0, 1.0, 0.0])
-    ex = np.cross(t, n)
-    ex_len = float(np.linalg.norm(ex))
-    ex = ex / ex_len if ex_len > 1e-9 else np.array([1.0, 0.0, 0.0])
-    ey = np.cross(n, ex)
-    return ex, ey
+
+    # Lightweight scalar normalize (n from _drill_compute_patch_stats is ~unit;
+    # one sqrt + 3 mults replaces np.linalg.norm + array division).
+    inv_n = 1.0 / math.sqrt(n_sq)
+    nx *= inv_n; ny *= inv_n; nz *= inv_n
+
+    # Choose reference vector t to avoid near-parallel with n;
+    # compute ex_raw = t × n inline (no np.array allocation, no np.cross call).
+    if abs(nz) < 0.9:
+        # t = (0, 0, 1)  →  t × n = (-ny, nx, 0)
+        ex_x = -ny; ex_y = nx; ex_z = 0.0
+    else:
+        # t = (0, 1, 0)  →  t × n = (nz, 0, -nx)
+        ex_x = nz; ex_y = 0.0; ex_z = -nx
+
+    # Normalise ex with scalar math (no np.linalg.norm, no intermediate array).
+    ex_sq = ex_x*ex_x + ex_y*ex_y + ex_z*ex_z
+    if ex_sq < 1e-18:
+        ex_x = 1.0; ex_y = 0.0; ex_z = 0.0
+    else:
+        inv_ex = 1.0 / math.sqrt(ex_sq)
+        ex_x *= inv_ex; ex_y *= inv_ex; ex_z *= inv_ex
+
+    # ey = n × ex  (right-hand system; scalar cross product, no np.cross call).
+    ey_x = ny*ex_z - nz*ex_y
+    ey_y = nz*ex_x - nx*ex_z
+    ey_z = nx*ex_y - ny*ex_x
+
+    return np.array([ex_x, ex_y, ex_z]), np.array([ey_x, ey_y, ey_z])
 
 
 def _drill_merge_vertices(verts: "np.ndarray") -> "np.ndarray":
@@ -1555,6 +1583,7 @@ def _drill_region_growing(
 
         pid = next_pid; next_pid += 1
         n_seed = face_n[f0]
+        sx = float(n_seed[0]); sy = float(n_seed[1]); sz = float(n_seed[2])
         P = _DrillPatchInfo(id=pid)
         q: "deque[int]" = deque([f0])
         face_patch_id[f0] = pid
@@ -1568,7 +1597,8 @@ def _drill_region_growing(
                 if face_n_norms[fn] < 0.5:
                     face_patch_id[fn] = -2
                     continue
-                if float(np.dot(face_n[fn], n_seed)) >= COS_GROW:
+                _fn = face_n[fn]
+                if _fn[0]*sx + _fn[1]*sy + _fn[2]*sz >= COS_GROW:
                     face_patch_id[fn] = pid
                     q.append(fn)
 
@@ -1747,36 +1777,44 @@ def _drill_is_drill_patch(
         return False
 
     n_patch = P.avg_normal
-    n_len = float(np.linalg.norm(n_patch))
-    if n_len < 0.5:
+    _nx = float(n_patch[0]); _ny = float(n_patch[1]); _nz = float(n_patch[2])
+    if _nx*_nx + _ny*_ny + _nz*_nz < 0.25:  # equivalent to np.linalg.norm < 0.5
         return False
-    n_patch = n_patch / n_len
+    # P.avg_normal is already a unit vector from _drill_compute_patch_stats (when
+    # area > 1e-12).  No re-normalisation needed; _drill_build_orthonormal_basis
+    # carries its own lightweight scalar normalise as a safety guard.
 
     ex, ey = _drill_build_orthonormal_basis(n_patch)
 
-    # Project all patch vertices to (ex, ey) once; reuse for PCA, scanline,
-    # edge-bbox, and turn-angle chain.
+    # ---- PCA + diameter/aspect gate ----
+    # Per-face inverse mapping (uv_inv, u0a…v2a) is deferred until after the
+    # diameter/aspect gate: almost all patches are rejected there, so building
+    # the mapping eagerly wastes work for the vast majority of calls.
     fi_arr = P.fi_arr if P.fi_arr is not None else np.asarray(P.faces, dtype=np.int32)
     vids_flat = face_v[fi_arr].reshape(-1)                        # (3*M_patch,)
-    vids_unique, vids_inv = np.unique(vids_flat, return_inverse=True)
+    vids_unique = np.unique(vids_flat)                            # sorted; return_inverse deferred
+
     q = (verts[vids_unique] - P.center)
     u_uniq = (q @ ex).astype(np.float64)                         # (K,)
     v_uniq = (q @ ey).astype(np.float64)                         # (K,)
-
-    # Per-face projected coordinates for scanline (same basis as PCA and edge bbox)
-    uv_inv = vids_inv.reshape(-1, 3)                              # (M_patch, 3)
-    u0a = u_uniq[uv_inv[:, 0]]; v0a = v_uniq[uv_inv[:, 0]]
-    u1a = u_uniq[uv_inv[:, 1]]; v1a = v_uniq[uv_inv[:, 1]]
-    u2a = u_uniq[uv_inv[:, 2]]; v2a = v_uniq[uv_inv[:, 2]]
-
     # PCA-based patch extent — major axis ≈ ring outer diameter.
     # Using PCA rather than a fixed-axis bbox means a tilted ring is measured
     # along its own axes; a rectangular slab cannot slip past the aspect gate.
     pts2d = np.column_stack([u_uniq, v_uniq])                    # (K, 2)
     if pts2d.shape[0] < 3:
         return False
+
     _centered = pts2d - pts2d.mean(axis=0)
-    _, _eigvecs = np.linalg.eigh(np.cov(_centered.T))
+    # Direct 2×2 covariance via dot-products: avoids np.cov overhead (broadcasting /
+    # masked-array checks) for this fixed 2D case. Already mean-subtracted so
+    # cov[i,j] = dot(col_i, col_j) / (N-1); N >= 3 guaranteed above.
+    _cx = _centered[:, 0]; _cy = _centered[:, 1]
+    _denom = _centered.shape[0] - 1
+    cxx = np.dot(_cx, _cx) / _denom
+    cxy = np.dot(_cx, _cy) / _denom
+    cyy = np.dot(_cy, _cy) / _denom
+    _, _eigvecs = np.linalg.eigh(np.array([[cxx, cxy], [cxy, cyy]]))
+
     _proj_pca = _centered @ _eigvecs
     _extents = _proj_pca.max(axis=0) - _proj_pca.min(axis=0)
     long_e = float(_extents.max())
@@ -1788,9 +1826,20 @@ def _drill_is_drill_patch(
     if long_e > _DRILL_RING_MAX_ASPECT * short_e:
         return False
 
-    # Scanline hole test reuses the per-face projections already computed above
+    # Diameter/aspect gate passed: now build per-face inverse mapping for scanline.
+    # vids_unique is already sorted by np.unique, so searchsorted gives the same
+    # inverse as np.unique(..., return_inverse=True) would have produced.
+    vids_inv = np.searchsorted(vids_unique, vids_flat)
+    uv_inv = vids_inv.reshape(-1, 3)                              # (M_patch, 3)
+    u0a = u_uniq[uv_inv[:, 0]]; v0a = v_uniq[uv_inv[:, 0]]
+    u1a = u_uniq[uv_inv[:, 1]]; v1a = v_uniq[uv_inv[:, 1]]
+    u2a = u_uniq[uv_inv[:, 2]]; v2a = v_uniq[uv_inv[:, 2]]
+
+    # ---- Scanline hole test ----
     if not _drill_patch_has_hole_by_scanlines(u0a, v0a, u1a, v1a, u2a, v2a):
         return False
+
+    # ---- Connection-edge collection + bbox check ----
 
     # Lookup table vid → (u, v) for connection-edge bbox and chain turn-angle
     vid_to_uv: "dict[int, Tuple[float, float]]" = {
@@ -1845,6 +1894,8 @@ def _drill_is_drill_patch(
     min_d = min(dx, dy); max_d = max(dx, dy)
     if min_d < 3.0 or max_d > 35.0:
         return False
+
+    # ---- Turn-angle chain walk ----
 
     # Walk connected edge chains; accumulate turn angle (≥220° → drill candidate).
     # Pre-build vertex→edge-index map so each step is O(degree) not O(n_edges).
@@ -1961,11 +2012,14 @@ def detect_drill_holes(mesh: "trimesh.Trimesh") -> dict:
             return {"valid": True, "found": False, "candidate_count": 0}
 
         # Step 5: compute patch statistics (reuses face_area; caches fi_arr per patch)
-        _drill_compute_patch_stats(face_v, face_n, face_c, verts, patches, face_area)
+        # Pre-filter to ≥5 faces: patches with fewer faces are unconditionally rejected
+        # by Step 6, so computing stats for them wastes the majority of this step's time.
+        stat_patches = [P for P in patches if len(P.faces) >= 5]
+        _drill_compute_patch_stats(face_v, face_n, face_c, verts, stat_patches, face_area)
 
         # Step 6: filter drill hole candidates
         candidate_count = 0
-        for P in patches:
+        for P in stat_patches:
             if len(P.faces) < 5 or P.area <= 0.0:
                 continue
             if _drill_is_drill_patch(verts, face_v, face_n, face_patch_id, edge_map, P):
