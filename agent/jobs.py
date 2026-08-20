@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
+from .engine_job_queue import serialized_engine_job
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
 from .preview_scale import preview_scale_for
 from .prz_encoder import _compute_print_time, sl1_layer_names
@@ -399,6 +400,7 @@ async def _drain_stderr(stream) -> bytes:
     return b"".join(chunks)
 
 
+@serialized_engine_job
 async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     """Run PrusaSlicer in the background."""
     job_dir = get_job_dir(job_id)
@@ -676,6 +678,7 @@ def get_input_model_path(job_id: str) -> Optional[Path]:
     return None
 
 
+@serialized_engine_job
 async def run_support_generation(job_id: str, config: Optional[SLAConfig] = None):
     """
     Generate support mesh only (without layer extraction).
@@ -739,6 +742,7 @@ def get_hollow_mesh_path(job_id: str) -> Optional[Path]:
     return None
 
 
+@serialized_engine_job
 async def run_hollow_generation(job_id: str, config: Optional[SLAConfig] = None):
     """
     Generate hollow interior mesh only.
@@ -846,6 +850,7 @@ def get_boolean_mesh_path(job_id: str) -> Optional[Path]:
     return None
 
 
+@serialized_engine_job
 async def run_cut_operation(job_id: str, cut_height: float, keep_mode: str = "both"):
     """
     Cut mesh at specified Z height.

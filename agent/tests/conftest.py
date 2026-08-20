@@ -7,6 +7,7 @@ Task 5.5 (add-slicing-progress).
 import pytest
 
 from agent import jobs
+from agent.engine_job_queue import reset_engine_job_queue_for_tests
 
 
 @pytest.fixture(autouse=True)
@@ -23,5 +24,7 @@ def _isolate_job_progress():
     part-way through and left an entry behind.
     """
     jobs.job_progress.clear()
+    reset_engine_job_queue_for_tests()
     yield
     jobs.job_progress.clear()
+    reset_engine_job_queue_for_tests()

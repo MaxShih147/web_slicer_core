@@ -27,6 +27,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import trimesh
 
+from .engine_job_queue import serialized_engine_job
 from .jobs import get_job_dir, write_job_status
 from .models import BooleanOperation, JobStatus, SLAConfig
 from .sla_operations import (
@@ -725,6 +726,7 @@ def _complete_as_no_hollow(
         json.dump(status_data, f)
 
 
+@serialized_engine_job
 async def run_ortho_pipeline(
     job_id: str,
     hollowing_min_thickness: float = 3.0,
