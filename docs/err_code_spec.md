@@ -39,6 +39,11 @@
 | `SUPPORT_PAD_GAP_CONFLICT` | 422 | false | 支撐柱底部落於物件與 pad 的間隙（pillar/pad gap 衝突） |
 | `MODEL_OUT_OF_BOUNDS` | 422 | false | 沒有物件完全落在成型體積內（`no object is fully inside the print volume`） |
 | `SUPPORT_GENERATION_FAILED` | 422 | false | 支撐生成失敗且無法歸因至更具體代碼（fail-closed fallback，附原始 stdout/stderr） |
+| `PAD_CONFIG_INVALID` | 422 | false | Pad brim 過小，無法在目前組態下產生底座（`Pad brim size is too small`） |
+| `EXPOSURE_TIME_OUT_OF_RANGE` | 422 | false | 曝光時間超出印表機設定檔的允許範圍（`Exposition/Initial exposition time is out of printer profile bounds`） |
+| `MODEL_MESH_UNSLICEABLE` | 422 | false | 模型幾何無法切片（幾何破損或 non-manifold，`can not be sliced`） |
+| `UNPRINTABLE_OBJECT` | 422 | false | 模型包含無法列印的層（建議調整支撐設定，`There are unprintable objects`） |
+| `PAD_GENERATION_FAILED` | 422 | false | 在目前組態下無法為此模型產生底座 mesh（`No pad can be generated`） |
 
 ---
 
@@ -113,13 +118,35 @@
 
 開始切片（背景執行）。呼叫後用 `GET /api/v2/slices/{job_id}` 輪詢狀態。
 
-錯誤：
+切片結果分類依 CLI 的 exit code、stdout 與 stderr 文字標記判定（見 openspec/changes/add-slicing-error-codes）。
+
+**建立／排程階段錯誤：**
 
 - JOB_NOT_FOUND
 - JOB_ALREADY_EXECUTED // job 已執行，不在 pending 狀態
 - MODEL_NOT_FOUND // 這個 job id 沒有模型
 - INVALID_MODEL // 模型 data 無效
 - INTERNAL_ERROR
+
+**切片失敗（背景執行，透過 `GET /api/v2/slices/{job_id}` 輪詢時以 HTTP 200 + `success:false` 回傳具體 code）：**
+
+目前 Web API 可達（9 個具體 code + JOB_FAILED fallback）：
+
+- INVALID_MODEL // STL parse 失敗 / 空模型（LoadPrintData 無法載入模型）
+- SUPPORT_ELEVATION_TOO_LOW // 物件抬升高度過低（`Elevation is too low for object`，需傳 supports_enable=true）
+- EXPOSURE_TIME_OUT_OF_RANGE // 曝光時間超出印表機設定檔範圍
+- SUPPORT_HEAD_PENETRATION_INVALID // head penetration 值無效（`Invalid Head penetration`）
+- SUPPORT_HEAD_TOO_WIDE // pinhead 直徑無效（`Invalid pinhead diameter`）
+- MODEL_OUT_OF_BOUNDS // 沒有物件完全落在成型體積內（stdout 路徑，exit 0 特殊情境）
+- MODEL_MESH_UNSLICEABLE // 模型幾何無法切片（`can not be sliced`）
+- UNPRINTABLE_OBJECT // 模型含無法列印的層（`There are unprintable objects`）
+- PAD_GENERATION_FAILED // 無法產生底座 mesh（`No pad can be generated`，需傳 pad_enable=true）
+- JOB_FAILED // 其餘無法歸因的切片失敗（fallback）
+
+分類器支援、但目前 SLAConfig 未暴露必要設定、現階段 Web API 不可達：
+
+- PAD_CONFIG_INVALID // pad brim 過小（`Pad brim size is too small`；pad 幾何參數不在 SLAConfig）
+- SUPPORT_PAD_GAP_CONFLICT // 支撐柱底與 pad 間隙衝突（`The endings of the support pillars`；pad_around_object 不在 SLAConfig，Prusa 預設 false）
 
 ---
 

@@ -27,6 +27,7 @@ from pydantic import BaseModel, ValidationError
 from .errors import (
     APIError,
     boolean_failed,
+    exposure_time_out_of_range,
     file_not_found,
     hollow_generation_failed,
     internal_error,
@@ -36,16 +37,20 @@ from .errors import (
     job_not_found,
     job_still_processing,
     missing_body,
+    model_mesh_unsliceable,
     model_not_found,
     model_out_of_bounds,
     no_drain_holes,
     no_hex_grid_cells,
+    pad_config_invalid,
+    pad_generation_failed,
     support_elevation_too_low,
     support_generation_failed,
     support_head_penetration_invalid,
     support_head_too_wide,
     support_pad_gap_conflict,
     support_points_required,
+    unprintable_object,
     validation_error,
 )
 from .jobs import (
@@ -211,14 +216,24 @@ def _save_model_to_job(model_data: dict, input_path) -> None:
 
 
 _ERROR_CODE_FACTORIES = {
-    "HOLLOW_GENERATION_FAILED": hollow_generation_failed,
-    "SUPPORT_HEAD_TOO_WIDE": support_head_too_wide,
-    "SUPPORT_HEAD_PENETRATION_INVALID": support_head_penetration_invalid,
-    "SUPPORT_ELEVATION_TOO_LOW": support_elevation_too_low,
-    "SUPPORT_POINTS_REQUIRED": support_points_required,
-    "SUPPORT_PAD_GAP_CONFLICT": support_pad_gap_conflict,
-    "MODEL_OUT_OF_BOUNDS": model_out_of_bounds,
-    "SUPPORT_GENERATION_FAILED": support_generation_failed,
+    # ── support generation ────────────────────────────────────────────────────
+    "HOLLOW_GENERATION_FAILED":        hollow_generation_failed,
+    "SUPPORT_HEAD_TOO_WIDE":           support_head_too_wide,
+    "SUPPORT_HEAD_PENETRATION_INVALID":support_head_penetration_invalid,
+    "SUPPORT_ELEVATION_TOO_LOW":       support_elevation_too_low,
+    "SUPPORT_POINTS_REQUIRED":         support_points_required,
+    "SUPPORT_PAD_GAP_CONFLICT":        support_pad_gap_conflict,
+    "MODEL_OUT_OF_BOUNDS":             model_out_of_bounds,
+    "SUPPORT_GENERATION_FAILED":       support_generation_failed,
+    # ── slicing (shared + new) ────────────────────────────────────────────────
+    # Codes shared with support generation are re-used as-is above; the ones
+    # below are either slicing-only or newly introduced in this change.
+    "INVALID_MODEL":                   invalid_model,
+    "PAD_CONFIG_INVALID":              pad_config_invalid,
+    "EXPOSURE_TIME_OUT_OF_RANGE":      exposure_time_out_of_range,
+    "MODEL_MESH_UNSLICEABLE":          model_mesh_unsliceable,
+    "UNPRINTABLE_OBJECT":              unprintable_object,
+    "PAD_GENERATION_FAILED":           pad_generation_failed,
 }
 
 

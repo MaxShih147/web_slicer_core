@@ -202,3 +202,52 @@ def support_generation_failed(detail: str = None) -> APIError:
         422,
         retryable=False,
     )
+
+
+# ─── slicing error codes ───────────────────────────────────────────────────────
+# Correspond to classified SLA slicing failures (see slicing_classifier.py).
+# Follow the same 422 / retryable=False convention as the geometry-failure family.
+
+def pad_config_invalid(detail: str = None) -> APIError:
+    return APIError(
+        "PAD_CONFIG_INVALID",
+        detail or "Pad brim size is too small for the current configuration",
+        422,
+        retryable=False,
+    )
+
+
+def exposure_time_out_of_range(detail: str = None) -> APIError:
+    return APIError(
+        "EXPOSURE_TIME_OUT_OF_RANGE",
+        detail or "Exposure time is outside the printer profile bounds",
+        422,
+        retryable=False,
+    )
+
+
+def model_mesh_unsliceable(detail: str = None) -> APIError:
+    return APIError(
+        "MODEL_MESH_UNSLICEABLE",
+        detail or "Model mesh cannot be sliced; the geometry may be broken or non-manifold",
+        422,
+        retryable=False,
+    )
+
+
+def unprintable_object(detail: str = None) -> APIError:
+    return APIError(
+        "UNPRINTABLE_OBJECT",
+        detail or "Model contains layers that cannot be printed; try adjusting support settings",
+        422,
+        retryable=False,
+    )
+
+
+def pad_generation_failed(detail: str = None) -> APIError:
+    return APIError(
+        "PAD_GENERATION_FAILED",
+        detail or "Pad mesh could not be generated for this model with the current configuration",
+        422,
+        retryable=False,
+    )

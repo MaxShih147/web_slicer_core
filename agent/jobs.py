@@ -16,6 +16,7 @@ from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
 from .prz_encoder import _compute_print_time, sl1_layer_names
 from .sla_operations import generate_config_ini, notify_launcher_if_prusa_crashed
+from .slicing_classifier import classify_slice_result
 
 logger = logging.getLogger(__name__)
 
@@ -231,44 +232,52 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
 
         notify_launcher_if_prusa_crashed(process.returncode)
 
-        if process.returncode != 0:
-            error_msg = stderr.decode("utf-8", errors="replace")
-            write_job_status(job_id, JobStatus.FAILED, error=f"Exit code {process.returncode}: {error_msg}")
-            return
-
-        # Parse metadata from .sl1 (layers served directly from .sl1 on demand)
-        if output_file.exists():
-            layer_count, fork_print_time, resin_volume_ml = parse_sl1_metadata(output_file)
-
-            # Sync estimated_print_time to the PRZ physical formula (single source
-            # of truth, identical to the PRZ download path). Any failure degrades
-            # to the fork SL1 estimate without affecting the COMPLETED status.
-            prz_config = _load_prz_config(job_dir)
-            if prz_config is None:
-                logger.info(
-                    "prz_config missing, falling back to fork time (job=%s)", job_id
-                )
-            estimated_print_time = resolve_estimated_print_time(
-                prz_config, layer_count, fork_print_time
-            )
-
-            # Check if support mesh was generated
-            has_support_mesh = support_stl_file.exists()
-
-            # Experimental: Export 3MF project file for support inspection
-            if EXPORT_PROJECT_3MF:
-                await export_project_3mf(job_id, input_file, job_dir / "output")
-
+        failure = classify_slice_result(
+            exit_code=process.returncode,
+            stdout=stdout,
+            stderr=stderr,
+            input_filename=input_file.name,
+            output_file_exists=output_file.exists(),
+        )
+        if failure is not None:
             write_job_status(
                 job_id,
-                JobStatus.COMPLETED,
-                layer_count=layer_count,
-                estimated_print_time=estimated_print_time,
-                resin_volume_ml=resin_volume_ml,
-                has_support_mesh=has_support_mesh,
+                JobStatus.FAILED,
+                error=failure.error,
+                error_code=failure.error_code,
             )
-        else:
-            write_job_status(job_id, JobStatus.FAILED, error="Output file not created")
+            return
+
+        # Successful slice: output file is guaranteed to exist here.
+        layer_count, fork_print_time, resin_volume_ml = parse_sl1_metadata(output_file)
+
+        # Sync estimated_print_time to the PRZ physical formula (single source
+        # of truth, identical to the PRZ download path). Any failure degrades
+        # to the fork SL1 estimate without affecting the COMPLETED status.
+        prz_config = _load_prz_config(job_dir)
+        if prz_config is None:
+            logger.info(
+                "prz_config missing, falling back to fork time (job=%s)", job_id
+            )
+        estimated_print_time = resolve_estimated_print_time(
+            prz_config, layer_count, fork_print_time
+        )
+
+        # Check if support mesh was generated
+        has_support_mesh = support_stl_file.exists()
+
+        # Experimental: Export 3MF project file for support inspection
+        if EXPORT_PROJECT_3MF:
+            await export_project_3mf(job_id, input_file, job_dir / "output")
+
+        write_job_status(
+            job_id,
+            JobStatus.COMPLETED,
+            layer_count=layer_count,
+            estimated_print_time=estimated_print_time,
+            resin_volume_ml=resin_volume_ml,
+            has_support_mesh=has_support_mesh,
+        )
 
     except Exception as e:
         write_job_status(job_id, JobStatus.FAILED, error=str(e))
