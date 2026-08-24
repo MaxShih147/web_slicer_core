@@ -22,3 +22,4 @@
 - [x] 4.2 建立契約 / golden 測試，直接對 CLI 實際輸出的 validate 訊息與 stderr/stdout 標記字串進行斷言，使引擎改版或去識別化改寫時能被測試擋下
 - [x] 4.3 對整個 `agent/` 執行 lint 與既有測試套件，確認無回歸（302 passed；2 pre-existing failures 與本次無關）
 - [ ] 4.4 以真實模型跑端到端：幾何破損 mesh（期望 `MODEL_MESH_UNSLICEABLE`）、成型體積外的模型（期望 `MODEL_OUT_OF_BOUNDS`）、曝光時間超出預設範圍（期望 `EXPOSURE_TIME_OUT_OF_RANGE`）、正常模型（期望成功）
+  - **【部分驗證 2026-08-24】** `EXPOSURE_TIME_OUT_OF_RANGE`（`exposure_time=200`）已以 binary 直測確認根因（exit 0 + stderr "Exposition time is out of printer profile bounds."，詳見 design.md D1 修正備註），並補 `TestPathBStep6xValidateAtExitZero` 單元測試類別（`agent/tests/test_slicing_classifier.py`）與 `slicing_classifier.py` Path B Step 6.x。其餘三情境（`MODEL_MESH_UNSLICEABLE`、`MODEL_OUT_OF_BOUNDS`、成功路徑）尚待真實模型端到端測試。

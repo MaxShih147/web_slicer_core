@@ -200,6 +200,48 @@ class TestPathBStep6EmptyModel:
         assert result.error_code == _EMPTY_MODEL_CODE
 
 
+# ─── Path B · Step 6.x: validate() errors at exit 0 ──────────────────────────
+# The fork's process_actions() returns 1 (bool true) on validate failure, so the
+# process exits 0 even though stderr carries a recognisable validate message.
+# Step 6.x re-uses _VALIDATE_CODE_MAP so there is only one source of truth.
+
+class TestPathBStep6xValidateAtExitZero:
+    def test_exposure_time_out_of_range_exit0(self):
+        """Core regression: exposure_time=200 → Prusa exits 0 with validate stderr.
+        Must resolve to EXPOSURE_TIME_OUT_OF_RANGE, not the Step 7 JOB_FAILED fallback."""
+        stderr = "Exposition time is out of printer profile bounds."
+        result = classify_slice_result(0, b"", stderr, _MODEL, False)
+        assert isinstance(result, SliceClassification)
+        assert result.error_code == "EXPOSURE_TIME_OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("needle,code", _VALIDATE_CODE_MAP)
+    def test_all_validate_codes_matched_at_exit0(self, needle, code):
+        """Every validate code in _VALIDATE_CODE_MAP must also fire in Path B."""
+        result = classify_slice_result(0, b"", needle, _MODEL, False)
+        assert result is not None
+        assert result.error_code == code
+
+    def test_step6_empty_model_beats_step6x_validate(self):
+        """Step 6 (INVALID_MODEL empty-file) fires before Step 6.x validate scan."""
+        stderr = f"{_EMPTY_MODEL_MARKER} model.stl\nPad brim size is too small"
+        result = classify_slice_result(0, b"", stderr, _MODEL, False)
+        assert result.error_code == _EMPTY_MODEL_CODE
+
+    def test_step6x_validate_beats_step7_fallback(self):
+        """Step 6.x must fire before Step 7 generic fallback."""
+        result = classify_slice_result(
+            0, b"", "Invalid pinhead diameter value.", _MODEL, False
+        )
+        assert result is not None
+        assert result.error_code == "SUPPORT_HEAD_TOO_WIDE"
+
+    def test_unknown_stderr_still_falls_to_step7(self):
+        """No validate needle → Step 7 generic fallback still applies."""
+        result = classify_slice_result(0, b"", "some unknown error", _MODEL, False)
+        assert isinstance(result, SliceClassification)
+        assert result.error_code is None
+
+
 # ─── Path B · Step 7: zero-exit fallback ──────────────────────────────────────
 
 class TestPathBStep7Fallback:

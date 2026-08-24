@@ -15,7 +15,7 @@ from typing import Optional
 from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
 from .prz_encoder import _compute_print_time, sl1_layer_names
-from .sla_operations import generate_config_ini, notify_launcher_if_prusa_crashed
+from .sla_operations import generate_config_ini, notify_launcher_if_prusa_crashed, _english_locale_env
 from .slicing_classifier import classify_slice_result
 
 logger = logging.getLogger(__name__)
@@ -215,7 +215,7 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         # (download) round-trip. PRZ output is byte-identical (verified). The
         # layers.zip endpoint converts back to PNG on demand for the rare
         # PNG-expecting fallback.
-        slice_env = {**os.environ, "SLA_LAYER_RLE": "1"}
+        slice_env = {**_english_locale_env(), "SLA_LAYER_RLE": "1"}
 
         process = await asyncio.create_subprocess_exec(
             *cmd,

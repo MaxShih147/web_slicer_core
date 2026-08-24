@@ -36,6 +36,8 @@
 
 - **理由**：此判別在切片路徑上是可信的；在 Path B 仍以文字標記為判定依據，確保 exit-0 特殊路徑的歸因不依賴 exit code 的具體數值。
 
+> **【事後修正 2026-08-24】** D1 原文「均可靠地回傳 exit 1」對 validate() 路徑有誤。實際上 `ProcessActions.cpp::process_actions()` 宣告為 `bool`，其 validate 失敗分支執行 `return 1`——在 C++ bool 函式中等同 `return true`；`Run.cpp` 的 `if (!process_actions(...)) return 1` 條件因此不觸發，**process 以 exit 0 退出**，但 stderr 仍留有 validate() 寫入的錯誤訊息。以 `exposure_time=200` 直接測試既有 `slicer-engine.exe`（Aug 3 build）確認：exit_code=0，stderr="Exposition time is out of printer profile bounds."，無輸出檔。Non-Goals 已列明不修改 C++ fork；Python 端 workaround 為在 Path B 新增 **Step 6.x**，對 stderr 重跑 `_VALIDATE_CODE_MAP` 掃描（`agent/slicing_classifier.py`），確保 validate 失敗即使 exit 0 也能歸因到正確 error code。
+
 ### D2. Path A 分類順序：validate → process → STL parse → unclassified
 
 validate() 在程式執行順序上先於 process()，訊息更具體（參數非法）；process() 例外次之（幾何操作失敗）；STL parse error 以 `"{filename}:"` 前綴作為指紋（`LoadPrintData.cpp` 使用 `cerr << file << ": " << e.what()` 格式）。三者互斥；依此序列「first match wins」可保證確定性。

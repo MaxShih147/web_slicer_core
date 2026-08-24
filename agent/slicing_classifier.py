@@ -150,6 +150,14 @@ def classify_slice_result(
         if _EMPTY_MODEL_MARKER in err:
             return SliceClassification(error=err.strip() or None, error_code=_EMPTY_MODEL_CODE)
 
+        # Step 6.x: validate() errors — the fork's process_actions() returns 1 (bool
+        # true) on validate failure, so the process exits 0 even though validate()
+        # wrote a recognisable error to stderr.  Reuse the same map as Path A Step 1
+        # so there is only one source of truth for the needle→code mapping.
+        for needle, code in _VALIDATE_CODE_MAP:
+            if needle in err:
+                return SliceClassification(error=err.strip() or None, error_code=code)
+
         # Step 7: other zero-exit / no-output — unclassified
         return SliceClassification(error="Output file not created", error_code=None)
 
