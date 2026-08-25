@@ -27,6 +27,7 @@ from pydantic import BaseModel, ValidationError
 from .errors import (
     APIError,
     boolean_failed,
+    boolean_invalid_mesh,
     exposure_time_out_of_range,
     file_not_found,
     hollow_generation_failed,
@@ -60,6 +61,7 @@ from .jobs import (
     get_hollow_mesh_path,
     get_input_model_path,
     get_job_dir,
+    get_job_progress,
     job_exists,
     read_job_status,
     run_slicing,
@@ -68,7 +70,7 @@ from .jobs import (
     run_cut_operation,
     write_job_status,
 )
-from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config
+from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config, gate_blur
 from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
 
 logger = logging.getLogger(__name__)
@@ -941,6 +943,8 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
 
     if not result.success:
         write_job_status(job_id, JobStatus.FAILED, error=result.error)
+        if result.error_code == "BOOLEAN_INVALID_MESH":
+            raise boolean_invalid_mesh()
         raise boolean_failed(result.error)
 
     if debug_dir and result.boolean_mesh_path and result.boolean_mesh_path.exists():
@@ -1557,6 +1561,16 @@ async def get_slice_job_status(job_id: str):
             }
             if "ortho_progress" in status_data:
                 response_data["orthoProgress"] = status_data["ortho_progress"]
+
+            # Slice progress (percent + STAGE_* identifier) lives in the agent's
+            # in-memory store, not status.json. The field is OMITTED entirely when
+            # unavailable — never 0 or null, which a polling client would read as
+            # the progress going backwards. Terminal jobs have already had their
+            # entry cleared, so a COMPLETED response carries no progress.
+            progress = get_job_progress(job_id)
+            if progress is not None:
+                response_data["progress"] = progress
+
             return V2Response(success=True, data=response_data)
 
     # Check pending jobs (not yet executed)
@@ -1811,6 +1825,12 @@ def _inject_retract_overrides(config: Dict[str, Any]) -> None:
             print_section[mechado_key] = config[sla_key]
 
 
+# blur 閘控的真值來源已移至 `models.gate_blur`，因為 `prz_encoder` 也要用它，而
+# prz_encoder 是本模組的下游——留在這裡會迫使它反向匯入整個路由模組。此別名保留
+# 既有呼叫點與測試中的 `_gate_blur` 名稱。
+_gate_blur = gate_blur
+
+
 def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     """
     Convert DS-Online config format to SLAConfig.
@@ -1864,6 +1884,12 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         if ds_key in print_config:
             sla_dict[sla_key] = print_config[ds_key]
 
+    # `Image Blur` 開關閘控（見 _gate_blur）。必須在 mapping 迴圈之後套用，才能作用在
+    # 已解析出的強度值上——不論它來自 snake `blur` 還是 DS-Online 的 `Image Blur Pixel`。
+    blur_gated = _gate_blur(print_config.get("Image Blur"), sla_dict.get("blur"))
+    if blur_gated is not None:
+        sla_dict["blur"] = blur_gated
+
     # Handle "Image Size" array -> display_pixels_x, display_pixels_y
     image_size = print_config.get("Image Size")
     if isinstance(image_size, list) and len(image_size) >= 2:
@@ -1909,6 +1935,8 @@ def _extract_sla_from_mechado(
       - `Advanced.Anti-aliasing Level` 與 `Advanced.Image Blur Pixel` 在 mechado
         中已是後端刻度（前端 uiToDefault 已套 UI→backend 轉換），此處直接複製，
         不可再套任何刻度轉換。
+      - `blur` 額外受 `Advanced."Image Blur"` 開關閘控（見 `_gate_blur`）。開關與刻度
+        正交：閘控只決定要不要套用，不改變強度值本身。
       - `printer_model` 取自 `Machine.machine_type`（前端不另傳）。
       - 任一來源欄位缺失時，留給 SLAConfig 預設值，不拋錯（僅記 log）。
 
@@ -1941,7 +1969,9 @@ def _extract_sla_from_mechado(
     put("anti_aliasing", advanced.get("Anti-aliasing"))                  # 6
     put("anti_aliasing_level", advanced.get("Anti-aliasing Level"))      # 7  直接複製
     put("gray_level", advanced.get("Grey Level"))                        # 8
-    put("blur", advanced.get("Image Blur Pixel"))                        # 9  直接複製
+    # 9  強度直接複製（不得二次刻度轉換），但受 `Image Blur` 開關閘控——見 _gate_blur
+    put("blur", _gate_blur(advanced.get("Image Blur"),
+                           advanced.get("Image Blur Pixel")))
 
     # ── 隨附欄位（非幾何 9 欄，但 SLAConfig 需要）────────────────────────
     put("printer_model", machine.get("machine_type"))

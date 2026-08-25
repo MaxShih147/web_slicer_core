@@ -531,21 +531,25 @@ Note: PrusaSlicer auto-centers the model on the bed and auto-drops it to Z=0. Th
 ```
 Frontend config          generate_config_ini()         PrusaSlicer CLI
 (backendSlicer.js)  -->  (sla_operations.py)      -->  (--load config.ini)
-                         Writes:                       Reads config.ini +
-                         - layer_height                Falls back to defaults for:
-                         - exposure_time               - display_width    (120.0)
-                         - supports_enable             - display_height   (68.0)
-                         - hollowing_*                  - display_pixels_x (2560)
-                         - etc.                         - display_pixels_y (1440)
-                         Does NOT write:
-                         - display_width
-                         - display_height
-                         - display_pixels_*
+                         Writes EVERY SLAConfig        Reads config.ini.
+                         field, including:             Its own defaults apply
+                         - layer_height                only when no --load is
+                         - exposure_time               passed at all:
+                         - supports_enable             - display_width    (120.0)
+                         - hollowing_*                 - display_height   (68.0)
+                         - display_width               - display_pixels_x (2560)
+                         - display_height              - display_pixels_y (1440)
+                         - display_pixels_x / _y
+                         - display_orientation
 ```
+
+`display_pixels_x` / `display_pixels_y` reaching the INI is what lets the agent
+derive the preview downscale ratio from the same format the engine rasterises
+at — see `agent/preview_scale.py`.
 
 ### TODO: Sync Frontend Parameters with PrusaSlicer Config
 
-- [ ] **Add printer/display config to `generate_config_ini()`** — Write `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y`, `display_orientation` into the INI file so PrusaSlicer uses the same bed as the frontend
+- [x] **Add printer/display config to `generate_config_ini()`** — Done: it dumps every `SLAConfig` field, so `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y` and `display_orientation` all reach the INI and PrusaSlicer uses the same bed as the frontend
 - [ ] **Add printer profile selection to frontend** — Let users choose a printer profile (SL1, SL1S, Anycubic, custom) or enter custom display dimensions
 - [ ] **Return display config from backend API** — Include `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y` in slice job status response so the frontend knows the actual bed size used
 - [ ] **Sync `paramsStore.bedSize` with PrusaSlicer display** — Frontend's `paramsStore.bedSize` (currently [195.84, 122.4] for LS Plus) should match the PrusaSlicer printer profile, or be overridden by it

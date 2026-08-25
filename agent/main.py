@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import os
 import tempfile
 import threading
@@ -34,6 +35,19 @@ from .jobs import (
     run_slicing,
 )
 from .api_v2 import router as v2_router, prz_session_cleanup_loop
+
+
+# uvicorn 只設定它自己的 logger，因此 `agent.*` 的訊息在實機上會被整個丟棄——
+# 包含階段標籤漂移的告警與封存尾段的耗時量測，兩者都因此形同無效。
+# 只掛在套件層 logger 上（而非 root）：改 root 會連帶打開第三方套件的 INFO
+# 噪音（PIL、trimesh…）。以 handlers 檢查保持冪等，--reload 重複匯入不會疊加。
+_agent_logger = logging.getLogger(__package__ or "agent")
+if not _agent_logger.handlers:
+    _agent_handler = logging.StreamHandler()
+    _agent_handler.setFormatter(logging.Formatter("%(levelname)s:     [%(name)s] %(message)s"))
+    _agent_logger.addHandler(_agent_handler)
+    _agent_logger.setLevel(logging.INFO)
+    _agent_logger.propagate = False
 
 
 @asynccontextmanager

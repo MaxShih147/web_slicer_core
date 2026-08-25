@@ -1,0 +1,8 @@
+schema: spec-driven
+created: 2026-08-05
+title: 布林運算對非流型網格的容錯修補
+status: completed
+type: fix
+owner: backend
+repos:
+  - web_slicer_core
