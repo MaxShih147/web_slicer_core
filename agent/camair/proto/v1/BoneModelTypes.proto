@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ThreeShape.CAMair.Api.Protocol.v1.BoneModelTypes;
+
+// Bone model specific data
+// <img src='../../documentation/images/BoneModel-FacetMarks.png' style="width:500px" />
+enum BoneModelFacetMark {
+  None = 0;
+}
+
+// Data query for bone model
+message NeededBoneModelData {
+}
+
+//Bone model specific data
+message BoneModelData {
+}

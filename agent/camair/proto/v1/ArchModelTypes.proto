@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ThreeShape.CAMair.Api.Protocol.v1.ArchModelTypes;
+
+// Arch model specific data
+// <img src='../../documentation/images/ArchModel-FacetMarks.png' style="width:500px" />
+enum ArchModelFacetMark {
+  None = 0;
+}
+
+// Data query for Arch model
+message NeededArchModelData {
+}
+
+// Arch model specific data
+message ArchModelData {
+}

@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+import "CAMairDataTypes.proto";
+
+package ThreeShape.CAMair.Api.Protocol.v1.AnatomyItemTypes;
+
+// Anatomy item facet marks:
+// <img src='../../documentation/images/AnatomyItem - FacetMarks.png' style="width:500px" />
+enum AnatomyItemFacetMark {
+  None = 0;
+
+  OuterSurface = 1;
+  EnhancedCementGap = 2;
+  CementGap = 3;
+  MarginLineArea = 4;
+  EnhancedMarginLineArea = 5;
+}
+
+// Data query for anatomy item (Crown, Inlay, Veneer).
+message NeededAnatomyItemData {
+  // Margin line. Closed polyline.
+  bool marginLine = 1;
+  // Tooth anatomical directions (mesial and buccal)
+  bool toothAnatomicalDirections = 2;
+  // contact map
+  DistancesMapNeededData contactMap = 3;
+}
+
+//Data to query for contact map items
+message DistancesMapNeededData {
+  // Get vertices ids (if the distance map is needed this should alwasy be true)
+  bool verticesIds = 1;
+  // Get distances to neighbor tooth
+  bool distancesToNeighbor = 2;
+  // Get distances to antagonist
+  bool distancesToAntagonist  = 3;
+}
+
+// Distance map data. 
+// Data structure uses an array-based organization, for each vertex the distance to neighbor tooth and antagonist is stored.
+message DistanceMap {
+  // Vertices ids
+  repeated int32 verticesIds = 1;
+  // An array of signed floats indicating the distance to the neighbor tooth
+  repeated float distancesToNeighbor = 2;
+  // An array of signed floats indicating the distance to the antagonist
+  repeated float distancesToAntagonist = 3;
+}
+
+// Anatomy item specific data
+// <img src='../../documentation/images/AnatomyItem - Data.png' style="width:500px" />
+message AnatomyItemData {
+  // Margin line. Closed polyline.
+  Polyline marginLine = 1;
+  // Tooth anatomical directions (mesial and buccal)
+  ToothAnatomicalDirections toothAnatomicalDirections = 2;
+  // Contact map.
+  DistanceMap contactMap = 3;
+}

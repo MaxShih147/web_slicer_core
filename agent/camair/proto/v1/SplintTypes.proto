@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+import "CAMairDataTypes.proto";
+
+package ThreeShape.CAMair.Api.Protocol.v1.SplintTypes;
+
+// Splint facet marks:
+// <img src='../../documentation/images/Splint - FacetMarks.png' style="width:500px" />
+enum SplintFacetMark {
+  None = 0;
+
+  OuterSurface = 1;
+  InnerSurface = 2;
+}
+
+// Data query for splint
+message NeededSplintData {
+// Margin line. Closed polyline.
+  bool marginLine = 1;
+}
+
+// Splint specific data
+message SplintData {
+// Margin line. Closed polyline.
+  Polyline marginLine = 1;
+}

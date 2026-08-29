@@ -1,0 +1,24 @@
+syntax = "proto3";
+package ThreeShape.CAMair.Api.Protocol;
+
+service RegionConfigurationService {
+  // Retrieves the current region configuration for the authenticated user.
+  // The user's information is extracted from the JWT token in the request  metadata.
+
+  // Possible errors:
+  // - NOT_FOUND (404): If no region configuration is found for the user
+  // - INTERNAL (500): For any server-side errors
+  rpc GetCurrentRegionConfiguration(RegionConfigurationRequest) returns (RegionConfiguration);
+}
+
+message RegionConfiguration {
+  // Hostname for gRPC API in the user's region, e.g., "grpc.us-west4.example.com"
+  string host = 1;
+  // The port for the gRPC communication
+  int32 port = 2;
+}
+
+// The Regional Configuration Request
+// No input parameters are required.
+message RegionConfigurationRequest {
+}

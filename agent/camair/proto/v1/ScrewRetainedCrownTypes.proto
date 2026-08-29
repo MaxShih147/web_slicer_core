@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+import "CAMairDataTypes.proto";
+
+package ThreeShape.CAMair.Api.Protocol.v1.ScrewRetainedCrownTypes;
+
+// todo: put an image here
+enum ScrewRetainedCrownFacetMark {
+  None = 0;
+
+  Base = 1;
+  TopCap = 2;
+  ScrewHole = 3;
+  ExitProfile = 4;
+}
+
+//Details about the abutment kit used
+message AbutmentKitData{
+  string abutmentKitId = 1;
+  string abutmentKitName = 2;
+  string implantSystemId = 3;
+  string implantSystemName = 4;
+  string implantSystemVersion = 5;
+  double zAxisOffset = 6;  // CAD block offset to fit the base (to correspond the base model position)
+  double rotateAroundImplantAngle = 7; // CAD block rotation around Z axis (to correspond the base model orientation)
+}
+
+message NeededScrewRetainedCrownData{
+  bool emergenceProfileCurve = 1;
+  bool toothAnatomicalDirections = 2;
+  bool abutmentKit = 3;
+  bool implantCoordSystem = 4;
+}
+
+// <img src='../../documentation/images/ScrewRetainedCrown-WithImplantCoordinateSystem.png' style="width:500px" />
+message ScrewRetainedCrownData{
+  Polyline emergenceProfileCurve = 1;
+  // Tooth anatomical directions (mesial and buccal)
+  ToothAnatomicalDirections toothAnatomicalDirections = 2;
+  // Details about aboutment kit used
+  AbutmentKitData abutmentKit = 3;
+  // Coordingate system of the implant.
+  // Where:
+  // yAxis represents: implant direction;
+  // origin represents: position of implant;
+  CoordinateSystem implantCoordSystem = 4;
+}

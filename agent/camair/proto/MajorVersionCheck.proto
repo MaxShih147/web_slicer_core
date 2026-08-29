@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package ThreeShape.CAMair.Api.Protocol;
+
+// gRPC service with a simple handshake-like method serving two major purposes.
+//   1. Check that connection to the given partner integration component can be established
+//   2. Find out the major version of the CAMair gRPC protocol supported by the server to rule out potential incompatibility.
+service CAMairMajorVersionCheck {
+  // Request server-side supported major version of the CAMair gRPC protocol.
+  rpc GetSupportedMajorVersions(GetSupportedMajorVersionsRequest) returns (GetSupportedMajorVersionsResponse);
+}
+
+// Request type for 'GetSupportedMajorVersions' method
+message GetSupportedMajorVersionsRequest {
+}
+
+// Response type for 'GetSupportedMajorVersions' method
+message GetSupportedMajorVersionsResponse {
+  // Major versions of CAMair gRPC protocol supported by the server.
+  // The server is allowed to support multiple versions of the protocol.
+  repeated int32 serverSupportedMajorVersions = 1;
+}

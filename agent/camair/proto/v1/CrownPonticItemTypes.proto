@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+import "CAMairDataTypes.proto";
+
+package ThreeShape.CAMair.Api.Protocol.v1.CrownPonticItemTypes;
+
+// Data query for crown pontic (as part of the anatomical bridge).
+message NeededCrownPonticItemData {
+  //Tooth anatomical directions (mesial and buccal)
+  bool toothAnatomicalDirections = 2;
+}
+
+// Crown pontic specific data (as part of the anatomical bridge)
+// <img src='../../documentation/images/CrownPonticItem - Data.png' style="width:500px" />
+message CrownPonticItemData {
+  //Tooth anatomical directions (mesial and buccal)
+  ToothAnatomicalDirections toothAnatomicalDirections = 2;
+}

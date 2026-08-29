@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package ThreeShape.CAMair.Api.Protocol;
+
+// Enum that contains the definition of the port used for partner integration component discovery using UDP protocol 
+enum NetworkDiscoveryPort {
+  do_not_use_this_value = 0;
+  
+  Value = 6643;
+}
+
+// Enum that contains the definition of the protocols used for partner integration component gRPC endpoint
+enum Protocol {
+  //Unsecured connection for local partner integration component
+  Http = 0;  
+  //Secure connection for cloud or local partner integration component
+  Https = 1;
+}
+
+// The network discovery request for partner integration components.
+// Will be serialized to byte array using Protobuf built-in methods and broadcasted using UDP. 
+message ComponentDiscoveryRequest {
+}
+
+// The network discovery response from partner integration components.
+// Should be serialized to byte array using Protobuf built-in methods and sent back using UDP to the channel where discovery request was received. 
+message ComponentDiscoveryResponse {
+  // The host for the gRPC communication 
+  string host = 1;
+  // The port for the gRPC communication
+  int32 port = 2;
+  // The protocol for gRPC communication  
+  Protocol protocol = 3;
+}

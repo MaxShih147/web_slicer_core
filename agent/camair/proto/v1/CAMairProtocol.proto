@@ -1,0 +1,174 @@
+syntax = "proto3";
+import "CAMairDataTypes.proto";
+
+import "AnatomyItemTypes.proto";
+import "BridgeTypes.proto";
+import "ScrewRetainedCrownTypes.proto";
+import "SurgicalGuideTypes.proto";
+import "SplintTypes.proto";
+import "ArchModelTypes.proto";
+import "BoneModelTypes.proto";
+import "google/protobuf/timestamp.proto";
+
+package ThreeShape.CAMair.Api.Protocol.v1;
+
+// Used to indicate the major version of CAMair protocol declared in this file.
+enum MajorVersionV1 {
+  // ignore this one
+  do_not_use = 0;
+  
+  // This folder contains protocol definition for protocol version 1 
+  Value = 1;
+}
+
+// Used to indicate the minor version of CAMair protocol declared in this file.
+// It is not used in any of the services, it just seems to be the only way to declare 'constant' in proto file. 
+enum MinorVersion {
+  // ignore this one
+  do_not_use_this_field = 0;
+
+  // Current protocol minor version. 
+  // It is recommended to convert this value to int and send back in Connect method.
+  Current = 3;
+}
+
+// gRPC service that allows partner integration components to communicate with CAMair.
+// CAMair acts as a client while the partner integration component plays the role of the server.
+// Consequently, CAMair is responsible for sending the Requests while the integration components send the Responses.
+service CAMairIntegration {
+  // Exchanges version.
+  rpc Connect (ConnectRequest) returns (ConnectResponse);
+
+  // Queries what data is needed to manufacture the given item.
+  // Fields marked with 'True' will be provided in the subsequent StartJob call.
+  rpc GetNeededData(GetNeededDataRequest) returns (GetNeededDataResponse);
+
+  // Starts the manufacturing job. CAMair passes all data requested in GetNeededDataResponse.
+  // Request can be broken down into chunks to match the gRPC max message size.
+  // Chunks should be grouped by key and merged back using built-in gRPC methods, see the example implementation for details.
+  // StartJobResponse is expected when all data was received and all job was started or at least allocated.
+  // StartJobRequest can contain one or multiple items. The response stream should return job identifiers for each individual item.
+  rpc StartJob(stream StartJobRequest) returns (stream StartJobResponse);
+  
+  // Starts the job status transmission for a specific job from the connected partner component
+  // JobStatusResponse contains job status data definition of current job status of the job in production at the connected partner integration component
+  // JobStatusResponse stream should can be closed by both CAMair client and partner integration component server
+  rpc GetJobStatuses (JobStatusRequest) returns (stream JobStatusResponse);
+}
+
+message ConnectRequest {
+  // Version of CAMair protocol supported by the client.
+  int32 clientProtocolVersion = 1;
+}
+
+message ConnectResponse {
+  // Version of the CAMair protocol supported by the server.
+  int32 serverProtocolVersion = 1;
+  
+  // List of machines supported by the server.
+  repeated MachineIdentifier machineIds = 2;
+  
+  // Custom name to be displayed for this Partner Integration Component in UI
+  string picCustomName = 3;
+
+  // Identifier to recognize same gRPC server by running different discovery methods
+  // This identifier should be unique between gRPC servers, please generate it when starting a new server.
+  // The client will not display multiple integration components, if they share the same pic identifier.
+  // Persistance of this ID is also handled on client side.
+  string picIdentifier = 4;
+}
+
+// Request to provide the data needed to manufacture a given item.
+message GetNeededDataRequest {
+  // Job description.
+  JobDescription jobDescription = 1;
+}
+
+// Container that indicates what data should be included in StartJobRequest to manufacture a given item.
+message GetNeededDataResponse {
+  // Item mesh.
+  bool mesh = 10;
+  // Material.
+  bool material = 11;
+  // The direction that item will travel when being mounted into its position in the jaw.
+  bool mountDirection = 12;
+  // Anatomy Item (Crown, Inlay, Veneer) specific data.
+  AnatomyItemTypes.NeededAnatomyItemData anatomyItemData = 13;
+  // Bridge specific data.
+  BridgeTypes.NeededBridgeData bridgeData = 14;
+  // Surgical guide specific data.
+  SurgicalGuideTypes.NeededSurgicalGuideData surgicalGuideData = 15;
+  // Screw retained crown specific data.
+  ScrewRetainedCrownTypes.NeededScrewRetainedCrownData screwRetainedCrownData = 16;
+  // Splint specific data.
+  SplintTypes.NeededSplintData splintData = 17;
+  // Arch model specific data.
+  ArchModelTypes.NeededArchModelData archModelData = 18;
+  // Bone model specific data.
+  BoneModelTypes.NeededBoneModelData boneModelData = 19;
+  // Patient data.
+  bool patientData = 20;
+}
+
+message StartJobRequest {
+  // Unique identifier of the item in the case.
+  string key = 1;
+  
+  // Job data for the given data chunk
+  JobData jobData = 2;
+}
+
+message JobData {
+  // Job description.
+  JobDescription jobDescription = 1;
+  // Item mesh.
+  Mesh mesh = 10;
+  // Material.
+  Material material = 11;
+  // The direction that item will travel when being mounted into its position in the jaw.
+  DirectionVector mountDirection = 12;
+  // Anatomy Item (Crown, Inlay, Veneer) specific data.
+  AnatomyItemTypes.AnatomyItemData anatomyItemData = 13;
+  // Bridge specific data
+  BridgeTypes.BridgeData bridgeData = 14;
+  // Surgical guide specific data.
+  SurgicalGuideTypes.SurgicalGuideData surgicalGuideData = 15;
+  // Screw retained crown specific data.
+  ScrewRetainedCrownTypes.ScrewRetainedCrownData screwRetainedCrownData = 16;
+  // Splint specific data.
+  SplintTypes.SplintData splintData = 17;
+  // Arch model specific data.
+  ArchModelTypes.ArchModelData archModelData = 18;
+  // Bone model specific data.
+  BoneModelTypes.BoneModelData boneModelData = 19;
+}
+
+message StartJobResponse {
+  // Job identifier that can be used to track manufacturing status. 
+  // Job identifier should be unique within a given partner integration component. 
+  string jobId = 1;
+  // Unique identifier of the item taken from the StartJobRequest.
+  string key = 2;
+}
+
+message JobStatusRequest {
+  // Version of CAMair protocol supported by the client
+  int32 clientProtocolVersion = 1;
+  // Job identifier for the requested job statuses
+  string jobId = 2;
+}
+
+message JobStatusResponse {
+  // Timestamp when the job status got created from partner integration component, handles different timezones, used for status traceabilty
+  google.protobuf.Timestamp timeStamp = 1;
+  // Current job status, PartnerComponentJobStatus enum value
+  JobStatus currentStatus = 2;
+  // Custom message for extended job status description from partner integration component **[OPTIONAL]**
+  optional string message = 4;
+  // Estimated ending time of job manufacturing **[OPTIONAL]**
+  google.protobuf.Timestamp estimatedEndingTime = 5;
+  // Percentage of job processing **[OPTIONAL]**
+  optional uint32 percentageProgress = 6;
+  // Manufacturing error data, for software/hardware errors (if any) that occur during the manufacturing of a job **[OPTIONAL]**
+  optional JobStatusErrorData jobStatusErrorData = 7;
+}

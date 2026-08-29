@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package ThreeShape.CAMair.Api.Protocol.v1.SurgicalGuideTypes;
+
+// Surgical guide facet marks:
+// <img src='../../documentation/images/SurgicalGuide - FacetMarks.png' style="width:900px" />
+enum SurgicalGuideFacetMark {
+  None = 0;
+
+  OuterSurface = 1;
+  SleeveCylinder = 2;
+  InnerSurface = 3;
+  Sleeve = 4;
+}
+
+// Data query for surgical guide
+message NeededSurgicalGuideData {
+}
+
+// Surgical guide specific data
+// <img src='../../documentation/images/SurgicalGuide - Data.png' style="width:500px" />
+message SurgicalGuideData {
+}

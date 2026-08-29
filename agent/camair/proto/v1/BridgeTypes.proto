@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+import "CAMairDataTypes.proto";
+import "AnatomyItemTypes.proto";
+import "CrownPonticItemTypes.proto";
+
+package ThreeShape.CAMair.Api.Protocol.v1.BridgeTypes;
+
+// Bridge facet marks:
+// <img src='../../documentation/images/Bridge - FacetMarks.png' style="width:500px" />
+enum BridgeFacetMark {
+  None = 0;
+
+  OuterSurface = 1;
+  EnhancedCementGap = 2;
+  CementGap = 3;
+  MarginLineArea = 4;
+  EnhancedMarginLineArea = 5;
+  Pontic = 6;
+}
+
+// Data query for items in the bridge.
+message NeededBridgePartData {
+  // Request individual mount direction for every single part inside bridge
+  bool individualMountDirection = 2;
+  
+  // Data request for Crowns, Inlays, and Veneers
+  AnatomyItemTypes.NeededAnatomyItemData anatomyItemData = 10;
+  // Data request for Crown Pontics
+  CrownPonticItemTypes.NeededCrownPonticItemData crownPonticItemData = 11;
+}
+
+// Data query for bridges.
+message NeededBridgeData {
+  NeededBridgePartData bridgeParts = 1;
+  bool toothFacets = 2;
+}
+
+message BridgePartData {
+  // Job description for the item in the bridge.
+  JobDescription job = 1;
+  
+  // Individual mount direction of the item in the bridge.
+  // Can be null, which means that bridge mount direction is applied to this item.
+  DirectionVector individualMountDirection = 2;
+  
+  // Crown, Inlay, Veneer specific data
+  AnatomyItemTypes.AnatomyItemData anatomyItemData = 10;
+  // Crown Pontic specific data
+  CrownPonticItemTypes.CrownPonticItemData crownPonticItemData = 11;
+}
+
+// Bridge specific data
+// <img src='../../documentation/images/Bridge - Data.png' style="width:500px" />
+message BridgeData {
+  // bridge parts per the tooth UNN in the bridge
+  map<int32, BridgePartData> bridgeParts = 1;
+
+  // mapping of tooth UNNs to the facets of the bridge part associated with that tooth
+  map<int32, FacetIdList> toothFacets = 2;
+}

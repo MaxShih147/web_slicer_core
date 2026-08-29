@@ -1,0 +1,171 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+package ThreeShape.CAMair.Api.Protocol.v1;
+
+// Indication type enum.
+// Will be extended later with other supported indications.
+enum IndicationType {
+  NoValue = 0;
+  Crown = 1;
+  Inlay = 2;
+  Veneer = 3;
+  SurgicalGuide = 4;
+  ScrewRetainedCrown = 5;
+  Splint = 6;
+  // Full arch model (Digital dental study model)
+  ArchModel = 7;
+
+  // Anatomical bridge what can contain several Crowns, Inlays, Veneers and CrownPontics
+  Bridge = 8;
+
+  // Pontic as part of anatomical bridge only
+  CrownPontic = 9;
+
+  //Bone Model 
+  BoneModel = 10;
+}
+
+// Identifier for the machine
+message MachineIdentifier { 
+  //Machine manufacturer identifier
+  string manufacturerId = 1;
+  //Machine model identifier
+  string machineModelId = 2;
+}
+
+message JobDescription {
+  // Identifier for the machine selected for manufacturing the item
+  MachineIdentifier machineId = 1;
+  // Indication for the manufacturing item
+  IndicationType indicationType = 2;
+  int32 unnFrom = 3;
+  int32 unnTo = 4;
+  //The name of the case
+  string caseName = 5;
+  // Identifier of the machine used to design the item
+  // In most cases the same as machineId, but it can also differ or be null
+  MachineIdentifier designMachineId = 6;
+  // Patient data
+  PatientData patientData = 7;
+}
+
+// Status of the job which is in production at the connected partner integration component
+enum JobStatus {
+  NotImplemented = 0;
+  JobReceivedSuccessfully = 1;
+  JobInProgress = 2;
+  JobFinishedSuccessfully = 3;
+  JobFailed = 4;
+  JobCancelled = 5;
+  JobInQueue = 6;
+}
+
+//Error category
+enum ErrorCategory {
+  NotUsed = 0;
+}
+
+//Error details
+message JobStatusErrorData {
+  // Text error details
+  string errorDetails = 1;
+  // Error identifier code
+  string errorId = 2;
+  // Error category
+  ErrorCategory category = 3; 
+}
+
+message Point3f {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+// Normalized direction vector.
+message DirectionVector {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+// Point in 3d space.
+message Point3d {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  
+}
+
+// 3d polyline. 
+// Closed polyline will have an end point equal to the start point. 
+message Polyline {
+  repeated Point3d points = 1;
+}
+
+//3d Coordinate system defined by origin point and x,y,z directions
+message CoordinateSystem {
+  Point3d origin = 1;
+  DirectionVector xDir = 2;
+  DirectionVector yDir = 3;
+  DirectionVector zDir = 4;
+}
+
+// 3d mesh. 
+message Mesh {
+  repeated Point3d vertices = 1;
+  repeated Facet facets = 2;
+  map<string, FacetIdList> facetMarks = 3;
+}
+
+// Mesh facet. 
+// Vertex indices are zero based and refer to the Mesh's vertices collection.
+message Facet {
+  // Index of the first vertex.
+  int32 v0Idx = 1;
+  // Index of the second vertex.
+  int32 v1Idx = 2;
+  // Index of the third vertex.
+  int32 v2Idx = 3;
+
+  // Facet normal. 
+  DirectionVector normal = 4;
+}
+
+// List of facets IDs for some mesh.
+// Facet ID is a zero based index of facet in mesh.Facets list.  
+message FacetIdList {
+  repeated int32 ids = 1;
+}
+
+//Tooth anatomical directions (mesial and buccal)
+message ToothAnatomicalDirections {
+  // Direction pointing outwards from the mouth, from the center of the restoration towards its buccal side.
+  DirectionVector buccal = 1;
+  // The direction pointing from the center of restoration towards its mesial side.
+  DirectionVector mesial = 2;
+}
+
+// Material info.
+message Material {
+  // material name
+  string id = 1;
+  // material translucency
+  string translucency = 3;
+  // material color/shade
+  string color = 2; 
+}
+
+// Patient data.
+message PatientData {
+  // first name
+  string firstName = 1;
+  // last name
+  string lastName = 2;
+  // date of birth
+  google.protobuf.Timestamp birthDate = 3;
+  // patient id inputted in the order form (can represent the social security number but can also be any other string)
+  string patientId = 4;
+  // internal 3Shape patient id
+  string internalPatientUid = 5;
+}

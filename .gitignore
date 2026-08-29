@@ -100,3 +100,6 @@ third_party/slicer-engine-qa-symbols/
 #######################################
 
 deploy/.env
+
+# CAMair PIC: per-install identifier, must not be shared across machines
+agent/camair/.pic_identifier
