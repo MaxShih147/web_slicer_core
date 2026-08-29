@@ -356,22 +356,31 @@ def resolve_estimated_print_time(
 _STDERR_CHUNK_SIZE = 65536
 
 
-async def _drain_stdout_progress(stream, job_id: str) -> Optional[float]:
+async def _drain_stdout_progress(stream, job_id: str) -> tuple[Optional[float], bytes]:
     """逐行讀 stdout，把進度事件寫進 job_progress。
 
     stdout 的進度行很短，行導向讀取安全；解析失敗的行靜默忽略——畸形的一行
     絕不能中斷切片。
 
-    回傳引擎回報運算完成（``STAGE_FINALIZING``）當下的 :func:`time.monotonic`
-    時間點，供呼叫端量測封存尾段；該行未出現時回傳 ``None``。取第一次出現的
-    時間，且用 monotonic 而非 wall clock，不受系統時間調整影響。
+    回傳 ``(finalizing_at, stdout)``。
+
+    ``finalizing_at`` 是引擎回報運算完成（``STAGE_FINALIZING``）當下的
+    :func:`time.monotonic` 時間點，供呼叫端量測封存尾段；該行未出現時為
+    ``None``。取第一次出現的時間，且用 monotonic 而非 wall clock，不受系統
+    時間調整影響。
+
+    ``stdout`` 是逐行讀進來的原始 bytes。這裡是唯一讀得到 stdout 的地方，
+    不累積就等於丟失——``classify_slice_result`` 需要它才能辨認 STL 解析錯誤
+    （F-05）。
     """
     finalizing_at: Optional[float] = None
+    captured: list[bytes] = []
 
     while True:
         raw = await stream.readline()
         if not raw:
             break
+        captured.append(raw)
 
         event = parse_progress_event(raw.decode("utf-8", errors="replace"))
         if event is None:
@@ -383,7 +392,7 @@ async def _drain_stdout_progress(stream, job_id: str) -> Optional[float]:
 
         set_job_progress(job_id, percent, stage)
 
-    return finalizing_at
+    return finalizing_at, b"".join(captured)
 
 
 async def _drain_stderr(stream) -> bytes:
@@ -493,7 +502,7 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
 
         # 兩個串流並行 drain（design D2）。只讀 stdout 會在 stderr 管線緩衝區
         # 填滿時死鎖；務必兩條 task 同時跑完再 wait() 收退出碼。
-        finalizing_at, stderr = await asyncio.gather(
+        (finalizing_at, stdout), stderr = await asyncio.gather(
             _drain_stdout_progress(process.stdout, job_id),
             _drain_stderr(process.stderr),
         )
