@@ -1,25 +1,30 @@
-"""Minimal CAMair Partner Integration Component (Stage 1).
+"""CAMair Partner Integration Component.
 
-Implements the two RPCs CAMair calls before it will show us as an available
-manufacturing target:
+Serves the whole conversation Produce has with a manufacturing partner:
 
   CAMairMajorVersionCheck.GetSupportedMajorVersions  — version handshake
   CAMairIntegration.Connect                          — "I am alive, here are my machines"
-
-The data-transfer and job-status RPCs are declared but answer UNIMPLEMENTED for
-now; they arrive in Stage 2/3. See docs/3shape-camair-integration.md in the
-DS-Online repo for the full plan.
+  CAMairIntegration.GetNeededData                    — which parts of a case we want
+  CAMairIntegration.StartJob                         — receive it (bidi stream)
+  CAMairIntegration.GetJobStatuses                   — report progress (server stream)
 
 Both the handshake service and the versioned service MUST be served on the same
 port — CAMair runs the handshake first over the same channel.
 
-Run:  python -m agent.camair.server [--port 30051]
+Accepted cases are handed to agent.camair.processing, which runs them through
+the agent's normal slicing pipeline. Pass --no-process to accept and store cases
+without slicing them, which is what the protocol-level tests use.
+
+See docs/3shape-camair-integration.md in the DS-Online repo for the plan.
+
+Run:  python -m agent.camair.server [--port 30051] [--jobs-root DIR]
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import threading
 import uuid
 from concurrent import futures
 from pathlib import Path
@@ -27,6 +32,7 @@ from pathlib import Path
 import grpc
 
 from agent import camair  # noqa: F401  — puts _generated on sys.path
+from agent.camair.jobs import JobStore
 
 import CAMairProtocol_pb2  # isort: skip
 import CAMairProtocol_pb2_grpc  # isort: skip
@@ -94,8 +100,10 @@ class MajorVersionCheckService(MajorVersionCheck_pb2_grpc.CAMairMajorVersionChec
 
 
 class CAMairIntegrationService(CAMairProtocol_pb2_grpc.CAMairIntegrationServicer):
-    def __init__(self, pic_identifier: str):
+    def __init__(self, pic_identifier: str, jobs: JobStore, on_job_accepted=None):
         self._pic_identifier = pic_identifier
+        self._jobs = jobs
+        self._on_job_accepted = on_job_accepted
 
     def Connect(self, request, context):
         """Called when a user opens the Produce module; a reply means "ready for jobs"."""
@@ -118,45 +126,145 @@ class CAMairIntegrationService(CAMairProtocol_pb2_grpc.CAMairIntegrationServicer
         )
 
     def GetNeededData(self, request, context):
-        context.abort(grpc.StatusCode.UNIMPLEMENTED, "GetNeededData arrives in Stage 2")
+        """Declare the subset of the case we want. CAMair sends only what we ask for.
+
+        Mesh is what we slice. Material and mountDirection are cheap and inform
+        the resin profile and the initial orientation. Indication-specific blocks
+        and patientData are left off: we have no use for them yet, and not asking
+        for patient data is the better default.
+        """
+        indication = CAMairDataTypes_pb2.IndicationType.Name(
+            request.jobDescription.indicationType,
+        ) if request.jobDescription.indicationType else "Unknown"
+        logger.info("GetNeededData for %s (%s)", request.jobDescription.caseName, indication)
+        return CAMairProtocol_pb2.GetNeededDataResponse(
+            mesh=True,
+            material=True,
+            mountDirection=True,
+            patientData=False,
+        )
 
     def StartJob(self, request_iterator, context):
-        context.abort(grpc.StatusCode.UNIMPLEMENTED, "StartJob arrives in Stage 2")
+        """Receive the case. Bidirectional: each item is answered as it lands.
+
+        Answering per item rather than after the stream closes is what lets
+        CAMair start tracking the first job while later items are still in
+        flight, and it is why the RPC is a bidi stream rather than unary.
+        """
+        for request in request_iterator:
+            try:
+                job = self._jobs.accept(request.key, request.jobData)
+            except ValueError as exc:
+                logger.error("Rejected item %s: %s", request.key, exc)
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
+                return
+            logger.info(
+                "Accepted %s (%s, UNN %s-%s) → job %s [%s]",
+                job.case_name,
+                job.indication,
+                request.jobData.jobDescription.unnFrom,
+                request.jobData.jobDescription.unnTo,
+                job.job_id,
+                job.stl_path.name,
+            )
+            if self._on_job_accepted is not None:
+                self._on_job_accepted(job)
+            yield CAMairProtocol_pb2.StartJobResponse(jobId=job.job_id, key=job.key)
 
     def GetJobStatuses(self, request, context):
-        context.abort(grpc.StatusCode.UNIMPLEMENTED, "GetJobStatuses arrives in Stage 3")
+        """Stream this job's status transitions until it reaches a final state."""
+        if self._jobs.get(request.jobId) is None:
+            context.abort(grpc.StatusCode.NOT_FOUND, f"Unknown jobId {request.jobId}")
+            return
+
+        logger.info("Status stream opened for %s", request.jobId)
+        stop = threading.Event()
+        # CAMair may walk away mid-stream; without this the follow() generator
+        # would keep waiting on the condition variable for a job nobody wants.
+        context.add_callback(stop.set)
+
+        for event in self._jobs.follow(request.jobId, stop):
+            response = CAMairProtocol_pb2.JobStatusResponse(currentStatus=event.status)
+            response.timeStamp.FromDatetime(event.at)
+            if event.message:
+                response.message = event.message
+            if event.percentage is not None:
+                response.percentageProgress = event.percentage
+            logger.info(
+                "  %s → %s%s",
+                request.jobId,
+                CAMairDataTypes_pb2.JobStatus.Name(event.status),
+                f" ({event.percentage}%)" if event.percentage is not None else "",
+            )
+            yield response
 
 
-def build_server(port: int, max_workers: int = 4) -> tuple[grpc.Server, str]:
-    """Wire both services onto one insecure port and return the unstarted server."""
+DEFAULT_JOBS_ROOT = Path(__file__).parent / "received_jobs"
+
+
+def build_server(
+    port: int,
+    jobs_root: Path | None = None,
+    max_workers: int = 8,
+    on_job_accepted=None,
+) -> tuple[grpc.Server, str, JobStore]:
+    """Wire both services onto one insecure port and return the unstarted server.
+
+    max_workers has to leave room for the long-lived status streams: each open
+    GetJobStatuses occupies a pool thread for the life of the job, so a pool
+    sized for unary calls alone would deadlock once a few jobs are in flight.
+    """
     pic_identifier = _pic_identifier()
+    jobs = JobStore(jobs_root or DEFAULT_JOBS_ROOT)
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
     MajorVersionCheck_pb2_grpc.add_CAMairMajorVersionCheckServicer_to_server(
         MajorVersionCheckService(), server,
     )
     CAMairProtocol_pb2_grpc.add_CAMairIntegrationServicer_to_server(
-        CAMairIntegrationService(pic_identifier), server,
+        CAMairIntegrationService(pic_identifier, jobs, on_job_accepted), server,
     )
-    # Stage 1 is plaintext. A cloud PIC needs SslCredentials plus an OAuth 2.0
+    # Plaintext for now. A cloud PIC needs SslCredentials plus an OAuth 2.0
     # token checked per method; a local PIC stays on the LAN.
     bound = server.add_insecure_port(f"127.0.0.1:{port}")
     if bound == 0:
         raise RuntimeError(f"Could not bind port {port}")
-    return server, pic_identifier
+    return server, pic_identifier, jobs
 
 
-def serve(port: int) -> None:
+def serve(port: int, jobs_root: Path | None = None, process: bool = True) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    server, pic_identifier = build_server(port)
+
+    on_accepted = None
+    if process:
+        from agent.camair.processing import JobProcessor
+
+        processor = JobProcessor()
+        on_accepted = processor.submit
+
+    server, pic_identifier, jobs = build_server(port, jobs_root, on_job_accepted=on_accepted)
+    if on_accepted is not None:
+        processor.bind(jobs)
+
     server.start()
-    logger.info("CAMair PIC listening on 127.0.0.1:%d (picIdentifier=%s)", port, pic_identifier)
+    logger.info(
+        "CAMair PIC listening on 127.0.0.1:%d (picIdentifier=%s, jobs=%s)",
+        port, pic_identifier, jobs_root or DEFAULT_JOBS_ROOT,
+    )
     server.wait_for_termination()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="3Shape CAMair Partner Integration Component")
     parser.add_argument("--port", type=int, default=30051, help="gRPC port (default: 30051)")
-    serve(parser.parse_args().port)
+    parser.add_argument("--jobs-root", type=Path, default=None, help="where received cases are written")
+    parser.add_argument(
+        "--no-process",
+        action="store_true",
+        help="accept cases but do not run them; jobs stay at JobReceivedSuccessfully",
+    )
+    args = parser.parse_args()
+    serve(args.port, args.jobs_root, process=not args.no_process)
 
 
 if __name__ == "__main__":
