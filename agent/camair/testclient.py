@@ -37,6 +37,9 @@ import CAMairProtocol_pb2_grpc  # isort: skip
 import MajorVersionCheck_pb2  # isort: skip
 import MajorVersionCheck_pb2_grpc  # isort: skip
 
+# Matches the server and 3Shape's own client; see MAX_MESSAGE_BYTES in server.py.
+MAX_MESSAGE_BYTES = 75 * 1024 * 1024
+
 # The partner package lives in the DS-Online checkout beside this repo.
 DEFAULT_TESTDATA = (
     Path(__file__).resolve().parents[3]
@@ -71,7 +74,10 @@ def run(host: str, port: int, testdata_dir: Path, case_names: list[str], follow:
     target = f"{host}:{port}"
     print(f"→ connecting to {target}")
 
-    with grpc.insecure_channel(target) as channel:
+    with grpc.insecure_channel(target, options=[
+        ("grpc.max_receive_message_length", MAX_MESSAGE_BYTES),
+        ("grpc.max_send_message_length", MAX_MESSAGE_BYTES),
+    ]) as channel:
         try:
             grpc.channel_ready_future(channel).result(timeout=5)
         except grpc.FutureTimeoutError:

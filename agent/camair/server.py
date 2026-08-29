@@ -68,6 +68,11 @@ MACHINE_MODEL_IDS = [
     "sonic_xl_4k_plus",
 ]
 
+# "The majority of items sent by CAMair will exceed the default Grpc Message
+# length of 4 MB" — partner readme, which recommends 75 MB. Their own PIC example
+# and TestClient both use exactly this. A Bridge case really does blow past 4 MB.
+MAX_MESSAGE_BYTES = 75 * 1024 * 1024
+
 # CAMair de-duplicates integration components by this id across its discovery
 # methods, so it has to stay stable for a given install — a fresh uuid on every
 # restart would make Produce list us repeatedly.
@@ -217,7 +222,13 @@ def build_server(
     pic_identifier = _pic_identifier()
     jobs = JobStore(jobs_root or DEFAULT_JOBS_ROOT)
 
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=max_workers),
+        options=[
+            ("grpc.max_receive_message_length", MAX_MESSAGE_BYTES),
+            ("grpc.max_send_message_length", MAX_MESSAGE_BYTES),
+        ],
+    )
     MajorVersionCheck_pb2_grpc.add_CAMairMajorVersionCheckServicer_to_server(
         MajorVersionCheckService(), server,
     )
