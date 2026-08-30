@@ -10,6 +10,8 @@ signal (see openspec/changes/add-support-generation-error-codes, design D1).
 
 Decision order (first match wins):
 
+    Step 0  output hits the point/model mismatch marker
+                                                    -> FAILED + SUPPORT_POINTS_MODEL_MISMATCH
     Step 1  stderr hits a known validate() error   -> FAILED + specific code
             stderr hits a non-support validate error-> FAILED + fallback
     Step 2  stdout/stderr hits model-out-of-bounds  -> FAILED + MODEL_OUT_OF_BOUNDS
@@ -19,8 +21,8 @@ Decision order (first match wins):
 
 All markers are matched as English substrings. The validate() strings are
 translatable (``_u8L``), so the engine locale must be pinned to English for
-Step 1 to stay reliable (enforced separately; see Task 7). The stdout markers
-(Step 2-4) are raw literals and are not translated.
+Step 1 to stay reliable (enforced separately; see Task 7). The Step 0 marker and
+the stdout markers (Step 2-4) are raw literals and are not translated.
 """
 from __future__ import annotations
 
@@ -34,6 +36,23 @@ SUPPORT_NOT_NEEDED = "SUPPORT_NOT_NEEDED"
 
 # Fallback error code for anything unattributable (fail-closed).
 FALLBACK_CODE = "SUPPORT_GENERATION_FAILED"
+
+# ─── Step 0: imported support points do not belong to this model ──────────────
+# Printed verbatim to stderr by ProcessActions.cpp before print->apply(), so the
+# run aborts before validate() and before any positive stdout marker can appear.
+# The literal is a contract with the fork; it is defined once in
+# src/libslic3r/SLA/SupportPointIO.hpp as support_points_model_mismatch_marker
+# and is pinned by test_support_string_contract.py.
+#
+# Checked FIRST, ahead of the fail-closed fallback, so "the model changed" is
+# never flattened into the generic "support generation failed" — the two need
+# different fixes on the caller's side (regenerate the points vs. adjust
+# settings). Like every other rule here it keys on text only, never on the
+# returncode: this fork exits 0 from several failing paths.
+MODEL_MISMATCH_MARKER = (
+    "SUPPORT_POINTS_MODEL_MISMATCH: imported support points do not match this model"
+)
+MODEL_MISMATCH_CODE = "SUPPORT_POINTS_MODEL_MISMATCH"
 
 # ─── Step 1: known SLAPrint::validate() messages → specific support code ───────
 # Distinctive English substrings taken from src/libslic3r/SLAPrint.cpp::validate().
@@ -94,6 +113,18 @@ def classify_support_result(
     """Classify a support-only CLI run from its text output (never the exit code)."""
     out = _to_text(stdout)
     err = _to_text(stderr)
+
+    # ── Step 0: imported points reject the model → dedicated code ────────────
+    # Scanned on both streams for the same reason as Step 2: the marker goes to
+    # stderr today, and a future stream reshuffle must not silently downgrade
+    # this to the fallback code.
+    if MODEL_MISMATCH_MARKER in err or MODEL_MISMATCH_MARKER in out:
+        return SupportClassification(
+            status=JobStatus.FAILED,
+            error_code=MODEL_MISMATCH_CODE,
+            has_support_mesh=False,
+            detail=_raw_appendix(out, err),
+        )
 
     # ── Step 1: known validate() errors on stderr ────────────────────────────
     for needle, code in VALIDATE_CODE_MAP:

@@ -19,7 +19,13 @@ from .engine_job_queue import serialized_engine_job
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
 from .preview_scale import preview_scale_for
 from .prz_encoder import _compute_print_time, sl1_layer_names
-from .sla_operations import generate_config_ini, notify_launcher_if_prusa_crashed, _english_locale_env
+from .sla_operations import (
+    generate_config_ini,
+    notify_launcher_if_prusa_crashed,
+    support_points_input_path,
+    support_points_output_path,
+    _english_locale_env,
+)
 from .slicing_classifier import classify_slice_result
 
 logger = logging.getLogger(__name__)
@@ -356,22 +362,44 @@ def resolve_estimated_print_time(
 _STDERR_CHUNK_SIZE = 65536
 
 
-async def _drain_stdout_progress(stream, job_id: str) -> Optional[float]:
-    """逐行讀 stdout，把進度事件寫進 job_progress。
+async def _drain_stdout_progress(stream, job_id: str) -> tuple[Optional[float], bytes]:
+    """逐行讀 stdout，把進度事件寫進 job_progress，並累積完整的原始 bytes。
 
     stdout 的進度行很短，行導向讀取安全；解析失敗的行靜默忽略——畸形的一行
     絕不能中斷切片。
 
-    回傳引擎回報運算完成（``STAGE_FINALIZING``）當下的 :func:`time.monotonic`
-    時間點，供呼叫端量測封存尾段；該行未出現時回傳 ``None``。取第一次出現的
-    時間，且用 monotonic 而非 wall clock，不受系統時間調整影響。
+    回傳 ``(finalizing_at, stdout_bytes)``：
+
+    順序刻意與 origin/fix/slicing-stdout-nameerror、origin/release/v1.0.5 上的
+    同一份修復一致。兩種順序的行數與結構完全相同，合併時未必會被標成衝突；
+    一旦挑錯邊，``stdout`` 會拿到 float 而 ``finalizing_at`` 會拿到 bytes，
+    分類器將以浮點數做字串比對。統一順序是唯一能讓這種錯誤無法成立的作法。
+
+    ``stdout_bytes`` 是**未經修改**的完整 stdout。串流化之前這裡是
+    ``process.communicate()``，它同時回傳兩條串流；改成串流讀取時 stdout 只被
+    用來解析進度、沒有留存，於是 :func:`classify_slice_result` 的
+    ``stdout=stdout`` 失去綁定並拋 ``NameError``，讓每一次切片都在分類前爆掉。
+    累積原始行即是還原 ``communicate()`` 當時的語意——分類器需要它，因為
+    「model out of bounds」與支撐點指紋不符等標記是印在 stdout 上的。
+
+    記憶體用量與串流化之前相同：``communicate()`` 本來就整包留在記憶體裡。
+
+    ``finalizing_at`` 是引擎回報運算完成（``STAGE_FINALIZING``）當下的
+    :func:`time.monotonic` 時間點，供呼叫端量測封存尾段；該行未出現時為
+    ``None``。取第一次出現的時間，且用 monotonic 而非 wall clock，不受系統時間
+    調整影響。
     """
     finalizing_at: Optional[float] = None
+    captured: list[bytes] = []
 
     while True:
         raw = await stream.readline()
         if not raw:
             break
+
+        # 先留存再解析：無法解析為進度事件的行（引擎的一般 log、錯誤標記）
+        # 正是分類器要看的內容，絕不能因為 continue 而漏掉。
+        captured.append(raw)
 
         event = parse_progress_event(raw.decode("utf-8", errors="replace"))
         if event is None:
@@ -383,7 +411,7 @@ async def _drain_stdout_progress(stream, job_id: str) -> Optional[float]:
 
         set_job_progress(job_id, percent, stage)
 
-    return finalizing_at
+    return finalizing_at, b"".join(captured)
 
 
 async def _drain_stderr(stream) -> bytes:
@@ -417,6 +445,10 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     # is written with supports_enable=0 / pad_enable=0.
     import_support_file = job_dir / "input" / "support.stl"
     import_support = import_support_file.exists()
+
+    # Caller supplied support points, landed verbatim by the API layer.
+    import_support_points_file = support_points_input_path(job_dir)
+    import_support_points = import_support_points_file.exists()
     if import_support and config is not None:
         config.supports_enable = False
         config.pad_enable = False
@@ -475,6 +507,21 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         if import_support:
             cmd.extend(["--import-support-stl", str(import_support_file)])
 
+        # A caller supplied support point list replaces automatic detection.
+        # Mutually exclusive with --import-support-stl - the engine refuses the
+        # run if both are given - and meaningless alongside it anyway, since an
+        # imported mesh forces supports_enable off. The API layer rejects the
+        # combination up front; this is the second line of defence.
+        if import_support_points and not import_support:
+            cmd.extend(["--import-support-points", str(import_support_points_file)])
+        elif import_support_points and import_support:
+            logger.warning(
+                "Job %s supplied both a support mesh and a support point list; "
+                "the point list is ignored because the imported mesh replaces "
+                "the whole support track.",
+                job_id,
+            )
+
         cmd.append(str(input_file))
 
         # [layer-rle] Emit layers as PRZ-compatible RLE (not PNG) so the PRZ
@@ -493,7 +540,7 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
 
         # 兩個串流並行 drain（design D2）。只讀 stdout 會在 stderr 管線緩衝區
         # 填滿時死鎖；務必兩條 task 同時跑完再 wait() 收退出碼。
-        finalizing_at, stderr = await asyncio.gather(
+        (finalizing_at, stdout), stderr = await asyncio.gather(
             _drain_stdout_progress(process.stdout, job_id),
             _drain_stderr(process.stderr),
         )
@@ -741,6 +788,67 @@ async def run_support_generation(job_id: str, config: Optional[SLAConfig] = None
 
     except Exception as e:
         write_job_status(job_id, JobStatus.FAILED, error=str(e))
+
+
+@serialized_engine_job
+async def run_support_points_export(job_id: str, config: Optional[SLAConfig] = None):
+    """
+    Compute the support points and write them out as JSON, nothing else.
+
+    Runs through the same serialized engine queue as every other engine job.
+    Unlike run_support_generation this produces no mesh, so whatever
+    has_support_mesh already said is carried through untouched; the result of
+    this operation is the file, and its presence is what the getter below
+    reports.
+    """
+    from .sla_operations import export_support_points
+
+    job_dir = get_job_dir(job_id)
+
+    # write_job_status rewrites status.json wholesale, defaulting every field it
+    # is not handed - including the PROCESSING write two lines down. Exporting a
+    # point list says nothing about the support mesh, so the existing flag is
+    # read FIRST and carried across; otherwise a job that generated supports and
+    # then exported points would report hasSupportMesh:false with the mesh still
+    # sitting on disk.
+    had_support_mesh = bool(read_job_status(job_id).get("has_support_mesh"))
+
+    write_job_status(job_id, JobStatus.PROCESSING, has_support_mesh=had_support_mesh)
+
+    try:
+        if config is None:
+            config = SLAConfig(supports_enable=True)
+
+        result = await export_support_points(job_dir, config)
+
+        if result.success:
+            write_job_status(
+                job_id,
+                JobStatus.COMPLETED,
+                layer_count=0,
+                has_support_mesh=had_support_mesh,
+            )
+        else:
+            write_job_status(
+                job_id,
+                JobStatus.FAILED,
+                error=result.error,
+                has_support_mesh=had_support_mesh,
+            )
+
+    except Exception as e:
+        write_job_status(
+            job_id,
+            JobStatus.FAILED,
+            error=str(e),
+            has_support_mesh=had_support_mesh,
+        )
+
+
+def get_support_points_path(job_id: str) -> Optional[Path]:
+    """Path to the support point list the engine wrote, or None."""
+    points_path = support_points_output_path(get_job_dir(job_id))
+    return points_path if points_path.exists() else None
 
 
 def get_hollow_mesh_path(job_id: str) -> Optional[Path]:

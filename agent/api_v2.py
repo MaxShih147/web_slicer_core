@@ -10,6 +10,7 @@ import io
 import json
 import logging
 import math
+import re
 import shutil
 import time
 import traceback as tb
@@ -50,6 +51,7 @@ from .errors import (
     support_head_penetration_invalid,
     support_head_too_wide,
     support_pad_gap_conflict,
+    support_points_model_mismatch,
     support_points_required,
     unprintable_object,
     validation_error,
@@ -62,16 +64,26 @@ from .jobs import (
     get_input_model_path,
     get_job_dir,
     get_job_progress,
+    get_support_points_path,
     job_exists,
     read_job_status,
     run_slicing,
     run_support_generation,
+    run_support_points_export,
     run_hollow_generation,
     run_cut_operation,
     write_job_status,
 )
 from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config, gate_blur
-from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
+from .sla_operations import (
+    generate_drain_holes,
+    generate_hex_grid,
+    load_trimesh,
+    parse_binary_stl,
+    perform_boolean,
+    write_binary_stl,
+    write_support_points_input,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +193,22 @@ _prz_sessions: Dict[str, Tuple["PrzFile", float]] = {}
 # Helpers
 # ============================================================================
 
+# A job id is a server generated token (see create_job_id), never something a
+# caller invents, so anything outside this alphabet is a probe rather than a
+# typo. The characters that matter are the ones missing: dot, slash and
+# BACKSLASH. Backslash is not a URL path separator, so "..%5Csecret" survives
+# routing as a single path segment - and then Windows treats it as a directory
+# separator, turning JOBS_DIR / job_id into a path outside the job store.
+_JOB_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _require_safe_job_id(job_id: str) -> str:
+    """Reject a job id that could reach outside the job store."""
+    if not _JOB_ID_RE.match(job_id):
+        raise job_not_found(job_id)
+    return job_id
+
+
 def _require_pending(job_id: str) -> dict:
     """Return pending job dict, or raise JOB_NOT_FOUND / JOB_ALREADY_EXECUTED."""
     if job_id in _pending_jobs:
@@ -227,6 +255,7 @@ _ERROR_CODE_FACTORIES = {
     "SUPPORT_PAD_GAP_CONFLICT":        support_pad_gap_conflict,
     "MODEL_OUT_OF_BOUNDS":             model_out_of_bounds,
     "SUPPORT_GENERATION_FAILED":       support_generation_failed,
+    "SUPPORT_POINTS_MODEL_MISMATCH":   support_points_model_mismatch,
     # ── slicing (shared + new) ────────────────────────────────────────────────
     # Codes shared with support generation are re-used as-is above; the ones
     # below are either slicing-only or newly introduced in this change.
@@ -433,6 +462,14 @@ async def upload_support_file(job_id: str, file: UploadFile = File(...)):
 
     _validate_stl_bytes(content, file.filename)
 
+    # The engine refuses a support mesh and a support point list together, so
+    # the guard has to work in both directions - not just when the list arrives
+    # second.
+    if pending.get("support_points") is not None:
+        raise validation_error(
+            "A support mesh cannot be combined with a supplied support point list"
+        )
+
     pending["support_stl"] = content
 
     return V2Response(
@@ -505,6 +542,11 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
         if support_blob:
             with open(job_dir / "input" / "support.stl", "wb") as f:
                 f.write(support_blob)
+        # Land a caller supplied support point list as input/support_points.json,
+        # byte for byte. run_slicing passes it via --import-support-points.
+        points_blob = pending.get("support_points")
+        if points_blob is not None:
+            write_support_points_input(job_dir, points_blob)
         config = pending["config"]
         # Persist the Mechado prz_config (NOT the snake_case slicing config) so
         # run_slicing computes the PRZ physical print time from the same source
@@ -549,6 +591,9 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
         job_dir = create_job(job_id)
         input_path = job_dir / "input" / "model.stl"
         _save_model_to_job(pending["models"][0], input_path)
+        points_blob = pending.get("support_points")
+        if points_blob is not None:
+            write_support_points_input(job_dir, points_blob)
         config = pending["config"]
         config["supports_enable"] = True
         sla_config = _convert_v2_config_to_sla(config)
@@ -560,6 +605,130 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
         raise
     except Exception as exc:
         raise internal_error(str(exc))
+
+
+@router.post("/slices/{job_id}/export-support-points", response_model=V2Response)
+async def export_support_points_only(job_id: str, background_tasks: BackgroundTasks):
+    """
+    Compute the support points for this job's model and write them out as JSON.
+
+    Produces no mesh and no archive: the engine stops right after the support
+    point step. The result is fetched with
+    GET /slices/{job_id}/support-points.
+    """
+    if job_id not in _pending_jobs:
+        if job_exists(job_id) and get_support_points_path(job_id) is not None:
+            return V2Response(
+                success=True,
+                message="Support points already exported",
+                data={"hasSupportPoints": True},
+            )
+        raise job_not_found(job_id)
+
+    pending = _pending_jobs[job_id]
+
+    if not pending["models"]:
+        raise model_not_found("No models have been added to this job")
+
+    try:
+        job_dir = create_job(job_id)
+        input_path = job_dir / "input" / "model.stl"
+        _save_model_to_job(pending["models"][0], input_path)
+        config = pending["config"]
+        # Forced here as well as in the operation itself: with supports off the
+        # engine skips the support point step and hands back an empty list with
+        # no error, which the caller cannot tell apart from "none needed".
+        config["supports_enable"] = True
+        sla_config = _convert_v2_config_to_sla(config)
+        pending["model_saved"] = True
+        pending["job_dir"] = str(job_dir)
+        background_tasks.add_task(run_support_points_export, job_id, sla_config)
+        return V2Response(
+            success=True,
+            message="Support point export started",
+            data={"currentConfig": config},
+        )
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(str(exc))
+
+
+@router.get("/slices/{job_id}/support-points")
+async def get_support_points(job_id: str):
+    """
+    Return the support point list the engine computed, verbatim.
+
+    The bytes on disk are served unchanged - not parsed and re-serialized -
+    so what the caller receives is exactly what the engine wrote, fingerprint
+    and all. Re-encoding here would risk moving a float in the last digit and
+    silently breaking the round trip.
+    """
+    _require_safe_job_id(job_id)
+
+    if not job_exists(job_id):
+        raise job_not_found(job_id)
+
+    points_path = get_support_points_path(job_id)
+    if points_path is None:
+        raise file_not_found("Support points have not been exported for this job")
+
+    return Response(
+        content=points_path.read_bytes(),
+        media_type="application/json",
+    )
+
+
+@router.post("/slices/{job_id}/support-points", response_model=V2Response)
+async def set_support_points(job_id: str, request: Request):
+    """
+    Supply a custom support point list for this job.
+
+    The body is stored as given and landed as input/support_points.json when the
+    job runs. The backend performs NO normalisation and fills in NO defaults: a
+    size key that the caller left out means "fall back to the global setting",
+    and making that decision is the engine's job. Adding one here would freeze a
+    value the caller never chose.
+    """
+    pending = _require_pending(job_id)
+
+    try:
+        raw = await request.body()
+    except Exception as exc:
+        raise internal_error(f"Failed to read support point body: {exc}")
+
+    if not raw:
+        raise missing_body("No support point list provided")
+
+    # Parsed only to reject a body the engine would refuse anyway; the ORIGINAL
+    # bytes are what gets stored.
+    try:
+        parsed = json.loads(raw)
+    except Exception as exc:
+        raise validation_error(f"Support point list is not valid JSON: {exc}")
+
+    if not isinstance(parsed, dict):
+        raise validation_error("Support point list must be a JSON object")
+
+    # Checked before it is used: len() on a number raises TypeError, which would
+    # leave the caller with a 500 for what is plainly a malformed request.
+    if not isinstance(parsed.get("points"), list):
+        raise validation_error("Support point list must have a 'points' array")
+
+    # The engine refuses this combination outright. Caught here so the caller is
+    # told before a job runs, rather than after.
+    if pending.get("support_stl"):
+        raise validation_error(
+            "A support point list cannot be combined with an uploaded support mesh"
+        )
+
+    pending["support_points"] = raw
+
+    return V2Response(
+        success=True,
+        message="Support point list accepted",
+        data={"points": len(parsed["points"]), "bytes": len(raw)},
+    )
 
 
 @router.post("/slices/{job_id}/generate-hollow", response_model=V2Response)

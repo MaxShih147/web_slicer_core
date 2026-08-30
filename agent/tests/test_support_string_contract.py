@@ -23,6 +23,7 @@ import pytest
 from agent import sla_operations
 from agent.support_classifier import (
     HAS_SUPPORT_MARKERS,
+    MODEL_MISMATCH_MARKER,
     NONSPECIFIC_VALIDATE_MARKERS,
     NOT_NEEDED_MARKERS,
     OUT_OF_BOUNDS_MARKER,
@@ -35,6 +36,8 @@ _FORK = _REPO_ROOT / "third_party" / "prusaslicer_fork" / "src"
 _SLAPRINT_CPP = _FORK / "libslic3r" / "SLAPrint.cpp"
 # out-of-bounds + support/pad stdout markers (Steps 2-4) live here:
 _PROCESS_ACTIONS_CPP = _FORK / "CLI" / "ProcessActions.cpp"
+# the support-point/model mismatch marker (Step 0) is defined here:
+_SUPPORT_POINT_IO_HPP = _FORK / "libslic3r" / "SLA" / "SupportPointIO.hpp"
 
 
 def _read_source(path: Path) -> str:
@@ -51,6 +54,11 @@ def slaprint_src():
 @pytest.fixture(scope="module")
 def process_actions_src():
     return _read_source(_PROCESS_ACTIONS_CPP)
+
+
+@pytest.fixture(scope="module")
+def support_point_io_src():
+    return _read_source(_SUPPORT_POINT_IO_HPP)
 
 
 class TestValidateMessageContract:
@@ -84,6 +92,83 @@ class TestStdoutMarkerContract:
         assert needle in process_actions_src, (
             f"has-support marker drifted: {needle!r} no longer in ProcessActions.cpp"
         )
+
+
+class TestModelMismatchMarkerContract:
+    """8.3: pin the support-point/model mismatch marker (classifier Step 0).
+
+    Same shape as the other contract tests: the Python-side needle is asserted
+    against the fork source that produces it, so a rewrite on either side is
+    caught here instead of degrading to SUPPORT_GENERATION_FAILED at runtime.
+    """
+
+    # The C++ constant that holds the literal, and the exact literal itself.
+    CONSTANT_NAME = "support_points_model_mismatch_marker"
+
+    def test_marker_literal_present_in_header(self, support_point_io_src):
+        """The classifier needle must appear verbatim in SupportPointIO.hpp."""
+        assert MODEL_MISMATCH_MARKER in support_point_io_src, (
+            f"mismatch marker drifted: {MODEL_MISMATCH_MARKER!r} no longer in "
+            "SupportPointIO.hpp — agent/support_classifier.py MODEL_MISMATCH_MARKER "
+            "must be updated to match, or the failure silently becomes "
+            "SUPPORT_GENERATION_FAILED"
+        )
+
+    def test_marker_defined_as_a_named_constant(self, support_point_io_src):
+        """The literal is defined once, under the name the CLI prints."""
+        assert self.CONSTANT_NAME in support_point_io_src
+
+    def test_cli_prints_the_constant_not_a_copy(self, process_actions_src):
+        """ProcessActions.cpp must emit the shared constant, not its own copy.
+
+        A second hand-written copy of the literal would drift independently and
+        this contract would stop protecting the path that actually runs.
+        """
+        assert self.CONSTANT_NAME in process_actions_src
+        assert MODEL_MISMATCH_MARKER not in process_actions_src, (
+            "ProcessActions.cpp inlines its own copy of the marker; it should "
+            f"print sla::{self.CONSTANT_NAME} instead"
+        )
+
+    def test_marker_is_not_wrapped_for_translation(self, support_point_io_src):
+        """Spec: the marker MUST NOT be translatable — it is matched in every locale.
+
+        Scans the marker's own definition line rather than the whole file, so an
+        unrelated _u8L() elsewhere in the header cannot mask a real regression.
+        """
+        line = next(
+            ln for ln in support_point_io_src.splitlines()
+            if MODEL_MISMATCH_MARKER in ln
+        )
+        assert "_u8L" not in line
+        assert "_L(" not in line
+        assert "translate" not in line
+
+    def test_marker_carries_the_error_code_verbatim(self):
+        """The code the classifier assigns is the marker's own prefix.
+
+        Keeps the human-readable stderr line and the machine code from drifting
+        apart: the marker literally starts with the code it maps to.
+        """
+        from agent.support_classifier import MODEL_MISMATCH_CODE
+
+        assert MODEL_MISMATCH_MARKER.startswith(MODEL_MISMATCH_CODE)
+
+    @pytest.mark.parametrize(
+        "mutated",
+        [
+            "SUPPORT_POINTS_MODEL_MISMATCH: imported support points don't match this model",
+            "SUPPORT_POINT_MODEL_MISMATCH: imported support points do not match this model",
+            "SUPPORT_POINTS_MODEL_MISMATCH: imported support points do not match the model",
+        ],
+    )
+    def test_drifted_marker_is_not_in_source(self, mutated, support_point_io_src):
+        """Teeth: a plausibly-reworded marker must NOT be found.
+
+        Proves the positive assertion above would fail if the string changed.
+        """
+        assert mutated != MODEL_MISMATCH_MARKER
+        assert mutated not in support_point_io_src
 
 
 class TestNegativeCheck:

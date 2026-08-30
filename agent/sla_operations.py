@@ -23,7 +23,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 
 import struct
 
@@ -77,6 +77,60 @@ def notify_launcher_if_prusa_crashed(returncode: Optional[int]) -> None:
 # detected support points. See generate_supports().
 SUPPORT_DETECTION_LAYER_HEIGHT = 0.15
 
+# Support point interchange files, named next to their STL counterparts: the
+# caller's list lands in input/ beside support.stl, the engine's export lands in
+# output/ beside model_support.stl.
+SUPPORT_POINTS_FILENAME = "support_points.json"
+
+
+def support_points_input_path(job_dir: Path) -> Path:
+    """Where a caller supplied support point list is landed for the engine."""
+    return job_dir / "input" / SUPPORT_POINTS_FILENAME
+
+
+def support_points_output_path(job_dir: Path) -> Path:
+    """Where the engine writes the support point list it computed."""
+    return job_dir / "output" / SUPPORT_POINTS_FILENAME
+
+
+def write_support_points_input(
+    job_dir: Path,
+    points: Union[bytes, str, dict, list],
+) -> Path:
+    """
+    Land a caller supplied support point list as input/support_points.json.
+
+    The content goes through UNCHANGED. The backend must not add a missing size
+    key, normalise a value, or fill in a default: an absent key means "fall back
+    to the global setting at build time", and performing that fallback is the
+    engine's job. Filling one in here would freeze a value the caller never
+    asked for, and the caller would have no way to tell the difference.
+
+    bytes and str are written as given. A already-parsed body is re-serialized,
+    which is unavoidable, but json.dumps writes exactly the keys that are there
+    and invents none.
+    """
+    path = support_points_input_path(job_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if isinstance(points, bytes):
+        payload = points
+    elif isinstance(points, str):
+        payload = points.encode("utf-8")
+    elif isinstance(points, (dict, list)):
+        payload = json.dumps(points).encode("utf-8")
+    else:
+        # Anything else would serialize to a technically valid but meaningless
+        # document - None becomes "null", 5 becomes "5" - and the engine would
+        # report a confusing parse error from a file the backend wrote itself.
+        raise TypeError(
+            "support point list must be bytes, str, dict or list, not "
+            f"{type(points).__name__}"
+        )
+
+    path.write_bytes(payload)
+    return path
+
 # Locale forced to English (the C locale) whenever the engine CLI runs, so the
 # classifier's Step 1 validate() substring comparison stays reliable (design D5).
 # PrusaSlicer's validate() messages are wrapped in _u8L()/I18N::translate, which
@@ -110,6 +164,7 @@ def load_trimesh(path) -> "trimesh.Trimesh":
 class OperationType(str, Enum):
     """Available SLA operations."""
     GENERATE_SUPPORTS = "generate_supports"
+    EXPORT_SUPPORT_POINTS = "export_support_points"
     GENERATE_HOLLOW = "generate_hollow"
     SLICE = "slice"
     CUT = "cut"
@@ -128,6 +183,9 @@ class OperationResult:
     error_code: Optional[str] = None
     # Output paths
     support_mesh_path: Optional[Path] = None
+    # Support point list the engine wrote (--export-support-points). Mirrors
+    # support_mesh_path: set only when the file is actually on disk.
+    support_points_path: Optional[Path] = None
     hollow_mesh_path: Optional[Path] = None
     cut_upper_mesh_path: Optional[Path] = None
     cut_lower_mesh_path: Optional[Path] = None
@@ -147,6 +205,7 @@ class OperationResult:
             "job_id": self.job_id,
             "error": self.error,
             "support_mesh_path": str(self.support_mesh_path) if self.support_mesh_path else None,
+            "support_points_path": str(self.support_points_path) if self.support_points_path else None,
             "hollow_mesh_path": str(self.hollow_mesh_path) if self.hollow_mesh_path else None,
             "cut_upper_mesh_path": str(self.cut_upper_mesh_path) if self.cut_upper_mesh_path else None,
             "cut_lower_mesh_path": str(self.cut_lower_mesh_path) if self.cut_lower_mesh_path else None,
@@ -265,8 +324,16 @@ async def generate_supports(
         "--export-support-stl",
         "--output", str(output_file),
         "--load", str(config_file),
-        str(input_file),
     ]
+
+    # A caller supplied point list replaces automatic detection. Passed through
+    # untouched; the engine checks it against the model's fingerprint and
+    # refuses the whole run if it does not belong to this model.
+    import_points = support_points_input_path(job_dir)
+    if import_points.exists():
+        cmd.extend(["--import-support-points", str(import_points)])
+
+    cmd.append(str(input_file))
 
     returncode, stdout, stderr = await run_prusa_cli(cmd, stderr_file, stdout_file)
 
@@ -300,6 +367,93 @@ async def generate_supports(
         sl1_path=output_file if output_file.exists() else None,
         metadata={"config": config.model_dump()},
         classification=classification,
+    )
+
+
+async def export_support_points(
+    job_dir: Path,
+    config: SLAConfig,
+    input_file: Optional[Path] = None,
+) -> OperationResult:
+    """
+    Compute the support points and write them out as JSON, nothing else.
+
+    The engine stops right after the support point step: no support tree, no
+    pad, no slicing, no archive. That is the whole point of this operation -
+    the caller wants a list it can edit, not a mesh.
+
+    Args:
+        job_dir: Job directory containing input/output folders
+        config: SLA configuration (supports_enable is forced True)
+        input_file: Optional input STL path. Defaults to job_dir/input/model.stl
+
+    Returns:
+        OperationResult with support_points_path if the file was written
+    """
+    job_id = job_dir.name
+    input_file = input_file or (job_dir / "input" / "model.stl")
+    points_file = support_points_output_path(job_dir)
+    config_file = job_dir / "config.ini"
+    stderr_file = job_dir / "stderr_support_points.log"
+    stdout_file = job_dir / "stdout_support_points.log"
+
+    points_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Success is judged on this file existing, so a leftover from an earlier run
+    # would make a failed export look successful and hand the caller a list that
+    # describes a different model. Removed before the engine starts, not after
+    # it fails, so a crash mid-run cannot leave the stale file behind either.
+    points_file.unlink(missing_ok=True)
+
+    # Forced, not merely defaulted. With supports disabled the engine skips the
+    # support point step outright and would hand back an empty list with no
+    # error at all - the caller would see "zero points" and have no way to tell
+    # that apart from "this model needs none".
+    config.supports_enable = True
+
+    # Same reasoning as generate_supports: point detection runs off per-layer
+    # island analysis, not print resolution, and this path produces no sl1. A
+    # coarser slice height cuts the dominant cost without changing which points
+    # are found. The real slicing path still uses the configured height.
+    detect_config = config.model_copy(update={
+        "layer_height": SUPPORT_DETECTION_LAYER_HEIGHT,
+        "initial_layer_height": SUPPORT_DETECTION_LAYER_HEIGHT,
+    })
+    generate_config_ini(detect_config, config_file)
+
+    with open(job_dir / "config.json", "w") as f:
+        json.dump(config.model_dump(), f, indent=2)
+
+    # No --output and no other export action: --export-support-points alone is
+    # what puts the engine on the points-only fast path.
+    cmd = [
+        str(SLICER_ENGINE_CLI),
+        "--export-support-points", str(points_file),
+        "--load", str(config_file),
+        str(input_file),
+    ]
+
+    returncode, stdout, stderr = await run_prusa_cli(cmd, stderr_file, stdout_file)
+
+    # Judged on the file, not the exit code: this fork exits 0 from several
+    # failing paths (design D1), so a successful exit proves nothing. Error
+    # attribution for this operation is added in a later step; for now the raw
+    # stderr travels back so nothing is lost.
+    if not points_file.exists():
+        return OperationResult(
+            success=False,
+            operation=OperationType.EXPORT_SUPPORT_POINTS,
+            job_id=job_id,
+            error=stderr.decode("utf-8", errors="replace").strip()
+            or "Support point export produced no file",
+        )
+
+    return OperationResult(
+        success=True,
+        operation=OperationType.EXPORT_SUPPORT_POINTS,
+        job_id=job_id,
+        support_points_path=points_file,
+        metadata={"config": config.model_dump()},
     )
 
 
