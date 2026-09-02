@@ -2,6 +2,23 @@
 setlocal enabledelayedexpansion
 
 :: ============================================
+:: One-time-per-machine safety net (idempotent every run, no admin rights needed)
+:: ============================================
+:: Suppress the Windows "how do you want to open this file" picker for .vfproj files.
+:: CMake's Fortran compiler probe (triggered by Eigen's own CMakeLists during the deps
+:: build) generates a throwaway .vfproj file. Without a file association, Windows shows
+:: an interactive picker instead of a quiet failure, hanging any unattended build (local
+:: or CI) until a human clicks it away. HKCU needs no admin rights and is safe to redo
+:: every run. See preflight-blockers.md P0.14.
+set VFPROJ_FIX_PS1=%TEMP%\phrozen_vfproj_fix_%RANDOM%.ps1
+echo New-Item -Path 'HKCU:\Software\Classes\.vfproj' -Force ^| Out-Null > "%VFPROJ_FIX_PS1%"
+echo Set-ItemProperty -Path 'HKCU:\Software\Classes\.vfproj' -Name '(default)' -Value 'vfprojfile' >> "%VFPROJ_FIX_PS1%"
+echo New-Item -Path 'HKCU:\Software\Classes\vfprojfile\shell\open\command' -Force ^| Out-Null >> "%VFPROJ_FIX_PS1%"
+echo Set-ItemProperty -Path 'HKCU:\Software\Classes\vfprojfile\shell\open\command' -Name '(default)' -Value '"C:\Windows\System32\findstr.exe" "" "%%1"' >> "%VFPROJ_FIX_PS1%"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%VFPROJ_FIX_PS1%" >nul 2>&1
+del /q "%VFPROJ_FIX_PS1%" >nul 2>&1
+
+:: ============================================
 :: Memory Mode / Flavor / Package Configuration
 :: Usage: build_prusaslicer_fork_windows.bat [full|low|qa] [clean|qa|package] [qa|package] [package]
 ::   full     - 4 parallel projects, /MP enabled (32GB+ RAM)
@@ -35,15 +52,22 @@ if /i "%1"=="qa" (
 :: "package" as sole/first token is not a memory mode
 if /i "%MEMORY_MODE%"=="package" set MEMORY_MODE=low
 if /i "%MEMORY_MODE%"=="full" (
-    set "MSBUILD_ARGS=/m:4"
+    set "MSBUILD_ARGS=/m:4 /nodeReuse:false"
     set "SLIC3R_PARALLEL_FLAG=-DSLIC3R_MSVC_COMPILE_PARALLEL=ON"
     echo [CONFIG] Memory mode: FULL - 4 parallel projects, /MP enabled ^(32GB+ RAM^)
 ) else (
     set MEMORY_MODE=low
-    set "MSBUILD_ARGS=/m:1 /p:CL_MPCount=1 /p:UseMultiToolTask=false"
+    set "MSBUILD_ARGS=/m:1 /p:CL_MPCount=1 /p:UseMultiToolTask=false /nodeReuse:false"
     set "SLIC3R_PARALLEL_FLAG=-DSLIC3R_MSVC_COMPILE_PARALLEL=OFF"
     echo [CONFIG] Memory mode: LOW - 1 parallel project, /MP disabled ^(16GB RAM^)
 )
+:: 2026-08-26: tried bare /m (no number, like PhrozenOrca) instead of /m:4, but on a
+:: 32-core/31GB machine that let MSBuild run far more than 4 parallel projects, stacked
+:: with OCCT's own unlimited /MP, and blew out compiler memory (C1060 out of heap space).
+:: /m:4 was likely already tuned for the "32GB+ RAM" spec in this script's own comment -
+:: reverted back to the fixed 4. See preflight-blockers.md P0.15 / P0.16.
+:: /nodeReuse:false - always use fresh MSBuild processes, no lingering nodes from a
+:: previous killed/crashed run contaminating this one.
 if "!DO_PACKAGE!"=="1" (
     echo [CONFIG] Package after build: ON
 ) else (
@@ -127,10 +151,22 @@ echo [PrusaSlicer] Building on current branch: !CURRENT_BRANCH! ^(fetch/checkout
 :: ============================================
 :: Step 1: Build dependencies (if not already built)
 :: ============================================
+:: 2026-08-26: deps configure now passes -DDEP_DEBUG=OFF. deps/CMakeLists.txt:49 defaults
+:: DEP_DEBUG to ON, which silently adds a second full rebuild of every dependency (incl.
+:: OCCT) in Debug via an ALL-tagged custom target (deps/CMakeLists.txt:219-282), using its
+:: own uncontrolled cmake --build call that ignores our /m:4 and /nodeReuse:false below.
+:: Confirmed against a known-good reference build (a separate PrusaSlicer clone had
+:: DEP_DEBUG:BOOL=OFF in its deps CMakeCache.txt) - likely the real cause of the OCCT
+:: C1060 out-of-heap failures seen while testing this script. See preflight-blockers.md P0.16.
+:: NOTE: keep multi-line comments like this OUTSIDE any parenthesized if/for block -
+:: cmd.exe's parser can misread :: comments containing parens/quotes/colons when they sit
+:: inside a ( ... ) block, causing "was unexpected at this time" errors (learned the hard
+:: way here on 2026-08-26 - two comment blocks placed inside if(...) blocks broke the script).
 set DEPS_DESTDIR=%DEPS_BUILD_DIR%\destdir\usr\local
 set DEPS_COMPLETE_MARKER=%DEPS_BUILD_DIR%\.deps_complete
 set DEPS_TBB_MARKER=%DEPS_DESTDIR%\lib\cmake\TBB\TBBConfig.cmake
 set DEPS_OPENVDB_MARKER=%DEPS_DESTDIR%\lib\libopenvdb.lib
+set DEPS_OCCT_MARKER=%DEPS_DESTDIR%\include\opencascade\STEPCAFControl_Reader.hxx
 set BUILD_DEPS=
 set CONFIGURE_DEPS=
 
@@ -144,6 +180,10 @@ if not exist "%DEPS_COMPLETE_MARKER%" (
         if not exist "%DEPS_BUILD_DIR%\CMakeCache.txt" set CONFIGURE_DEPS=1
     ) else if not exist "%DEPS_OPENVDB_MARKER%" (
         echo [PrusaSlicer] Dependencies incomplete ^(OpenVDB lib missing^). Resuming dependency build...
+        set BUILD_DEPS=1
+        if not exist "%DEPS_BUILD_DIR%\CMakeCache.txt" set CONFIGURE_DEPS=1
+    ) else if not exist "%DEPS_OCCT_MARKER%" (
+        echo [PrusaSlicer] Dependencies incomplete ^(OCCT STEP headers missing^). Resuming dependency build...
         set BUILD_DEPS=1
         if not exist "%DEPS_BUILD_DIR%\CMakeCache.txt" set CONFIGURE_DEPS=1
     )
@@ -160,13 +200,23 @@ if defined BUILD_DEPS (
     if not exist "%DEPS_BUILD_DIR%" mkdir "%DEPS_BUILD_DIR%"
     cd /d "%DEPS_BUILD_DIR%"
 
+    :: Remove 0-byte object files left by interrupted or force-killed deps builds (causes LNK1136)
+    for /r "%DEPS_BUILD_DIR%" %%f in (*.obj) do (
+        if %%~zf equ 0 (
+            echo [PrusaSlicer] Removing corrupt 0-byte object: %%f
+            del /q "%%f"
+        )
+    )
+
     if defined CONFIGURE_DEPS (
-        :: Build deps without wxWidgets (headless/CLI mode)
-        :: CMAKE_POLICY_VERSION_MINIMUM=3.5 allows subprojects with old cmake_minimum_required to work with CMake 4.x
+        :: Build deps without wxWidgets, DEP_DEBUG=OFF avoids a duplicate Debug rebuild pass
         "%CMAKE_BIN%" .. ^
             -G "%VS_GENERATOR%" ^
             -A x64 ^
             -DCMAKE_BUILD_TYPE=Release ^
+            -DDEP_DEBUG=OFF ^
+            -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON ^
+            -DCMAKE_FIND_USE_PACKAGE_REGISTRY=FALSE ^
             -DPrusaSlicer_deps_PACKAGE_EXCLUDES="wxWidgets"
 
         if !errorlevel! neq 0 (
@@ -189,6 +239,10 @@ if defined BUILD_DEPS (
     )
     if not exist "%DEPS_OPENVDB_MARKER%" (
         echo [ERROR] Dependencies build finished but OpenVDB lib is still missing at %DEPS_OPENVDB_MARKER%
+        exit /b 1
+    )
+    if not exist "%DEPS_OCCT_MARKER%" (
+        echo [ERROR] Dependencies build finished but OCCT STEP headers are still missing at %DEPS_OCCT_MARKER%
         exit /b 1
     )
     echo deps build complete > "%DEPS_COMPLETE_MARKER%"
@@ -248,12 +302,15 @@ if defined CONFIGURE_SLICER (
         -G "%VS_GENERATOR%" ^
         -A x64 ^
         -DCMAKE_BUILD_TYPE=Release ^
+        -DCMAKE_CONFIGURATION_TYPES=Release ^
         -DSLIC3R_GUI=OFF ^
         -DSLIC3R_BUILD_TESTS=OFF ^
         !SLIC3R_PARALLEL_FLAG! ^
         !QA_HARNESS_FLAG! ^
         -DCMAKE_PREFIX_PATH="%DEPS_DESTDIR%" ^
         -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON ^
+        -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON ^
+        -DCMAKE_FIND_USE_PACKAGE_REGISTRY=FALSE ^
         -DIlmBase_DIR="%DEPS_DESTDIR%\lib\cmake\IlmBase" ^
         -DOpenEXR_DIR="%DEPS_DESTDIR%\lib\cmake\OpenEXR"
 

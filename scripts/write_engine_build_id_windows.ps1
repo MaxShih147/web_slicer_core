@@ -5,11 +5,15 @@
   Also validates brand-free ProductVersion on PE (no Prusa tokens).
 #>
 param(
-    [Parameter(Mandatory = $true)][string]$ArtifactRoot,
+    [string]$ArtifactRoot = "",
     [string]$ReportPath = ""
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $ArtifactRoot) {
+    $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+    $ArtifactRoot = Join-Path $RepoRoot "slicer-engine"
+}
 $ArtifactRoot = (Resolve-Path -LiteralPath $ArtifactRoot).Path
 $manifestPath = Join-Path $ArtifactRoot "engine-artifact-manifest.json"
 if (-not (Test-Path $manifestPath)) { $manifestPath = Join-Path $ArtifactRoot "artifact-manifest.json" }

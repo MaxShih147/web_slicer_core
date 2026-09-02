@@ -17,8 +17,15 @@ if (-not (Test-Path -LiteralPath $EngineExe)) {
     throw "Missing engine: $EngineExe"
 }
 if (-not $ReportDir) {
+    # Default used to point into openspec\changes\backend-slicer-engine-deidentification\evidence\,
+    # a review-project folder archived on 2026-07-30 (renamed with an archive-date prefix). Every
+    # run since then wrote into an orphaned folder nobody reviews. Same root cause and fix as
+    # Bundle-Launcher's build-windows-bundle.ps1 -EvidenceDir (task 1.4): this report is a
+    # per-run diagnostic result, not a durable audit record, so it belongs under build\ (already
+    # gitignored here), not inside an openspec change folder. Pass -ReportDir explicitly to keep
+    # a specific run.
     $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
-    $ReportDir = Join-Path $RepoRoot "openspec\changes\backend-slicer-engine-deidentification\evidence\windows\subprocess-5.11-$stamp"
+    $ReportDir = Join-Path $RepoRoot "build\evidence\windows\subprocess-5.11-$stamp"
 }
 New-Item -ItemType Directory -Force -Path $ReportDir | Out-Null
 
