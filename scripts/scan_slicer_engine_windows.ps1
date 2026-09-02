@@ -122,7 +122,7 @@ Get-ChildItem -LiteralPath $ArtifactRoot -Force -ErrorAction SilentlyContinue | 
 
 # AGPL legal pack (REQ-DEID-011) — required for consumer staging/bundles
 $legalDir = Join-Path $ArtifactRoot "legal"
-$legalRequired = @("LICENSE", "NOTICE.md", "SOURCE_OFFER.md")
+$legalRequired = @("LICENSE", "NOTICE", "MODIFICATIONS.md", "SOURCE-OFFER.md")
 $legalPresent = @()
 $legalMissing = @()
 if (Test-Path $legalDir) {
