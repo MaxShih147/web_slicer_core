@@ -82,6 +82,8 @@ from .sla_operations import (
     parse_binary_stl,
     perform_boolean,
     write_binary_stl,
+    support_pillars_output_path,
+    write_prior_supports_input,
     write_support_points_input,
 )
 
@@ -547,6 +549,9 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
         points_blob = pending.get("support_points")
         if points_blob is not None:
             write_support_points_input(job_dir, points_blob)
+        prior_blob = pending.get("prior_supports")
+        if prior_blob is not None:
+            write_prior_supports_input(job_dir, prior_blob)
         config = pending["config"]
         # Persist the Mechado prz_config (NOT the snake_case slicing config) so
         # run_slicing computes the PRZ physical print time from the same source
@@ -594,6 +599,9 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
         points_blob = pending.get("support_points")
         if points_blob is not None:
             write_support_points_input(job_dir, points_blob)
+        prior_blob = pending.get("prior_supports")
+        if prior_blob is not None:
+            write_prior_supports_input(job_dir, prior_blob)
         config = pending["config"]
         config["supports_enable"] = True
         sla_config = _convert_v2_config_to_sla(config)
@@ -728,6 +736,71 @@ async def set_support_points(job_id: str, request: Request):
         success=True,
         message="Support point list accepted",
         data={"points": len(parsed["points"]), "bytes": len(raw)},
+    )
+
+
+@router.get("/slices/{job_id}/support-pillars")
+async def get_support_pillars(job_id: str):
+    """
+    The pillars the last support generation produced for this job.
+
+    This is what a caller hands back as prior-supports on the next generation so
+    a newly placed support can brace to what is already on the plate. Served as
+    the engine wrote it.
+    """
+    if not job_exists(job_id):
+        raise job_not_found(job_id)
+
+    path = support_pillars_output_path(get_job_dir(job_id))
+    if not path.exists():
+        raise support_points_required(
+            "No support pillars for this job; run generate-supports first"
+        )
+
+    return FileResponse(path, media_type="application/json", filename=path.name)
+
+
+@router.post("/slices/{job_id}/prior-supports", response_model=V2Response)
+async def set_prior_supports(job_id: str, request: Request):
+    """
+    Supply the pillars of an already generated support for this job.
+
+    They let a newly placed support brace to what is already on the plate: the
+    engine queries and braces to them, and counts them towards the new pillar's
+    link budget so it does not grow redundant auxiliary props — but it never
+    re-emits their geometry, so the support mesh the caller already holds stays
+    valid and unchanged.
+
+    Like the support point list, the body is stored as given and the backend
+    fills in nothing.
+    """
+    pending = _require_pending(job_id)
+
+    try:
+        raw = await request.body()
+    except Exception as exc:
+        raise internal_error(f"Failed to read prior support body: {exc}")
+
+    if not raw:
+        raise missing_body("No prior pillar list provided")
+
+    try:
+        parsed = json.loads(raw)
+    except Exception as exc:
+        raise validation_error(f"Prior pillar list is not valid JSON: {exc}")
+
+    if not isinstance(parsed, dict):
+        raise validation_error("Prior pillar list must be a JSON object")
+
+    if not isinstance(parsed.get("pillars"), list):
+        raise validation_error("Prior pillar list must have a 'pillars' array")
+
+    pending["prior_supports"] = raw
+
+    return V2Response(
+        success=True,
+        message="Prior pillar list accepted",
+        data={"pillars": len(parsed["pillars"]), "bytes": len(raw)},
     )
 
 

@@ -83,6 +83,44 @@ SUPPORT_DETECTION_LAYER_HEIGHT = 0.15
 SUPPORT_POINTS_FILENAME = "support_points.json"
 
 
+PRIOR_SUPPORTS_FILENAME = "prior_supports.json"
+
+
+def prior_supports_input_path(job_dir: Path) -> Path:
+    """Where a caller supplied prior pillar list is landed for the engine."""
+    return job_dir / "input" / PRIOR_SUPPORTS_FILENAME
+
+
+def write_prior_supports_input(
+    job_dir: Path,
+    pillars: Union[bytes, str, dict, list],
+) -> Path:
+    """
+    Land a caller supplied prior pillar list as input/prior_supports.json.
+
+    Passed through UNCHANGED, for the same reason the support point list is:
+    the engine owns every default, and a value invented here would be one the
+    caller never chose. See write_support_points_input.
+    """
+    path = prior_supports_input_path(job_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(pillars, bytes):
+        path.write_bytes(pillars)
+    elif isinstance(pillars, str):
+        path.write_text(pillars, encoding="utf-8")
+    else:
+        path.write_text(json.dumps(pillars), encoding="utf-8")
+    return path
+
+
+SUPPORT_PILLARS_FILENAME = "support_pillars.json"
+
+
+def support_pillars_output_path(job_dir: Path) -> Path:
+    """Where the engine writes the pillars a generation produced."""
+    return job_dir / "output" / SUPPORT_PILLARS_FILENAME
+
+
 def support_points_input_path(job_dir: Path) -> Path:
     """Where a caller supplied support point list is landed for the engine."""
     return job_dir / "input" / SUPPORT_POINTS_FILENAME
@@ -332,6 +370,19 @@ async def generate_supports(
     import_points = support_points_input_path(job_dir)
     if import_points.exists():
         cmd.extend(["--import-support-points", str(import_points)])
+
+    # Additive generation: the pillars already on the plate. They are braced to
+    # and counted towards the new pillar's link budget, but never re-emitted, so
+    # the support mesh the caller already holds stays valid.
+    prior = prior_supports_input_path(job_dir)
+    if prior.exists():
+        cmd.extend(["--prior-supports", str(prior)])
+
+    # Always ask for the pillar list. It is what makes the NEXT generation able
+    # to brace to this one, and it costs a small JSON file.
+    pillars_out = support_pillars_output_path(job_dir)
+    pillars_out.parent.mkdir(parents=True, exist_ok=True)
+    cmd.extend(["--export-support-pillars", str(pillars_out)])
 
     cmd.append(str(input_file))
 
