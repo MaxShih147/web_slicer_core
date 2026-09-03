@@ -100,3 +100,4 @@ third_party/slicer-engine-qa-symbols/
 #######################################
 
 deploy/.env
+scripts/logs/
