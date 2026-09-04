@@ -115,6 +115,19 @@ def write_prior_supports_input(
 
 SUPPORT_PILLARS_FILENAME = "support_pillars.json"
 SUPPORT_TREE_FILENAME = "support_tree.json"
+PAD_STL_FILENAME = "model_pad.stl"
+
+
+def pad_output_path(job_dir: Path) -> Path:
+    """
+    Where the engine writes the pad on its own.
+
+    The support mesh export merges the pad into it, which is right for printing
+    and wrong for a caller drawing from the element list: a pad is an extruded
+    footprint, not pillars and bracing, so the tree has no way to carry it and
+    the caller would simply be missing it.
+    """
+    return job_dir / "output" / PAD_STL_FILENAME
 
 
 def support_tree_output_path(job_dir: Path) -> Path:
@@ -409,6 +422,9 @@ async def generate_supports(
     # it is the only form in which a caller can address one bar of bracing.
     tree_out = support_tree_output_path(job_dir)
     cmd.extend(["--export-support-tree", str(tree_out)])
+
+    # And the pad on its own, for the same caller: the tree cannot describe one.
+    cmd.extend(["--export-pad-stl", str(pad_output_path(job_dir))])
 
     # Braces reaching prior pillars, one file each. Kept out of the support mesh
     # so that removing such a pillar can take its brace with it, leaving the

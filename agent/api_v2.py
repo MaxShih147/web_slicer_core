@@ -83,6 +83,7 @@ from .sla_operations import (
     perform_boolean,
     write_binary_stl,
     braces_output_dir,
+    pad_output_path,
     support_pillars_output_path,
     support_tree_output_path,
     write_prior_supports_input,
@@ -785,6 +786,28 @@ async def get_support_tree(job_id: str):
         )
 
     return FileResponse(path, media_type="application/json", filename=path.name)
+
+
+@router.get("/slices/{job_id}/pad.stl")
+async def get_pad_stl(job_id: str):
+    """
+    The pad on its own, if this job's generation made one.
+
+    The support mesh export merges the pad into it, which is right for printing.
+    A caller drawing the support from --export-support-tree needs it apart: a pad
+    is an extruded footprint, not pillars and bracing, so the tree cannot carry
+    it and the caller would be missing the slab under everything.
+    """
+    if not job_exists(job_id):
+        raise job_not_found(job_id)
+
+    path = pad_output_path(get_job_dir(job_id))
+    if not path.exists():
+        raise support_points_required(
+            "No pad for this job; it may be disabled or nothing was generated"
+        )
+
+    return FileResponse(path, media_type="model/stl", filename=path.name)
 
 
 @router.get("/slices/{job_id}/braces/{prior_id}.stl")
