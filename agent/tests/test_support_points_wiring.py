@@ -441,3 +441,43 @@ class TestStatusFlagsSurviveAnExport:
         asyncio.run(jobs.run_support_points_export(job, SLAConfig()))
 
         assert jobs.read_job_status(job)["has_support_mesh"] is False
+
+
+class TestSupportTreeExportReachesTheCLI:
+    """
+    The support as data rather than triangles: heads, pillars, junctions,
+    pedestals and one record per BAR of bracing.
+
+    A caller that draws supports itself needs this instead of the STL. An STL is
+    one lump - there is no way to point at a single bar in it, and no way to take
+    that bar away - and recovering bars from triangle soup means guessing by
+    connected components. The engine has always held them one record per bar.
+    """
+
+    def test_generation_always_asks_for_the_tree(self, job_dir, monkeypatch):
+        # Unconditional: it costs a small JSON file, and it is the only form in
+        # which a caller can address one bar.
+        cli = _stub_cli(monkeypatch, stdout=b"Generated (supports only)\n")
+        (job_dir / "output" / "model_support.stl").write_bytes(b"solid s\n")
+
+        asyncio.run(generate_supports(job_dir, SLAConfig()))
+
+        assert cli.flag_value("--export-support-tree") == str(
+            sla_operations.support_tree_output_path(job_dir)
+        )
+
+    def test_the_tree_goes_to_the_output_directory(self, job_dir):
+        # Input is what the caller supplied; this is what the engine produced.
+        path = sla_operations.support_tree_output_path(job_dir)
+        assert path.parent == job_dir / "output"
+        assert path.name.endswith(".json")
+
+    def test_input_file_stays_last_on_the_command_line(self, job_dir, monkeypatch):
+        """The model path is positional and must not be consumed as the value of
+        --export-support-tree."""
+        cli = _stub_cli(monkeypatch, stdout=b"Generated (supports only)\n")
+        (job_dir / "output" / "model_support.stl").write_bytes(b"solid s\n")
+
+        asyncio.run(generate_supports(job_dir, SLAConfig()))
+
+        assert cli.commands[0][-1] == str(job_dir / "input" / "model.stl")

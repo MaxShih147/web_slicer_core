@@ -84,6 +84,7 @@ from .sla_operations import (
     write_binary_stl,
     braces_output_dir,
     support_pillars_output_path,
+    support_tree_output_path,
     write_prior_supports_input,
     write_support_points_input,
 )
@@ -756,6 +757,31 @@ async def get_support_pillars(job_id: str):
     if not path.exists():
         raise support_points_required(
             "No support pillars for this job; run generate-supports first"
+        )
+
+    return FileResponse(path, media_type="application/json", filename=path.name)
+
+
+@router.get("/slices/{job_id}/support-tree")
+async def get_support_tree(job_id: str):
+    """
+    The last generation's support as data rather than triangles.
+
+    Heads, pillars, junctions, pedestals and one record per BAR of bracing. A
+    caller drawing the support itself wants this instead of the STL: an STL is
+    one lump, with no way to point at a single bar and no way to take that bar
+    away. Bars carry `reaches`, the caller's handle for a pillar carried in from
+    an earlier generation, which says exactly which bars die with which support.
+
+    Served as the engine wrote it.
+    """
+    if not job_exists(job_id):
+        raise job_not_found(job_id)
+
+    path = support_tree_output_path(get_job_dir(job_id))
+    if not path.exists():
+        raise support_points_required(
+            "No support tree for this job; run generate-supports first"
         )
 
     return FileResponse(path, media_type="application/json", filename=path.name)

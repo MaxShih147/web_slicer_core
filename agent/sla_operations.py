@@ -114,6 +114,19 @@ def write_prior_supports_input(
 
 
 SUPPORT_PILLARS_FILENAME = "support_pillars.json"
+SUPPORT_TREE_FILENAME = "support_tree.json"
+
+
+def support_tree_output_path(job_dir: Path) -> Path:
+    """
+    Where the engine writes the support as data rather than triangles.
+
+    Heads, pillars, junctions, pedestals and one record per bar of bracing -
+    everything the support mesh is built from, before it is built. A caller that
+    has this can draw the support itself, point at one bar and remove that bar,
+    none of which a single STL allows.
+    """
+    return job_dir / "output" / SUPPORT_TREE_FILENAME
 
 
 def support_pillars_output_path(job_dir: Path) -> Path:
@@ -391,6 +404,11 @@ async def generate_supports(
     pillars_out = support_pillars_output_path(job_dir)
     pillars_out.parent.mkdir(parents=True, exist_ok=True)
     cmd.extend(["--export-support-pillars", str(pillars_out)])
+
+    # The same support as data. Always asked for: it costs a small JSON file and
+    # it is the only form in which a caller can address one bar of bracing.
+    tree_out = support_tree_output_path(job_dir)
+    cmd.extend(["--export-support-tree", str(tree_out)])
 
     # Braces reaching prior pillars, one file each. Kept out of the support mesh
     # so that removing such a pillar can take its brace with it, leaving the
