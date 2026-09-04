@@ -121,6 +121,14 @@ def support_pillars_output_path(job_dir: Path) -> Path:
     return job_dir / "output" / SUPPORT_PILLARS_FILENAME
 
 
+BRACES_DIRNAME = "braces"
+
+
+def braces_output_dir(job_dir: Path) -> Path:
+    """Where the engine writes one STL per brace reaching a prior pillar."""
+    return job_dir / "output" / BRACES_DIRNAME
+
+
 def support_points_input_path(job_dir: Path) -> Path:
     """Where a caller supplied support point list is landed for the engine."""
     return job_dir / "input" / SUPPORT_POINTS_FILENAME
@@ -383,6 +391,13 @@ async def generate_supports(
     pillars_out = support_pillars_output_path(job_dir)
     pillars_out.parent.mkdir(parents=True, exist_ok=True)
     cmd.extend(["--export-support-pillars", str(pillars_out)])
+
+    # Braces reaching prior pillars, one file each. Kept out of the support mesh
+    # so that removing such a pillar can take its brace with it, leaving the
+    # support the brace was grown with untouched.
+    braces_dir = braces_output_dir(job_dir)
+    braces_dir.mkdir(parents=True, exist_ok=True)
+    cmd.extend(["--export-brace-stls", str(braces_dir)])
 
     cmd.append(str(input_file))
 

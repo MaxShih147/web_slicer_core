@@ -82,6 +82,7 @@ from .sla_operations import (
     parse_binary_stl,
     perform_boolean,
     write_binary_stl,
+    braces_output_dir,
     support_pillars_output_path,
     write_prior_supports_input,
     write_support_points_input,
@@ -758,6 +759,25 @@ async def get_support_pillars(job_id: str):
         )
 
     return FileResponse(path, media_type="application/json", filename=path.name)
+
+
+@router.get("/slices/{job_id}/braces/{prior_id}.stl")
+async def get_brace_stl(job_id: str, prior_id: int):
+    """
+    One brace this job's generation grew to a prior pillar.
+
+    Served separately from the support mesh so the caller can drop just this
+    brace when the pillar it reaches goes away, without regenerating the support
+    it was grown with.
+    """
+    if not job_exists(job_id):
+        raise job_not_found(job_id)
+
+    path = braces_output_dir(get_job_dir(job_id)) / f"brace_{prior_id}.stl"
+    if not path.exists():
+        raise support_points_required(f"No brace to pillar {prior_id} for this job")
+
+    return FileResponse(path, media_type="application/octet-stream", filename=path.name)
 
 
 @router.post("/slices/{job_id}/prior-supports", response_model=V2Response)
