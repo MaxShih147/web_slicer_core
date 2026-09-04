@@ -52,6 +52,10 @@ class SLAConfig(BaseModel):
     support_points_density_relative: int = 100
     support_object_elevation: float = 5.0
     support_critical_angle: float = 45.0
+    # Whether the engine may prop up a lonely tall pillar with pillars of its
+    # own. Manual placement turns it off: one placement should produce one
+    # support, not three.
+    support_auxiliary_pillars: bool = True
 
     @field_validator('support_object_elevation')
     @classmethod
