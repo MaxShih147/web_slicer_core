@@ -83,6 +83,78 @@ SUPPORT_DETECTION_LAYER_HEIGHT = 0.15
 SUPPORT_POINTS_FILENAME = "support_points.json"
 
 
+PRIOR_SUPPORTS_FILENAME = "prior_supports.json"
+
+
+def prior_supports_input_path(job_dir: Path) -> Path:
+    """Where a caller supplied prior pillar list is landed for the engine."""
+    return job_dir / "input" / PRIOR_SUPPORTS_FILENAME
+
+
+def write_prior_supports_input(
+    job_dir: Path,
+    pillars: Union[bytes, str, dict, list],
+) -> Path:
+    """
+    Land a caller supplied prior pillar list as input/prior_supports.json.
+
+    Passed through UNCHANGED, for the same reason the support point list is:
+    the engine owns every default, and a value invented here would be one the
+    caller never chose. See write_support_points_input.
+    """
+    path = prior_supports_input_path(job_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(pillars, bytes):
+        path.write_bytes(pillars)
+    elif isinstance(pillars, str):
+        path.write_text(pillars, encoding="utf-8")
+    else:
+        path.write_text(json.dumps(pillars), encoding="utf-8")
+    return path
+
+
+SUPPORT_PILLARS_FILENAME = "support_pillars.json"
+SUPPORT_TREE_FILENAME = "support_tree.json"
+PAD_STL_FILENAME = "model_pad.stl"
+
+
+def pad_output_path(job_dir: Path) -> Path:
+    """
+    Where the engine writes the pad on its own.
+
+    The support mesh export merges the pad into it, which is right for printing
+    and wrong for a caller drawing from the element list: a pad is an extruded
+    footprint, not pillars and bracing, so the tree has no way to carry it and
+    the caller would simply be missing it.
+    """
+    return job_dir / "output" / PAD_STL_FILENAME
+
+
+def support_tree_output_path(job_dir: Path) -> Path:
+    """
+    Where the engine writes the support as data rather than triangles.
+
+    Heads, pillars, junctions, pedestals and one record per bar of bracing -
+    everything the support mesh is built from, before it is built. A caller that
+    has this can draw the support itself, point at one bar and remove that bar,
+    none of which a single STL allows.
+    """
+    return job_dir / "output" / SUPPORT_TREE_FILENAME
+
+
+def support_pillars_output_path(job_dir: Path) -> Path:
+    """Where the engine writes the pillars a generation produced."""
+    return job_dir / "output" / SUPPORT_PILLARS_FILENAME
+
+
+BRACES_DIRNAME = "braces"
+
+
+def braces_output_dir(job_dir: Path) -> Path:
+    """Where the engine writes one STL per brace reaching a prior pillar."""
+    return job_dir / "output" / BRACES_DIRNAME
+
+
 def support_points_input_path(job_dir: Path) -> Path:
     """Where a caller supplied support point list is landed for the engine."""
     return job_dir / "input" / SUPPORT_POINTS_FILENAME
@@ -332,6 +404,34 @@ async def generate_supports(
     import_points = support_points_input_path(job_dir)
     if import_points.exists():
         cmd.extend(["--import-support-points", str(import_points)])
+
+    # Additive generation: the pillars already on the plate. They are braced to
+    # and counted towards the new pillar's link budget, but never re-emitted, so
+    # the support mesh the caller already holds stays valid.
+    prior = prior_supports_input_path(job_dir)
+    if prior.exists():
+        cmd.extend(["--prior-supports", str(prior)])
+
+    # Always ask for the pillar list. It is what makes the NEXT generation able
+    # to brace to this one, and it costs a small JSON file.
+    pillars_out = support_pillars_output_path(job_dir)
+    pillars_out.parent.mkdir(parents=True, exist_ok=True)
+    cmd.extend(["--export-support-pillars", str(pillars_out)])
+
+    # The same support as data. Always asked for: it costs a small JSON file and
+    # it is the only form in which a caller can address one bar of bracing.
+    tree_out = support_tree_output_path(job_dir)
+    cmd.extend(["--export-support-tree", str(tree_out)])
+
+    # And the pad on its own, for the same caller: the tree cannot describe one.
+    cmd.extend(["--export-pad-stl", str(pad_output_path(job_dir))])
+
+    # Braces reaching prior pillars, one file each. Kept out of the support mesh
+    # so that removing such a pillar can take its brace with it, leaving the
+    # support the brace was grown with untouched.
+    braces_dir = braces_output_dir(job_dir)
+    braces_dir.mkdir(parents=True, exist_ok=True)
+    cmd.extend(["--export-brace-stls", str(braces_dir)])
 
     cmd.append(str(input_file))
 
