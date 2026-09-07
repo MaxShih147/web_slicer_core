@@ -85,7 +85,14 @@ cmake-*.app/
 # PrusaSlicer fork build artifacts
 #######################################
 
+slicer-engine/
 third_party/prusaslicer_build/
+
+# D13 consumer package + symbol archive (local build outputs)
+third_party/slicer-engine/
+third_party/slicer-engine-symbols/
+third_party/slicer-engine-qa/
+third_party/slicer-engine-qa-symbols/
 
 
 #######################################
@@ -93,3 +100,4 @@ third_party/prusaslicer_build/
 #######################################
 
 deploy/.env
+scripts/logs/

@@ -1,0 +1,3 @@
+# Ignore large Windows dump binaries under PoC evidence (keep SUMMARY/HASHES/static).
+**/dumps/*.dmp
+**/dumps/*.DMP

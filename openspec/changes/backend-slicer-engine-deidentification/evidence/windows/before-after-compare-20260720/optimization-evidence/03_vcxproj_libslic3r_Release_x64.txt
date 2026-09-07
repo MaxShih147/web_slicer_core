@@ -1,0 +1,20 @@
+﻿# Source: C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\libslic3r\libslic3r.vcxproj
+# Extracted: ItemDefinitionGroup Release|x64 (ClCompile / key flags)
+# Captured: 2026-07-20T03:38:00.7999710Z
+
+<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "C:/Phrozen3D/Lechon/03_Development/Win/web_slicer_core/third_party/prusaslicer_fork/deps/build/destdir/usr/local/include" /external:I "C:/Phrozen3D/Lechon/03_Development/Win/web_slicer_core/third_party/prusaslicer_fork/deps/build/destdir/usr/local/include/boost-1_83" /external:I "C:/Phrozen3D/Lechon/03_Development/Win/web_slicer_core/third_party/prusaslicer_fork/deps/build/destdir/usr/local/include/eigen3" /external:I "C:/Phrozen3D/Lechon/03_Development/Win/web_slicer_core/third_party/prusaslicer_fork/deps/build/destdir/usr/local/include/LibBGCode" /external:I "C:/Phrozen3D/Lechon/03_Development/Win/web_slicer_core/third_party/prusaslicer_fork/bundled_deps/libigl/." /external:I "C:/Phrozen3D/Lechon/03_Development/Win/web_slicer_core/third_party/prusaslicer_fork/deps/build/destdir/usr/local/include/OpenEXR" -bigobj -Zm520 /FS /utf-8</AdditionalOptions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <Optimization>MaxSpeed</Optimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+    </ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+  </ItemDefinitionGroup>
+
+# MSVC mapping (Microsoft docs):
+#   <Optimization>MaxSpeed</Optimization>  =>  /O2
+#   <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>  =>  /Ob2
+#   <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>  =>  /MD
+#   Debug <Optimization>Disabled</Optimization>  =>  /Od  (contrast)

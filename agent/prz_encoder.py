@@ -6,14 +6,29 @@ PrzLayerContent, LM_SVGRenderer.cpp WritePRZFormat).
 All multi-byte integers are big-endian.
 Config dict uses the same structure as Mechado default profile JSON
 (e.g. sonic_ls_plus.json: Machine, Print, Advanced, Resin, Other sections).
+
+Unit changes (since 2026-05-21):
+  - volume / weight / price header fields are written in mm³ (previously mL).
+    Downstream readers (frontend / firmware) must be updated accordingly.
+
+Accepted config keys added in fix-prz-output-correctness (2026-05-21):
+  Print.Retract Distance              — first-stage retract distance (mm); falsy = Case 4
+  Print.Retract Second Distance       — second-stage retract distance (mm); falsy = Case 4
+  Print.Bottom Retract Distance       — bottom first-stage retract (mm); falsy = Case 4
+  Print.Bottom Retract Second Distance — bottom second-stage retract (mm); falsy = Case 4
+  All four keys are read directly by _get_float() and are NOT part of PrzPrintTimingConfig.
+  See _resolve_retract_pair() for the 4-case override logic (design.md D2).
 """
 
+import re
 import struct
 import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Optional
+from typing import Any, Iterable, Optional
+
+from .models import PrzPrintTimingConfig, gate_blur
 
 import numpy as np
 from PIL import Image
@@ -27,6 +42,11 @@ PRZ_CRLF = b"\r\n"
 PRZ_LAYER_HEADER = 0x55
 LAYER_CONTENT_OFFSET = 195477
 
+# 標頭 metadata 常數（design D4）——集中管理，保留未來改 build-time 注入的彈性
+SOFTWARE_NAME = "Phrozen DS"
+SOFTWARE_VERSION = "0.0.1"   # 產品端版本常數；未來可改 build-time 注入
+PRICE_UNIT = "$/L"
+
 PREVIEW_SMALL_SIZE = 116
 PREVIEW_LARGE_SIZE = 290
 
@@ -38,27 +58,88 @@ RLE_GRAY = 0x40
 
 # ---------- Helpers ----------
 
+# 層檔命名嚴格比對（design D2）：model#####.rle / model#####.png。
+# 只認頂層、5 位零填充序號的層檔，藉此排除子目錄縮圖（thumbnail/thumbnailNNNxNNN.png）
+# 與任何非層檔（config.ini / prusaslicer.ini / config.json）污染層數統計。
+# 注意：前綴 "model" 綁定固定輸出檔名 output/model.sl1（其 stem 即層檔前綴，見
+# fork Format/SL1.cpp export_print 的 project 命名）；若日後改輸出檔名，須同步更新此正則。
+_LAYER_NAME_RE = re.compile(r"^model\d{5}\.(rle|png)$")
+
+
+def sl1_layer_names(names: Iterable[str]) -> list[str]:
+    """回傳 .sl1 內的層檔名，作為層數統計 / 單層取用 / PRZ 編碼的單一真值來源。
+
+    行為（design D1 / D2）：
+      - 以 `_LAYER_NAME_RE` 嚴格比對 model#####.{rle,png}，排除縮圖與設定檔。
+      - 同一 .sl1 內若存在 .rle 層檔則優先採用 .rle（PRZ 快路徑），否則採用 .png。
+      - 以檔名 `sorted()` 排序；5 位零填充下字典序即層索引升冪序。
+    """
+    layer_names = [n for n in names if _LAYER_NAME_RE.match(n)]
+    rle_names = sorted(n for n in layer_names if n.endswith(".rle"))
+    if rle_names:
+        return rle_names
+    return sorted(n for n in layer_names if n.endswith(".png"))
+
+
 def _pack_str(s: str, size: int) -> bytes:
-    """Pack a string into a fixed-size zero-padded field."""
-    encoded = s.encode("utf-8")[:size]
-    return encoded.ljust(size, b"\x00")
+    """Pack a string into a fixed-size field with a guaranteed trailing NUL.
+
+    Defensive packing (design D3) — protects downstream printer firmware that
+    reads these fields as C-strings:
+      - reserve 1 byte for the NUL terminator (effective content max = size-1),
+        so a full-length string can never leave the field without a 0x00 and
+        cause strlen()/strcpy() to overrun into adjacent bytes;
+      - UTF-8 char-safe truncation: byte-slice to budget, then
+        decode(errors="ignore") drops any partial trailing multibyte sequence
+        so no half a CJK character is ever emitted;
+      - zero-pad to exactly `size`.
+    """
+    budget = size - 1
+    raw = (s or "").encode("utf-8")[:budget]
+    safe = raw.decode("utf-8", errors="ignore").encode("utf-8")
+    return safe.ljust(size, b"\x00")
+
+
+def _traverse_dotpath(config: dict, dotpath: str) -> tuple[bool, Any]:
+    """Traverse a dotted path through a nested dict.
+
+    Returns (True, value) if the path exists; (False, None) if any segment
+    is missing or a non-dict node is encountered mid-path.
+    """
+    parts = dotpath.split(".")
+    val: Any = config
+    for part in parts:
+        if not isinstance(val, dict) or part not in val:
+            return False, None
+        val = val[part]
+    return True, val
 
 
 def _get_float(config: dict, dotpath: str, default: float = 0.0) -> float:
     """Get a float from a dotted config path (e.g. 'Print.Exposure Time')."""
-    parts = dotpath.split(".")
-    val = config
-    for part in parts:
-        if isinstance(val, dict):
-            val = val.get(part)
-        else:
-            return default
-    if val is None:
+    found, val = _traverse_dotpath(config, dotpath)
+    if not found or val is None:
         return default
     try:
         return float(val)
     except (ValueError, TypeError):
         return default
+
+
+def _get_float_opt(config: dict, dotpath: str) -> Optional[float]:
+    """Get a float from a dotted config path, returning None when absent.
+
+    Unlike _get_float, a value of 0.0 is returned as 0.0 (not treated as
+    falsy/missing). Returns None only when the key is genuinely absent or
+    the stored value is None. TypeError/ValueError also yield None.
+    """
+    found, val = _traverse_dotpath(config, dotpath)
+    if not found or val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
 
 
 def _get_int(config: dict, dotpath: str, default: int = 0) -> int:
@@ -123,6 +204,19 @@ def _resize_preview(img: Image.Image, size: int) -> np.ndarray:
     img = img.convert("RGB")
     img = img.resize((size, size), Image.LANCZOS)
     return np.array(img, dtype=np.uint8)
+
+
+def _preview_rgb_to_rgb565_be(rgb: np.ndarray, target_size: int) -> Optional[bytes]:
+    """Convert an arbitrary-size (H, W, 3) uint8 RGB array to RGB565 BE bytes
+    sized for the given PRZ preview slot, resizing via PIL Lanczos when needed.
+    Returns None on invalid shape/dtype."""
+    if rgb is None:
+        return None
+    if rgb.dtype != np.uint8 or rgb.ndim != 3 or rgb.shape[2] != 3:
+        return None
+    if rgb.shape[0] != target_size or rgb.shape[1] != target_size:
+        rgb = _resize_preview(Image.fromarray(rgb, mode="RGB"), target_size)
+    return _rgb_to_rgb565_be(rgb)
 
 
 # ---------- RLE Encoding ----------
@@ -264,13 +358,148 @@ def _rle_encode_layer(gray_pixels: np.ndarray) -> bytes:
     return bytes(out[:pos])
 
 
+# ---------- Timing Resolution ----------
+
+def _resolve_timing_values(
+    timing: PrzPrintTimingConfig, is_bottom: bool
+) -> tuple:
+    """Return (light_off_time, before_lift_time, after_lift_time, after_retract_time).
+
+    Enforces delay_mode exclusivity:
+      mode 0 (lightOff)  — light_off_delay written, all rest times forced to 0.0
+      mode 1 (waitTime)  — light_off_time forced to 0.0, rest times written
+    """
+    if timing.exposure_delay_mode == 0:
+        return (timing.light_off_delay, 0.0, 0.0, 0.0)
+    # mode == 1 (waitTime)
+    if is_bottom:
+        return (
+            0.0,
+            timing.bottom_rest_before_lift,
+            timing.bottom_rest_after_lift,
+            timing.bottom_rest_after_retract,
+        )
+    return (
+        0.0,
+        timing.rest_before_lift,
+        timing.rest_after_lift,
+        timing.rest_after_retract,
+    )
+
+
+
+def _resolve_retract_pair(
+    config: dict,
+    dist_key: str,
+    drop2_key: str,
+    lift: float,
+    lift2: float,
+) -> tuple[float, float]:
+    """Return (retract_distance, retract_second_distance).
+
+    key 存在（含 0.0）視為已傳入；key 缺席或值為 None 視為未傳入。
+    4-case override 邏輯（詳見 design.md D2 真值表）：
+      Case 1 (只傳 drop2)  : (max(0, lift+lift2-drop2), drop2)
+      Case 2 (只傳 dist)   : (dist, 0.0)
+      Case 3 (兩者皆傳)    : (dist, drop2)  — 兩值原樣保留
+      Case 4 (兩者皆未傳) : (0.0, lift+lift2)                 — 單段下降
+    """
+    dist  = _get_float_opt(config, dist_key)
+    drop2 = _get_float_opt(config, drop2_key)
+    if dist is not None and drop2 is not None:  # Case 3
+        return dist, drop2
+    if dist is not None:                        # Case 2
+        return dist, 0.0
+    if drop2 is not None:                       # Case 1
+        return max(0.0, lift + lift2 - drop2), drop2
+    return 0.0, lift + lift2                    # Case 4
+
+
+def _to_mm_per_sec(v_mm_per_min: float) -> float:
+    """Convert mm/min speed (UI/config convention) to mm/s for physics formulas (D5 unit fix)."""
+    return v_mm_per_min / 60.0 if v_mm_per_min else 0.0
+
+
+def _compute_print_time(
+    config: dict,
+    total_layers: int,
+    timing: PrzPrintTimingConfig,
+) -> float:
+    """Compute total print time in seconds from PRZ-aware parameters.
+
+    Phase 1: constant-speed model (÷60 unit conversion mandatory — see design.md D5).
+    """
+    bottom_count = _get_int(config, "Print.Bottom Layer Count", default=5)
+    transition_count = _get_int(config, "Print.Transition Layer Count", default=5)
+    bottom_exp = _get_float(config, "Print.Bottom Exposure Time", default=35.0)
+    normal_exp = _get_float(config, "Print.Exposure Time", default=2.5)
+
+    def motion_time(d: float, v_mm_per_min: float) -> float:
+        """d in mm, v in mm/min. Converts to mm/s internally. Returns seconds."""
+        v = _to_mm_per_sec(v_mm_per_min)
+        return d / v if d > 0 and v > 0 else 0.0
+
+    total = 0.0
+    for layer_idx in range(total_layers):
+        is_bottom = layer_idx < bottom_count
+        vals = _resolve_timing_values(timing, is_bottom=is_bottom)
+
+        # exposure with transition ramp (mirrors _write_layer_definition logic)
+        if is_bottom:
+            exposure = bottom_exp
+        else:
+            transition_idx = layer_idx - bottom_count
+            if 0 <= transition_idx < transition_count:
+                exposure = bottom_exp + (normal_exp - bottom_exp) / (1.0 + transition_count) * (transition_idx + 1.0)
+            else:
+                exposure = normal_exp
+
+        if is_bottom:
+            lift  = _get_float(config, "Print.Bottom Lifting Distance", default=8.0)
+            lift2 = _get_float(config, "Print.Bottom Lifting Second Distance")
+            lift_v  = _get_float(config, "Print.Bottom Lifting Speed", default=50.0)
+            lift2_v = _get_float(config, "Print.Bottom Lifting Second Speed")
+            retract, drop2 = _resolve_retract_pair(
+                config, "Print.Bottom Retract Distance",
+                "Print.Bottom Retract Second Distance", lift, lift2,
+            )
+            retract_v = _get_float(config, "Print.Bottom Retract Speed", default=100.0)
+            drop2_v   = _get_float(config, "Print.Bottom Retract Second Speed")
+        else:
+            lift  = _get_float(config, "Print.Lifting Distance", default=7.0)
+            lift2 = _get_float(config, "Print.Lifting Second Distance")
+            lift_v  = _get_float(config, "Print.Lifting Speed", default=50.0)
+            lift2_v = _get_float(config, "Print.Lifting Second Speed")
+            retract, drop2 = _resolve_retract_pair(
+                config, "Print.Retract Distance",
+                "Print.Retract Second Distance", lift, lift2,
+            )
+            retract_v = _get_float(config, "Print.Normal Retract Speed", default=100.0)
+            drop2_v   = _get_float(config, "Print.Normal Retract Second Speed")
+
+        total += (
+            exposure
+            + vals[0]                           # light_off_time
+            + vals[1]                           # before_lift_time
+            + motion_time(lift,    lift_v)
+            + motion_time(lift2,   lift2_v)
+            + vals[2]                           # after_lift_time
+            + motion_time(retract, retract_v)
+            + motion_time(drop2,   drop2_v)
+            + vals[3]                           # after_retract_time
+        )
+
+    return total
+
+
 # ---------- Header ----------
 
 def _write_header(
     config: dict,
     total_layers: int,
-    estimated_print_time: float = 0,
-    resin_volume_ml: float = 0,
+    timing: PrzPrintTimingConfig,
+    estimated_print_time: float = 0,  # deprecated: ignored; time is computed via _compute_print_time()
+    resin_volume_mm3: float = 0,
     preview_small: Optional[bytes] = None,
     preview_large: Optional[bytes] = None,
 ) -> bytes:
@@ -283,11 +512,11 @@ def _write_header(
     # Tag (8B)
     buf.write(PRZ_TAG)
 
-    # Software (32B) - zeroed
-    buf.write(b"\x00" * 32)
+    # Software (32B) — 產品識別常數（design D4）
+    buf.write(_pack_str(SOFTWARE_NAME, 32))
 
-    # Software Version (24B) - zeroed
-    buf.write(b"\x00" * 24)
+    # Software Version (24B) — 版本號常數（design D4）
+    buf.write(_pack_str(SOFTWARE_VERSION, 24))
 
     # File Time (24B)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -299,8 +528,9 @@ def _write_header(
     # Printer Type (32B)
     buf.write(_pack_str(_get_str(config, "Machine.machine_type"), 32))
 
-    # Profile Name (32B)
-    buf.write(_pack_str(_get_str(config, "Machine.Machine Name"), 32))
+    # Profile Name (32B) — 樹脂名稱（design D4 契約：讀 Other.profile_name，
+    # 不再誤用 Machine.Machine Name）；缺漏時 _get_str 回空字串 → 降級補 NUL
+    buf.write(_pack_str(_get_str(config, "Other.profile_name"), 32))
 
     # AA Level (2B short BE)
     buf.write(struct.pack(">H", _get_int(config, "Advanced.Anti-aliasing Level")))
@@ -308,8 +538,14 @@ def _write_header(
     # Grey Level (2B short BE)
     buf.write(struct.pack(">H", _get_int(config, "Advanced.Grey Level")))
 
-    # Blur Level (2B short BE)
-    buf.write(struct.pack(">H", _get_int(config, "Advanced.Image Blur Pixel")))
+    # Blur Level (2B short BE) — 受 `Advanced."Image Blur"` 開關閘控，與切片端共用
+    # models.gate_blur 這個唯一真值來源。少了閘控，使用者關掉 blur 時層圖會以
+    # blur = 0 光柵化，header 卻仍宣稱 `Image Blur Pixel` 的強度，PRZ 的自述與它
+    # 自己夾帶的層圖互相矛盾。開關讀原始值而非走 _get_int：後者會把「鍵不存在」
+    # 與「值為 false」一起壓成 0，正好抹掉閘控要區分的兩態。
+    _, blur_enabled = _traverse_dotpath(config, "Advanced.Image Blur")
+    buf.write(struct.pack(">H", int(gate_blur(
+        blur_enabled, _get_int(config, "Advanced.Image Blur Pixel")))))
 
     # Preview 116x116 (26912B RGB565 BE)
     expected_small = PREVIEW_SMALL_SIZE * PREVIEW_SMALL_SIZE * 2
@@ -363,30 +599,32 @@ def _write_header(
     # Exposure Time (4B float BE)
     buf.write(struct.pack(">f", _get_float(config, "Print.Exposure Time", default=2.5)))
 
-    # Delay Mode (1B) = 1
-    buf.write(struct.pack("B", 1))
+    bottom = _resolve_timing_values(timing, is_bottom=True)
+    normal = _resolve_timing_values(timing, is_bottom=False)
 
-    # Turn Off Time (4B float BE)
-    buf.write(struct.pack(">f", _get_float(config, "Print.Light-off Delay", default=1.0)))
+    # Delay Mode (1B)
+    buf.write(struct.pack("B", timing.exposure_delay_mode))
+
+    # Turn Off Time (4B float BE) — bottom[0] == normal[0] by design
+    buf.write(struct.pack(">f", bottom[0]))
 
     # Bottom Before Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", bottom[1]))
 
     # Bottom After Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", bottom[2]))
 
     # Bottom After Retract Time (4B float BE)
-    rest_time = _get_float(config, "Print.Rest Time After Retract", default=1.0)
-    buf.write(struct.pack(">f", rest_time))
+    buf.write(struct.pack(">f", bottom[3]))
 
     # Before Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", normal[1]))
 
     # After Lift Time (4B float BE)
-    buf.write(struct.pack(">f", 0.0))
+    buf.write(struct.pack(">f", normal[2]))
 
     # After Retract Time (4B float BE)
-    buf.write(struct.pack(">f", rest_time))
+    buf.write(struct.pack(">f", normal[3]))
 
     # Bottom Exposure Time (4B float BE)
     buf.write(struct.pack(">f", _get_float(config, "Print.Bottom Exposure Time", default=35.0)))
@@ -400,18 +638,17 @@ def _write_header(
     # then all second-stage fields in same order.
     bottom_lift = _get_float(config, "Print.Bottom Lifting Distance", default=8.0)
     bottom_lift2 = _get_float(config, "Print.Bottom Lifting Second Distance")
-    bottom_drop2 = _get_float(config, "Print.Bottom Retract Second Distance")
     normal_lift = _get_float(config, "Print.Lifting Distance", default=7.0)
     normal_lift2 = _get_float(config, "Print.Lifting Second Distance")
-    normal_drop2 = _get_float(config, "Print.Retract Second Distance")
 
-    # RetractDist = lift_height + lift_second_height - drop_second_height (from C++ Slicer.cpp)
-    bottom_retract = bottom_lift + bottom_lift2 - bottom_drop2
-    if bottom_retract <= 0.0:
-        bottom_retract = bottom_lift + bottom_lift2
-    normal_retract = normal_lift + normal_lift2 - normal_drop2
-    if normal_retract <= 0.0:
-        normal_retract = normal_lift + normal_lift2
+    bottom_retract, bottom_drop2 = _resolve_retract_pair(
+        config, "Print.Bottom Retract Distance", "Print.Bottom Retract Second Distance",
+        bottom_lift, bottom_lift2,
+    )
+    normal_retract, normal_drop2 = _resolve_retract_pair(
+        config, "Print.Retract Distance", "Print.Retract Second Distance",
+        normal_lift, normal_lift2,
+    )
 
     buf.write(struct.pack(">f", bottom_lift))
     buf.write(struct.pack(">f", _get_float(config, "Print.Bottom Lifting Speed", default=50.0)))
@@ -436,25 +673,31 @@ def _write_header(
     # Normal Light PWM (2B short BE)
     buf.write(struct.pack(">H", _get_int(config, "Advanced.Light PWM", default=255)))
 
-    # Advance Mode (1B) = 0
-    buf.write(struct.pack("B", 0))
+    # Advance Mode (1B) = 1
+    buf.write(struct.pack("B", 1))
 
     # Print Times (4B int BE)
-    print_time = estimated_print_time or _get_float(config, "Other.estimated_print_time")
+    print_time = _compute_print_time(config, total_layers, timing)
     buf.write(struct.pack(">I", int(print_time)))
 
-    # Volume (4B float BE)
-    volume = resin_volume_ml or _get_float(config, "Other.volume")
+    # Volume (4B float BE) — unit: mm³ (since 2026-05-21; formerly mL)
+    volume = resin_volume_mm3 or _get_float(config, "Other.volume")
     buf.write(struct.pack(">f", volume))
 
-    # Weight (4B float BE) — C++ writes volume for weight too
-    buf.write(struct.pack(">f", volume))
+    # TODO(tech-debt): per-resin-density —— 密度/單價目前取自印表機 default profile 的
+    # Resin 區塊（per-printer 粒度），未來應下沉至 resin_profiles 做到 per-resin 精度。
+    # Weight (4B float BE) — 由 volume × 密度 計算（design D2）；密度缺漏/為 0 → 降級寫 volume
+    density = _get_float(config, "Resin.Resin Density")
+    weight = (volume / 1000.0) * density if density else volume
+    buf.write(struct.pack(">f", weight))
 
-    # Price (4B float BE) — C++ writes volume for price too
-    buf.write(struct.pack(">f", volume))
+    # Price (4B float BE) — 由 volume × 單價 計算（design D2）；單價缺漏/為 0 → 降級寫 volume
+    cost = _get_float(config, "Resin.Resin Cost")
+    price = (volume / 1_000_000.0) * cost if cost else volume
+    buf.write(struct.pack(">f", price))
 
-    # Price Unit (8B) - zeroed
-    buf.write(b"\x00" * 8)
+    # Price Unit (8B) — 價格單位常數（design D4）
+    buf.write(_pack_str(PRICE_UNIT, 8))
 
     # Layer Content Offset (4B int BE)
     buf.write(struct.pack(">I", LAYER_CONTENT_OFFSET))
@@ -476,7 +719,9 @@ def _write_header(
 
 # ---------- Per-Layer Definition ----------
 
-def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> bytes:
+def _write_layer_definition(
+    config: dict, layer_idx: int, total_layers: int, timing: PrzPrintTimingConfig
+) -> bytes:
     """Write per-layer definition block (matches C++ PrzLayerContent exactly)."""
     buf = BytesIO()
 
@@ -510,18 +755,11 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
             exposure = _get_float(config, "Print.Exposure Time", default=2.5)
     buf.write(struct.pack(">f", exposure))
 
-    # Light-off time (4B float BE) — C++ uses same light_off_time for all layers
-    off_time = _get_float(config, "Print.Light-off Delay", default=1.0)
-    buf.write(struct.pack(">f", off_time))
-
-    # Before Lift Time (4B float BE) — always 0 in C++
-    buf.write(struct.pack(">f", 0.0))
-
-    # After Lift Time (4B float BE) — always 0 in C++
-    buf.write(struct.pack(">f", 0.0))
-
-    # After Retract Time (4B float BE) — rest_time in C++
-    buf.write(struct.pack(">f", _get_float(config, "Print.Rest Time After Retract", default=1.0)))
+    vals = _resolve_timing_values(timing, is_bottom=is_bottom)
+    buf.write(struct.pack(">f", vals[0]))  # light_off_time
+    buf.write(struct.pack(">f", vals[1]))  # before_lift_time
+    buf.write(struct.pack(">f", vals[2]))  # after_lift_time
+    buf.write(struct.pack(">f", vals[3]))  # after_retract_time
 
     # 8 lift/retract params (matches C++ PrzLayerContent order):
     # LiftDist, LiftSpeed, LiftSecondDist, LiftSecondSpeed,
@@ -529,10 +767,10 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
     if is_bottom:
         lift = _get_float(config, "Print.Bottom Lifting Distance", default=8.0)
         lift2 = _get_float(config, "Print.Bottom Lifting Second Distance")
-        drop2 = _get_float(config, "Print.Bottom Retract Second Distance")
-        retract = lift + lift2 - drop2
-        if retract <= 0.0:
-            retract = lift + lift2
+        retract, drop2 = _resolve_retract_pair(
+            config, "Print.Bottom Retract Distance", "Print.Bottom Retract Second Distance",
+            lift, lift2,
+        )
         buf.write(struct.pack(">f", lift))
         buf.write(struct.pack(">f", _get_float(config, "Print.Bottom Lifting Speed", default=50.0)))
         buf.write(struct.pack(">f", lift2))
@@ -544,10 +782,10 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
     else:
         lift = _get_float(config, "Print.Lifting Distance", default=7.0)
         lift2 = _get_float(config, "Print.Lifting Second Distance")
-        drop2 = _get_float(config, "Print.Retract Second Distance")
-        retract = lift + lift2 - drop2
-        if retract <= 0.0:
-            retract = lift + lift2
+        retract, drop2 = _resolve_retract_pair(
+            config, "Print.Retract Distance", "Print.Retract Second Distance",
+            lift, lift2,
+        )
         buf.write(struct.pack(">f", lift))
         buf.write(struct.pack(">f", _get_float(config, "Print.Lifting Speed", default=50.0)))
         buf.write(struct.pack(">f", lift2))
@@ -572,8 +810,11 @@ def _write_layer_definition(config: dict, layer_idx: int, total_layers: int) -> 
 def encode_prz(
     config: dict,
     sl1_path: Path,
-    estimated_print_time: float = 0,
-    resin_volume_ml: float = 0,
+    timing: PrzPrintTimingConfig,
+    estimated_print_time: float = 0,  # deprecated: ignored; time is computed via _compute_print_time()
+    resin_volume_mm3: float = 0,
+    preview_small_rgb: Optional[np.ndarray] = None,
+    preview_large_rgb: Optional[np.ndarray] = None,
 ) -> bytes:
     """
     Encode a PRZ V3.0 binary from a config dict and .sl1 layer archive.
@@ -581,23 +822,26 @@ def encode_prz(
     Args:
         config: Mechado-format config dict (same structure as default profile JSON).
         sl1_path: Path to the .sl1 ZIP file containing PNG layers.
-        estimated_print_time: Print time in seconds (from slicing metadata).
-        resin_volume_ml: Resin volume in ml (from slicing metadata).
+        estimated_print_time: Deprecated. Ignored; print time is computed via _compute_print_time().
+        resin_volume_mm3: Resin volume in mm³ (from slicing metadata; callers must convert mL × 1000).
 
     Returns:
         Complete PRZ binary data as bytes.
     """
-    # Count layers and collect PNG names from .sl1
+    # Count layers via the single source of truth (sl1_layer_names). encode_prz
+    # assumes PNG layers (it PNG-decodes each entry below); on a PNG-mode .sl1
+    # this selects the same set as the old endswith(".png") filter.
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        png_names = sorted(n for n in zf.namelist() if n.endswith(".png"))
+        png_names = sl1_layer_names(zf.namelist())
 
     total_layers = len(png_names)
 
     # Write header
     header = _write_header(
-        config, total_layers,
-        estimated_print_time=estimated_print_time,
-        resin_volume_ml=resin_volume_ml,
+        config, total_layers, timing,
+        resin_volume_mm3=resin_volume_mm3,
+        preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
+        preview_large=_preview_rgb_to_rgb565_be(preview_large_rgb, PREVIEW_LARGE_SIZE),
     )
 
     output = BytesIO()
@@ -607,7 +851,7 @@ def encode_prz(
     with zipfile.ZipFile(sl1_path, "r") as zf:
         for layer_idx, png_name in enumerate(png_names):
             # Layer definition
-            output.write(_write_layer_definition(config, layer_idx, total_layers))
+            output.write(_write_layer_definition(config, layer_idx, total_layers, timing))
             output.write(PRZ_CRLF)
 
             # Read PNG and RLE encode
@@ -642,8 +886,11 @@ def _decode_and_rle(png_bytes: bytes) -> bytes:
 def encode_prz_streaming(
     config: dict,
     sl1_path: Path,
-    estimated_print_time: float = 0,
-    resin_volume_ml: float = 0,
+    timing: PrzPrintTimingConfig,
+    estimated_print_time: float = 0,  # deprecated: ignored; time is computed via _compute_print_time()
+    resin_volume_mm3: float = 0,
+    preview_small_rgb: Optional[np.ndarray] = None,
+    preview_large_rgb: Optional[np.ndarray] = None,
 ):
     """
     Generator that yields PRZ chunks for streaming response.
@@ -651,38 +898,48 @@ def encode_prz_streaming(
     Uses ThreadPoolExecutor to parallelize PNG decode + RLE encode
     while maintaining sequential output order.
     """
-    from concurrent.futures import ThreadPoolExecutor
-
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        png_names = sorted(n for n in zf.namelist() if n.endswith(".png"))
+        names = zf.namelist()
 
-    total_layers = len(png_names)
+    # [layer-rle] Enumerate layer files via the single source of truth
+    # (sl1_layer_names): .rle takes priority over .png. When .rle layers are
+    # present we use them directly — skip the PNG decode + re-RLE round-trip;
+    # otherwise fall back to the PNG decode path for standard sl1 archives.
+    layer_names = sl1_layer_names(names)
+    is_rle = bool(layer_names) and layer_names[0].endswith(".rle")
+
+    total_layers = len(layer_names)
 
     # Yield header
     yield _write_header(
-        config, total_layers,
-        estimated_print_time=estimated_print_time,
-        resin_volume_ml=resin_volume_ml,
+        config, total_layers, timing,
+        resin_volume_mm3=resin_volume_mm3,
+        preview_small=_preview_rgb_to_rgb565_be(preview_small_rgb, PREVIEW_SMALL_SIZE),
+        preview_large=_preview_rgb_to_rgb565_be(preview_large_rgb, PREVIEW_LARGE_SIZE),
     )
 
-    # Read all PNGs from ZIP first (ZIP is sequential I/O, fast)
-    png_data_list = []
+    # Read all layers from ZIP first (ZIP is sequential I/O, fast)
+    layer_data_list = []
     with zipfile.ZipFile(sl1_path, "r") as zf:
-        for png_name in png_names:
-            png_data_list.append(zf.read(png_name))
+        for name in layer_names:
+            layer_data_list.append(zf.read(name))
 
-    # Parallel decode + RLE encode (ProcessPool to bypass GIL)
-    from concurrent.futures import ProcessPoolExecutor
-    import os
-    num_workers = min(os.cpu_count() or 4, 8)
-    with ProcessPoolExecutor(max_workers=num_workers) as pool:
-        rle_futures = list(pool.map(_decode_and_rle, png_data_list, chunksize=32))
+    if is_rle:
+        # Already RLE — use the bytes verbatim, no decode/encode.
+        rle_futures = layer_data_list
+    else:
+        # Parallel PNG decode + RLE encode (ProcessPool to bypass GIL)
+        from concurrent.futures import ProcessPoolExecutor
+        import os
+        num_workers = min(os.cpu_count() or 4, 8)
+        with ProcessPoolExecutor(max_workers=num_workers) as pool:
+            rle_futures = list(pool.map(_decode_and_rle, layer_data_list, chunksize=32))
 
     # Yield each layer (sequential, must be in order)
     for layer_idx, rle_data in enumerate(rle_futures):
         layer_buf = BytesIO()
 
-        layer_buf.write(_write_layer_definition(config, layer_idx, total_layers))
+        layer_buf.write(_write_layer_definition(config, layer_idx, total_layers, timing))
         layer_buf.write(PRZ_CRLF)
 
         layer_buf.write(struct.pack(">I", len(rle_data)))

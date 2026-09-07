@@ -1,0 +1,70 @@
+﻿{
+    "schema":  "slicer-engine-windows-scan/1.0",
+    "artifact_root":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\slicer-engine",
+    "expect_flavor":  "consumer",
+    "blacklist_hint":  "1.2",
+    "authenticode":  "skipped_manual_signing",
+    "verdict":  "PASS",
+    "checks":  {
+                   "manifest_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\slicer-engine\\engine-artifact-manifest.json",
+                   "legal_pack":  {
+                                      "present":  [
+                                                      "LICENSE",
+                                                      "NOTICE.md",
+                                                      "SOURCE_OFFER.md"
+                                                  ],
+                                      "missing":  [
+
+                                                  ]
+                                  },
+                   "pdb_in_bin":  [
+
+                                  ],
+                   "brand_paths":  [
+
+                                   ],
+                   "resource_brand_path_count":  148,
+                   "symbols_present":  true,
+                   "brand_pdb_in_symbols":  [
+
+                                            ],
+                   "schema_version":  "1.0",
+                   "manifest_flavor":  "consumer",
+                   "engine_build_id":  "20260719T105832Z",
+                   "platform":  "Windows",
+                   "exe_post_strip_sha256_manifest":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+                   "exe_post_strip_sha256_actual":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+                   "dll_post_strip_sha256_manifest":  "df36eab9105548732ba4d8f87484e09db5431a9747b1122123ce9ee8fbb93a41",
+                   "dll_post_strip_sha256_actual":  "df36eab9105548732ba4d8f87484e09db5431a9747b1122123ce9ee8fbb93a41",
+                   "versioninfo_slicer-engine.exe":  {
+                                                         "ProductName":  "Slicer Engine",
+                                                         "FileDescription":  "Slicer Engine",
+                                                         "InternalName":  "slicer-engine",
+                                                         "OriginalFilename":  "slicer-engine.exe",
+                                                         "CompanyName":  "Phrozen Technology",
+                                                         "ProductVersion":  "Slicer Engine 2.9.4+UNKNOWN"
+                                                     },
+                   "versioninfo_slicer_core.dll":  {
+                                                       "ProductName":  "Slicer Engine",
+                                                       "FileDescription":  "Slicer Engine",
+                                                       "InternalName":  "slicer_core",
+                                                       "OriginalFilename":  "slicer_core.dll",
+                                                       "CompanyName":  "Phrozen Technology",
+                                                       "ProductVersion":  "Slicer Engine 2.9.4+UNKNOWN"
+                                                   },
+                   "named_exports":  1,
+                   "slicer_run_cli":  true,
+                   "slic3r_main":  false,
+                   "debug_directory_brand":  false,
+                   "harness_markers":  [
+
+                                       ]
+               },
+    "notes":  [
+                  "bin/resources contains 148 brand-named asset path(s); not fail-closed here (profiles/icons). Sample: bin/resources/data/printer_gantries/prusa3d_coreoneL_gantry.stl, bin/resources/data/printer_gantries/prusa3d_coreone_gantry.stl, bin/resources/data/printer_gantries/prusa3d_ht90_actuator.stl, bin/resources/data/printer_gantries/prusa3d_mini_gantry.stl, bin/resources/data/printer_gantries/prusa3d_mk3s_gantry.stl"
+              ],
+    "failures":  [
+
+                 ],
+    "scanned_at_utc":  "2026-07-19T14:45:13.8604604Z"
+}

@@ -1,0 +1,12 @@
+{
+  "binary": "/tmp/m1-hide-slicer-20260717T032100Z/slicer-engine.unstripped",
+  "sha256": "8ed53521dcd230cff5a260895dcb11da1e15b4b2fe678a2c973ced6c65c3c13e",
+  "nm_global_brand": 933,
+  "nm_local_brand": 20978,
+  "ips": [],
+  "verdict": "PASS",
+  "notes": [
+    "high nm global brand hits; expect visibility+strip before close"
+  ],
+  "codesign_identifier": "slicer-engine"
+}

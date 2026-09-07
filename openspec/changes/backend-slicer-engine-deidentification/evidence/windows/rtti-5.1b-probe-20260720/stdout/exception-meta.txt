@@ -1,0 +1,6 @@
+﻿exe=d:\Repos\Phrozen\Bundle\web_slicer_core\slicer-engine-qa\bin\slicer-engine.exe
+mode=exception
+exit_code=-1073740791
+exit_hex=0xC0000409
+elapsed_ms=14155
+note=STATUS_STACK_BUFFER_OVERRUN / fastfail abort path (MSVC noexcept throw -> terminate)

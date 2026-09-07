@@ -1,0 +1,19 @@
+{
+  "task": "7.4",
+  "captured_at_utc": "2026-07-19T15:14:15Z",
+  "app_path": "/tmp/bundle-dmg-2111/Bundle Launcher.app",
+  "engine_path": "/tmp/bundle-dmg-2111/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/bin/slicer-engine",
+  "engine_sha256": "336f930329d11dd02330ec4173802f20f9cd2eddacce171254eb41225cbda5d1",
+  "expect_flavor": "consumer",
+  "failures": [],
+  "verdict": "PASS",
+  "checks": {
+    "scan": "PASS",
+    "help_exit": 0,
+    "help_prusaslicer_hits": 0,
+    "codesign": "PASS",
+    "stapler": "PASS",
+    "artifact": "DMG Bundle Launcher_mac_arm64_1.0.0-202607192111.dmg mounted app"
+  },
+  "source_dmg": "~/Desktop/Bundle Launcher_mac_arm64_1.0.0-202607192111.dmg"
+}

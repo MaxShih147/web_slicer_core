@@ -1,0 +1,17 @@
+﻿File=C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer-engine.exe
+CompanyName=Phrozen Technology
+ProductName=Slicer Engine
+FileDescription=Slicer Engine
+InternalName=slicer-engine
+OriginalFilename=slicer-engine.exe
+FileVersion=SlicerEngine-2.9.4+UNKNOWN
+ProductVersion=SlicerEngine-2.9.4+UNKNOWN
+---
+File=C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer_core.dll
+CompanyName=Phrozen Technology
+ProductName=Slicer Engine
+FileDescription=Slicer Engine
+InternalName=slicer-engine
+OriginalFilename=slicer-engine.exe
+FileVersion=SlicerEngine-2.9.4+UNKNOWN
+ProductVersion=SlicerEngine-2.9.4+UNKNOWN

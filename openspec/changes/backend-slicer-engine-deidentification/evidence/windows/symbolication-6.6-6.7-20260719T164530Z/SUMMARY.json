@@ -1,0 +1,27 @@
+﻿{
+    "task":  "6.6-6.7",
+    "captured_at_utc":  "2026-07-19T16:48:19.3165397Z",
+    "verdict":  "FAIL",
+    "checks":  {
+                   "engine_build_id":  "20260719T162525Z",
+                   "pe_rsds_guid":  "31CD05E0-C5CB-4F3B-8B98-6AC7F66B7F73",
+                   "pdb_guid":  null,
+                   "guid_match":  false,
+                   "onedrive_store_root":  "C:\\Users\\spd_y\\OneDrive - 普羅森科技股份有限公司\\Software Team\\軟體測試\\安裝檔\\WebSlicer\\Dental Center Core\\slicer-engine-symbols\\windows",
+                   "drill_store_path":  "D:\\Repos\\Phrozen\\Bundle\\web_slicer_core\\openspec\\changes\\backend-slicer-engine-deidentification\\evidence\\windows\\symbolication-6.6-6.7-20260719T164530Z\\symbol-store-mirror\\windows\\20260719T162525Z",
+                   "lookup_by_build_id":  true,
+                   "onedrive_uploaded":  "C:\\Users\\spd_y\\OneDrive - 普羅森科技股份有限公司\\Software Team\\軟體測試\\安裝檔\\WebSlicer\\Dental Center Core\\slicer-engine-symbols\\windows\\20260719T162525Z",
+                   "symbol_loss_detected":  true,
+                   "prior_build_ids":  [
+                                           "20260719T095415Z",
+                                           "20260719T105832Z"
+                                       ],
+                   "rollback_prior_build_id":  "20260719T095415Z",
+                   "rollback_prior_pdb_present":  true,
+                   "qa_segfault_exit":  -1073741819,
+                   "qa_segfault_nonzero":  true
+               },
+    "failures":  [
+                     "PE RSDS GUID (31CD05E0-C5CB-4F3B-8B98-6AC7F66B7F73) != PDB GUID ()"
+                 ]
+}

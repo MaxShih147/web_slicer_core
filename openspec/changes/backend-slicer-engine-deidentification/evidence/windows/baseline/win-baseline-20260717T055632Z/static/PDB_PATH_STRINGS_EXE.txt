@@ -1,0 +1,1 @@
+﻿C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\prusa-slicer-console.pdb

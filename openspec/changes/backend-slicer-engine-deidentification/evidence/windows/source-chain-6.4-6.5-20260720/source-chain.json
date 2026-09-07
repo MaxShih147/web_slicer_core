@@ -1,0 +1,11 @@
+﻿{
+    "schema":  "slicer-engine-source-chain/1.0",
+    "engine_build_id":  "20260719T162525Z",
+    "engine_commit":  "1d5f7a843fe46804d70cd5e9f27e0ba3d893a42e",
+    "flavor":  "consumer",
+    "exe_post_strip_sha256":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+    "sbom_path":  "sbom.spdx.json",
+    "sbom_format":  "SPDX-2.3-JSON",
+    "source_offer":  "legal/SOURCE_OFFER.md",
+    "generated_at_utc":  "2026-07-19T16:45:30.2242440Z"
+}

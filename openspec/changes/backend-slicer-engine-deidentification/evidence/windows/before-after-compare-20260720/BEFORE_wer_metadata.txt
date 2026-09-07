@@ -1,0 +1,12 @@
+﻿=== WER / dump surface baseline (PDB-free analyze) ===
+dump=C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\baseline\win-baseline-20260717T055632Z\dumps\postload-baseline.dmp
+sha256=C9C09483683FC9D659AA3600981398E6D55E9D2E6B8DE4FE72499588EDECC78B
+clean_env=_NT_SYMBOL_PATH empty; .sympath cleared for analysis
+note=Dump taken at PrusaSlicer.dll load (loader breakpoint), not QA crash site (no BUNDLE_QA_CRASH_MODE on this Windows build).
+=== brand-bearing lines ===
+00007ff7`c3ac0000 00007ff7`c3ae5000   prusa_slicer_console   (deferred)             
+00007ffd`644b0000 00007ffd`6551f000   PrusaSlicer   (deferred)             
+*** WARNING: Unable to verify checksum for prusa-slicer-console.exe
+000000a9`8f5bed20 00007ff7`c3ac1f3c     prusa_slicer_console!wmain+0x1c3
+(Inline Function) --------`--------     prusa_slicer_console!invoke_main+0x22
+000000a9`8f5bf7c0 00007ffe`0777e957     prusa_slicer_console!__scrt_common_main_seh+0x10c

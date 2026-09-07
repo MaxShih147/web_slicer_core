@@ -1,0 +1,81 @@
+Opened log file 'C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\poc\evidence\w25-close-20260717T083241Z\wer\cdb_exception.txt'
+
+Microsoft (R) Windows Debugger Version 10.0.22621.755 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+CommandLine: C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer-engine.exe --help 
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+Symbol search path is: srv*
+Executable search path is: 
+ModLoad: 00007ff7`ebd50000 00007ff7`ebd75000   slicer-engine.exe
+ModLoad: 00007ffe`08700000 00007ffe`08966000   ntdll.dll
+ModLoad: 00007ffe`07750000 00007ffe`07819000   C:\WINDOWS\System32\KERNEL32.DLL
+ModLoad: 00007ffe`05fc0000 00007ffe`063ba000   C:\WINDOWS\System32\KERNELBASE.dll
+ModLoad: 00007ffe`05e70000 00007ffe`05fbc000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00007ffd`e9450000 00007ffd`e94d9000   C:\WINDOWS\SYSTEM32\MSVCP140.dll
+ModLoad: 00007ffd`e94e0000 00007ffd`e94fe000   C:\WINDOWS\SYSTEM32\VCRUNTIME140.dll
+ModLoad: 00007ffd`e9410000 00007ffd`e941c000   C:\WINDOWS\SYSTEM32\VCRUNTIME140_1.dll
+(6518.2378): Break instruction exception - code 80000003 (first chance)
+ntdll!LdrpDoDebuggerBreak+0x35:
+00007ffe`0881d78d cc              int     3
+0:000> $$<C:\Temp\w25-exception.cdb
+0:000> .sympath
+Symbol search path is: srv*
+Expanded Symbol search path is: cache*;SRV*https://msdl.microsoft.com/download/symbols
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+0:000> sxe -c ".dump /mA C:\Temp\w25-exception.dmp; q" av
+0:000> sxe -c ".dump /mA C:\Temp\w25-exception.dmp; q" sov
+0:000> sxe -c ".dump /mA C:\Temp\w25-exception.dmp; q" eh
+0:000> sxe -c ".dump /mA C:\Temp\w25-exception.dmp; q" ibp
+0:000> g
+Command file caused an implicit wait
+Command file execution failed, HRESULT 0x80004005
+    "µLªk«ü¥"
+ModLoad: 00007ffc`f13b0000 00007ffc`f3f88000   C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer_core.dll
+ModLoad: 00007ffe`08390000 00007ffe`08410000   C:\WINDOWS\System32\WS2_32.dll
+ModLoad: 00007ffe`07dd0000 00007ffe`07ee8000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00007ffe`08050000 00007ffe`08106000   C:\WINDOWS\System32\ADVAPI32.dll
+ModLoad: 00007ffe`076a0000 00007ffe`07749000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00007ffe`06960000 00007ffe`06a0a000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00007ffe`08420000 00007ffe`085e7000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00000000`6f540000 00000000`6f5a1000   C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\libmpfr-4.dll
+ModLoad: 00007ffe`05d10000 00007ffe`05d37000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`6acc0000 00000000`6ad33000   C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\libgmp-10.dll
+ModLoad: 00007ffe`08360000 00007ffe`0838b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00007ffe`05d40000 00007ffe`05e6b000   C:\WINDOWS\System32\gdi32full.dll
+ModLoad: 00007ffe`05990000 00007ffe`05a33000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00007ffe`06aa0000 00007ffe`07224000   C:\WINDOWS\System32\SHELL32.dll
+ModLoad: 00007ffd`f85d0000 00007ffd`f85d7000   C:\WINDOWS\SYSTEM32\MSVCP140_CODECVT_IDS.dll
+ModLoad: 00007ffe`06470000 00007ffe`064a2000   C:\WINDOWS\System32\IMM32.DLL
+(6518.2378): C++ EH exception - code e06d7363 (first chance)
+Creating C:Tempw25-exception.dmp - mini user dump
+Dump successfully written
+quit:
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'

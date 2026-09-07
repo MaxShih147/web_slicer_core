@@ -1,0 +1,5 @@
+﻿ExitCode=-1
+stdout=PrusaSlicer.dll was not loaded
+
+stderr=
+note=Expected loader failure after renaming PrusaSlicer.dll

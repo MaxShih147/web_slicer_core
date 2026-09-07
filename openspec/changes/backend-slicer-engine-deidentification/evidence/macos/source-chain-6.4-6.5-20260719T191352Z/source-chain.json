@@ -1,0 +1,14 @@
+{
+  "schema": "slicer-engine-source-chain/1.0",
+  "engine_build_id": "slicer-engine-consumer-2026-07-19T095348Z",
+  "engine_commit": "59fec072c5215d1e9105856b6b9d483d66d1a222",
+  "flavor": "consumer",
+  "platform": "macOS",
+  "cli_post_strip_sha256": "3c6c0976ff2c6bfe4adf5c13a61e41378f0aab787f09ee47b3e4abba3866b95b",
+  "cli_disk_sha256": "3c6c0976ff2c6bfe4adf5c13a61e41378f0aab787f09ee47b3e4abba3866b95b",
+  "sbom_path": "sbom.spdx.json",
+  "sbom_format": "SPDX-2.3-JSON",
+  "source_offer": "legal/SOURCE-OFFER.md",
+  "generated_at_utc": "2026-07-19T19:13:54.455050+00:00",
+  "source_offer_present": true
+}

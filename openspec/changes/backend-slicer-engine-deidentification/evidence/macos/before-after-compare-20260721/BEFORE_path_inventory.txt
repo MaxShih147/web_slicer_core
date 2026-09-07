@@ -1,0 +1,15 @@
+BEFORE install folder（安裝表面檔名；品牌執行檔＋symlink，對齊 Windows Release PE 清單）:
+total
+drwxr-xr-x  .
+ .
+drwxr-xr-x  ..
+-rw-r--r--  Info.plist
+lrwxr-xr-x  PrusaGCodeViewer -> PrusaSlicer
+-rwxr-xr-x  PrusaSlicer
+lrwxr-xr-x  prusa-gcodeviewer -> PrusaSlicer
+lrwxr-xr-x  prusa-slicer -> PrusaSlicer
+
+Note: 舊 Bundle Launcher 正式安裝路徑曾為
+  /Applications/Bundle Launcher.app/.../third_party/prusaslicer_build/src/
+其中混有 Makefile／cmake／libslic3r 等建置殘留。本報告 §01 截圖改拍「安裝表面」
+（僅品牌可執行檔與 symlink），避免被誤認為原始碼樹；建置殘留不進正式包見 After 對照。

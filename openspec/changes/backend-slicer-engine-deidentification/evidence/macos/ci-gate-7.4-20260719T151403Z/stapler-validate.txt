@@ -1,0 +1,2 @@
+Processing: /tmp/bundle-dmg-2111/Bundle Launcher.app
+The validate action worked!

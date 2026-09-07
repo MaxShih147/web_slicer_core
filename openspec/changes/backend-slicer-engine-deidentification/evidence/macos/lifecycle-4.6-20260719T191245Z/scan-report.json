@@ -1,0 +1,24 @@
+{
+  "schema": "slicer-engine-macos-scan/1.0",
+  "artifact_root": "/tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine",
+  "expect_flavor": "consumer",
+  "verdict": "PASS",
+  "checks": {
+    "debug_leaks": [],
+    "brand_paths": [],
+    "manifest_flavor": "consumer",
+    "engine_build_id": "slicer-engine-consumer-2026-07-19T095348Z",
+    "post_strip_sha256_manifest": "3c6c0976ff2c6bfe4adf5c13a61e41378f0aab787f09ee47b3e4abba3866b95b",
+    "post_strip_sha256_actual": "336f930329d11dd02330ec4173802f20f9cd2eddacce171254eb41225cbda5d1",
+    "hash_policy": "skipped_post_sign",
+    "post_sign_sha256": "336f930329d11dd02330ec4173802f20f9cd2eddacce171254eb41225cbda5d1",
+    "codesign_identifier": "slicer-engine",
+    "nm_brand_global": 0,
+    "nm_brand_local": 0,
+    "harness_markers": []
+  },
+  "notes": [
+    "disk sha256 != post_strip (expected after Developer ID codesign)"
+  ],
+  "failures": []
+}

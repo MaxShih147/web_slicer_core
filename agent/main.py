@@ -2,7 +2,11 @@
 
 import asyncio
 import json
+import logging
 import os
+import tempfile
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -10,7 +14,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTa
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
-from .config import HOST, PORT, PRUSA_SLICER_CLI
+from .config import HOST, PORT, SLICER_ENGINE_CLI, TLS_CERT_PATH, TLS_KEY_PATH
 from .models import JobCreateResponse, JobStatus, JobStatusResponse, SLAConfig
 from .jobs import (
     create_job,
@@ -30,12 +34,46 @@ from .jobs import (
     read_job_status,
     run_slicing,
 )
-from .api_v2 import router as v2_router
+from .api_v2 import router as v2_router, prz_session_cleanup_loop
+
+
+# uvicorn 只設定它自己的 logger，因此 `agent.*` 的訊息在實機上會被整個丟棄——
+# 包含階段標籤漂移的告警與封存尾段的耗時量測，兩者都因此形同無效。
+# 只掛在套件層 logger 上（而非 root）：改 root 會連帶打開第三方套件的 INFO
+# 噪音（PIL、trimesh…）。以 handlers 檢查保持冪等，--reload 重複匯入不會疊加。
+_agent_logger = logging.getLogger(__package__ or "agent")
+if not _agent_logger.handlers:
+    _agent_handler = logging.StreamHandler()
+    _agent_handler.setFormatter(logging.Formatter("%(levelname)s:     [%(name)s] %(message)s"))
+    _agent_logger.addHandler(_agent_handler)
+    _agent_logger.setLevel(logging.INFO)
+    _agent_logger.propagate = False
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: preload heavy modules in a background thread so first mesh request is fast."""
+
+    def _preload_heavy_modules() -> None:
+        import numpy  # noqa: F401
+        import trimesh  # noqa: F401
+        try:
+            import manifold3d  # noqa: F401
+        except ImportError:
+            pass
+
+    t = threading.Thread(target=_preload_heavy_modules, daemon=True)
+    t.start()
+    cleanup_task = asyncio.create_task(prz_session_cleanup_loop())
+    yield
+    cleanup_task.cancel()
+
 
 app = FastAPI(
     title="web_slicer_core Agent",
-    description="Local agent for SLA slicing using PrusaSlicer CLI. Supports multiple frontends via versioned APIs.",
+    description="Local agent for SLA slicing using the slicer engine CLI. Supports multiple frontends via versioned APIs.",
     version="0.2.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration:
@@ -43,12 +81,32 @@ app = FastAPI(
 # - hosted UI origin for local-agent bridge
 # - optional comma-separated overrides via CORS_ALLOWED_ORIGINS env var
 _cors_origins = {
+    "https://release.dsonline.phrozen3d.info",
+    "https://dev.dsonline.phrozen3d.info",
+    "https://dsonline.phrozen3d.info",
     "https://dentalslice.onrender.com",
     "https://dental-testing.onrender.com",
     "https://ya-ke-nei-bu-ce-shi.onrender.com",
-    "http://localhost:5173",   # DS-Online (default Vite port)
+    # DS-Online branch: cloud HTTPS UI -> local HTTPS agent (Safari mixed-content test)
+    "https://safari-mixed-content-local-https.onrender.com",
+    "https://localhost:5173",   # DS-Online (default Vite port)
+    "https://127.0.0.1:5173",
+    "https://localhost:5174",   # web_slicer_core React UI (alternate port)
+    "https://127.0.0.1:5174",
+    "https://localhost:5175",
+    "https://127.0.0.1:5175",
+    "https://localhost:5176",
+    "https://127.0.0.1:5176",
+    "https://localhost:5177",
+    "https://127.0.0.1:5177",
+    "https://localhost:5178",   # DS-Online (when other ports in use)
+    "https://127.0.0.1:5178",
+    "https://localhost:3000",   # Common dev port
+    "https://127.0.0.1:3000",
+    # Local dev fallback while frontend dev server still runs on HTTP.
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:5174",   # web_slicer_core React UI (alternate port)
+    "http://localhost:5174",
     "http://127.0.0.1:5174",
     "http://localhost:5175",
     "http://127.0.0.1:5175",
@@ -56,9 +114,9 @@ _cors_origins = {
     "http://127.0.0.1:5176",
     "http://localhost:5177",
     "http://127.0.0.1:5177",
-    "http://localhost:5178",   # DS-Online (when other ports in use)
+    "http://localhost:5178",
     "http://127.0.0.1:5178",
-    "http://localhost:3000",   # Common dev port
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
 }
 _extra_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
@@ -122,7 +180,8 @@ async def request_validation_handler(request: Request, exc: RequestValidationErr
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     err_text = _tb.format_exc()
-    with open("/tmp/boolean_error.log", "a") as f:
+    log_path = Path(tempfile.gettempdir()) / "boolean_error.log"
+    with open(log_path, "a") as f:
         f.write(f"\n=== GLOBAL {request.url.path} ===\n{err_text}\n")
     err = internal_error(str(exc))
     return err.to_response(_cors_headers(request))
@@ -138,7 +197,7 @@ async def root():
     return {
         "service": "web_slicer_core",
         "status": "running",
-        "cli_available": PRUSA_SLICER_CLI.exists(),
+        "cli_available": SLICER_ENGINE_CLI.exists(),
     }
 
 
@@ -752,13 +811,23 @@ async def download_prz(job_id: str, request: Request):
     config = await request.json()
 
     from .prz_encoder import encode_prz_streaming
+    from .api_v2 import _inject_retract_overrides
+    from .models import _extract_prz_timing_config
+    from pydantic import ValidationError
+
+    _inject_retract_overrides(config)
+
+    try:
+        timing = _extract_prz_timing_config(config)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors())
 
     return StreamingResponse(
         encode_prz_streaming(
             config=config,
             sl1_path=sl1_path,
-            estimated_print_time=status_data.get("estimated_print_time") or 0,
-            resin_volume_ml=status_data.get("resin_volume_ml") or 0,
+            timing=timing,
+            resin_volume_mm3=(status_data.get("resin_volume_ml") or 0) * 1000,
         ),
         media_type="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=model.prz"},
@@ -1027,7 +1096,19 @@ async def get_ortho_result(job_id: str):
 def main():
     """Run the server."""
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT)
+    if not TLS_CERT_PATH.is_file() or not TLS_KEY_PATH.is_file():
+        raise RuntimeError(
+            "TLS cert/key not found. "
+            f"cert={TLS_CERT_PATH}, key={TLS_KEY_PATH}. "
+            "Provide AGENT_TLS_CERTFILE/AGENT_TLS_KEYFILE or prepare agent/tls/localhost.crt|key."
+        )
+    uvicorn.run(
+        app,
+        host=HOST,
+        port=PORT,
+        ssl_certfile=str(TLS_CERT_PATH),
+        ssl_keyfile=str(TLS_KEY_PATH),
+    )
 
 
 if __name__ == "__main__":

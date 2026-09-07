@@ -1,0 +1,16 @@
+﻿DEBUG_DIRECTORY_HINTS.txt: token=prusa
+DEBUG_DIRECTORY_HINTS.txt: token=PrusaSlicer
+DEPENDENTS_prusa-slicer-console.exe.txt: token=prusa
+DEPENDENTS_prusa-slicer-console.exe.txt: token=PrusaSlicer
+EXPORTS_PrusaSlicer.dll.txt: token=prusa
+EXPORTS_PrusaSlicer.dll.txt: token=PrusaSlicer
+EXPORTS_PrusaSlicer.dll.txt: token=Slic3r
+EXPORTS_PrusaSlicer.dll.txt: token=slic3r_main
+HEADERS_PrusaSlicer.dll.txt: token=prusa
+HEADERS_PrusaSlicer.dll.txt: token=PrusaSlicer
+HEADERS_prusa-slicer-console.exe.txt: token=Prusa
+HEADERS_prusa-slicer-console.exe.txt: token=PrusaSlicer
+PATH_INVENTORY.txt: token=prusa
+PATH_INVENTORY.txt: token=PrusaSlicer
+VERSIONINFO.txt: token=prusa
+VERSIONINFO.txt: token=PrusaSlicer

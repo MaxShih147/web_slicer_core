@@ -4,6 +4,9 @@ python-multipart>=0.0.6
 pydantic>=2.0.0
 trimesh>=4.0.0
 manifold3d>=2.3.0
+networkx>=3.0
 rtree
 numpy
 Pillow
+scipy>=1.10.0
+mapbox-earcut>=2.0.0

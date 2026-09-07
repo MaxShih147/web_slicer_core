@@ -1,0 +1,10 @@
+﻿# Source: C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\scripts\build_prusaslicer_fork_macos.sh
+# macOS default build type (Clang)
+
+  14: echo "Please download from: https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-macos-universal.dmg"
+  18: # Prefer RelWithDebInfo so dsymutil can archive DWARF before strip (D13 / 5.1).
+  19: # Override with SLICER_ENGINE_BUILD_TYPE=Release if needed.
+  20: BUILD_TYPE="${SLICER_ENGINE_BUILD_TYPE:-RelWithDebInfo}"
+  78: -DCMAKE_BUILD_TYPE=Release \
+ 109: echo "[PrusaSlicer] Configuring build (CMAKE_BUILD_TYPE=$BUILD_TYPE, flavor=$FLAVOR, harness=$HARNESS_FLAG)..."
+ 111: -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \

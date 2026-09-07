@@ -1,0 +1,3 @@
+Slic3r_in_exports_lines=462
+slic3r_main=1
+named_exports=470

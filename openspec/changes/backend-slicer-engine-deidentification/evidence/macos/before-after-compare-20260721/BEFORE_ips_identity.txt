@@ -1,0 +1,18 @@
+# BEFORE
+file: BEFORE_PrusaSlicer_overflow_brand_stack.ips
+procName: PrusaSlicer
+codeSigningID: PrusaSlicer
+bundleID: com.prusa3d.slic3r/
+version: PrusaSlicer PrusaSlicer-2.9.4+UNKNOWN
+thread: slic3r_main
+frames:
+  - ___chkstk_darwin
+  - Slic3r::bundle_force_stack_overflow()
+  - Slic3r::bundle_force_stack_overflow()
+  - Slic3r::bundle_force_stack_overflow()
+  - Slic3r::bundle_force_stack_overflow()
+  - Slic3r::bundle_force_stack_overflow()
+  - Slic3r::bundle_force_stack_overflow()
+  - Slic3r::bundle_force_stack_overflow()
+  - Slic3r::SLAPrint::process()
+  - Slic3r::CLI::process_actions(Slic3r::CLI::Data&, Slic3r::DynamicPrintConfig const&, std::__1::vector<Slic3r::Model, std::__1::allocator<Slic3r::Model>>&)

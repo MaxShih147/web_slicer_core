@@ -1,0 +1,153 @@
+﻿{
+    "spdxVersion":  "SPDX-2.3",
+    "dataLicense":  "CC0-1.0",
+    "SPDXID":  "SPDXRef-DOCUMENT",
+    "name":  "slicer-engine-20260719T162525Z",
+    "documentNamespace":  "https://phrozen3d.com/spdx/slicer-engine/20260719T162525Z",
+    "creationInfo":  {
+                         "created":  "2026-07-19T16:45:30Z",
+                         "creators":  [
+                                          "Tool: package_slicer_engine_windows.ps1",
+                                          "Organization: Phrozen Technology"
+                                      ]
+                     },
+    "packages":  [
+                     {
+                         "SPDXID":  "SPDXRef-Package-slicer-engine",
+                         "name":  "slicer-engine",
+                         "versionInfo":  "20260719T162525Z",
+                         "downloadLocation":  "NOASSERTION",
+                         "filesAnalyzed":  false,
+                         "supplier":  "Organization: Phrozen Technology",
+                         "copyrightText":  "NOASSERTION",
+                         "licenseConcluded":  "AGPL-3.0-only",
+                         "licenseDeclared":  "AGPL-3.0-only",
+                         "comment":  "Modified PrusaSlicer-derived CLI; see legal/SOURCE_OFFER.md",
+                         "externalRefs":  [
+                                              {
+                                                  "referenceCategory":  "OTHER",
+                                                  "referenceType":  "buildId",
+                                                  "referenceLocator":  "20260719T162525Z"
+                                              },
+                                              {
+                                                  "referenceCategory":  "OTHER",
+                                                  "referenceType":  "gitCommit",
+                                                  "referenceLocator":  "1d5f7a843fe46804d70cd5e9f27e0ba3d893a42e"
+                                              }
+                                          ]
+                     },
+                     {
+                         "SPDXID":  "SPDXRef-File-1",
+                         "name":  "libgmp-10.dll",
+                         "versionInfo":  "20260719T162525Z",
+                         "downloadLocation":  "NOASSERTION",
+                         "filesAnalyzed":  false,
+                         "checksums":  [
+                                           {
+                                               "algorithm":  "SHA256",
+                                               "checksumValue":  "fec43cb18ce0ec8a5dd6ad1db745747167310ccb92b5acff0d445a8b3013f009"
+                                           }
+                                       ],
+                         "licenseConcluded":  "NOASSERTION",
+                         "licenseDeclared":  "NOASSERTION",
+                         "copyrightText":  "NOASSERTION"
+                     },
+                     {
+                         "SPDXID":  "SPDXRef-File-2",
+                         "name":  "libmpfr-4.dll",
+                         "versionInfo":  "20260719T162525Z",
+                         "downloadLocation":  "NOASSERTION",
+                         "filesAnalyzed":  false,
+                         "checksums":  [
+                                           {
+                                               "algorithm":  "SHA256",
+                                               "checksumValue":  "09b3b868b96433991fc15c9c5ae6f9a44c62d2e21194110442607917391ed927"
+                                           }
+                                       ],
+                         "licenseConcluded":  "NOASSERTION",
+                         "licenseDeclared":  "NOASSERTION",
+                         "copyrightText":  "NOASSERTION"
+                     },
+                     {
+                         "SPDXID":  "SPDXRef-File-3",
+                         "name":  "OCCTWrapper.dll",
+                         "versionInfo":  "20260719T162525Z",
+                         "downloadLocation":  "NOASSERTION",
+                         "filesAnalyzed":  false,
+                         "checksums":  [
+                                           {
+                                               "algorithm":  "SHA256",
+                                               "checksumValue":  "67e9ff10d8a9bb924786eb60fe4a39f35c10b1a83d4c7540ce13013a938fe7d9"
+                                           }
+                                       ],
+                         "licenseConcluded":  "NOASSERTION",
+                         "licenseDeclared":  "NOASSERTION",
+                         "copyrightText":  "NOASSERTION"
+                     },
+                     {
+                         "SPDXID":  "SPDXRef-File-4",
+                         "name":  "slicer-engine.exe",
+                         "versionInfo":  "20260719T162525Z",
+                         "downloadLocation":  "NOASSERTION",
+                         "filesAnalyzed":  false,
+                         "checksums":  [
+                                           {
+                                               "algorithm":  "SHA256",
+                                               "checksumValue":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5"
+                                           }
+                                       ],
+                         "licenseConcluded":  "NOASSERTION",
+                         "licenseDeclared":  "NOASSERTION",
+                         "copyrightText":  "NOASSERTION"
+                     },
+                     {
+                         "SPDXID":  "SPDXRef-File-5",
+                         "name":  "slicer_core.dll",
+                         "versionInfo":  "20260719T162525Z",
+                         "downloadLocation":  "NOASSERTION",
+                         "filesAnalyzed":  false,
+                         "checksums":  [
+                                           {
+                                               "algorithm":  "SHA256",
+                                               "checksumValue":  "df36eab9105548732ba4d8f87484e09db5431a9747b1122123ce9ee8fbb93a41"
+                                           }
+                                       ],
+                         "licenseConcluded":  "NOASSERTION",
+                         "licenseDeclared":  "NOASSERTION",
+                         "copyrightText":  "NOASSERTION"
+                     }
+                 ],
+    "relationships":  [
+                          {
+                              "spdxElementId":  "SPDXRef-DOCUMENT",
+                              "relationshipType":  "DESCRIBES",
+                              "relatedSpdxElement":  "SPDXRef-Package-slicer-engine"
+                          },
+                          {
+                              "spdxElementId":  "SPDXRef-Package-slicer-engine",
+                              "relationshipType":  "CONTAINS",
+                              "relatedSpdxElement":  "SPDXRef-File-1"
+                          },
+                          {
+                              "spdxElementId":  "SPDXRef-Package-slicer-engine",
+                              "relationshipType":  "CONTAINS",
+                              "relatedSpdxElement":  "SPDXRef-File-2"
+                          },
+                          {
+                              "spdxElementId":  "SPDXRef-Package-slicer-engine",
+                              "relationshipType":  "CONTAINS",
+                              "relatedSpdxElement":  "SPDXRef-File-3"
+                          },
+                          {
+                              "spdxElementId":  "SPDXRef-Package-slicer-engine",
+                              "relationshipType":  "CONTAINS",
+                              "relatedSpdxElement":  "SPDXRef-File-4"
+                          },
+                          {
+                              "spdxElementId":  "SPDXRef-Package-slicer-engine",
+                              "relationshipType":  "CONTAINS",
+                              "relatedSpdxElement":  "SPDXRef-File-5"
+                          }
+                      ],
+    "comment":  "REQ-DEID-011/6.4: binary SHA-256 ??engine_build_id ??engine_commit. Corresponding Source via legal/SOURCE_OFFER.md (email/written offer)."
+}

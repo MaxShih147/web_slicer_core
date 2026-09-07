@@ -1,0 +1,1 @@
+﻿LocalDumps configured at HKCU:\Software\Microsoft\Windows\Windows Error Reporting\LocalDumps\prusa-slicer-console.exe -> C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\baseline\win-baseline-20260717T055632Z\dumps

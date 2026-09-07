@@ -1,0 +1,57 @@
+﻿{
+    "schema":  "slicer-engine-windows-scan/1.0",
+    "artifact_root":  "C:\\Program Files\\Bundle Launcher\\resources\\bundle\\slicer-engine",
+    "expect_flavor":  "consumer",
+    "blacklist_hint":  "1.2",
+    "authenticode":  "skipped_manual_signing",
+    "verdict":  "PASS",
+    "checks":  {
+                   "manifest_path":  "C:\\Program Files\\Bundle Launcher\\resources\\bundle\\slicer-engine\\artifact-manifest.json",
+                   "pdb_in_bin":  [
+
+                                  ],
+                   "brand_paths":  [
+
+                                   ],
+                   "resource_brand_path_count":  148,
+                   "symbols_present":  false,
+                   "schema_version":  "1.0",
+                   "manifest_flavor":  "consumer",
+                   "engine_build_id":  "20260719T063127Z",
+                   "platform":  "windows-x64",
+                   "exe_post_strip_sha256_manifest":  "f9498ccb208c67ae878dcca58d5826754dbb9b7c0cdd29bc009760db6ad62f2f",
+                   "exe_post_strip_sha256_actual":  "f9498ccb208c67ae878dcca58d5826754dbb9b7c0cdd29bc009760db6ad62f2f",
+                   "dll_post_strip_sha256_manifest":  "cedff73cc47035ff242c2507b15e99696d87bce65cce4aeb3fb0222b9c143f0d",
+                   "dll_post_strip_sha256_actual":  "cedff73cc47035ff242c2507b15e99696d87bce65cce4aeb3fb0222b9c143f0d",
+                   "versioninfo_slicer-engine.exe":  {
+                                                         "ProductName":  "Slicer Engine",
+                                                         "FileDescription":  "Slicer Engine",
+                                                         "InternalName":  "slicer-engine",
+                                                         "OriginalFilename":  "slicer-engine.exe",
+                                                         "CompanyName":  "Phrozen Technology",
+                                                         "ProductVersion":  "Slicer Engine 2.9.4+UNKNOWN"
+                                                     },
+                   "versioninfo_slicer_core.dll":  {
+                                                       "ProductName":  "Slicer Engine",
+                                                       "FileDescription":  "Slicer Engine",
+                                                       "InternalName":  "slicer_core",
+                                                       "OriginalFilename":  "slicer_core.dll",
+                                                       "CompanyName":  "Phrozen Technology",
+                                                       "ProductVersion":  "Slicer Engine 2.9.4+UNKNOWN"
+                                                   },
+                   "named_exports":  1,
+                   "slicer_run_cli":  true,
+                   "slic3r_main":  false,
+                   "debug_directory_brand":  false,
+                   "harness_markers":  [
+
+                                       ]
+               },
+    "notes":  [
+                  "bin/resources contains 148 brand-named asset path(s); not fail-closed here (profiles/icons). Sample: bin/resources/data/printer_gantries/prusa3d_coreoneL_gantry.stl, bin/resources/data/printer_gantries/prusa3d_coreone_gantry.stl, bin/resources/data/printer_gantries/prusa3d_ht90_actuator.stl, bin/resources/data/printer_gantries/prusa3d_mini_gantry.stl, bin/resources/data/printer_gantries/prusa3d_mk3s_gantry.stl"
+              ],
+    "failures":  [
+
+                 ],
+    "scanned_at_utc":  "2026-07-19T08:49:33.1433458Z"
+}

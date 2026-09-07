@@ -1,0 +1,13 @@
+# AFTER segfault (m1-close)
+file: AFTER_slicer-engine_segfault.ips
+procName: slicer-engine
+codeSigningID: slicer-engine
+bundleID: None
+version: 
+thread: slicer-worker
+frames:
+  - imageOffset:6300084
+  - imageOffset:6288764
+  - imageOffset:251924
+  - imageOffset:360300
+  - start

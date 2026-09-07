@@ -1,0 +1,21 @@
+=== Strip restore demo · real atos on this Mac ===
+Crash: AFTER_slicer-engine_segfault.ips (slice_uuid=24ba876c-1f98-4186-b850-ffc7ba4a380b)
+Load base (from .ips usedImages): 0x102370000
+Triggered thread frames (imageOffset only after strip):
+  6300084  6288764  251924  360300
+
+--- A) WITHOUT symbols (stripped consumer binary only) ---
+Command: atos -o slicer-engine -arch arm64 -l 0x102370000 <addr>
+  imageOffset+6300084  0x1029721b4  →  0x00000001006021b4 (in slicer-engine) + 16
+  imageOffset+6288764  0x10296f57c  →  0x00000001005ff57c (in slicer-engine) + 1320
+  imageOffset+251924  0x1023ad814  →  0x000000010003d814 (in slicer-engine) + 9956
+  imageOffset+360300  0x1023c7f6c  →  0x0000000100057f6c (in slicer-engine) + 352
+
+--- B) WITH matching private symbols (.dSYM) — full restore ---
+Command: atos -o slicer-engine.dSYM -arch arm64 -l 0x102370000 <addr>
+  imageOffset+6300084  0x1029721b4  →  Slic3r::bundle_force_segfault() (in slicer-engine) + 16
+  imageOffset+6288764  0x10296f57c  →  Slic3r::SLAPrint::process() (in slicer-engine) + 1320
+  imageOffset+251924  0x1023ad814  →  Slic3r::CLI::process_actions(Slic3r::CLI::Data&, Slic3r::DynamicPrintConfig const&, std::__1::vector<Slic3r::Model, std::__1::allocator<Slic3r::Model>>&) (in slicer-engine) + 9956
+  imageOffset+360300  0x1023c7f6c  →  Slic3r::CLI::run(int, char**) (in slicer-engine) + 352
+
+Verdict: strip 後對外只剩位址；內部用同版 .dSYM／unstripped 可完整還原函式名。

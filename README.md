@@ -14,14 +14,68 @@ Web-based SLA slicing application powered by PrusaSlicer CLI (headless). Feature
 
 ## Prerequisites
 
-- macOS (tested on macOS 15.x)
+- macOS (tested on macOS 15.x) or Windows (see [Windows setup](#windows-setup) for TBB)
 - Python 3.9+
 - Node.js 18+
 - PrusaSlicer Fork (with `--export-support-stl` feature)
 
+### Windows setup
+
+**Recommended (easiest):** Use **Python 3.11 or 3.12** and follow [Quick Start (Windows)](#quick-start) (submodule init → build PrusaSlicer → create `.venv312` → `scripts\run_agent.bat`). `manifold3d` has prebuilt wheels for 3.11/3.12, so no TBB or compilation is needed.
+
+```bat
+py -3.12 -m venv .venv312
+scripts\run_agent.bat
+```
+
+You must [build PrusaSlicer](#1-build-prusaslicer-fork-macos--linux) first (use `scripts\build_prusaslicer_fork_windows.bat` on Windows). The script prefers `.venv312` if it exists and will install all dependencies from wheels.
+
+**Alternative (Python 3.14 or other):** If you use the default `.venv` (e.g. Python 3.14), `manifold3d` builds from source and requires **TBB**. Use [vcpkg](https://vcpkg.io/en/docs/README.html):
+
+1. `vcpkg install tbb:x64-windows`
+2. Set `VCPKG_ROOT` and add `%VCPKG_ROOT%\installed\x64-windows\bin` to your PATH.
+3. Run `scripts\run_agent.bat`
+
+See Troubleshooting below if you see "tbb was not found" or "DLL load failed".
+
 ## Quick Start
 
-### 1. Build PrusaSlicer Fork
+<a name="after-clone-init-submodules"></a>**After clone:** init submodules so the PrusaSlicer fork source is available:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Quick Start (Windows)
+
+After cloning (and [initializing submodules](#after-clone-init-submodules)), run in order:
+
+```bat
+:: 1. Init submodules (get PrusaSlicer fork source)
+git submodule update --init --recursive
+
+:: 2. Build PrusaSlicer CLI (requires CMake, Visual Studio; 16GB RAM use default, 32GB+ use full)
+::    Builds PrusaSlicer_app_console + OCCTWrapper (STEP plugin). Package is OFF by default.
+scripts\build_prusaslicer_fork_windows.bat
+
+:: Optional: build then package consumer staging in one step
+:: scripts\build_prusaslicer_fork_windows.bat low package
+:: or: set PACKAGE_SLICER_ENGINE=1 && scripts\build_prusaslicer_fork_windows.bat low
+
+:: 3. Python 3.12 venv (recommended so manifold3d installs from wheel)
+py -3.12 -m venv .venv312
+
+:: 4. Start backend (installs deps and runs agent)
+scripts\run_agent.bat
+```
+
+Backend runs at `https://127.0.0.1:5179`. Then start the frontend (see step 3 below).
+
+> **Due to de-identification, the new build output on Windows is `third_party\prusaslicer_build\src\Release\slicer-engine.exe` plus `slicer_core.dll` and `OCCTWrapper.dll`** (the console shim loads the neutral core DLL; STEP/STP uses the OCCT plugin). Point the agent at it with `set SLICER_ENGINE_BIN=%CD%\third_party\prusaslicer_build\src\Release\slicer-engine.exe`. See [De-identification notes](#de-identification-notes).
+
+**Prerequisites for Windows:** Python 3.12 (or 3.11), Node.js 18+, CMake, Visual Studio 2017+ (2019/2022/2026). Low RAM (16GB): use default; 32GB+: run `scripts\build_prusaslicer_fork_windows.bat full`. Args: `[full|low|qa] [clean|qa|package] …` — pass `package` or set `PACKAGE_SLICER_ENGINE=1` to run D13 staging after build (default **off**).
+
+### 1. Build PrusaSlicer Fork (macOS / Linux)
 
 The project uses a custom PrusaSlicer fork with support mesh STL export capability.
 
@@ -31,6 +85,8 @@ The project uses a custom PrusaSlicer fork with support mesh STL export capabili
 ```
 
 This builds the binary at `third_party/prusaslicer_build/src/prusa-slicer`.
+
+> **Due to de-identification, the new (current) output is `third_party/prusaslicer_build/src/slicer-engine` on macOS** (the CMake `OUTPUT_NAME` is now `slicer-engine`; branded symlinks such as `prusa-slicer` are removed on macOS). On Linux the binary is still named `prusa-slicer`. See [De-identification notes](#de-identification-notes).
 
 ### 2. Start the Backend
 
@@ -42,7 +98,9 @@ export PRUSA_SLICER_BIN=$(pwd)/third_party/prusaslicer_build/src/prusa-slicer
 ./scripts/run_agent.sh
 ```
 
-Backend runs at `http://127.0.0.1:5179`
+> **Due to de-identification, the new recommended variable is `SLICER_ENGINE_BIN` pointing at `slicer-engine`** (macOS example: `export SLICER_ENGINE_BIN=$(pwd)/third_party/prusaslicer_build/src/slicer-engine`). `PRUSA_SLICER_BIN` above is kept only as a local legacy fallback and still works during the transition — do not rely on it as the shipped default.
+
+Backend runs at `https://127.0.0.1:5179`
 
 ### 3. Start the Frontend
 
@@ -61,6 +119,74 @@ Frontend runs at `http://localhost:5174`
 | **React UI** | http://localhost:5174 | Main frontend - slicing, preview, supports, hollow |
 | **Boolean Test** | http://localhost:5179/test/boolean | Experimental boolean operations test page |
 | **API Docs** | http://localhost:5179/docs | Swagger UI for API exploration |
+
+## De-identification notes
+
+> De-identification only applies to the **consumer artifact (the formal, shipped package)**: it renames the surfaces a user or support agent can see so no Prusa／slic3r brand fingerprint leaks. **Slicing behavior and parameters are unchanged.**
+
+### Dev-branch handoff (read this first)
+
+De-identification is landed on the **`dev` branches** of both **`web_slicer_core`** and **`prusaslicer_fork`**. Pull both to latest before continuing development.
+
+1. **Local build & run are unchanged** — no extra manual steps for day-to-day work:
+   - macOS: `./scripts/build_prusaslicer_fork_macos.sh` (build) + `./scripts/run_agent.sh` (run)
+   - Windows: `scripts\build_prusaslicer_fork_windows.bat` (build) + `scripts\run_agent.bat` (run)
+   - Windows packaging is **opt-in** (same idea as macOS): pass `package` or `PACKAGE_SLICER_ENGINE=1` after a successful build when you need `slicer-engine\` staging.
+2. **Direct CLI** — same native PrusaSlicer flag grammar; only the executable name is neutral (`slicer-engine` / `slicer-engine.exe`). Example: `--load config.ini --export-gcode -o out.gcode model.stl` (or `--export-sla` for SLA). Prefer `SLICER_ENGINE_BIN` over legacy `PRUSA_SLICER_BIN`.
+3. **Scenarios & copy-paste commands** — [`docs/slicer-engine-deidentification/build-test-runbook.md`](docs/slicer-engine-deidentification/build-test-runbook.md) (safe to feed to an AI assistant for guidance).
+4. **Full R&D record** — [`openspec/changes/backend-slicer-engine-deidentification/`](openspec/changes/backend-slicer-engine-deidentification/) (`design.md`, `naming-manifest.md`, `blacklist.md`, `acceptance-procedure.md`, evidence, etc.).
+5. **Pre-merge retest (both platforms):** clean build → dental workflow smoke (one-click process + long supports + slice) → CLI slice smoke.
+
+> **Build / test runbook:** [`docs/slicer-engine-deidentification/build-test-runbook.md`](docs/slicer-engine-deidentification/build-test-runbook.md)
+>
+> Full spec: [`openspec/changes/backend-slicer-engine-deidentification/`](openspec/changes/backend-slicer-engine-deidentification/)
+
+### One-line positioning
+
+| Context | Name to use |
+|---------|-------------|
+| **Development / source / fork / submodule** | Keep PrusaSlicer (no need to rename) |
+| **Build tree** `third_party/prusaslicer_build/` | Keep as-is (folder name not required to change) |
+| **Consumer package / install path** | Neutral names `slicer-engine/`, `slicer-engine(.exe)`, `slicer_core.dll` |
+
+`slicer` ≠ `slic3r`: the neutral `slicer-*` names are **not** blacklist hits; the blacklisted token is `slic3r` (with the digit 3).
+
+### Development / compilation
+
+- For normal development, debugging, and running the CLI, **just use PrusaSlicer as before** — de-identification does not affect the dev workflow.
+- Output **filenames** become neutral right after compilation (CMake `OUTPUT_NAME`):
+  - macOS: `third_party/prusaslicer_build/src/slicer-engine` (OCCT linked statically into the binary on Apple)
+  - Windows: `…\src\Release\slicer-engine.exe` + `slicer_core.dll` + **`OCCTWrapper.dll`** (delay-loaded MODULE; the build script builds it explicitly after `PrusaSlicer_app_console`)
+  - The CMake target is still internally named `PrusaSlicer` — that is expected, leave it.
+- PE icon on Windows is embedded at **link time** from SoT `third_party/prusaslicer_fork/resources/icons/slicer-engine.ico` (`SLIC3R_APP_ICON` → `PrusaSlicer.rc.in`). Changing the `.ico` requires a clean rebuild of the console shim. Do **not** rely on Explorer list-view icons (shell cache); packaging verifies `ExtractAssociatedIcon` against the SoT (fail-closed).
+- Run a **clean build** when you touch any of these, so stale cache doesn't leave brand names behind (`build_...windows.bat clean`, or delete `prusaslicer_build` first on mac): `OUTPUT_NAME`, visibility flags, `BUNDLE_QA_CRASH_HARNESS`, exports (`.def`), VERSIONINFO / `version.inc`, **`SLIC3R_APP_ICON` / `.ico`**.
+- The **QA crash harness (the three intentional crashes) is compiled only when `flavor=qa`**; consumer builds default to OFF, and no runtime-triggerable crash path may be compiled into the formal package.
+- **Do not** touch slicing algorithms or do a wide C++ namespace rename for the sake of de-branding (`Slic3r::` → `slice::` is L3 and out of scope for this round).
+
+### Build / packaging
+
+- Plain compilation does **not** strip or seal PDBs; the formal package requires a separate package step (opt-in on both platforms):
+  - macOS: `PACKAGE_SLICER_ENGINE=1 ./scripts/build_prusaslicer_fork_macos.sh` → `third_party/slicer-engine/bin/`
+  - Windows: `scripts\build_prusaslicer_fork_windows.bat low package` **or** `set PACKAGE_SLICER_ENGINE=1` then build **or** `powershell -File scripts\package_slicer_engine_windows.ps1` → `slicer-engine\bin\`
+  - Packaging **deletes** the previous staging root then recopies (no leftover files from older packages).
+- The consumer package **must not contain**: `.pdb` (Win), `.dSYM` / `*.unstripped` (mac), the QA harness, or brand leftovers like `prusa-slicer*` / `PrusaSlicer.dll`.
+- **Keep symbols internally**: archive the mac `.dSYM` and the Win `.pdb` in a private symbol store (their UUID / GUID must match that build) so function names can be restored for debugging later.
+- After stripping on macOS you **must re-`codesign`**; Windows uses Authenticode. Do not strip / rename / patch after signing.
+
+### Usage (agent / CLI)
+
+- The agent binary path is driven by **`SLICER_ENGINE_BIN`**; `PRUSA_SLICER_BIN` is a local legacy fallback only — do not rely on it as the shipped default.
+- When invoking the CLI directly, the formal package calls `slicer-engine(.exe)`; the arguments are identical to PrusaSlicer (`--export-sla`, `--export-support-stl`, `--help`, etc.).
+- Running `slicer-engine.exe` on Windows requires `slicer_core.dll`, **`OCCTWrapper.dll`**, and GMP/MPFR (`libgmp-10.dll` / `libmpfr-4.dll`) in the same directory; missing files cause a LoadLibrary failure (error 126).
+
+### Quick self-check before acceptance
+
+```bash
+# --help must not print PrusaSlicer / slic3r (the neutral name slicer-engine is fine)
+"$SLICER_ENGINE_BIN" --help
+
+# The formal package dir has no prusa / slic3r filenames; no .pdb on Win, no .dSYM on mac
+```
 
 ## Usage
 
@@ -253,6 +379,8 @@ The backend supports multiple frontends through versioned API endpoints:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+> **Due to de-identification, the "PrusaSlicer CLI" box in these diagrams ships as the neutral `slicer-engine` engine** (Windows: `slicer-engine.exe` → `slicer_core.dll`). The adapter, APIs, and slicing behavior are unchanged; only the consumer-facing executable/DLL names are neutral. See [De-identification notes](#de-identification-notes).
+
 ## Directory Structure
 
 ```
@@ -289,9 +417,16 @@ web_slicer_core/
 └── README.md
 ```
 
+> **Due to de-identification, the new tree also includes:**
+> - `third_party/slicer-engine/` — optional packaged consumer layout (`bin/`, `symbols/`, `legal/`, manifest), produced by the packaging scripts; gitignored.
+> - `prusaslicer_build/` still builds with `OUTPUT_NAME=slicer-engine` (`slicer-engine`/`slicer-engine.exe` + `slicer_core.dll`); the folder name itself is left as-is.
+> - Additional scripts under `scripts/`: `build_prusaslicer_fork_windows.bat`, `package_slicer_engine_macos.sh`, `package_slicer_engine_windows.ps1`, `scan_slicer_engine_macos.sh`, `scan_slicer_engine_windows.ps1`.
+
 ## PrusaSlicer Fork
 
 This project uses a custom fork of PrusaSlicer (`github.com:MaxShih147/PrusaSlicer.git`) with additional CLI options:
+
+> **Due to de-identification, the new shipped binary is invoked as `slicer-engine` (`slicer-engine.exe` on Windows), not `prusa-slicer`.** The `prusa-slicer` commands shown in the examples below still describe the exact same CLI options and arguments — only the executable name changed for consumer artifacts. On Linux the dev binary remains `prusa-slicer`. See [De-identification notes](#de-identification-notes).
 
 ### `--export-support-stl`
 
@@ -396,21 +531,25 @@ Note: PrusaSlicer auto-centers the model on the bed and auto-drops it to Z=0. Th
 ```
 Frontend config          generate_config_ini()         PrusaSlicer CLI
 (backendSlicer.js)  -->  (sla_operations.py)      -->  (--load config.ini)
-                         Writes:                       Reads config.ini +
-                         - layer_height                Falls back to defaults for:
-                         - exposure_time               - display_width    (120.0)
-                         - supports_enable             - display_height   (68.0)
-                         - hollowing_*                  - display_pixels_x (2560)
-                         - etc.                         - display_pixels_y (1440)
-                         Does NOT write:
-                         - display_width
-                         - display_height
-                         - display_pixels_*
+                         Writes EVERY SLAConfig        Reads config.ini.
+                         field, including:             Its own defaults apply
+                         - layer_height                only when no --load is
+                         - exposure_time               passed at all:
+                         - supports_enable             - display_width    (120.0)
+                         - hollowing_*                 - display_height   (68.0)
+                         - display_width               - display_pixels_x (2560)
+                         - display_height              - display_pixels_y (1440)
+                         - display_pixels_x / _y
+                         - display_orientation
 ```
+
+`display_pixels_x` / `display_pixels_y` reaching the INI is what lets the agent
+derive the preview downscale ratio from the same format the engine rasterises
+at — see `agent/preview_scale.py`.
 
 ### TODO: Sync Frontend Parameters with PrusaSlicer Config
 
-- [ ] **Add printer/display config to `generate_config_ini()`** — Write `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y`, `display_orientation` into the INI file so PrusaSlicer uses the same bed as the frontend
+- [x] **Add printer/display config to `generate_config_ini()`** — Done: it dumps every `SLAConfig` field, so `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y` and `display_orientation` all reach the INI and PrusaSlicer uses the same bed as the frontend
 - [ ] **Add printer profile selection to frontend** — Let users choose a printer profile (SL1, SL1S, Anycubic, custom) or enter custom display dimensions
 - [ ] **Return display config from backend API** — Include `display_width`, `display_height`, `display_pixels_x`, `display_pixels_y` in slice job status response so the frontend knows the actual bed size used
 - [ ] **Sync `paramsStore.bedSize` with PrusaSlicer display** — Frontend's `paramsStore.bedSize` (currently [195.84, 122.4] for LS Plus) should match the PrusaSlicer printer profile, or be overridden by it
@@ -422,12 +561,20 @@ Frontend config          generate_config_ini()         PrusaSlicer CLI
 
 ### Backend Development
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+From the **repository root** (the scripts run the agent with **HTTPS** on `https://127.0.0.1:5179` and require TLS cert/key; see `agent/tls/` or `scripts/trust_dev_tls_*.sh` / `scripts/trust_dev_tls_windows.ps1`).
 
-# Run with auto-reload
-cd agent && uvicorn main:app --reload --port 5179
+**macOS / Linux**
+
+```bash
+pip install -r requirements.txt
+./scripts/run_agent.sh
+```
+
+**Windows** (Command Prompt or PowerShell)
+
+```bat
+pip install -r requirements.txt
+scripts\run_agent.bat
 ```
 
 ### Frontend Development
@@ -453,7 +600,19 @@ If you need to modify the PrusaSlicer fork:
    ./src/prusa-slicer --help | grep export-support
    ```
 
+> **Due to de-identification, on macOS the new test binary is `./src/slicer-engine`** (e.g. `./src/slicer-engine --help | grep export-support`); Linux still produces `prusa-slicer`.
+
 ## Troubleshooting
+
+### "PrusaSlicer CLI not found" (Windows)
+
+Build the fork first: `scripts\build_prusaslicer_fork_windows.bat`. Ensure you ran `git submodule update --init --recursive` after clone. The binary will be at `third_party\prusaslicer_build\src\Release\slicer-engine.exe` (with `slicer_core.dll` and `OCCTWrapper.dll` beside it).
+
+> **Due to de-identification, do not look for `prusa-slicer.exe`.** Use `slicer-engine.exe` + runtime DLLs in the same folder.
+
+### "tbb was not found" when installing dependencies (Windows)
+
+The `manifold3d` package needs TBB to build. Follow [Windows setup](#windows-setup): install TBB via vcpkg, set `VCPKG_ROOT` or `CMAKE_PREFIX_PATH`, then run `scripts\run_agent.bat` again.
 
 ### "CLI not available"
 
@@ -462,6 +621,18 @@ Ensure `PRUSA_SLICER_BIN` is set correctly:
 export PRUSA_SLICER_BIN=$(pwd)/third_party/prusaslicer_build/src/prusa-slicer
 $PRUSA_SLICER_BIN --version
 ```
+
+> **Due to de-identification, the new preferred variable and path are:**
+> ```bash
+> # macOS
+> export SLICER_ENGINE_BIN=$(pwd)/third_party/prusaslicer_build/src/slicer-engine
+> "$SLICER_ENGINE_BIN" --help
+>
+> # Windows (cmd)
+> set SLICER_ENGINE_BIN=%CD%\third_party\prusaslicer_build\src\Release\slicer-engine.exe
+> "%SLICER_ENGINE_BIN%" --help
+> ```
+> `PRUSA_SLICER_BIN` is still accepted as a local legacy fallback only.
 
 ### CORS errors in browser
 
@@ -701,3 +872,5 @@ export CORS_ALLOWED_ORIGINS="https://your-ui.example.com,https://another.example
 ## License
 
 PrusaSlicer is licensed under AGPLv3. See the fork repository for details.
+
+> **Due to de-identification, the new note is: de-branding renames consumer-facing artifacts only — it does NOT change AGPLv3 obligations.** The AGPL license, copyright, modification notices, and Corresponding Source offer must still ship with the consumer package (see `legal/slicer-engine/` and `openspec/changes/backend-slicer-engine-deidentification/`).

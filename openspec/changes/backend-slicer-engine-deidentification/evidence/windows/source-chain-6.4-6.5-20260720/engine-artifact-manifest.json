@@ -1,0 +1,46 @@
+﻿{
+    "schema_version":  "1.0",
+    "engine_commit":  "1d5f7a843fe46804d70cd5e9f27e0ba3d893a42e",
+    "engine_build_id":  "20260719T162525Z",
+    "build_id":  "20260719T162525Z",
+    "flavor":  "consumer",
+    "platform":  "Windows",
+    "architecture":  "x64",
+    "created_at_utc":  "2026-07-19T16:25:25.9132973Z",
+    "pre_strip_sha256":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+    "post_strip_sha256":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+    "files":  [
+                  {
+                      "path":  "bin/slicer-engine.exe",
+                      "role":  "shim",
+                      "pre_strip_sha256":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+                      "post_strip_sha256":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5",
+                      "sha256":  "254248fc041c30fe0db3529da5eeeabc0bde0156e712ab46b79d05e6f0dd76e5"
+                  },
+                  {
+                      "path":  "bin/slicer_core.dll",
+                      "role":  "engine_dll",
+                      "pre_strip_sha256":  "df36eab9105548732ba4d8f87484e09db5431a9747b1122123ce9ee8fbb93a41",
+                      "post_strip_sha256":  "df36eab9105548732ba4d8f87484e09db5431a9747b1122123ce9ee8fbb93a41",
+                      "sha256":  "df36eab9105548732ba4d8f87484e09db5431a9747b1122123ce9ee8fbb93a41",
+                      "named_exports":  1,
+                      "export_entry":  "slicer_run_cli"
+                  }
+              ],
+    "symbol_archive":  {
+                           "kind":  "PDB",
+                           "archived_files":  [
+                                                  "slicer-engine.pdb",
+                                                  "slicer_core.pdb"
+                                              ]
+                       },
+    "identity":  {
+                     "windows_original_filename":  "slicer-engine.exe",
+                     "product_version":  "Slicer Engine"
+                 },
+    "qa_delta":  null,
+    "approvals":  {
+                      "naming_manifest_version":  "1.3"
+                  },
+    "notes":  "Windows PE: pre/post hash equal when no post-link rewrite; PDB excluded from bin. Authenticode is manual (Launcher does not sign)."
+}

@@ -9,18 +9,58 @@ REPO_ROOT = AGENT_DIR.parent
 # Use BUNDLE_JOBS_DIR when set by Bundle Launcher (packaged Windows/macOS) so jobs dir is user-writable; otherwise use agent dir (dev or standalone).
 JOBS_DIR = Path(os.getenv("BUNDLE_JOBS_DIR", str(AGENT_DIR / "jobs")))
 
-# PrusaSlicer CLI path
-# Use PRUSA_SLICER_BIN env var if set, otherwise fall back to local build
+# Slicer engine CLI path (naming-manifest: SLICER_ENGINE_BIN).
+# Legacy PRUSA_SLICER_BIN is accepted for local transition only; do not ship it as consumer default.
 import sys
-if sys.platform == "win32":
-    _default_cli = REPO_ROOT / "third_party" / "prusaslicer_build" / "src" / "Release" / "prusa-slicer.exe"
-else:
-    _default_cli = REPO_ROOT / "third_party" / "prusaslicer_build" / "src" / "prusa-slicer"
-PRUSA_SLICER_CLI = Path(os.getenv("PRUSA_SLICER_BIN", str(_default_cli)))
+
+def _default_engine_cli() -> Path:
+    if sys.platform == "win32":
+        candidates = [
+            REPO_ROOT / "slicer-engine" / "bin" / "slicer-engine.exe",
+            REPO_ROOT / "third_party" / "prusaslicer_build" / "src" / "Release" / "slicer-engine.exe",
+        ]
+    else:
+        candidates = [
+            REPO_ROOT / "slicer-engine" / "bin" / "slicer-engine",
+            REPO_ROOT / "third_party" / "prusaslicer_build" / "src" / "slicer-engine",
+        ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    return candidates[0]
+
+
+_env_cli = (os.getenv("SLICER_ENGINE_BIN") or os.getenv("PRUSA_SLICER_BIN") or "").strip()
+SLICER_ENGINE_CLI = Path(_env_cli) if _env_cli else _default_engine_cli()
+# Backward-compatible alias for existing call sites.
+PRUSA_SLICER_CLI = SLICER_ENGINE_CLI
 
 # Server config
 HOST = "127.0.0.1"
 PORT = 5179
+TLS_DIR = AGENT_DIR / "tls"
+
+
+def _resolve_tls_path(env_name: str, default_filename: str) -> Path:
+    env_value = os.getenv(env_name, "").strip()
+    if env_value:
+        return Path(env_value)
+
+    candidates = [
+        TLS_DIR / default_filename,
+        # Cross-repo dev fallback: reuse Bundle-Launcher prepared certs.
+        REPO_ROOT.parent / "Bundle-Launcher" / "bundle-mac" / "agent" / "tls" / default_filename,
+        REPO_ROOT.parent / "Bundle-Launcher" / "bundle-win" / "agent" / "tls" / default_filename,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    # Keep primary default for clearer error message on startup.
+    return TLS_DIR / default_filename
+
+
+TLS_CERT_PATH = _resolve_tls_path("AGENT_TLS_CERTFILE", "localhost.crt")
+TLS_KEY_PATH = _resolve_tls_path("AGENT_TLS_KEYFILE", "localhost.key")
 
 # Experimental: Export 3MF project file alongside SLA layers
 # DISABLED: Testing confirmed that PrusaSlicer CLI --export-3mf exports only

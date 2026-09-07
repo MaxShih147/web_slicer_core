@@ -1,0 +1,8 @@
+{
+  "schema": "launcher-final-macos-deid-scan/1.0",
+  "app_path": "/tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app",
+  "engine_path": "/tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/bin/slicer-engine",
+  "engine_sha256": "336f930329d11dd02330ec4173802f20f9cd2eddacce171254eb41225cbda5d1",
+  "verdict": "PASS",
+  "failures": []
+}

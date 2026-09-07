@@ -1,0 +1,69 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "slicer-engine-slicer-engine-consumer-2026-07-19T095348Z",
+  "documentNamespace": "https://phrozen3d.com/spdx/slicer-engine/slicer-engine-consumer-2026-07-19T095348Z",
+  "creationInfo": {
+    "created": "2026-07-19T19:13:54Z",
+    "creators": [
+      "Tool: run_macos_compliance_5_11_6_x.sh",
+      "Organization: Phrozen Technology"
+    ]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-slicer-engine",
+      "name": "slicer-engine",
+      "versionInfo": "slicer-engine-consumer-2026-07-19T095348Z",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "supplier": "Organization: Phrozen Technology",
+      "copyrightText": "NOASSERTION",
+      "licenseConcluded": "AGPL-3.0-only",
+      "licenseDeclared": "AGPL-3.0-only",
+      "comment": "Modified PrusaSlicer-derived CLI; see legal/SOURCE_OFFER.md",
+      "externalRefs": [
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "buildId",
+          "referenceLocator": "slicer-engine-consumer-2026-07-19T095348Z"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "gitCommit",
+          "referenceLocator": "59fec072c5215d1e9105856b6b9d483d66d1a222"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-File-1",
+      "name": "slicer-engine",
+      "versionInfo": "slicer-engine-consumer-2026-07-19T095348Z",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3c6c0976ff2c6bfe4adf5c13a61e41378f0aab787f09ee47b3e4abba3866b95b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-slicer-engine"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-slicer-engine",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-File-1"
+    }
+  ],
+  "comment": "REQ-DEID-011/6.4: binary SHA-256 \u2194 engine_build_id \u2194 engine_commit. Corresponding Source via legal/SOURCE_OFFER.md."
+}

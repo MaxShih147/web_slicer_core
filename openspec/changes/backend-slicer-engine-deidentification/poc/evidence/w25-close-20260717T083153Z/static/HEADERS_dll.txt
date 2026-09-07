@@ -1,0 +1,170 @@
+﻿Microsoft (R) COFF/PE Dumper Version 14.29.30151.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\third_party\prusaslicer_build\src\Release\slicer_core.dll
+
+PE signature found
+
+File Type: DLL
+
+FILE HEADER VALUES
+            8664 machine (x64)
+               6 number of sections
+        6A59E867 time date stamp Fri Jul 17 16:31:35 2026
+               0 file pointer to symbol table
+               0 number of symbols
+              F0 size of optional header
+            2022 characteristics
+                   Executable
+                   Application can handle large (>2GB) addresses
+                   DLL
+
+OPTIONAL HEADER VALUES
+             20B magic # (PE32+)
+           14.37 linker version
+         2257000 size of code
+          97E600 size of initialized data
+               0 size of uninitialized data
+         2080D80 entry point (0000000182080D80) _DllMainCRTStartup
+            1000 base of code
+       180000000 image base (0000000180000000 to 0000000182BD7FFF)
+            1000 section alignment
+             200 file alignment
+            6.00 operating system version
+            0.00 image version
+            6.00 subsystem version
+               0 Win32 version
+         2BD8000 size of image
+             400 size of headers
+               0 checksum
+               3 subsystem (Windows CUI)
+             160 DLL characteristics
+                   High Entropy Virtual Addresses
+                   Dynamic base
+                   NX compatible
+          100000 size of stack reserve
+            1000 size of stack commit
+          100000 size of heap reserve
+            1000 size of heap commit
+               0 loader flags
+              10 number of directories
+         2886FC0 [   1F2E4] RVA [size] of Export Directory
+         28A62A4 [     1E0] RVA [size] of Import Directory
+         2BA5000 [   1BE08] RVA [size] of Resource Directory
+         2A37000 [  16D700] RVA [size] of Exception Directory
+               0 [       0] RVA [size] of Certificates Directory
+         2BC1000 [   16CEC] RVA [size] of Base Relocation Directory
+         23FFD10 [      54] RVA [size] of Debug Directory
+               0 [       0] RVA [size] of Architecture Directory
+               0 [       0] RVA [size] of Global Pointer Directory
+         23FFF00 [      28] RVA [size] of Thread Storage Directory
+         23FFBD0 [     140] RVA [size] of Load Configuration Directory
+               0 [       0] RVA [size] of Bound Import Directory
+         2258000 [    1658] RVA [size] of Import Address Table Directory
+               0 [       0] RVA [size] of Delay Import Directory
+               0 [       0] RVA [size] of COM Descriptor Directory
+               0 [       0] RVA [size] of Reserved Directory
+
+
+SECTION HEADER #1
+   .text name
+ 2256E4C virtual size
+    1000 virtual address (0000000180001000 to 0000000182257E4B)
+ 2257000 size of raw data
+     400 file pointer to raw data (00000400 to 022573FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+60000020 flags
+         Code
+         Execute Read
+
+SECTION HEADER #2
+  .rdata name
+  65570E virtual size
+ 2258000 virtual address (0000000182258000 to 00000001828AD70D)
+  655800 size of raw data
+ 2257400 file pointer to raw data (02257400 to 028ACBFF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+40000040 flags
+         Initialized Data
+         Read Only
+
+  Debug Directories
+
+        Time Type        Size      RVA  Pointer
+    -------- ------- -------- -------- --------
+    6A59E867 cv            28 024AC888  24ABC88    Format: RSDS, {A12AE428-8B5C-4B21-BBF9-E013E1D1BFA9}, 2, slicer_core.pdb
+    6A59E867 feat          14 024AC8B0  24ABCB0    Counts: Pre-VC++ 11.00=0, C/C++=1306, /GS=1306, /sdl=0, guardN=50
+    6A59E867 coffgrp      45C 024AC8C4  24ABCC4    4C544347 (LTCG)
+
+SECTION HEADER #3
+   .data name
+  188768 virtual size
+ 28AE000 virtual address (00000001828AE000 to 0000000182A36767)
+  142E00 size of raw data
+ 28ACC00 file pointer to raw data (028ACC00 to 029EF9FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0000040 flags
+         Initialized Data
+         Read Write
+
+SECTION HEADER #4
+  .pdata name
+  16D700 virtual size
+ 2A37000 virtual address (0000000182A37000 to 0000000182BA46FF)
+  16D800 size of raw data
+ 29EFA00 file pointer to raw data (029EFA00 to 02B5D1FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+40000040 flags
+         Initialized Data
+         Read Only
+
+SECTION HEADER #5
+   .rsrc name
+   1BE08 virtual size
+ 2BA5000 virtual address (0000000182BA5000 to 0000000182BC0E07)
+   1C000 size of raw data
+ 2B5D200 file pointer to raw data (02B5D200 to 02B791FF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+40000040 flags
+         Initialized Data
+         Read Only
+
+SECTION HEADER #6
+  .reloc name
+   16CEC virtual size
+ 2BC1000 virtual address (0000000182BC1000 to 0000000182BD7CEB)
+   16E00 size of raw data
+ 2B79200 file pointer to raw data (02B79200 to 02B8FFFF)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+42000040 flags
+         Initialized Data
+         Discardable
+         Read Only
+
+  Summary
+
+      189000 .data
+      16E000 .pdata
+      656000 .rdata
+       17000 .reloc
+       1C000 .rsrc
+     2257000 .text

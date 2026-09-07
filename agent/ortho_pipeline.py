@@ -20,16 +20,19 @@ with a single upload (~2MB) and download (~3.7MB).
 import json
 import logging
 import math
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import trimesh
 
+from .engine_job_queue import serialized_engine_job
 from .jobs import get_job_dir, write_job_status
 from .models import BooleanOperation, JobStatus, SLAConfig
 from .sla_operations import (
     boolean_meshes,
+    compute_hex_grid_layout,
     generate_drain_holes,
     generate_hex_grid,
     generate_hollow,
@@ -528,6 +531,202 @@ def _update_progress(job_id: str, step: int, total_steps: int, description: str,
         json.dump(status_data, f)
 
 
+def clean_input_for_manifold(in_path: Path, out_path: Path, weld_tol: float = 0.5) -> dict:
+    """
+    Pre-clean an input STL so manifold3d's CSG accepts it. No-op when input
+    is already clean. Writes result to out_path.
+
+    Why: legacy base-gen produced shells where bottom-face triangulation did
+    not share vertex IDs with the wall ring. After STL roundtrip this becomes
+    a watertight-looking but non-manifold mesh (3 zero-area slivers per
+    perimeter vertex + 6 faces sharing the wall edge), which manifold3d
+    silently turns into an empty Manifold and every downstream boolean
+    collapses to empty.
+
+    Three-step repair, all of which are no-ops on a healthy input:
+      1) drop zero-area triangles (earcut slivers);
+      2) merge near-coincident vertices at 1e-3 mm (float roundtrip noise);
+      3) weld remaining boundary verts whose distance ≤ weld_tol mm
+         (closes the residual seam between bottom face and wall ring).
+    """
+    from collections import defaultdict
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import connected_components
+    from scipy.spatial import cKDTree
+
+    mesh = trimesh.load(str(in_path))
+    if isinstance(mesh, trimesh.Scene):
+        mesh = trimesh.util.concatenate(mesh.dump())
+
+    stats = {"zero_area_dropped": 0, "merged_verts": 0, "boundary_welded": 0}
+
+    keep = mesh.area_faces > 1e-9
+    if not keep.all():
+        stats["zero_area_dropped"] = int((~keep).sum())
+        mesh.update_faces(keep)
+        mesh.remove_unreferenced_vertices()
+
+    before = len(mesh.vertices)
+    mesh.merge_vertices(digits_vertex=3)
+    stats["merged_verts"] = before - len(mesh.vertices)
+
+    edges_sorted = mesh.edges_sorted
+    ue, c = np.unique(edges_sorted, axis=0, return_counts=True)
+    bd_verts = np.unique(ue[c == 1])
+    if len(bd_verts) > 0:
+        pos = mesh.vertices[bd_verts]
+        pairs = cKDTree(pos).query_pairs(r=weld_tol)
+        if pairs:
+            i = np.array([p[0] for p in pairs])
+            j = np.array([p[1] for p in pairs])
+            n_bd = len(bd_verts)
+            g = csr_matrix(
+                (np.ones(len(i) * 2), (np.r_[i, j], np.r_[j, i])),
+                shape=(n_bd, n_bd),
+            )
+            _, lab = connected_components(g, directed=False)
+            groups = defaultdict(list)
+            for idx, l in enumerate(lab):
+                groups[l].append(idx)
+            remap = np.arange(len(mesh.vertices))
+            welded = 0
+            for members in groups.values():
+                if len(members) < 2:
+                    continue
+                rep = bd_verts[members[0]]
+                for m in members[1:]:
+                    remap[bd_verts[m]] = rep
+                    welded += 1
+            new_faces = remap[mesh.faces]
+            valid = (
+                (new_faces[:, 0] != new_faces[:, 1])
+                & (new_faces[:, 1] != new_faces[:, 2])
+                & (new_faces[:, 0] != new_faces[:, 2])
+            )
+            new_faces = new_faces[valid]
+            mesh = trimesh.Trimesh(vertices=mesh.vertices, faces=new_faces, process=True)
+            mesh.remove_unreferenced_vertices()
+            stats["boundary_welded"] = welded
+
+    mesh.export(str(out_path))
+    return stats
+
+
+def _cleanup_hollow_intermediates(job_dir: Path, output_dir: Path, job_id: str) -> None:
+    """Remove PrusaSlicer hollow intermediate files produced during ortho pipeline."""
+    for p in [
+        output_dir / "model_hollow.stl",
+        job_dir / "stderr_hollow.log",
+        job_dir / "config_hollow.json",
+    ]:
+        if p.exists():
+            p.unlink()
+    logger.info(f"[ortho_pipeline:{job_id}] Cleaned up intermediate files")
+
+
+# ---------------------------------------------------------------------------
+# Pre-hollow model type classification
+# ---------------------------------------------------------------------------
+
+_U_ARCH_FILL_RATIO_THRESHOLD = 0.80
+_U_ARCH_SECTION_Z_FRACS = (0.05, 0.075, 0.10)
+_U_ARCH_MIN_VALID_SECTIONS = 2
+_U_ARCH_MIN_MATCHING_SECTIONS = 2
+
+
+def _is_u_arch_from_low_sections(input_path: Path) -> bool:
+    """Return True if the mesh appears to be a U-arch dental model.
+
+    Slices at three low normalised Z heights and computes
+    fill_ratio = section_area / convex_hull_area for each valid slice.
+    U-arch models have a large central opening that reduces fill_ratio well
+    below the threshold; full-base models have nearly solid cross-sections.
+
+    Fails safe: any exception returns False so the pipeline continues to the
+    normal hollow path.
+    """
+    try:
+        from scipy.spatial import ConvexHull as _ConvexHull
+
+        m = load_trimesh(input_path)
+        bb = m.bounds
+        z_min = float(bb[0][2])
+        height = float(bb[1][2]) - z_min
+        if height < 1.0:
+            return False
+
+        valid_count = 0
+        matching_count = 0
+
+        for z_frac in _U_ARCH_SECTION_Z_FRACS:
+            try:
+                z_act = z_min + z_frac * height
+                section = m.section(plane_origin=[0, 0, z_act], plane_normal=[0, 0, 1])
+                if section is None or len(section.entities) == 0:
+                    continue
+                path2d, _ = section.to_2D()
+
+                all_pts = []
+                total_area = 0.0
+                for ent in path2d.entities:
+                    pts = path2d.vertices[ent.points]
+                    if len(pts) < 3:
+                        continue
+                    all_pts.extend(pts.tolist())
+                    total_area += abs(poly_area_2d(pts))
+
+                if len(all_pts) < 3 or total_area < 1.0:
+                    continue
+
+                hull_area = float(_ConvexHull(np.array(all_pts)).volume)
+                if hull_area < 1.0:
+                    continue
+
+                valid_count += 1
+                if total_area / hull_area < _U_ARCH_FILL_RATIO_THRESHOLD:
+                    matching_count += 1
+
+            except Exception:
+                continue
+
+        return (
+            valid_count >= _U_ARCH_MIN_VALID_SECTIONS
+            and matching_count >= _U_ARCH_MIN_MATCHING_SECTIONS
+        )
+
+    except Exception:
+        return False
+
+
+def _complete_as_no_hollow(
+    job_id: str,
+    job_dir: Path,
+    input_path: Path,
+    output_dir: Path,
+    status_data: dict,
+    total_steps: int,
+    reason: str = "",
+) -> None:
+    """Copy input as ortho_result.stl and write completed status (no-hollow path)."""
+    if reason:
+        logger.info(f"[ortho_pipeline:{job_id}] {reason}; outputting cleaned input mesh.")
+    ortho_result_path = output_dir / "ortho_result.stl"
+    shutil.copyfile(str(input_path), str(ortho_result_path))
+    _cleanup_hollow_intermediates(job_dir, output_dir, job_id)
+    status_data["status"] = "completed"
+    status_data["ortho_progress"] = {
+        "step": total_steps,
+        "total_steps": total_steps,
+        "description": "Complete",
+    }
+    status_data["has_ortho_result"] = True
+    status_data["output_path"] = str(ortho_result_path)
+    status_file = get_job_dir(job_id) / "status.json"
+    with open(status_file, "w") as f:
+        json.dump(status_data, f)
+
+
+@serialized_engine_job
 async def run_ortho_pipeline(
     job_id: str,
     hollowing_min_thickness: float = 3.0,
@@ -566,6 +765,22 @@ async def run_ortho_pipeline(
     status_data: dict = {}
 
     try:
+        # ===== Pre-clean input for manifold3d =====
+        # Repairs legacy base-gen output where the bottom face and wall ring
+        # didn't share vertices. No-op on healthy meshes.
+        cleaned_path = job_dir / "input" / "model_clean.stl"
+        clean_stats = clean_input_for_manifold(input_path, cleaned_path)
+        logger.info(f"[ortho_pipeline:{job_id}] Pre-clean: {clean_stats}")
+        input_path = cleaned_path
+
+        # ===== Pre-hollow model type classification =====
+        if _is_u_arch_from_low_sections(input_path):
+            _complete_as_no_hollow(
+                job_id, job_dir, input_path, output_dir, status_data, total_steps,
+                reason="Pre-hollow: U-arch detected, skipping hollow processing",
+            )
+            return
+
         # ===== Step 1: Generate hollow =====
         _update_progress(job_id, 1, total_steps, "Generating hollow mesh...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 1: Generating hollow")
@@ -585,6 +800,229 @@ async def run_ortho_pipeline(
 
         hollow_mesh = load_trimesh(result.hollow_mesh_path)
 
+        # ===== Decide whether the hollow interior is usable =====
+        # This is a product decision, not a generation failure. The hollow STL was
+        # produced successfully; we now test whether it is wide enough for hex-grid
+        # infill processing.
+        #
+        # Why per-component (not total bbox):
+        #   A hollow may consist of several disconnected narrow spaces whose union
+        #   bbox looks adequate, but no individual space can accommodate a hex cell.
+        #
+        # Why XY minimum width via rotating calipers (not AABB):
+        #   Oblique strip-shaped hollows inflate their AABB in both X and Y even
+        #   though the actual narrow dimension is smaller than one hex diameter.
+        #
+        # Fixed geometric threshold: hollow must be at least this wide to be
+        # worth processing.  Not tied to hex_cell_radius so the skip decision
+        # does not shift when hex parameters change.
+        # A radial center-opening check (see helper below) supplements the
+        # width gate for large components: it detects the characteristic
+        # "open center + narrow outer band" of U-arch hollows that ConvexHull
+        # min_width overestimates by filling the concave interior.
+        _MIN_HOLLOW_WIDTH_MM    = 18.0
+        _RADIAL_SIZE_GATE_MM    = 45.0  # radial check only on large components
+        _RADIAL_RAY_COUNT       = 72    # rays from bbox center (one per 5°)
+        _RADIAL_BAND_MM         = 2.0   # perpendicular half-band width per ray
+        _RADIAL_GAP_MM          = 4.0   # t-gap threshold to split ray segments
+        _RADIAL_MIN_PTS_RAY     = 5     # skip ray if fewer valid points
+        _RADIAL_MIN_PTS_SEG     = 3     # skip segment if fewer points
+        _RADIAL_CENTER_CLEAR_MM = 8.0   # first segment must start beyond this
+        _RADIAL_NARROW_RATIO    = 0.25  # min fraction of narrow+clear rays
+        _RADIAL_MIN_VALID_RAYS  = 20    # require at least this many valid rays
+        _RADIAL_MIN_NARROW_RAYS = 6     # and at least this many narrow+clear rays
+        _legacy_threshold = 1.5 * 2.0 * hex_cell_radius  # log comparison only
+        logger.info(
+            f"[ortho_pipeline:{job_id}] Hollow fit check: "
+            f"fixed={_MIN_HOLLOW_WIDTH_MM}mm, "
+            f"legacy_hex={_legacy_threshold:.1f}mm (r={hex_cell_radius})"
+        )
+
+        _total_bb = hollow_mesh.bounds
+        _total_xy_w = float(_total_bb[1][0] - _total_bb[0][0])
+        _total_xy_h = float(_total_bb[1][1] - _total_bb[0][1])
+
+        def _min_width_xy(_comp):
+            """XY minimum width of a mesh component via rotating calipers on its
+            convex hull. Falls back to min(AABB_X, AABB_Y) on failure."""
+            try:
+                from scipy.spatial import ConvexHull
+                _vxy = _comp.vertices[:, :2]
+                _hull = ConvexHull(_vxy)
+                _hpts = _vxy[_hull.vertices]
+                _n = len(_hpts)
+                _mw = float('inf')
+                for _j in range(_n):
+                    _e = _hpts[(_j + 1) % _n] - _hpts[_j]
+                    _elen = float(np.linalg.norm(_e))
+                    if _elen < 1e-9:
+                        continue
+                    _perp = np.array([-_e[1], _e[0]]) / _elen
+                    _proj = _hpts @ _perp
+                    _mw = min(_mw, float(_proj.max() - _proj.min()))
+                return _mw
+            except Exception as _hull_exc:
+                logger.warning(
+                    f"[ortho_pipeline:{job_id}] ConvexHull/calipers failed "
+                    f"({_hull_exc}); falling back to AABB min for this component."
+                )
+                _cbb = _comp.bounds
+                return min(
+                    float(_cbb[1][0] - _cbb[0][0]),
+                    float(_cbb[1][1] - _cbb[0][1]),
+                )
+
+        def _radial_center_opening_stats_xy(_comp):
+            """Detect 'center-opening + narrow outer band' in XY projection.
+
+            Fires _RADIAL_RAY_COUNT rays from the XY bbox center.  For each
+            ray, XY vertices within _RADIAL_BAND_MM of the ray line (and
+            strictly ahead of the center) are sorted by radial distance, then
+            split into segments at gaps > _RADIAL_GAP_MM.
+
+            A ray is 'narrow-and-clear' when:
+              - its first valid segment starts beyond _RADIAL_CENTER_CLEAR_MM
+                (center region is empty → U opening), AND
+              - the minimum segment span is < _MIN_HOLLOW_WIDTH_MM
+                (outer band is a narrow hollow channel → U arm).
+
+            Full-base hollows are distinguished by their large flat top/bottom
+            cavity faces: those faces project many XY vertices near the bbox
+            center, so first_start ≈ 0 and the center-clear condition fails.
+            """
+            _vxy = _comp.vertices[:, :2]
+            _cbb = _comp.bounds
+            _cx = float(_cbb[0][0] + _cbb[1][0]) / 2.0
+            _cy = float(_cbb[0][1] + _cbb[1][1]) / 2.0
+            _ctr = np.array([_cx, _cy])
+
+            _valid = 0
+            _narrow = 0
+            _all_spans: list[float] = []
+            _no_pts_rays = 0
+            _no_seg_rays = 0
+
+            for _i in range(_RADIAL_RAY_COUNT):
+                _theta = 2.0 * np.pi * _i / _RADIAL_RAY_COUNT
+                _dir = np.array([np.cos(_theta), np.sin(_theta)])
+                _nrm = np.array([-_dir[1], _dir[0]])
+
+                _rel = _vxy - _ctr
+                _t   = _rel @ _dir
+                _d   = np.abs(_rel @ _nrm)
+
+                _mask = (_t > 0.0) & (_d <= _RADIAL_BAND_MM)
+                if int(_mask.sum()) < _RADIAL_MIN_PTS_RAY:
+                    _no_pts_rays += 1
+                    continue
+
+                _ts = np.sort(_t[_mask])
+                _gaps = np.diff(_ts)
+                _splits = np.where(_gaps > _RADIAL_GAP_MM)[0] + 1
+                _segs = [
+                    _s for _s in np.split(_ts, _splits)
+                    if len(_s) >= _RADIAL_MIN_PTS_SEG
+                ]
+                if not _segs:
+                    _no_seg_rays += 1
+                    continue
+
+                _valid += 1
+                _first_start = float(_segs[0][0])
+                _center_clear = _first_start > _RADIAL_CENTER_CLEAR_MM
+                _spans = [float(_s[-1] - _s[0]) for _s in _segs]
+                _min_span = min(_spans)
+                _all_spans.append(_min_span)
+
+                if _center_clear and _min_span < _MIN_HOLLOW_WIDTH_MM:
+                    _narrow += 1
+
+            _ratio = _narrow / _valid if _valid > 0 else 0.0
+            return {
+                "valid_ray_count":     _valid,
+                "narrow_ray_count":    _narrow,
+                "narrow_ray_ratio":    _ratio,
+                "no_pts_rays":         _no_pts_rays,
+                "no_seg_rays":         _no_seg_rays,
+                "min_segment_span":    float(min(_all_spans)) if _all_spans else float("inf"),
+                "median_segment_span": float(np.median(_all_spans)) if _all_spans else float("inf"),
+            }
+
+        _hollow_fits = False
+        _skip_reasons: list[str] = []
+        try:
+            _components = hollow_mesh.split(only_watertight=False)
+            _significant = [c for c in _components if len(c.faces) >= 100]
+            if not _significant:
+                logger.warning(
+                    f"[ortho_pipeline:{job_id}] Hollow split: all components < 100 faces; "
+                    f"using whole mesh as single component."
+                )
+                _significant = [hollow_mesh]
+
+            for _c in _significant:
+                _mw = _min_width_xy(_c)
+                _cbb = _c.bounds
+                _cmax = max(
+                    float(_cbb[1][0] - _cbb[0][0]),
+                    float(_cbb[1][1] - _cbb[0][1]),
+                )
+
+                if _mw < _MIN_HOLLOW_WIDTH_MM:
+                    _skip_reasons.append(
+                        f"min_w={_mw:.1f} < {_MIN_HOLLOW_WIDTH_MM}"
+                    )
+                    continue
+
+                # Component passed the width gate.  For large components, run
+                # the radial center-opening check.  ConvexHull min_width
+                # overestimates for U-arch hollows because the hull fills the
+                # concave interior; radial rays from the XY bbox center detect
+                # the characteristic "open center + narrow outer hollow band".
+                if _cmax >= _RADIAL_SIZE_GATE_MM:
+                    _rstats = _radial_center_opening_stats_xy(_c)
+                    if (
+                        _rstats["valid_ray_count"] >= _RADIAL_MIN_VALID_RAYS
+                        and _rstats["narrow_ray_count"] >= _RADIAL_MIN_NARROW_RAYS
+                        and _rstats["narrow_ray_ratio"] >= _RADIAL_NARROW_RATIO
+                        and _rstats["min_segment_span"] < _MIN_HOLLOW_WIDTH_MM
+                    ):
+                        logger.info(
+                            f"[ortho_pipeline:{job_id}] Center-opening U-arch detected "
+                            f"(narrow_ratio={_rstats['narrow_ray_ratio']:.2f} "
+                            f"narrow={_rstats['narrow_ray_count']} "
+                            f"min_span={_rstats['min_segment_span']:.1f}mm); "
+                            f"component excluded from fits."
+                        )
+                        _skip_reasons.append(
+                            f"center-opening: narrow_ratio={_rstats['narrow_ray_ratio']:.2f} "
+                            f"narrow={_rstats['narrow_ray_count']} "
+                            f"min_span={_rstats['min_segment_span']:.1f}"
+                        )
+                        continue
+
+                _hollow_fits = True
+                break
+
+        except Exception as _split_exc:
+            logger.warning(
+                f"[ortho_pipeline:{job_id}] Hollow split failed ({_split_exc}); "
+                f"falling back to total AABB min check."
+            )
+            _hollow_fits = min(_total_xy_w, _total_xy_h) >= _MIN_HOLLOW_WIDTH_MM
+
+        if not _hollow_fits:
+            _reason_str = (
+                "; ".join(_skip_reasons)
+                if _skip_reasons
+                else "no significant component passed the hollow fit check"
+            )
+            _complete_as_no_hollow(
+                job_id, job_dir, input_path, output_dir, status_data, total_steps,
+                reason=f"Hollow interior did not pass fit check ({_reason_str})",
+            )
+            return
+
         # ===== Step 2: Extend bottom vertices =====
         _update_progress(job_id, 2, total_steps, "Extending bottom vertices...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 2: Extending bottom vertices")
@@ -603,6 +1041,16 @@ async def run_ortho_pipeline(
         # Get bounding box for bottom_z
         bottom_z = float(input_mesh.bounds[0][2])
 
+        # Compute grid layout once so hex grid and drain holes share the same
+        # centre, column/row count, and cell spacing. hollow_mesh is already
+        # translated to the input model's centre at this point.
+        grid_layout = compute_hex_grid_layout(
+            radius=hex_cell_radius,
+            wall_thickness=hex_wall_thickness,
+            grid_count=hex_grid_count,
+            hollow_mesh=hollow_mesh,
+        )
+
         # ===== Step 4: Generate hex grid =====
         _update_progress(job_id, 4, total_steps, "Generating hex grid...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 4: Generating hex grid")
@@ -615,6 +1063,7 @@ async def run_ortho_pipeline(
             grid_count=hex_grid_count,
             bottom_z=bottom_z,
             hollow_mesh=hollow_mesh,
+            layout=grid_layout,
         )
         if hex_mesh is None:
             raise RuntimeError("Step 4: Hex grid generation failed - no cells built")
@@ -629,6 +1078,7 @@ async def run_ortho_pipeline(
             grid_count=hex_grid_count,
             drain_radius=drain_hole_radius,
             bottom_z=bottom_z,
+            layout=grid_layout,
         )
 
         # ===== Step 6: Generate side wall drains =====
@@ -680,14 +1130,7 @@ async def run_ortho_pipeline(
         result_mesh.export(str(ortho_result_path))
 
         # ===== Cleanup PrusaSlicer intermediate outputs =====
-        for p in [
-            output_dir / "model_hollow.stl",
-            job_dir / "stderr_hollow.log",
-            job_dir / "config_hollow.json",
-        ]:
-            if p.exists():
-                p.unlink()
-        logger.info(f"[ortho_pipeline:{job_id}] Cleaned up intermediate files")
+        _cleanup_hollow_intermediates(job_dir, output_dir, job_id)
 
         # ===== Done =====
         logger.info(f"[ortho_pipeline:{job_id}] Pipeline completed successfully")

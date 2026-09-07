@@ -1,0 +1,52 @@
+Opened log file 'C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\baseline\win-baseline-20260717T055632Z\dynamic\CDB_POSTLOAD.txt'
+
+Microsoft (R) Windows Debugger Version 10.0.22621.755 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+CommandLine: C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\baseline\win-baseline-20260717T055632Z\dynamic\sandbox\prusa-slicer-console.exe --help
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+Symbol search path is: srv*
+Executable search path is: 
+ModLoad: 00007ff7`c3ac0000 00007ff7`c3ae5000   prusa-slicer-console.exe
+ModLoad: 00007ffe`08700000 00007ffe`08966000   ntdll.dll
+ModLoad: 00007ffe`07750000 00007ffe`07819000   C:\WINDOWS\System32\KERNEL32.DLL
+ModLoad: 00007ffe`05fc0000 00007ffe`063ba000   C:\WINDOWS\System32\KERNELBASE.dll
+ModLoad: 00007ffe`05e70000 00007ffe`05fbc000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00007ffd`e9450000 00007ffd`e94d9000   C:\WINDOWS\SYSTEM32\MSVCP140.dll
+ModLoad: 00007ffd`e94e0000 00007ffd`e94fe000   C:\WINDOWS\SYSTEM32\VCRUNTIME140.dll
+ModLoad: 00007ffd`e9410000 00007ffd`e941c000   C:\WINDOWS\SYSTEM32\VCRUNTIME140_1.dll
+(4e58.4d8c): Break instruction exception - code 80000003 (first chance)
+ntdll!LdrpDoDebuggerBreak+0x35:
+00007ffe`0881d78d cc              int     3
+0:000> $$<C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\baseline\win-baseline-20260717T055632Z\dynamic\postload_dump.cdb
+0:000> .echo POSTLOAD_START
+POSTLOAD_START
+0:000> .sympath
+Symbol search path is: srv*
+Expanded Symbol search path is: cache*;SRV*https://msdl.microsoft.com/download/symbols
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+0:000> sxe ld PrusaSlicer.dll
+0:000> g
+Command file caused an implicit wait
+Command file execution failed, HRESULT 0x80004005
+    "µLªk«ü¥"
+ModLoad: 00007ffd`644b0000 00007ffd`6551f000   C:\Phrozen3D\Lechon\03_Development\Win\web_slicer_core\openspec\changes\backend-slicer-engine-deidentification\evidence\windows\baseline\win-baseline-20260717T055632Z\dynamic\sandbox\PrusaSlicer.dll
+ntdll!NtMapViewOfSection+0x14:
+00007ffe`08860574 c3              ret

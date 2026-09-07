@@ -1,0 +1,13 @@
+baseline_global=4959
+baseline_local=20972
+renamed_global=4959
+renamed_local=20972
+stripped_global=4959
+stripped_local=4959
+--- codesign renamed ---
+Identifier=slicer-engine
+TeamIdentifier=not set
+--- codesign stripped ---
+Identifier=slicer-engine
+TeamIdentifier=not set
+--- note: strip -x alone insufficient for global Slic3r symbols ---

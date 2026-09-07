@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "engine_commit": "59fec072c5215d1e9105856b6b9d483d66d1a222",
+  "engine_build_id": "slicer-engine-consumer-2026-07-19T095348Z",
+  "flavor": "consumer",
+  "platform": "macOS",
+  "architecture": "arm64",
+  "toolchain": "Apple clang version 21.0.0 (clang-2100.1.1.101); SDK=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk",
+  "created_at_utc": "2026-07-19T09:53:48Z",
+  "pre_strip_sha256": "a1388ea9aece238e001fe7f8ecbf0cf1c6158567db342222ef39dac8ff6360f3",
+  "post_strip_sha256": "3c6c0976ff2c6bfe4adf5c13a61e41378f0aab787f09ee47b3e4abba3866b95b",
+  "symbol_archive": {
+    "kind": "dSYM",
+    "uuid_or_guid": "A5826E32-5956-3C14-A6B9-63F9354DCAF2",
+    "archive_uri": "file:///Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine-symbols/slicer-engine.dSYM",
+    "archive_sha256": "9fbcb7efdf56a77f1702cfb59822c449a2d8f131d83bcef780b7b90f388b1da9",
+    "unstripped_sha256": "a1388ea9aece238e001fe7f8ecbf0cf1c6158567db342222ef39dac8ff6360f3"
+  },
+  "files": [
+    {
+      "path": "slicer-engine/bin/slicer-engine",
+      "sha256": "3c6c0976ff2c6bfe4adf5c13a61e41378f0aab787f09ee47b3e4abba3866b95b",
+      "role": "engine_cli"
+    }
+  ],
+  "identity": {
+    "macos_codesign_identifier": "slicer-engine",
+    "product_version": "Slicer Engine"
+  },
+  "qa_delta": null,
+  "sbom": {
+    "format": "SPDX-2.3-JSON",
+    "uri_or_inline_sha256": "pending"
+  },
+  "approvals": {
+    "naming_manifest_version": "1.3"
+  },
+  "scan_hints": {
+    "nm_brand_global": 0,
+    "nm_brand_local": 0
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "steps": [
+    {
+      "step": "install_1",
+      "detail": "copied to /tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app",
+      "at_utc": "2026-07-19T19:13:03.749589+00:00"
+    },
+    {
+      "step": "cli_help",
+      "detail": "PrusaSlicer_hits=0 file=/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/evidence/macos/lifecycle-4.6-20260719T191245Z/help-after-install.txt",
+      "at_utc": "2026-07-19T19:13:07.685553+00:00"
+    },
+    {
+      "step": "legal_present",
+      "detail": "/tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/legal",
+      "at_utc": "2026-07-19T19:13:07.722869+00:00"
+    },
+    {
+      "step": "scan_after_install",
+      "detail": "scan_final \u2192 /Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/evidence/macos/lifecycle-4.6-20260719T191245Z/scan-after-install.json",
+      "at_utc": "2026-07-19T19:13:08.669920+00:00"
+    },
+    {
+      "step": "uninstall",
+      "detail": "removed /tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app",
+      "at_utc": "2026-07-19T19:13:11.145782+00:00"
+    },
+    {
+      "step": "reinstall",
+      "detail": "copied to /tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app",
+      "at_utc": "2026-07-19T19:13:29.873556+00:00"
+    },
+    {
+      "step": "cli_help",
+      "detail": "PrusaSlicer_hits=0 file=/Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/evidence/macos/lifecycle-4.6-20260719T191245Z/help-after-reinstall.txt",
+      "at_utc": "2026-07-19T19:13:33.646029+00:00"
+    },
+    {
+      "step": "legal_present",
+      "detail": "/tmp/bundle-launcher-4.6-20260719T191245Z/Bundle Launcher.app/Contents/Resources/bundle/slicer-engine/legal",
+      "at_utc": "2026-07-19T19:13:33.685565+00:00"
+    },
+    {
+      "step": "scan_after_reinstall",
+      "detail": "scan_final \u2192 /Users/sw-dev/repos/Bundle/web_slicer_core/openspec/changes/backend-slicer-engine-deidentification/evidence/macos/lifecycle-4.6-20260719T191245Z/scan-after-reinstall.json",
+      "at_utc": "2026-07-19T19:13:34.876198+00:00"
+    }
+  ]
+}

@@ -5,22 +5,30 @@ This module provides API endpoints that match the DS-Online frontend's expected 
 Both v1 (/api/jobs) and v2 (/api/v2/slices) share the same underlying job manager.
 """
 
+import asyncio
 import io
 import json
 import logging
 import math
 import shutil
+import time
 import traceback as tb
-from typing import Any, Dict, List, Optional
+import uuid
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from .prz_decoder import PrzFile
 
 import trimesh
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Request
-from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import FileResponse, Response, StreamingResponse
+from pydantic import BaseModel, ValidationError
 
 from .errors import (
     APIError,
     boolean_failed,
+    boolean_invalid_mesh,
+    exposure_time_out_of_range,
     file_not_found,
     hollow_generation_failed,
     internal_error,
@@ -30,9 +38,20 @@ from .errors import (
     job_not_found,
     job_still_processing,
     missing_body,
+    model_mesh_unsliceable,
     model_not_found,
+    model_out_of_bounds,
     no_drain_holes,
     no_hex_grid_cells,
+    pad_config_invalid,
+    pad_generation_failed,
+    support_elevation_too_low,
+    support_generation_failed,
+    support_head_penetration_invalid,
+    support_head_too_wide,
+    support_pad_gap_conflict,
+    support_points_required,
+    unprintable_object,
     validation_error,
 )
 from .jobs import (
@@ -42,14 +61,16 @@ from .jobs import (
     get_hollow_mesh_path,
     get_input_model_path,
     get_job_dir,
+    get_job_progress,
     job_exists,
     read_job_status,
     run_slicing,
     run_support_generation,
     run_hollow_generation,
     run_cut_operation,
+    write_job_status,
 )
-from .models import BooleanOperation, JobStatus, SLAConfig
+from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config, gate_blur
 from .sla_operations import generate_drain_holes, generate_hex_grid, load_trimesh, parse_binary_stl, perform_boolean, write_binary_stl
 
 logger = logging.getLogger(__name__)
@@ -69,12 +90,22 @@ class V2Response(BaseModel):
 class V2SliceCreateRequest(BaseModel):
     """Request to create a new slice job."""
     config: Optional[Dict[str, Any]] = None
+    # Full Mechado config (Title Case "Print.*") for PRZ physical print-time sync;
+    # kept separate from the snake_case slicing `config`. Optional / backward-compatible.
+    prz_config: Optional[Dict[str, Any]] = None
+    # Per-job geometry: model bounding-box center offset [x, y] from display center.
+    # Frontend-only value (not part of the reusable Mechado printer profile), so it
+    # rides as a top-level field rather than being injected into prz_config.
+    center: Optional[List[float]] = None
 
 
 class V2ConfigUpdateRequest(BaseModel):
     """Request to update slice job config."""
     config: Dict[str, Any]
     isAppend: bool = True
+    # Full Mechado config (Title Case "Print.*") for PRZ physical print-time sync;
+    # kept separate from the snake_case slicing `config`. Optional / backward-compatible.
+    prz_config: Optional[Dict[str, Any]] = None
 
 
 class V2ModelsAddRequest(BaseModel):
@@ -140,6 +171,11 @@ class V2OrthoProcessRequest(BaseModel):
 # Key: job_id, Value: {config: dict, models: list, status: str}
 _pending_jobs: Dict[str, Dict[str, Any]] = {}
 
+# Store for parsed PRZ file sessions
+# Key: session_id (UUID v4 str)
+# Value: (PrzFile, last_access_timestamp)  — PrzFile holds a memoryview into the raw bytes
+_prz_sessions: Dict[str, Tuple["PrzFile", float]] = {}
+
 
 # ============================================================================
 # Helpers
@@ -182,7 +218,24 @@ def _save_model_to_job(model_data: dict, input_path) -> None:
 
 
 _ERROR_CODE_FACTORIES = {
-    "HOLLOW_GENERATION_FAILED": hollow_generation_failed,
+    # ── support generation ────────────────────────────────────────────────────
+    "HOLLOW_GENERATION_FAILED":        hollow_generation_failed,
+    "SUPPORT_HEAD_TOO_WIDE":           support_head_too_wide,
+    "SUPPORT_HEAD_PENETRATION_INVALID":support_head_penetration_invalid,
+    "SUPPORT_ELEVATION_TOO_LOW":       support_elevation_too_low,
+    "SUPPORT_POINTS_REQUIRED":         support_points_required,
+    "SUPPORT_PAD_GAP_CONFLICT":        support_pad_gap_conflict,
+    "MODEL_OUT_OF_BOUNDS":             model_out_of_bounds,
+    "SUPPORT_GENERATION_FAILED":       support_generation_failed,
+    # ── slicing (shared + new) ────────────────────────────────────────────────
+    # Codes shared with support generation are re-used as-is above; the ones
+    # below are either slicing-only or newly introduced in this change.
+    "INVALID_MODEL":                   invalid_model,
+    "PAD_CONFIG_INVALID":              pad_config_invalid,
+    "EXPOSURE_TIME_OUT_OF_RANGE":      exposure_time_out_of_range,
+    "MODEL_MESH_UNSLICEABLE":          model_mesh_unsliceable,
+    "UNPRINTABLE_OBJECT":              unprintable_object,
+    "PAD_GENERATION_FAILED":           pad_generation_failed,
 }
 
 
@@ -218,6 +271,26 @@ def _require_completed(status_data: dict, job_id: str) -> None:
 router = APIRouter(prefix="/api/v2", tags=["v2-slices"])
 
 
+def _evict_expired_sessions() -> None:
+    """Evict PRZ sessions whose last_access timestamp is older than 1800 seconds."""
+    now = time.time()
+    expired = [sid for sid, (_, ts) in list(_prz_sessions.items()) if now - ts > 1800]
+    for sid in expired:
+        _prz_sessions.pop(sid, None)
+        logger.debug("PRZ session evicted (TTL): %s", sid)
+
+
+async def prz_session_cleanup_loop() -> None:
+    """Background task: evict PRZ sessions idle for > 30 minutes.
+
+    Scans every 5 minutes; removes sessions whose last_access timestamp is
+    older than 1800 seconds.  Call via asyncio.create_task() at app startup.
+    """
+    while True:
+        await asyncio.sleep(300)
+        _evict_expired_sessions()
+
+
 @router.post("/slices", response_model=V2Response)
 async def create_slice_job(request: V2SliceCreateRequest):
     """
@@ -233,6 +306,10 @@ async def create_slice_job(request: V2SliceCreateRequest):
             "models": [],
             "status": "created",
         }
+        if request.prz_config is not None:
+            _pending_jobs[job_id]["prz_config"] = request.prz_config
+        if request.center is not None:
+            _pending_jobs[job_id]["center"] = request.center
         return V2Response(success=True, message="Slice job created", data={"jobId": job_id})
     except APIError:
         raise
@@ -251,6 +328,9 @@ async def update_slice_job_config(job_id: str, request: V2ConfigUpdateRequest):
         pending["config"].update(request.config)
     else:
         pending["config"] = request.config
+
+    if request.prz_config is not None:
+        pending["prz_config"] = request.prz_config
 
     return V2Response(success=True, message="Config updated")
 
@@ -323,6 +403,45 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
     )
 
 
+@router.post("/slices/{job_id}/upload-support", response_model=V2Response)
+async def upload_support_file(job_id: str, file: UploadFile = File(...)):
+    """
+    Upload a separate support-mesh STL for the slice job.
+
+    The support is kept distinct from the model (it is NOT merged) and is landed
+    as input/support.stl on execute. run_slicing then passes it to the slicer via
+    --import-support-stl, with self-generated supports/pad disabled. Sharing the
+    model's world origin (Contract A) keeps the two aligned without a transform.
+    """
+    pending = _require_pending(job_id)
+
+    if not file or not file.filename:
+        raise missing_body("No support file provided")
+
+    if not file.filename.lower().endswith(".stl"):
+        raise validation_error("Only .stl files are supported for supports")
+
+    try:
+        content = await file.read()
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded support file: {exc}")
+
+    if not content:
+        raise missing_body("Uploaded support file is empty")
+
+    _validate_stl_bytes(content, file.filename)
+
+    pending["support_stl"] = content
+
+    return V2Response(
+        success=True,
+        message=f"Support file '{file.filename}' uploaded",
+        data={"filename": file.filename, "bytes": len(content)},
+    )
+
+
 @router.post("/slices/{job_id}/use-model-from/{source_job_id}", response_model=V2Response)
 async def use_model_from_job(job_id: str, source_job_id: str, source_file: str = "boolean.stl"):
     """
@@ -380,8 +499,23 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
         job_dir = create_job(job_id)
         input_path = job_dir / "input" / "model.stl"
         _save_model_to_job(pending["models"][0], input_path)
+        # Land the separate support mesh (if uploaded) as input/support.stl.
+        # run_slicing detects it and passes --import-support-stl to the slicer.
+        support_blob = pending.get("support_stl")
+        if support_blob:
+            with open(job_dir / "input" / "support.stl", "wb") as f:
+                f.write(support_blob)
         config = pending["config"]
-        sla_config = _convert_v2_config_to_sla(config)
+        # Persist the Mechado prz_config (NOT the snake_case slicing config) so
+        # run_slicing computes the PRZ physical print time from the same source
+        # as the PRZ download path. Apply the same _inject_retract_overrides
+        # pre-process as the download path for bit-wise consistency (design D5).
+        prz_cfg = pending.get("prz_config")
+        if prz_cfg is not None:
+            _inject_retract_overrides(prz_cfg)
+            with open(job_dir / "prz_config.json", "w") as f:
+                json.dump(prz_cfg, f)
+        sla_config = _build_sla_config(prz_cfg, config, pending.get("center"))
         del _pending_jobs[job_id]
         background_tasks.add_task(run_slicing, job_id, sla_config)
         return V2Response(success=True, message="Slicing started", data={"currentConfig": config})
@@ -783,6 +917,7 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
     try:
         job_id = create_job_id()
         job_dir = create_job(job_id)
+        write_job_status(job_id, JobStatus.PROCESSING)
         input_dir = job_dir / "input"
         mesh_a_path = input_dir / "mesh_a.stl"
         mesh_b_path = input_dir / "mesh_b.stl"
@@ -807,10 +942,15 @@ async def _boolean_operation_impl(mesh_a, mesh_b, operation, parent_job_id=None)
         raise internal_error(str(exc))
 
     if not result.success:
+        write_job_status(job_id, JobStatus.FAILED, error=result.error)
+        if result.error_code == "BOOLEAN_INVALID_MESH":
+            raise boolean_invalid_mesh()
         raise boolean_failed(result.error)
 
     if debug_dir and result.boolean_mesh_path and result.boolean_mesh_path.exists():
         shutil.copy2(result.boolean_mesh_path, debug_dir / f"step{step}_{operation}_output.stl")
+
+    write_job_status(job_id, JobStatus.COMPLETED)
 
     return V2Response(
         success=True,
@@ -855,11 +995,41 @@ async def get_preview_zip_v2(job_id: str):
     return FileResponse(preview_path, media_type="application/zip", filename="preview.zip")
 
 
+def _rle_sl1_to_png_zip(sl1_path) -> bytes:
+    """[layer-rle] Convert an RLE-layer .sl1 to a ZIP of layer PNGs on demand.
+
+    Used by the layers.zip endpoint when PrusaSlicer emitted RLE layers (the
+    fast PRZ path) but a PNG-expecting consumer (rare frontend fallback) asks
+    for layer PNGs. The decoded bitmaps are identical to the original PNG path.
+    """
+    import io
+    import zipfile
+
+    from .prz_decoder import rle_layer_to_png
+    from .prz_encoder import sl1_layer_names
+
+    with zipfile.ZipFile(sl1_path) as zf:
+        names = zf.namelist()
+        # 層檔列舉統一走 sl1_layer_names（單一真值來源）。此路徑僅在 RLE 模式被呼叫，
+        # 故選出的即 .rle 層檔（.rle 優先）。
+        rle_names = [n for n in sl1_layer_names(names) if n.endswith(".rle")]
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as oz:
+            for name in rle_names:
+                # 共用單層解碼 helper；整包語意：解析度缺失（helper 回 None）即整包無效 → raise。
+                png = rle_layer_to_png(zf, name)
+                if png is None:
+                    raise validation_error("cannot determine layer resolution for RLE->PNG")
+                oz.writestr(name[:-4] + ".png", png)
+        return out.getvalue()
+
+
 @router.get("/slices/{job_id}/layers.zip")
 async def get_layers_zip_v2(job_id: str):
     """
-    Get layer PNGs as a ZIP. Serves the .sl1 directly (it IS a ZIP of PNGs).
-    Zero processing time — no resize/re-encode needed.
+    Get layer PNGs as a ZIP. Standard PNG .sl1 is served directly (zero
+    processing). If PrusaSlicer emitted RLE layers (fast PRZ path), they are
+    converted back to PNG on demand for this rare PNG-expecting fallback.
     """
     status_data = _job_status_or_raise(job_id)
     _require_completed(status_data, job_id)
@@ -868,14 +1038,56 @@ async def get_layers_zip_v2(job_id: str):
     if not sl1_path.exists():
         raise file_not_found(".sl1 archive not found")
 
-    return FileResponse(sl1_path, media_type="application/zip", filename="layers.zip")
+    import zipfile
+    with zipfile.ZipFile(sl1_path) as zf:
+        has_rle = any(n.endswith(".rle") for n in zf.namelist())
+
+    if not has_rle:
+        return FileResponse(sl1_path, media_type="application/zip", filename="layers.zip")
+
+    png_zip = await asyncio.get_event_loop().run_in_executor(
+        None, _rle_sl1_to_png_zip, sl1_path
+    )
+    return Response(
+        content=png_zip,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=layers.zip"},
+    )
+
+
+def _decode_preview_rgb(field: Optional[dict]) -> Optional["np.ndarray"]:
+    """Decode a preview field { width, height, rgb_b64 } into (H, W, 3) uint8.
+    Returns None if missing/invalid; encoder will fall back to a black preview."""
+    if not isinstance(field, dict):
+        return None
+    width = field.get("width")
+    height = field.get("height")
+    b64 = field.get("rgb_b64")
+    if not (isinstance(width, int) and isinstance(height, int) and isinstance(b64, str)):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    import base64
+    import numpy as np
+    try:
+        raw = base64.b64decode(b64, validate=False)
+    except Exception:
+        return None
+    if len(raw) != width * height * 3:
+        return None
+    return np.frombuffer(raw, dtype=np.uint8).reshape(height, width, 3)
 
 
 @router.post("/slices/{job_id}/download.prz")
 async def download_prz_v2(job_id: str, request: Request):
     """
     Generate and stream a PRZ file from the .sl1 layers + posted config.
-    The POST body is the Mechado config JSON (same structure as default profile).
+
+    POST body is JSON:
+      - Mechado config fields (same structure as default profile), AND
+      - optional `preview_small`: { width, height, rgb_b64 } (raw RGB Uint8Array, base64)
+      - optional `preview_large`: { width, height, rgb_b64 }
+    The encoder will Lanczos-resize previews to PRZ's 116×116 / 290×290 slots.
     """
     status_data = _job_status_or_raise(job_id)
     _require_completed(status_data, job_id)
@@ -884,10 +1096,28 @@ async def download_prz_v2(job_id: str, request: Request):
     if not sl1_path.exists():
         raise file_not_found(".sl1 archive not found")
 
+    # config body 與 preview 皆為 optional。容忍空 body（不視為錯誤），
+    # 以便支援「config 已存在 job 內」的新流程。
+    raw = await request.body()
+    if raw:
+        try:
+            body = json.loads(raw)
+        except Exception:
+            raise validation_error("Request body must be valid JSON")
+        if not isinstance(body, dict):
+            raise validation_error("Request body must be a JSON object")
+    else:
+        body = {}
+
+    preview_small_rgb = _decode_preview_rgb(body.pop("preview_small", None))
+    preview_large_rgb = _decode_preview_rgb(body.pop("preview_large", None))
+    config = _resolve_prz_download_config(job_id, body)
+    _inject_retract_overrides(config)
+
     try:
-        config = await request.json()
-    except Exception:
-        raise validation_error("Request body must be valid JSON")
+        timing = _extract_prz_timing_config(config)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors())
 
     from .prz_encoder import encode_prz_streaming
 
@@ -895,12 +1125,398 @@ async def download_prz_v2(job_id: str, request: Request):
         encode_prz_streaming(
             config=config,
             sl1_path=sl1_path,
-            estimated_print_time=status_data.get("estimated_print_time") or 0,
-            resin_volume_ml=status_data.get("resin_volume_ml") or 0,
+            timing=timing,
+            resin_volume_mm3=(status_data.get("resin_volume_ml") or 0) * 1000,
+            preview_small_rgb=preview_small_rgb,
+            preview_large_rgb=preview_large_rgb,
         ),
         media_type="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=model.prz"},
     )
+
+
+@router.post("/detect-boundary", response_model=V2Response)
+async def detect_boundary_endpoint(file: UploadFile = File(...)):
+    """Detect boundary edges on an uploaded STL mesh and return boundary loop points."""
+    import asyncio
+    import tempfile
+    from .boundary_detection import detect_boundary
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        result = await asyncio.to_thread(detect_boundary, tmp_path)
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    if not result.loops:
+        return V2Response(success=True, message="No boundary loops found", data={"loops": []})
+
+    loops_data = []
+    for i, loop in enumerate(result.loops):
+        loops_data.append({
+            "index": i,
+            "vertex_count": len(loop.vertex_indices),
+            "perimeter": round(loop.perimeter, 2),
+            "centroid": loop.centroid.tolist(),
+            "points": loop.points.tolist(),
+            "is_main": i == result.main_loop_index,
+        })
+
+    return V2Response(
+        success=True,
+        data={
+            "total_boundary_edges": result.total_boundary_edges,
+            "loop_count": len(result.loops),
+            "main_loop_index": result.main_loop_index,
+            "loops": loops_data,
+        },
+    )
+
+
+@router.post("/smooth-boundary", response_model=V2Response)
+async def smooth_boundary_endpoint(request: Request):
+    """
+    Smooth boundary loop points using Taubin smoothing.
+
+    Accepts raw points and smoothing parameters, returns smoothed points.
+    No STL upload needed — works purely on point data.
+    """
+    import numpy as np
+    from .boundary_detection import smooth_boundary_loop
+
+    body = await request.json()
+    loops = body.get("loops", [])
+    iterations = body.get("iterations", 20)
+    lam = body.get("lambda", 0.5)
+    mu = body.get("mu", -0.53)
+
+    smoothed_loops = []
+    for loop in loops:
+        points = np.array(loop["points"], dtype=np.float64)
+        smoothed = smooth_boundary_loop(points, iterations=iterations, lam=lam, mu=mu)
+        smoothed_loops.append({
+            "points": smoothed.tolist(),
+            "perimeter": round(float(np.sum(np.linalg.norm(
+                np.diff(smoothed, axis=0, append=smoothed[:1]), axis=1
+            ))), 2),
+        })
+
+    return V2Response(success=True, data={"loops": smoothed_loops})
+
+
+@router.post("/apply-boundary")
+async def apply_boundary_endpoint(
+    file: UploadFile = File(...),
+    data: str = Form(...),
+):
+    """
+    Apply smoothed boundary to mesh vertices with gradual falloff.
+
+    Accepts STL file + JSON data with original/smoothed points.
+    Returns modified STL file.
+    """
+    import asyncio
+    import json
+    import tempfile
+    from .boundary_detection import apply_boundary_to_mesh
+
+    params = json.loads(data)
+    original_points = params["original_points"]
+    smoothed_points = params["smoothed_points"]
+    falloff_rings = params.get("falloff_rings", 3)
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            apply_boundary_to_mesh,
+            tmp_path,
+            original_points,
+            smoothed_points,
+            falloff_rings,
+        )
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model.stl"},
+    )
+
+
+@router.post("/generate-base")
+async def generate_base_endpoint(
+    file: UploadFile = File(...),
+    elevation: float = Form(0.1),
+    chamfer: bool = Form(False),
+    skip_orient: bool = Form(False),
+):
+    """
+    Generate base for dental mesh: auto-orient + wall + bottom.
+
+    Accepts STL file only. Backend auto-detects boundary, orients mesh,
+    and generates wall + bottom face.
+    Returns combined STL (original + wall + bottom).
+    """
+    import asyncio
+    import tempfile
+    from .boundary_detection import generate_base
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            generate_base,
+            tmp_path,
+            elevation=elevation,
+            chamfer=chamfer,
+            skip_orient=skip_orient,
+        )
+    finally:
+        import os
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model_with_base.stl"},
+    )
+
+
+@router.post("/apply-boundary-and-base")
+async def apply_boundary_and_base_endpoint(
+    file: UploadFile = File(...),
+    data: str = Form(...),
+):
+    """
+    Consolidated base generation: apply the smoothed boundary AND generate the
+    base in a single call, parsing the STL only once. Avoids the second upload +
+    parse + vertex-merge that calling /apply-boundary then /generate-base incurs.
+
+    ``data`` is JSON with: original_points, smoothed_points, falloff_rings,
+    elevation, chamfer, skip_orient. Returns the combined STL.
+    """
+    import asyncio
+    import json
+    import os
+    import tempfile
+    from .boundary_detection import apply_boundary_then_base
+
+    params = json.loads(data)
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        stl_bytes = await asyncio.to_thread(
+            apply_boundary_then_base,
+            tmp_path,
+            params["original_points"],
+            params["smoothed_points"],
+            params.get("elevation", 0.1),
+            params.get("chamfer", False),
+            params.get("skip_orient", True),
+            params.get("falloff_rings", 3),
+        )
+    finally:
+        os.unlink(tmp_path)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=model_with_base.stl"},
+    )
+
+
+@router.post("/auto-orient", response_model=V2Response)
+async def auto_orient_endpoint(
+    file: UploadFile = File(...),
+    mode: int = Form(2),
+    debug: bool = Form(False),
+):
+    """
+    Compute dental auto-orientation Euler angles for an uploaded model.
+
+    Accepts a local-space STL. Returns ``data.rotation_rad = [rx, ry, rz]``
+    (radians) to be applied with Euler order 'ZYX' on the frontend.
+
+    When ``debug`` is true, also returns the debug mesh info (decision/candidate/
+    concave face indices + drill cylinders) for visualization. Default is off —
+    those arrays are large, so they are only computed/sent on demand.
+
+    Currently only surgical-guide mode (2) is ported to the backend; other
+    modes still run in the frontend WASM module.
+    """
+    import os
+    import tempfile
+
+    import numpy as np
+
+    if mode != 2:
+        return V2Response(
+            success=False,
+            message=f"auto-orient mode {mode} is not supported on the backend yet",
+        )
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        mesh = load_trimesh(tmp_path)
+        vertices = np.asarray(mesh.vertices, dtype=np.float32)
+        faces = np.asarray(mesh.faces, dtype=np.uint32)
+
+        from .auto_orient_surg_guide import compute_auto_orientation_surg_guide_detail
+
+        detail = await asyncio.to_thread(
+            compute_auto_orientation_surg_guide_detail, vertices, faces, False, debug
+        )
+    finally:
+        os.unlink(tmp_path)
+
+    data = {"rotation_rad": detail["rotation_rad"]}
+    if debug:
+        data.update({
+            "decision_faces": detail["decision_faces"],
+            "step_faces": detail["step_faces"],
+            "candidate_faces": detail["candidate_faces"],
+            "concave_faces": detail.get("concave_faces", []),
+            "cylinders": detail.get("cylinders", []),
+        })
+    return V2Response(success=True, data=data)
+
+
+@router.post("/classify-model", response_model=V2Response)
+async def classify_model_endpoint(file: UploadFile = File(...)):
+    """
+    Classify an uploaded dental STL model and return its type.
+
+    Accepts multipart/form-data with a single 'file' field (STL).
+    Returns data.model_type as a string code (e.g. "other", "crown").
+    """
+    import os
+    import tempfile
+
+    from .model_classifier import classify_dental_model
+
+    if not file or not file.filename:
+        raise missing_body("No file provided")
+
+    if not file.filename.lower().endswith(".stl"):
+        raise validation_error("Only .stl files are supported")
+
+    try:
+        content = await file.read()
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded file: {exc}")
+
+    if not content:
+        raise missing_body("Uploaded file is empty")
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        try:
+            mesh = load_trimesh(tmp_path)
+            if len(mesh.faces) == 0:
+                raise ValueError("empty mesh")
+        except APIError:
+            raise
+        except Exception as exc:
+            raise invalid_model(f"STL content is corrupted or format is invalid: {exc}")
+
+        try:
+            model_type = await asyncio.to_thread(classify_dental_model, mesh)
+        except APIError:
+            raise
+        except Exception as exc:
+            raise internal_error(f"Classification failed unexpectedly: {exc}")
+    finally:
+        os.unlink(tmp_path)
+
+    return V2Response(success=True, data={"model_type": model_type.value})
+
+
+@router.post("/confirm-model-type", response_model=V2Response)
+async def confirm_model_type_endpoint(
+    file: UploadFile = File(...),
+    target_type: str = Form(...),
+):
+    """
+    Confirm whether an uploaded dental STL model is of a specified type.
+
+    Accepts multipart/form-data with a 'file' field (STL) and a 'target_type' field
+    (one of the DentalModelType string values).  Returns data.confirmed as a boolean.
+    The actual model type is never revealed in the response.
+    """
+    import os
+    import tempfile
+
+    from .model_classifier import DentalModelType, confirm_dental_model_type
+
+    if not file or not file.filename:
+        raise missing_body("No file provided")
+
+    if not file.filename.lower().endswith(".stl"):
+        raise validation_error("Only .stl files are supported")
+
+    try:
+        parsed_target = DentalModelType(target_type)
+    except ValueError:
+        raise validation_error(
+            f"Invalid target_type '{target_type}'. "
+            f"Must be one of: {', '.join(t.value for t in DentalModelType)}"
+        )
+
+    try:
+        content = await file.read()
+    except APIError:
+        raise
+    except Exception as exc:
+        raise internal_error(f"Failed to read uploaded file: {exc}")
+
+    if not content:
+        raise missing_body("Uploaded file is empty")
+
+    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        try:
+            mesh = load_trimesh(tmp_path)
+            if len(mesh.faces) == 0:
+                raise ValueError("empty mesh")
+        except APIError:
+            raise
+        except Exception as exc:
+            raise invalid_model(f"STL content is corrupted or format is invalid: {exc}")
+
+        try:
+            confirmed = await asyncio.to_thread(confirm_dental_model_type, mesh, parsed_target)
+        except APIError:
+            raise
+        except Exception as exc:
+            raise internal_error(f"Confirmation failed unexpectedly: {exc}")
+    finally:
+        os.unlink(tmp_path)
+
+    return V2Response(success=True, data={"confirmed": confirmed})
 
 
 @router.get("/slices/{job_id}", response_model=V2Response)
@@ -934,6 +1550,10 @@ async def get_slice_job_status(job_id: str):
                 "estimatedPrintTime": status_data.get("estimated_print_time"),
                 "resinVolumeMl": status_data.get("resin_volume_ml"),
                 "error": status_data.get("error"),
+                # Neutral support outcome (e.g. SUPPORT_NOT_NEEDED) rides on the
+                # success:true path — a "no supports needed" result is NOT a
+                # failure and must not block downstream slicing.
+                "supportOutcome": status_data.get("support_outcome"),
                 "hasSupportMesh": status_data.get("has_support_mesh", False),
                 "hasHollowMesh": status_data.get("has_hollow_mesh", False),
                 "hasCutMesh": status_data.get("has_cut_mesh", False),
@@ -941,6 +1561,16 @@ async def get_slice_job_status(job_id: str):
             }
             if "ortho_progress" in status_data:
                 response_data["orthoProgress"] = status_data["ortho_progress"]
+
+            # Slice progress (percent + STAGE_* identifier) lives in the agent's
+            # in-memory store, not status.json. The field is OMITTED entirely when
+            # unavailable — never 0 or null, which a polling client would read as
+            # the progress going backwards. Terminal jobs have already had their
+            # entry cleared, so a COMPLETED response carries no progress.
+            progress = get_job_progress(job_id)
+            if progress is not None:
+                response_data["progress"] = progress
+
             return V2Response(success=True, data=response_data)
 
     # Check pending jobs (not yet executed)
@@ -1055,8 +1685,151 @@ async def ortho_process(job_id: str, request: V2OrthoProcessRequest, background_
 
 
 # ============================================================================
+# PRZ Parser Endpoint
+# ============================================================================
+
+_PRZ_MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB
+
+
+def _ndarray_to_png_bytes(arr) -> bytes:
+    """Encode a uint8 numpy ndarray as PNG bytes (grayscale or RGB)."""
+    from io import BytesIO
+    from PIL import Image
+    buf = BytesIO()
+    Image.fromarray(arr).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+@router.post("/prz/parse")
+async def parse_prz_endpoint(file: UploadFile = File(..., description="PRZ V3.0 binary file")):
+    """
+    Parse a PRZ V3.0 file and return its header fields plus base64 preview images.
+
+    Accepts multipart/form-data with a 'file' field containing a .prz binary.
+    Returns JSON: header fields, preview_small_b64 (PNG base64), preview_large_b64 (PNG base64),
+    layer_count, and session_id for subsequent layer image requests.
+    """
+    import base64
+    import dataclasses
+
+    from .prz_decoder import parse_prz
+
+    file_data = await file.read()
+    if len(file_data) > _PRZ_MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 500 MB)")
+
+    try:
+        prz = parse_prz(file_data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    session_id = str(uuid.uuid4())
+    _prz_sessions[session_id] = (prz, time.time())
+
+    return {
+        "header": dataclasses.asdict(prz.header),
+        "preview_small_b64": base64.b64encode(_ndarray_to_png_bytes(prz.preview_small)).decode(),
+        "preview_large_b64": base64.b64encode(_ndarray_to_png_bytes(prz.preview_large)).decode(),
+        "layer_count": prz.header.total_layers,
+        "session_id": session_id,
+    }
+
+
+@router.get("/prz/{session_id}/layer/{index}")
+async def get_prz_layer(session_id: str, index: int):
+    """
+    Return a single decoded PRZ layer as a grayscale PNG.
+
+    Requires a session_id obtained from POST /prz/parse.
+    Each successful call resets the session TTL (30 minutes).
+    """
+    entry = _prz_sessions.get(session_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"PRZ session not found: {session_id}")
+
+    prz, _ = entry
+    layer_count = prz.header.total_layers
+    if index < 0 or index >= layer_count:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Layer index {index} out of range [0, {layer_count})",
+        )
+
+    arr = prz.decode_layer_image(index)
+    _prz_sessions[session_id] = (prz, time.time())  # reset TTL
+
+    return Response(content=_ndarray_to_png_bytes(arr), media_type="image/png")
+
+
+@router.delete("/prz/{session_id}", status_code=204)
+async def delete_prz_session(session_id: str):
+    """
+    Release a PRZ session from server memory.
+
+    Call this when the viewer is closed to free the cached PRZ file immediately
+    rather than waiting for the TTL to expire.
+    """
+    if session_id not in _prz_sessions:
+        raise HTTPException(status_code=404, detail=f"PRZ session not found: {session_id}")
+    _prz_sessions.pop(session_id)
+    return Response(status_code=204)
+
+
+# ============================================================================
 # Helper Functions
 # ============================================================================
+
+# SLAConfig snake_case key → Mechado "Print.*" Title Case key
+_SLA_RETRACT_TO_MECHADO = {
+    "retract_distance":               "Retract Distance",
+    "bottom_retract_distance":        "Bottom Retract Distance",
+    "retract_second_distance":        "Retract Second Distance",
+    "bottom_retract_second_distance": "Bottom Retract Second Distance",
+}
+
+
+def _inject_retract_overrides(config: Dict[str, Any]) -> None:
+    """Guarantee retract keys land in the nested Mechado `Print` section.
+
+    The PRZ encoder reads via `_get_float(config, "Print.Retract Distance")`,
+    which splits on `.` and requires NESTED dict structure:
+        config["Print"]["Retract Distance"]
+
+    Frontend may send any of these source formats; this function normalises
+    them all into the nested form expected by the encoder (priority order):
+
+      1. Nested Mechado:     config["Print"]["Retract Distance"]   ← canonical
+      2. Top-level Mechado:  config["Retract Distance"]
+      3. Dotted-flat:        config["Print.Retract Distance"]
+      4. SLAConfig snake:    config["retract_distance"]
+
+    Mutates `config` in-place: ensures `config["Print"]` is a dict and contains
+    every available retract key under its Mechado Title Case name.
+    """
+    print_section = config.get("Print")
+    if not isinstance(print_section, dict):
+        print_section = {}
+        config["Print"] = print_section
+
+    for sla_key, mechado_key in _SLA_RETRACT_TO_MECHADO.items():
+        if mechado_key in print_section:
+            continue  # canonical nested form already present
+        if mechado_key in config:
+            print_section[mechado_key] = config[mechado_key]
+            continue
+        dotted = f"Print.{mechado_key}"
+        if dotted in config:
+            print_section[mechado_key] = config[dotted]
+            continue
+        if sla_key in config:
+            print_section[mechado_key] = config[sla_key]
+
+
+# blur 閘控的真值來源已移至 `models.gate_blur`，因為 `prz_encoder` 也要用它，而
+# prz_encoder 是本模組的下游——留在這裡會迫使它反向匯入整個路由模組。此別名保留
+# 既有呼叫點與測試中的 `_gate_blur` 名稱。
+_gate_blur = gate_blur
+
 
 def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     """
@@ -1079,6 +1852,21 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
         "Anti-aliasing Level": "anti_aliasing_level",
         "Grey Level": "gray_level",
         "Image Blur Pixel": "blur",
+        "Shrinkage Compensation": "shrinkage_compensation",
+        "Shrinkage Compensation X": "shrinkage_compensation_x",
+        "Shrinkage Compensation Y": "shrinkage_compensation_y",
+        "Shrinkage Compensation Z": "shrinkage_compensation_z",
+        "Tolerance Compensation": "tolerance_compensation",
+        "Tolerance Compensation A": "tolerance_compensation_a",
+        "Tolerance Compensation B": "tolerance_compensation_b",
+        "Bottom Tolerance Compensation": "bottom_tolerance_compensation",
+        "Bottom Tolerance Compensation A": "bottom_tolerance_compensation_a",
+        "Bottom Tolerance Compensation B": "bottom_tolerance_compensation_b",
+        "Bottom Layer Count": "bottom_layer_count",
+        "Retract Distance": "retract_distance",
+        "Bottom Retract Distance": "bottom_retract_distance",
+        "Retract Second Distance": "retract_second_distance",
+        "Bottom Retract Second Distance": "bottom_retract_second_distance",
     }
 
     sla_dict = {}
@@ -1095,6 +1883,12 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     for ds_key, sla_key in mapping.items():
         if ds_key in print_config:
             sla_dict[sla_key] = print_config[ds_key]
+
+    # `Image Blur` 開關閘控（見 _gate_blur）。必須在 mapping 迴圈之後套用，才能作用在
+    # 已解析出的強度值上——不論它來自 snake `blur` 還是 DS-Online 的 `Image Blur Pixel`。
+    blur_gated = _gate_blur(print_config.get("Image Blur"), sla_dict.get("blur"))
+    if blur_gated is not None:
+        sla_dict["blur"] = blur_gated
 
     # Handle "Image Size" array -> display_pixels_x, display_pixels_y
     image_size = print_config.get("Image Size")
@@ -1121,3 +1915,129 @@ def _convert_v2_config_to_sla(config: Dict[str, Any]) -> Optional[SLAConfig]:
     if sla_dict:
         return SLAConfig(**sla_dict)
     return None
+
+
+def _extract_sla_from_mechado(
+    mechado: Dict[str, Any],
+    center: Optional[List[float]] = None,
+) -> Dict[str, Any]:
+    """從完整三段式 mechado config 萃取 SLAConfig 切片參數（回傳 dict，未建模）。
+
+    方案 B（單一真相）：DS-Online 前端只送一份完整 mechado config（含 Machine /
+    Print / Advanced 三段），後端由此萃取出 prusa 切片所需的 snake_case 欄位。
+
+    與 `_convert_v2_config_to_sla` 的差異：本函式理解三段式巢狀結構，並涵蓋
+    `Machine` 與 `Advanced` 區段（舊函式僅讀 `Print` 或頂層 snake，會丟失這兩段）。
+
+    重要約定：
+      - `display_width`/`display_height` 取自 `Machine.bed_size[2]`/`[3]`
+        （bed_size 結構為 [x0, y0, x1, y1]，前兩元素為原點，非幅面尺寸）。
+      - `Advanced.Anti-aliasing Level` 與 `Advanced.Image Blur Pixel` 在 mechado
+        中已是後端刻度（前端 uiToDefault 已套 UI→backend 轉換），此處直接複製，
+        不可再套任何刻度轉換。
+      - `blur` 額外受 `Advanced."Image Blur"` 開關閘控（見 `_gate_blur`）。開關與刻度
+        正交：閘控只決定要不要套用，不改變強度值本身。
+      - `printer_model` 取自 `Machine.machine_type`（前端不另傳）。
+      - 任一來源欄位缺失時，留給 SLAConfig 預設值，不拋錯（僅記 log）。
+
+    NOTE: 萃取出的 `anti_aliasing_level` 為切片控制值（Prusa 刻度 0/1/2），僅供
+    SLAConfig / prusa_slicer_fork 使用，不代表 PRZ 最終的顯示內容。
+    """
+    machine = mechado.get("Machine") or {}
+    print_c = mechado.get("Print") or {}
+    advanced = mechado.get("Advanced") or {}
+    out: Dict[str, Any] = {}
+
+    def put(key: str, val: Any) -> None:
+        """僅在來源存在（非 None）時寫入；缺值留給 SLAConfig 預設。"""
+        if val is not None:
+            out[key] = val
+
+    # ── 核心 9 欄位（對應前端 uiToBackendSlicing 權威清單）──────────────
+    put("layer_height", print_c.get("Layer Height"))                      # 1
+
+    image_size = machine.get("image_size")
+    if isinstance(image_size, list) and len(image_size) >= 2:
+        put("display_pixels_x", image_size[0])                            # 2
+        put("display_pixels_y", image_size[1])                            # 3
+
+    bed_size = machine.get("bed_size")                                    # [x0, y0, x1, y1]
+    if isinstance(bed_size, list) and len(bed_size) >= 4:
+        put("display_width", bed_size[2])                                 # 4  (索引標準)
+        put("display_height", bed_size[3])                                # 5  (索引標準)
+
+    put("anti_aliasing", advanced.get("Anti-aliasing"))                  # 6
+    put("anti_aliasing_level", advanced.get("Anti-aliasing Level"))      # 7  直接複製
+    put("gray_level", advanced.get("Grey Level"))                        # 8
+    # 9  強度直接複製（不得二次刻度轉換），但受 `Image Blur` 開關閘控——見 _gate_blur
+    put("blur", _gate_blur(advanced.get("Image Blur"),
+                           advanced.get("Image Blur Pixel")))
+
+    # ── 隨附欄位（非幾何 9 欄，但 SLAConfig 需要）────────────────────────
+    put("printer_model", machine.get("machine_type"))
+    put("exposure_time", print_c.get("Exposure Time"))
+    put("initial_exposure_time", print_c.get("Bottom Exposure Time"))
+    put("bottom_layer_count", print_c.get("Bottom Layer Count"))
+    for sla_key, mechado_key in _SLA_RETRACT_TO_MECHADO.items():
+        put(sla_key, print_c.get(mechado_key))
+
+    # ── center：相對位移 → 絕對座標（依賴正確的 display_width/height）─────
+    if isinstance(center, list) and len(center) >= 2:
+        dw = out.get("display_width", SLAConfig.model_fields["display_width"].default)
+        dh = out.get("display_height", SLAConfig.model_fields["display_height"].default)
+        out["center_x"] = center[0] + dw / 2
+        out["center_y"] = center[1] + dh / 2
+
+    # 缺關鍵幾何欄位時記 log（不拋錯），便於除錯靜默退預設的情況。
+    for critical in ("layer_height", "display_width", "display_height"):
+        if critical not in out:
+            logger.warning(
+                "_extract_sla_from_mechado: missing '%s' in mechado config; "
+                "SLAConfig default will be used", critical,
+            )
+
+    return out
+
+
+def _resolve_prz_download_config(job_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    """解析 download.prz 的 config 來源（design：config body 改 optional）。
+
+    - body 顯式提供（非空）config → 以 body 為優先，直接回傳。
+    - body 未提供 config → 降級從 job 持久化的 `prz_config.json` 讀取。
+    - 兩者皆無 → 拋出 validation error（無可用 config 生成 PRZ）。
+    """
+    if config:
+        return config
+    prz_config_path = get_job_dir(job_id) / "prz_config.json"
+    if prz_config_path.exists():
+        with open(prz_config_path) as f:
+            return json.load(f)
+    raise validation_error(
+        "No config provided in request body and no persisted "
+        "prz_config.json found for this job"
+    )
+
+
+def _build_sla_config(
+    prz_config: Optional[Dict[str, Any]],
+    snake_config: Optional[Dict[str, Any]],
+    center: Optional[List[float]] = None,
+) -> Optional[SLAConfig]:
+    """組裝最終 SLAConfig：mechado 萃取為 base、snake config 欄位級覆蓋（design D3）。
+
+    優先序（last-write-wins，欄位級）：
+        _extract_sla_from_mechado(prz_config, center)   ← base
+            └─ snake_config（PUT /config 傳入）的非 None 欄位逐欄覆蓋
+
+    - 新流程：只送 mechado（snake_config 為空）→ 純萃取結果。
+    - 舊流程：無 mechado、僅 snake_config → base 為空，行為退回
+      `_convert_v2_config_to_sla(snake_config)`，與變更前一致。
+    """
+    snake = snake_config or {}
+    merged: Dict[str, Any] = {}
+    if prz_config is not None:
+        merged.update(_extract_sla_from_mechado(prz_config, center))
+    merged.update({k: v for k, v in snake.items() if v is not None})
+    if merged:
+        return SLAConfig(**merged)
+    return _convert_v2_config_to_sla(snake)

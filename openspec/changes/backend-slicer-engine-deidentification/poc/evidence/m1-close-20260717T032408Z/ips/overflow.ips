@@ -1,0 +1,137 @@
+{"app_name":"slicer-engine","timestamp":"2026-07-17 11:24:17.00 +0800","app_version":"","slice_uuid":"24ba876c-1f98-4186-b850-ffc7ba4a380b","build_version":"","platform":1,"share_with_app_devs":1,"is_first_party":1,"bug_type":"309","os_version":"macOS 26.5.1 (25F80)","roots_installed":0,"incident_id":"1387D5A2-451D-4DCB-937D-0570991CB41B","name":"slicer-engine"}
+{
+  "uptime" : 12000,
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac15,3",
+  "coalitionID" : 1676,
+  "osVersion" : {
+    "train" : "macOS 26.5.1",
+    "build" : "25F80",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2026-07-17 11:24:15.7513 +0800",
+  "codeSigningMonitor" : 2,
+  "incident" : "1387D5A2-451D-4DCB-937D-0570991CB41B",
+  "pid" : 82917,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procLaunch" : "2026-07-17 11:24:14.2573 +0800",
+  "procStartAbsTime" : 295209572698,
+  "procExitAbsTime" : 295245321467,
+  "procName" : "slicer-engine",
+  "procPath" : "\/Users\/USER\/*\/slicer-engine",
+  "parentProc" : "bash",
+  "parentPid" : 82746,
+  "coalitionName" : "com.todesktop.230313mzl4w4u92",
+  "crashReporterKey" : "F7A6EDB8-D083-2393-4DB2-9A4DAFDAC4A6",
+  "lowPowerMode" : 1,
+  "appleIntelligenceStatus" : {"state":"available"},
+  "developerMode" : 1,
+  "bootProgressRegister" : "0x2f000000",
+  "responsiblePid" : 1638,
+  "responsibleProc" : "Cursor",
+  "codeSigningID" : "slicer-engine",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570425857,
+  "codeSigningValidationCategory" : 10,
+  "codeSigningTrustLevel" : 4294967295,
+  "codeSigningAuxiliaryInfo" : 0,
+  "instructionByteStream" : {"beforePC":"S4Fd+OoDAJFfAQvrCQEAVEoBCeujAABUXwEL62MAAFTqL3+pwANf1g==","atPC":"a4Ff+OoDAJE\/BUDxwwAAVEoFQNFLAUD5KQVA0T8FQPGI\/\/9USgEJyw=="},
+  "bootSessionUUID" : "3DA8CBEA-B3BF-45B6-B3AD-8E35231197CB",
+  "wakeTime" : 64,
+  "sleepWakeUUID" : "71CDE10F-0A79-45BF-A544-238DD75A4C5A",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0x16cd7fff8 is in 0x16957c000-0x16cd80000;  bytes after start: 58736632  bytes before end: 7\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      MALLOC metadata             154e00000-154e04000    [   16K] rw-\/rwx SM=PRV  \n      GAP OF 0x14778000 BYTES\n--->  STACK GUARD                 16957c000-16cd80000    [ 56.0M] ---\/rwx SM=PRV  stack guard for thread 0\n      Stack                       16cd80000-16d57c000    [ 8176K] rw-\/rwx SM=SHM  thread 0",
+  "exception" : {"codes":"0x0000000000000002, 0x000000016cd7fff8","message":"Thread stack size exceeded due to excessive recursion","rawCodes":[2,6121062392],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_PROTECTION_FAILURE at 0x000000016cd7fff8"},
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":82917},
+  "vmregioninfo" : "0x16cd7fff8 is in 0x16957c000-0x16cd80000;  bytes after start: 58736632  bytes before end: 7\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      MALLOC metadata             154e00000-154e04000    [   16K] rw-\/rwx SM=PRV  \n      GAP OF 0x14778000 BYTES\n--->  STACK GUARD                 16957c000-16cd80000    [ 56.0M] ---\/rwx SM=PRV  stack guard for thread 0\n      Stack                       16cd80000-16d57c000    [ 8176K] rw-\/rwx SM=SHM  thread 0",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"queue":"com.apple.main-thread","frames":[{"imageOffset":7260,"symbol":"___chkstk_darwin","symbolLocation":60,"imageIndex":1},{"imageOffset":6299980,"imageIndex":0},{"imageOffset":6300016,"imageIndex":0},{"imageOffset":6300016,"imageIndex":0},{"imageOffset":6300016,"imageIndex":0},{"imageOffset":6300016,"imageIndex":0},{"imageOffset":6300016,"imageIndex":0},{"imageOffset":6300016,"imageIndex":0},{"imageOffset":6288684,"imageIndex":0},{"imageOffset":251924,"imageIndex":0},{"imageOffset":360300,"imageIndex":0},{"imageOffset":130560,"symbol":"start","symbolLocation":6992,"imageIndex":2}],"id":422267,"recursionInfoArray":[{"hottestElided":5,"coldestElided":1011,"depth":1013,"keyFrame":{"imageOffset":6300016,"imageIndex":0}}],"originalLength":1020,"triggered":true,"threadState":{"x":[{"value":0},{"value":4392239072},{"value":259},{"value":18446744073709551607},{"value":0},{"value":0},{"value":0},{"value":18446726482597246976},{"value":1},{"value":8208},{"value":6121058000},{"value":6121062400},{"value":32},{"value":6129434079},{"value":4294967263},{"value":4392239022},{"value":6488525856,"symbolLocation":0,"symbol":"___chkstk_darwin"},{"value":8325386872},{"value":0},{"value":6129430399},{"value":6129427592},{"value":6129414352},{"value":0},{"value":6129427360},{"value":1},{"value":35920733440},{"value":0},{"value":4398336336},{"value":35920911936}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4343750988},"cpsr":{"value":2147487744},"fp":{"value":6121066224},"sp":{"value":6121066208},"esr":{"value":2449473543,"description":"(Data Abort) byte read Translation fault"},"pc":{"value":6488525916,"matchesCrashFrame":1},"far":{"value":6121062392}},"name":"slicer-worker"},{"id":422323,"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":4},{"imageOffset":35325772,"imageIndex":0},{"imageOffset":35325344,"imageIndex":0},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":1},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":1}],"threadState":{"x":[{"value":14},{"value":0},{"value":0},{"value":1},{"value":35916873856},{"value":0},{"value":1},{"value":54944056575750},{"value":0},{"value":48},{"value":4397935608,"symbolLocation":1312,"symbol":"openvdb::v8_2::tree::Tree<openvdb::v8_2::tree::RootNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::points::PointDataLeafNode<openvdb::v8_2::PointIndex<unsigned int, 1u>, 3u>, 4u>, 5u>>>::treeType()::once"},{"value":4294967290},{"value":4411923744},{"value":70375191011348},{"value":190464},{"value":53},{"value":18446744073709551580},{"value":8325382704},{"value":0},{"value":35930193792},{"value":35922875776},{"value":1},{"value":0},{"value":35930193832},{"value":1},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372776780},"cpsr":{"value":1610616832},"fp":{"value":6133657520},"sp":{"value":6133657472},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6488267696},"far":{"value":0}}},{"id":422324,"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":4},{"imageOffset":35325772,"imageIndex":0},{"imageOffset":35325344,"imageIndex":0},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":1},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":1}],"threadState":{"x":[{"value":14},{"value":0},{"value":0},{"value":1},{"value":35916874176},{"value":0},{"value":1},{"value":52438288512126},{"value":0},{"value":48},{"value":4397935608,"symbolLocation":1312,"symbol":"openvdb::v8_2::tree::Tree<openvdb::v8_2::tree::RootNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::points::PointDataLeafNode<openvdb::v8_2::PointIndex<unsigned int, 1u>, 3u>, 4u>, 5u>>>::treeType()::once"},{"value":4294967292},{"value":4411923744},{"value":52780857481246},{"value":188416},{"value":53},{"value":18446744073709551580},{"value":8325382704},{"value":0},{"value":35930193920},{"value":35922879616},{"value":1},{"value":0},{"value":35930193960},{"value":1},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372776780},"cpsr":{"value":1610616832},"fp":{"value":6137900976},"sp":{"value":6137900928},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6488267696},"far":{"value":0}}},{"id":422325,"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":4},{"imageOffset":35325772,"imageIndex":0},{"imageOffset":35325344,"imageIndex":0},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":1},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":1}],"threadState":{"x":[{"value":14},{"value":0},{"value":0},{"value":1},{"value":35916874496},{"value":0},{"value":1},{"value":54087963180160},{"value":0},{"value":48},{"value":4397935608,"symbolLocation":1312,"symbol":"openvdb::v8_2::tree::Tree<openvdb::v8_2::tree::RootNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::points::PointDataLeafNode<openvdb::v8_2::PointIndex<unsigned int, 1u>, 3u>, 4u>, 5u>>>::treeType()::once"},{"value":4294967291},{"value":4411923744},{"value":87969524541440},{"value":192512},{"value":53},{"value":18446744073709551580},{"value":8325382704},{"value":0},{"value":35930193536},{"value":35922882688},{"value":1},{"value":0},{"value":35930193576},{"value":1},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372776780},"cpsr":{"value":1610616832},"fp":{"value":6142144432},"sp":{"value":6142144384},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6488267696},"far":{"value":0}}},{"id":422326,"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":4},{"imageOffset":35325772,"imageIndex":0},{"imageOffset":35325344,"imageIndex":0},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":1},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":1}],"threadState":{"x":[{"value":14},{"value":0},{"value":0},{"value":1},{"value":35916875776},{"value":0},{"value":1},{"value":54680947164626},{"value":0},{"value":48},{"value":4397935608,"symbolLocation":1312,"symbol":"openvdb::v8_2::tree::Tree<openvdb::v8_2::tree::RootNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::points::PointDataLeafNode<openvdb::v8_2::PointIndex<unsigned int, 1u>, 3u>, 4u>, 5u>>>::treeType()::once"},{"value":4294967294},{"value":4411923744},{"value":175941192192130},{"value":202752},{"value":53},{"value":18446744073709551580},{"value":8325382704},{"value":0},{"value":35930193280},{"value":35924235648},{"value":1},{"value":0},{"value":35930193320},{"value":1},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372776780},"cpsr":{"value":1610616832},"fp":{"value":6146387888},"sp":{"value":6146387840},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6488267696},"far":{"value":0}}},{"id":422327,"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":4},{"imageOffset":35325772,"imageIndex":0},{"imageOffset":35325344,"imageIndex":0},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":1},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":1}],"threadState":{"x":[{"value":14},{"value":0},{"value":0},{"value":1},{"value":35916874816},{"value":0},{"value":1},{"value":53521334394312},{"value":0},{"value":48},{"value":4397935608,"symbolLocation":1312,"symbol":"openvdb::v8_2::tree::Tree<openvdb::v8_2::tree::RootNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::points::PointDataLeafNode<openvdb::v8_2::PointIndex<unsigned int, 1u>, 3u>, 4u>, 5u>>>::treeType()::once"},{"value":4294967293},{"value":4411923744},{"value":123158191601734},{"value":196608},{"value":53},{"value":18446744073709551580},{"value":8325382704},{"value":0},{"value":35930193664},{"value":35922885760},{"value":1},{"value":0},{"value":35930193704},{"value":1},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372776780},"cpsr":{"value":1610616832},"fp":{"value":6150631344},"sp":{"value":6150631296},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6488267696},"far":{"value":0}}},{"id":422328,"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":4},{"imageOffset":35325772,"imageIndex":0},{"imageOffset":35325344,"imageIndex":0},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":1},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":1}],"threadState":{"x":[{"value":14},{"value":0},{"value":0},{"value":1},{"value":35916875136},{"value":0},{"value":1},{"value":53690353123329},{"value":0},{"value":48},{"value":4397935608,"symbolLocation":1312,"symbol":"openvdb::v8_2::tree::Tree<openvdb::v8_2::tree::RootNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::points::PointDataLeafNode<openvdb::v8_2::PointIndex<unsigned int, 1u>, 3u>, 4u>, 5u>>>::treeType()::once"},{"value":0},{"value":4411923744},{"value":228724192782436},{"value":204800},{"value":53},{"value":18446744073709551580},{"value":8325382704},{"value":0},{"value":35930193408},{"value":35924230272},{"value":1},{"value":0},{"value":35930193448},{"value":1},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372776780},"cpsr":{"value":1610616832},"fp":{"value":6154874800},"sp":{"value":6154874752},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6488267696},"far":{"value":0}}},{"id":422329,"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":4},{"imageOffset":35325772,"imageIndex":0},{"imageOffset":35325344,"imageIndex":0},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":1},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":1}],"threadState":{"x":[{"value":14},{"value":0},{"value":0},{"value":1},{"value":35916875456},{"value":0},{"value":1},{"value":53988348552043},{"value":0},{"value":48},{"value":4397935608,"symbolLocation":1312,"symbol":"openvdb::v8_2::tree::Tree<openvdb::v8_2::tree::RootNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::tree::InternalNode<openvdb::v8_2::points::PointDataLeafNode<openvdb::v8_2::PointIndex<unsigned int, 1u>, 3u>, 4u>, 5u>>>::treeType()::once"},{"value":4294967295},{"value":4411923744},{"value":211129859252334},{"value":206848},{"value":53},{"value":18446744073709551580},{"value":8325382704},{"value":0},{"value":35930193152},{"value":35924230656},{"value":1},{"value":0},{"value":35930193192},{"value":1},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372776780},"cpsr":{"value":1610616832},"fp":{"value":6159118256},"sp":{"value":6159118208},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6488267696},"far":{"value":0}}}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4337451008,
+    "size" : 59473920,
+    "uuid" : "24ba876c-1f98-4186-b850-ffc7ba4a380b",
+    "path" : "\/Users\/USER\/*\/slicer-engine",
+    "name" : "slicer-engine"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6488518656,
+    "size" : 52028,
+    "uuid" : "4f33683c-18c8-39a1-800b-2e3bd43bcc13",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "name" : "libsystem_pthread.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6484492288,
+    "size" : 680472,
+    "uuid" : "a237ef81-b68b-37ba-a165-92c965529534",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6488264704,
+    "size" : 250544,
+    "uuid" : "cc1cf985-bc65-3725-809f-4c1e36b8f4ba",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "name" : "libsystem_kernel.dylib"
+  }
+],
+  "sharedCache" : {
+  "base" : 6483361792,
+  "size" : 5990596608,
+  "uuid" : "ff7119a7-f64d-305d-8135-7e6eb1c207d1"
+},
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "name" : "slicer-worker",
+    "queue" : "com.apple.main-thread"
+  }
+},
+  "logWritingSignature" : "d002efa55d88343d6e76fe49e4772bb6d975a150",
+  "roots_installed" : 0,
+  "bug_type" : "309",
+  "trmStatus" : 1,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "67648e5334a82511f4acf879",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000008
+    },
+    {
+      "rolloutId" : "699d4a6bb3c59721f0815d4a",
+      "factorPackIds" : [
+        "6a1e847dfae8a60fe3d88f20",
+        "6a1e847ffae8a60fe3d88f21",
+        "6a1e847fe5700036461dd986",
+        "6a1e848059a97e607a107573"
+      ],
+      "deploymentId" : 240000038
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}

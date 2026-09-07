@@ -1,0 +1,28 @@
+# Slicer Engine — Copyright and Attribution NOTICE
+
+This directory accompanies the **Slicer Engine** binary (`slicer-engine`), a modified
+fork of PrusaSlicer (AGPL-3.0 or later).
+
+## License
+
+The Slicer Engine binary and its Corresponding Source are licensed under the
+**GNU Affero General Public License v3 (AGPL-3.0)** or any later version.
+See `LICENSE` in this directory for the full license text.
+
+PrusaSlicer is Copyright (c) Prusa Research and its contributors.
+Additional modifications are Copyright (c) PHROZEN TECH CO., LTD. and contributors
+as recorded in the fork git history.
+
+## Modification notice
+
+This distribution is **not** an unmodified upstream PrusaSlicer binary.
+It is a modified Program under AGPL-3.0. See `MODIFICATIONS.md` for a summary of
+material changes and how to obtain the exact Corresponding Source for the
+`engine_build_id` / binary hash of this release.
+
+## De-identification vs. license disclosure
+
+Product process names, paths, and OS crash diagnostics use the neutral name
+**Slicer Engine** / `slicer-engine`. That does **not** remove AGPL obligations.
+Anyone reading these legal materials will correctly learn that the Program is a
+modified PrusaSlicer fork.

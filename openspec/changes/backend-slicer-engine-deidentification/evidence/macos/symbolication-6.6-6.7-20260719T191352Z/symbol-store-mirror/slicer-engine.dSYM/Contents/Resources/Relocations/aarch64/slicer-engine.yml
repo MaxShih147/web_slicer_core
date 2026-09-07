@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/sw-dev/repos/Bundle/web_slicer_core/third_party/slicer-engine/bin/slicer-engine'
+relocations:     []
+...

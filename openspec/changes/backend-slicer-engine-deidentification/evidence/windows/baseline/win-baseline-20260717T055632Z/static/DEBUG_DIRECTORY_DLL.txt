@@ -1,0 +1,2 @@
+﻿          D5FB00 [      1C] RVA [size] of Debug Directory
+  Debug Directories

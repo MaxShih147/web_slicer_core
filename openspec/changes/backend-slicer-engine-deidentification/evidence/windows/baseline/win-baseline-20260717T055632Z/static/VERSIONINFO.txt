@@ -1,0 +1,36 @@
+﻿File=C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\prusa-slicer-console.exe
+FileName=C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\prusa-slicer-console.exe
+InternalName=PrusaSlicer
+OriginalFilename=prusa-slicer.exe
+FileDescription=PrusaSlicer
+ProductName=PrusaSlicer
+ProductVersion=PrusaSlicer-2.9.4+UNKNOWN
+FileVersion=PrusaSlicer-2.9.4+UNKNOWN
+CompanyName=Prusa Research
+LegalCopyright=Copyright ? 2016-2025 Prusa Research, ? 2011-2018 Alessandro Ranellucci
+Comments=
+---
+File=C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\prusa-slicer.exe
+FileName=C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\prusa-slicer.exe
+InternalName=PrusaSlicer
+OriginalFilename=prusa-slicer.exe
+FileDescription=PrusaSlicer
+ProductName=PrusaSlicer
+ProductVersion=PrusaSlicer-2.9.4+UNKNOWN
+FileVersion=PrusaSlicer-2.9.4+UNKNOWN
+CompanyName=Prusa Research
+LegalCopyright=Copyright ? 2016-2025 Prusa Research, ? 2011-2018 Alessandro Ranellucci
+Comments=
+---
+File=C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\PrusaSlicer.dll
+FileName=C:\Phrozen3D\Lechon\03_Development\Win\Bundle-Launcher\dist\win-unpacked\resources\bundle\third_party\prusaslicer_build\src\Release\PrusaSlicer.dll
+InternalName=
+OriginalFilename=
+FileDescription=
+ProductName=
+ProductVersion=
+FileVersion=
+CompanyName=
+LegalCopyright=
+Comments=
+---

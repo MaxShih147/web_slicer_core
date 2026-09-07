@@ -1,0 +1,17 @@
+﻿# BEFORE WER identity fields (verbatim from live Report.wer)
+# Source file: BEFORE_Report.wer
+
+Version=1
+EventType=APPCRASH
+NsAppName=prusa-slicer-console.exe
+OriginalFilename=prusa-slicer.exe
+AppSessionGuid=000019e4-0001-0086-d811-3fab5c18dd01
+TargetAppId=W:000624e3848bcc98f8c77552fd1a4155c11100000904!0000c012a7dbd806fedad2d3578ef677e556b5849a1c!prusa-slicer-console.exe
+TargetAppVer=2026//06//27:14:11:16!0!prusa-slicer-console.exe
+IsFatal=1
+Sig[0].Value=prusa-slicer-console.exe
+UI[2]=D:\Repos\Phrozen\Bundle\web_slicer_core\third_party\prusaslicer_build\src\Release\prusa-slicer-console.exe
+LoadedModule[0]=D:\Repos\Phrozen\Bundle\web_slicer_core\third_party\prusaslicer_build\src\Release\prusa-slicer-console.exe
+FriendlyEventName=已停止運作
+AppName=PrusaSlicer
+AppPath=D:\Repos\Phrozen\Bundle\web_slicer_core\third_party\prusaslicer_build\src\Release\prusa-slicer-console.exe

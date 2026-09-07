@@ -1,0 +1,3 @@
+﻿mode=overflow exit=0 stderr_len=0 stdout_head=PrusaSlicer-2.9.4+UNKNOWN based on Slic3r (without GUI support) https://github.com/prusa3d/PrusaSlicer  Usage: prusa-
+mode=segfault exit=0 stderr_len=0 stdout_head=PrusaSlicer-2.9.4+UNKNOWN based on Slic3r (without GUI support) https://github.com/prusa3d/PrusaSlicer  Usage: prusa-
+mode=exception exit=0 stderr_len=0 stdout_head=PrusaSlicer-2.9.4+UNKNOWN based on Slic3r (without GUI support) https://github.com/prusa3d/PrusaSlicer  Usage: prusa-
