@@ -46,7 +46,9 @@ fi
 echo "[PrusaSlicer] Using macOS SDK: $OSX_SYSROOT"
 
 # Clone fork only if missing; otherwise build from the current branch as-is
-if [ ! -d "$SRC_DIR/.git" ]; then
+# NOTE: use -e (not -d) so this also recognizes a submodule checkout, where
+# .git is a gitlink *file* (not a directory) pointing at ../../.git/modules/...
+if [ ! -e "$SRC_DIR/.git" ]; then
   echo "[PrusaSlicer] Cloning fork..."
   mkdir -p "$ROOT_DIR/third_party"
   git clone "$FORK_URL" "$SRC_DIR"
