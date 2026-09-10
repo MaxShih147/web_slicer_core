@@ -62,7 +62,16 @@ class SLAConfig(BaseModel):
     def enforce_min_elevation(cls, v: float) -> float:
         return max(5.0, v)
 
-    # Support tree global parameters (add-support-tree-global-params, F1/B2).
+    # Support tree global parameters (F1/B2).
+    #
+    # Decision record lives in the *DS-Online* repo, not this one:
+    #   DS-Online/openspec/changes/archive/2026-09-10-add-support-tree-global-params
+    # It covers why "organic" is rejected at the API layer, why
+    # support_max_pillar_link_distance must NOT get a min-value guard, and why
+    # support_base_safety_distance is passed through unmodified. The code landed
+    # here (commit 826786b) without those docs, so name the repo explicitly —
+    # searching this repo's history for the change name finds nothing.
+    #
     # Engine (PrintConfig.cpp) already registers and reads these options; this
     # only opens the API entry point. Field names match the engine option key
     # 1:1 so generate_config_ini's generic field-name-driven write works as-is.
