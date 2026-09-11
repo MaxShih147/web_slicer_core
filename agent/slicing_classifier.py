@@ -11,6 +11,8 @@ run_slicing() after the CLI process exits; classifies both failure paths:
        • F-06 empty STL geometry   (message written to stderr by LoadPrintData)
 
 Decision order (first match wins):
+  Step 0  (either path) support-point/model mismatch -> FAILED +
+                                                        SUPPORT_POINTS_MODEL_MISMATCH
   Step 1  validate() patterns on stderr              -> FAILED + specific code
   Step 2  process() exception patterns on stderr     -> FAILED + specific code
   Step 3  STL parse error pattern on stderr          -> FAILED + INVALID_MODEL
@@ -28,6 +30,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional, Union
+
+# Single source of truth for the mismatch marker/code: the same literal the
+# support flow matches on, pinned against the fork source by
+# test_support_string_contract.py. Importing it here means the contract test
+# protects this path too, instead of a second copy drifting unnoticed.
+from .support_classifier import MODEL_MISMATCH_CODE, MODEL_MISMATCH_MARKER
 
 # ─── Path A: stderr patterns — validate() errors (exit ≠ 0) ──────────────────
 # Taken from SLAPrint.cpp::validate() and SLA/Pad.cpp::PadConfig::validate().
@@ -114,6 +122,25 @@ def classify_slice_result(
     """
     out = _decode(stdout)
     err = _decode(stderr)
+
+    # ── Step 0: imported support points do not describe this model ────────
+    # Sits ahead of BOTH paths: before the exit-code split, before the
+    # output-file check, and before the success return.
+    #
+    # Why before the exit-code split: --import-support-points is rejected in
+    # ProcessActions.cpp before print->apply(), so validate() never runs and
+    # none of Steps 1-6 can fire. Without this rule the run lands on Step 4 or
+    # Step 7 with error_code=None, i.e. a bare JOB_FAILED, and the caller
+    # cannot tell 'the model changed' from any other slice failure.
+    #
+    # Why before the success return: an .sl1 must never be accepted from a run
+    # that rejected its own point list. The abort cannot produce one today,
+    # so this only pins the fail-closed direction.
+    if MODEL_MISMATCH_MARKER in err or MODEL_MISMATCH_MARKER in out:
+        return SliceClassification(
+            error=(err.strip() or out.strip()) or None,
+            error_code=MODEL_MISMATCH_CODE,
+        )
 
     # ── Path A: non-zero exit ─────────────────────────────────────────────────
     if exit_code != 0:

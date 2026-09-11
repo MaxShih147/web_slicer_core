@@ -52,11 +52,86 @@ class SLAConfig(BaseModel):
     support_points_density_relative: int = 100
     support_object_elevation: float = 5.0
     support_critical_angle: float = 45.0
+    # Whether the engine may prop up a lonely tall pillar with pillars of its
+    # own. Manual placement turns it off: one placement should produce one
+    # support, not three.
+    support_auxiliary_pillars: bool = True
 
     @field_validator('support_object_elevation')
     @classmethod
     def enforce_min_elevation(cls, v: float) -> float:
         return max(5.0, v)
+
+    # Support tree global parameters (F1/B2).
+    #
+    # Decision record lives in the *DS-Online* repo, not this one:
+    #   DS-Online/openspec/changes/archive/2026-09-10-add-support-tree-global-params
+    # It covers why "organic" is rejected at the API layer, why
+    # support_max_pillar_link_distance must NOT get a min-value guard, and why
+    # support_base_safety_distance is passed through unmodified. The code landed
+    # here (commit 826786b) without those docs, so name the repo explicitly —
+    # searching this repo's history for the change name finds nothing.
+    #
+    # Engine (PrintConfig.cpp) already registers and reads these options; this
+    # only opens the API entry point. Field names match the engine option key
+    # 1:1 so generate_config_ini's generic field-name-driven write works as-is.
+    support_head_width: float = 1.0
+    support_base_diameter: float = 4.0
+    support_base_height: float = 1.0
+    support_bracing_angle: float = 45.0
+    support_max_bridge_length: float = 15.0
+    # 0 is a legal value (means "no pillar linking") — MUST NOT get a min-value
+    # validator like support_object_elevation's enforce_min_elevation.
+    support_max_pillar_link_distance: float = 10.0
+    support_max_bridges_on_pillar: int = 3
+    support_small_pillar_diameter_percent: float = 50.0
+    support_buildplate_only: bool = False
+
+    # Engine silently clamps values below EPSILON to a constant 0.5mm
+    # (SLAPrint.cpp:81-83). This is pre-existing engine behavior; SHALL NOT be
+    # modified or intercepted here — pass the value through as-is and let API
+    # consumers document the 0→0.5mm behavior themselves.
+    support_base_safety_distance: float = 1.0
+
+    # Engine enum key is a plain string (s_keys_map_SLAPillarConnectionMode:
+    # "zigzag"/"cross"/"dynamic"). Follows the existing plain-str convention
+    # used by display_orientation rather than a real Python Enum.
+    support_pillar_connection_mode: str = "dynamic"
+
+    @field_validator('support_pillar_connection_mode')
+    @classmethod
+    def validate_pillar_connection_mode(cls, v: str) -> str:
+        allowed = {"zigzag", "cross", "dynamic"}
+        if v not in allowed:
+            raise ValueError(f"support_pillar_connection_mode must be one of {sorted(allowed)}")
+        return v
+
+    # Engine enum key (s_keys_map_SLASupportTreeType) only registers
+    # "default"/"branching" — "organic" is a commented-out TODO in
+    # PrintConfig.cpp:227-230 and would fail at the engine's enum
+    # deserialization stage if it reached generate_config_ini. Reject it here.
+    # TODO: "branching" opens the entry point, but its 19 branchingsupport_*
+    # fields are not migrated in this change — the engine falls back to its
+    # own defaults for them (PrusaSlicer only overrides keys actually sent).
+    # Migrate them in bulk the same way as the 9 standard fields above, when
+    # tunable "branching" mode is needed.
+    support_tree_type: str = "default"
+
+    @field_validator('support_tree_type')
+    @classmethod
+    def validate_tree_type(cls, v: str) -> str:
+        allowed = {"default", "branching"}
+        if v not in allowed:
+            raise ValueError(f"support_tree_type must be one of {sorted(allowed)}")
+        return v
+
+    # Declared but not yet functional (parking item): only takes effect when
+    # paired with enforcer/blocker marker volumes on the model
+    # (SLAPrintSteps.cpp:1073, vol->is_support_enforcer()/is_support_blocker()).
+    # sla_operations.py currently has no marker-volume data flow (only
+    # --import-support-points / --prior-supports), so setting this has no
+    # observable effect yet. Needs that data flow as a follow-up feature.
+    support_enforcers_only: bool = False
 
     # Pad settings
     pad_enable: bool = False

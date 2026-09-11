@@ -1,0 +1,8 @@
+# 這個 repo 沒有 root .gitattributes 且 core.autocrlf=true。
+# 不明確標記的話，工作區會變 CRLF、repo 存 LF，下次改一行就是整檔 diff。
+# 這裡把 dev-interface 全部釘成 LF。
+* text=auto eol=lf
+
+# STL 是資料檔。ASCII STL 會被偵測成文字，必須明確關掉換行轉換，
+# 否則 checkout 出來的 byte 與原檔不同。
+*.stl -text

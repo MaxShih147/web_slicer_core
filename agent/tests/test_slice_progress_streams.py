@@ -444,7 +444,7 @@ def test_drain_returns_a_timestamp_when_the_engine_reports_done():
             _reader(b" 88% => Rasterizing layers\n100% => Slicing done\n"), JOB
         )
 
-    finalizing_at = asyncio.run(scenario())
+    finalizing_at, _ = asyncio.run(scenario())
     assert isinstance(finalizing_at, float)
 
 
@@ -454,7 +454,8 @@ def test_drain_returns_none_when_the_engine_never_reports_done():
             _reader(b" 29% => Slicing model\n 88% => Rasterizing layers\n"), JOB
         )
 
-    assert asyncio.run(scenario()) is None
+    finalizing_at, _ = asyncio.run(scenario())
+    assert finalizing_at is None
 
 
 def test_drain_timestamp_precedes_the_archive_marker():
@@ -462,7 +463,7 @@ def test_drain_timestamp_precedes_the_archive_marker():
 
     async def scenario():
         payload = ("100% => Slicing done\n" + ARCHIVE_DONE_LINE + "\n").encode()
-        finalizing_at = await _drain_stdout_progress(_reader(payload), JOB)
+        finalizing_at, _ = await _drain_stdout_progress(_reader(payload), JOB)
         return finalizing_at, time.monotonic()
 
     finalizing_at, after = asyncio.run(scenario())
@@ -476,7 +477,8 @@ def test_drain_keeps_the_first_finalizing_timestamp():
         payload = b"100% => Slicing done\n100% => Slicing done\n"
         return await _drain_stdout_progress(_reader(payload), JOB)
 
-    assert isinstance(asyncio.run(scenario()), float)
+    finalizing_at, _ = asyncio.run(scenario())
+    assert isinstance(finalizing_at, float)
 
 
 def test_drain_timestamp_survives_an_unrecognized_done_label(caplog):
@@ -487,7 +489,8 @@ def test_drain_timestamp_survives_an_unrecognized_done_label(caplog):
         return await _drain_stdout_progress(_reader(b"100% => Slicing finished\n"), JOB)
 
     with caplog.at_level(logging.WARNING, logger="agent.jobs"):
-        assert asyncio.run(scenario()) is None
+        finalizing_at, _ = asyncio.run(scenario())
+    assert finalizing_at is None
 
 
 # --- 8.2 archive-tail duration logging ------------------------------------
@@ -563,3 +566,126 @@ def test_terminal_status_is_written_before_progress_is_cleared(slicing_env):
     terminal_writes = [i for i, (kind, _) in enumerate(order) if kind == "write"]
     assert terminal_writes, "a terminal status must have been written"
     assert max(terminal_writes) < len(order) - 1
+
+
+# --- stdout must survive the drain and reach the classifier ----------------
+#
+# Regression cover for the NameError introduced when run_slicing() moved off
+# process.communicate(): the drain consumed stdout for progress parsing and
+# threw it away, but classify_slice_result() was still called with
+# `stdout=stdout`. That name no longer existed, so EVERY slice — success or
+# failure — raised NameError before it could be classified, and the outer
+# handler stored "name 'stdout' is not defined" as the job error.
+
+
+def test_drain_returns_the_complete_stdout_verbatim():
+    """The drain must hand back exactly what the engine wrote, byte for byte."""
+    payload = SAMPLE_STDOUT.encode()
+
+    async def scenario():
+        return await _drain_stdout_progress(_reader(payload), JOB)
+
+    _, stdout = asyncio.run(scenario())
+    assert stdout == payload
+
+
+def test_drain_keeps_lines_that_are_not_progress_events():
+    """Non-progress lines are exactly what the classifier reads.
+
+    The parse loop skips them with `continue`, so accumulation has to happen
+    before that — otherwise the markers the classifier keys on are dropped and
+    every stdout-borne failure degrades to an unclassified JOB_FAILED.
+    """
+    payload = (
+        b" 29% => Slicing model\n"
+        b"no object is fully inside the print volume\n"
+        b"100% => Slicing done\n"
+    )
+
+    async def scenario():
+        return await _drain_stdout_progress(_reader(payload), JOB)
+
+    _, stdout = asyncio.run(scenario())
+    assert b"no object is fully inside the print volume" in stdout
+    assert stdout == payload
+
+
+def test_drain_returns_empty_bytes_for_a_silent_engine():
+    """No output is an empty buffer, not None — the classifier decodes it."""
+
+    async def scenario():
+        return await _drain_stdout_progress(_reader(b""), JOB)
+
+    finalizing_at, stdout = asyncio.run(scenario())
+    assert stdout == b""
+    assert finalizing_at is None
+
+
+def test_a_slice_run_no_longer_dies_before_classification(slicing_env):
+    """The NameError itself: no run may fail with 'stdout' is not defined."""
+    job_dir = slicing_env["job_dir"]
+    slicing_env["install"](SAMPLE_STDOUT.encode(), b"", 0)
+
+    asyncio.run(run_slicing(JOB))
+
+    status = _read_status(job_dir)
+    assert "stdout" not in (status.get("error") or ""), (
+        f"run_slicing died before classifying: {status.get('error')!r}"
+    )
+
+
+def test_stdout_borne_marker_reaches_the_classifier(slicing_env):
+    """End-to-end proof that stdout is actually threaded through.
+
+    Model-out-of-bounds is printed to stdout with exit 0 and no .sl1. It can
+    only be attributed if the drained stdout reaches classify_slice_result().
+    """
+    job_dir = slicing_env["job_dir"]
+    slicing_env["install"](
+        b" 29% => Slicing model\nno object is fully inside the print volume\n",
+        b"",
+        0,
+    )
+
+    asyncio.run(run_slicing(JOB))
+
+    status = _read_status(job_dir)
+    assert status["status"] == JobStatus.FAILED.value
+    assert status["error_code"] == "MODEL_OUT_OF_BOUNDS"
+
+
+def test_support_point_mismatch_is_attributed_end_to_end(slicing_env):
+    """Phase 8 chain, live: marker → classifier Step 0 → stored error_code.
+
+    Until the NameError was fixed this stored "name 'stdout' is not defined"
+    with error_code None, so the dedicated code never reached the caller.
+    """
+    from agent.support_classifier import MODEL_MISMATCH_MARKER
+
+    job_dir = slicing_env["job_dir"]
+    slicing_env["install"](
+        b"Loading model file\n", MODEL_MISMATCH_MARKER.encode() + b"\n", 0
+    )
+
+    asyncio.run(run_slicing(JOB))
+
+    status = _read_status(job_dir)
+    assert status["status"] == JobStatus.FAILED.value
+    assert status["error_code"] == "SUPPORT_POINTS_MODEL_MISMATCH"
+    assert MODEL_MISMATCH_MARKER in status["error"]
+
+
+def test_mismatch_status_maps_to_the_422_api_error(slicing_env):
+    """The stored code must resolve to the specific, non-retryable APIError."""
+    from agent.api_v2 import _error_from_status
+    from agent.support_classifier import MODEL_MISMATCH_MARKER
+
+    job_dir = slicing_env["job_dir"]
+    slicing_env["install"](b"", MODEL_MISMATCH_MARKER.encode() + b"\n", 0)
+
+    asyncio.run(run_slicing(JOB))
+
+    err = _error_from_status(_read_status(job_dir))
+    assert err.code == "SUPPORT_POINTS_MODEL_MISMATCH"
+    assert err.http_status == 422
+    assert err.retryable is False

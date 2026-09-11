@@ -213,6 +213,23 @@ def support_generation_failed(detail: str = None) -> APIError:
     )
 
 
+def support_points_model_mismatch(detail: str = None) -> APIError:
+    """The imported support point list does not describe the model being sliced.
+
+    Not retryable: the fingerprint comparison is deterministic, so replaying the
+    same list against the same model always fails again. The only fix is to
+    regenerate the points from the current model.
+    """
+    return APIError(
+        "SUPPORT_POINTS_MODEL_MISMATCH",
+        detail
+        or "The supplied support points do not match this model; "
+           "regenerate them from the current model",
+        422,
+        retryable=False,
+    )
+
+
 # ─── slicing error codes ───────────────────────────────────────────────────────
 # Correspond to classified SLA slicing failures (see slicing_classifier.py).
 # Follow the same 422 / retryable=False convention as the geometry-failure family.
