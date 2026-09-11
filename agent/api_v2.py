@@ -10,10 +10,12 @@ import io
 import json
 import logging
 import math
+import re
 import shutil
 import time
 import traceback as tb
 import uuid
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
@@ -181,6 +183,22 @@ _prz_sessions: Dict[str, Tuple["PrzFile", float]] = {}
 # Helpers
 # ============================================================================
 
+# A job id is a server generated token (see create_job_id), never something a
+# caller invents, so anything outside this alphabet is a probe rather than a
+# typo. The characters that matter are the ones missing: dot, slash and
+# BACKSLASH. Backslash is not a URL path separator, so "..%5Csecret" survives
+# routing as a single path segment - and then Windows treats it as a directory
+# separator, turning JOBS_DIR / job_id into a path outside the job store.
+_JOB_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _require_safe_job_id(job_id: str) -> str:
+    """Reject a job id that could reach outside the job store."""
+    if not _JOB_ID_RE.match(job_id):
+        raise job_not_found(job_id)
+    return job_id
+
+
 def _require_pending(job_id: str) -> dict:
     """Return pending job dict, or raise JOB_NOT_FOUND / JOB_ALREADY_EXECUTED."""
     if job_id in _pending_jobs:
@@ -191,9 +209,25 @@ def _require_pending(job_id: str) -> dict:
 
 
 def _validate_stl_bytes(content: bytes, field: str = "model") -> None:
-    """Raise invalid_model if *content* is not a valid STL."""
+    """Raise invalid_model if *content* is not a valid STL.
+
+    process=False is load-bearing, not a micro-optimisation. This function only
+    decides two things - does it parse, and is it non-empty - and trimesh's
+    default process=True runs vertex merging and friends that contribute to
+    neither. On a 17.6 MB dental model that processing cost 774 ms per call
+    against 104 ms without it, and the call happens twice per support
+    generation (once on upload, once on landing). It is what made the upload
+    request spend 704 ms of its 826 ms in TTFB rather than in transfer.
+
+    Skipping the processing does not loosen validation: it skips geometry
+    *processing*, not geometry *checks*. Unparseable input still fails to
+    parse and an empty mesh is still empty. See
+    agent/tests/test_validate_stl_bytes.py for the six boundary cases that
+    pin this down - five rejected, one (a degenerate zero-area facet) accepted
+    - identically under both settings.
+    """
     try:
-        mesh = trimesh.load(io.BytesIO(content), file_type="stl")
+        mesh = trimesh.load(io.BytesIO(content), file_type="stl", process=False)
         if isinstance(mesh, trimesh.Scene):
             mesh = mesh.dump(concatenate=True)
         if not isinstance(mesh, trimesh.Trimesh) or len(mesh.faces) == 0:
@@ -262,6 +296,31 @@ def _require_completed(status_data: dict, job_id: str) -> None:
         raise job_failed(status_data.get("error"))
     if status != JobStatus.COMPLETED.value:
         raise job_still_processing()
+
+
+# The reference endpoint takes a bare filename, never a path, and on disk every
+# legal filename has exactly one directory it can be written to (each entry here
+# was traced back to its writer - see design.md 1a of the
+# optimize-support-regeneration change). Looking the directory up instead of
+# probing for the file buys two things from one table:
+#
+#   - a name outside this table never reaches the filesystem at all, so
+#     "../../../../x.stl" is a lookup miss rather than a traversal; and
+#   - a name inside it can only ever read the single directory its writer
+#     actually writes to, so a hit cannot be steered somewhere else either.
+#
+# Membership is deliberately narrow. Other filenames exist under a job (see the
+# same table) but nothing needs to reference them yet, and an entry that is
+# never used is an attack surface that is never exercised. Add one when a caller
+# needs it, together with the directory its writer uses.
+_SOURCE_FILE_DIRS = MappingProxyType({
+    "model.stl": "input",
+    "support.stl": "input",
+    "ortho_result.stl": "output",
+    "model_boolean_union.stl": "output",
+    "model_boolean_difference.stl": "output",
+    "model_boolean_intersection.stl": "output",
+})
 
 
 # ============================================================================
@@ -443,18 +502,35 @@ async def upload_support_file(job_id: str, file: UploadFile = File(...)):
 
 
 @router.post("/slices/{job_id}/use-model-from/{source_job_id}", response_model=V2Response)
-async def use_model_from_job(job_id: str, source_job_id: str, source_file: str = "boolean.stl"):
+async def use_model_from_job(job_id: str, source_job_id: str, source_file: str = "model.stl"):
     """
-    Reference an existing job's output file as the model for this slice job.
+    Reference a file that already exists under another job as this job's model.
     Avoids re-uploading large files that are already on the server.
+
+    source_file is a bare filename, never a path. _SOURCE_FILE_DIRS decides
+    which subdirectory it is read from, so the default model.stl is read from
+    input/ while ortho_result.stl is read from output/. A name that is not in
+    that table is rejected before any path is built.
     """
     if job_id not in _pending_jobs:
         raise job_not_found(job_id)
 
-    source_dir = get_job_dir(source_job_id)
-    source_path = source_dir / "output" / source_file
-    if not source_path.exists():
-        source_path = source_dir / "input" / source_file
+    # Before source_job_id reaches the filesystem: a backslash in it survives
+    # routing as one path segment and then acts as a directory separator on
+    # Windows, so "..%5Csecret" reads a file outside the job store and hands
+    # it back as this job's model. Reject the id rather than the path.
+    _require_safe_job_id(source_job_id)
+
+    # The directory comes from the table, not from probing the disk. The old
+    # code tried output/ and then fell back to input/, which meant an unknown
+    # name got two chances to hit something and the caller could not tell which
+    # file it had actually been handed. Now an unlisted name is rejected before
+    # any path is built, and a listed one resolves to exactly one location.
+    subdir = _SOURCE_FILE_DIRS.get(source_file)
+    if subdir is None:
+        raise validation_error(f"source_file '{source_file}' is not a referencable job file")
+
+    source_path = get_job_dir(source_job_id) / subdir / source_file
     if not source_path.exists():
         raise model_not_found(f"Source file '{source_file}' not found in job {source_job_id}")
 
