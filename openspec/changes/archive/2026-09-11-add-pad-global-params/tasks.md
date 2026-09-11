@@ -1,6 +1,6 @@
 ## 1. 後端：標準底墊全域參數（10 項）
 
-- [ ] 1.1 `agent/tests/test_sla_config.py`（此檔**已存在**，內容含
+- [x] 1.1 `agent/tests/test_sla_config.py`（此檔**已存在**，內容含
       `fix-prz-output-correctness` 與 `add-support-tree-global-params` 的既有測試，
       **在既有檔案裡新增測試類別，不得整檔覆寫**）新增 10 個標準欄位的測試
       （`pad_wall_thickness`、`pad_wall_height`、`pad_brim_size`、
@@ -8,14 +8,14 @@
       `pad_object_gap`、`pad_object_connector_stride`、`pad_object_connector_width`、
       `pad_object_connector_penetration`）——正常值案例、未提供時的預設值案例、
       `generate_config_ini` 寫出 ini 內容正確的案例
-- [ ] 1.2 `agent/models.py` 的 `SLAConfig` 在既有 `pad_enable`
+- [x] 1.2 `agent/models.py` 的 `SLAConfig` 在既有 `pad_enable`
       欄位下方新增上述 10 個欄位，預設值對齊 `PrintConfig.cpp:4716-4835` 的
       `set_default_value`（`pad_wall_thickness=2.0`、`pad_wall_height=0.0`、
       `pad_brim_size=1.6`、`pad_max_merge_distance=50.0`、`pad_around_object=False`、
       `pad_around_object_everywhere=False`、`pad_object_gap=1.0`、
       `pad_object_connector_stride=10.0`、`pad_object_connector_width=0.5`、
       `pad_object_connector_penetration=0.3`）
-- [ ] 1.3 在欄位區塊上方加程式碼註解，記錄 D3 的預設值陷阱：`Pad.hpp:45-51` 的
+- [x] 1.3 在欄位區塊上方加程式碼註解，記錄 D3 的預設值陷阱：`Pad.hpp:45-51` 的
       `PadConfig` struct 另有一套預設值，其中 `pad_wall_thickness`、
       `pad_wall_height`、`pad_wall_slope`、`pad_object_connector_penetration`
       四項與 `PrintConfig.cpp` 不一致；本後端走 `--load config.ini` 路徑，
@@ -24,7 +24,7 @@
       `git log --grep` 與 `openspec` 查得到決策紀錄。**本 change 的文件與程式碼
       同在本 repo**，因此只需寫 change 名稱，不必像 F1 那樣加註 repo 名
       （F1 的文件在 DS-Online，其註解已於本次補上 repo 指標）
-- [ ] 1.4 **撰寫預設值合約測試**（本節最重要的一項，見 design.md D3）。
+- [x] 1.4 **撰寫預設值合約測試**（本節最重要的一項，見 design.md D3）。
       背景：`generate_config_ini`（`sla_operations.py:294`）會把
       `SLAConfig.model_dump()` 的**每一個欄位**寫進 ini，不論使用者有沒有提供。
       因此本次填的 Python 預設值是**取代**引擎預設值，填錯會讓所有未調整的
@@ -40,11 +40,11 @@
 
 ## 2. 後端：底墊側壁斜度（範圍驗證）
 
-- [ ] 2.1 撰寫測試：`pad_wall_slope` 送 `45`／`67.5`／`90` 皆可正常設定；
+- [x] 2.1 撰寫測試：`pad_wall_slope` 送 `45`／`67.5`／`90` 皆可正常設定；
       送 `0`／`44.9`／`90.1`／`120`／負值皆觸發驗證錯誤且不寫入 ini
-- [ ] 2.2 `models.py` 新增 `pad_wall_slope: float = 90.0`，加 `field_validator`
+- [x] 2.2 `models.py` 新增 `pad_wall_slope: float = 90.0`，加 `field_validator`
       限制合法範圍為 `45 <= v <= 90`，錯誤訊息須明確指出合法範圍
-- [ ] 2.3 在該 validator 旁加程式碼註解，記錄 D2 的判準：擋這個欄位是因為
+- [x] 2.3 在該 validator 旁加程式碼註解，記錄 D2 的判準：擋這個欄位是因為
       `Pad.hpp:75` 的 `bottom_offset()` 以 `tan(wall_slope)` 為除數，送 `0` 會
       除以零並產生 `NaN`；並註明反例——F1 的 `support_max_pillar_link_distance`
       的 `0` 是引擎定義的合法語意，SHALL NOT 加範圍保護。判準是「有無除法／NaN
@@ -52,12 +52,12 @@
 
 ## 3. 後端：zero-elevation 專屬欄位（生效條件，不做條件驗證）
 
-- [ ] 3.1 撰寫測試：`pad_enable=False` 或 `pad_around_object=False` 時，送出
+- [x] 3.1 撰寫測試：`pad_enable=False` 或 `pad_around_object=False` 時，送出
       5 個 zero-elevation 專屬欄位的自訂值仍可正常設定並寫入 ini，不觸發任何
       驗證錯誤
-- [ ] 3.2 確認 `models.py` 的這 5 個欄位（已於 1.2 新增）SHALL NOT 套用任何
+- [x] 3.2 確認 `models.py` 的這 5 個欄位（已於 1.2 新增）SHALL NOT 套用任何
       `model_validator` 或條件式連動邏輯
-- [ ] 3.3 在這 5 個欄位旁加程式碼註解，記錄 D4：引擎
+- [x] 3.3 在這 5 個欄位旁加程式碼註解，記錄 D4：引擎
       `SLAPrint.cpp:48-51` 的 `is_zero_elevation()` 為
       `pad_enable && pad_around_object`，兩者同時為 `true` 才讀這 5 個值；
       並註明 `Pad.cpp:66` 的 EPSILON 提前 return（connector 參數設 `0` 會靜默
@@ -104,7 +104,7 @@
 > `agent/models.py` 與測試，沒有任何 openspec 文件，決策紀錄全留在另一個 repo，
 > 後端維護者在本 repo 的 git history 裡看不到。
 
-- [ ] 5.1 **【DS-Online repo】** `api/slicing_core.md` 的 `SLAConfig` 表格
+- [x] 5.1 **【DS-Online repo】** `api/slicing_core.md` 的 `SLAConfig` 表格
       （現於 `pad_enable` 該列附近）
       新增本批 11 個參數的請求 body 欄位說明，須含：
       (a) 各欄位的型別、預設值、引擎範圍；
@@ -114,14 +114,21 @@
       (d) connector 三項設 `0` 會靜默不產生連接柱；
       (e) `pad_around_object` 開啟後引擎忽略 `support_object_elevation`；
       (f) `pad_wall_height` 的脫模警告文案
-- [ ] 5.2 **【DS-Online repo】** `api/slicing_core.md` 新增引擎交叉驗證規則區塊，記載兩條規則：
+- [x] 5.2 **【DS-Online repo】** `api/slicing_core.md` 新增引擎交叉驗證規則區塊，記載兩條規則：
       `PadConfig::validate()` 的 brim／斜度／厚度組合條件，以及
       `support_base_safety_distance` 必須大於 `pad_object_gap`（zero-elevation 時）。
       須明確說明這兩條由引擎在切片階段檢查，不在 API 驗證階段回報
-- [ ] 5.3 **【本 repo】** `pytest agent/tests/` 全綠，且既有測試無回歸
+- [x] 5.3 **【本 repo】** `pytest agent/tests/` 全綠，且既有測試無回歸
       （含 `test_sla_config.py` 新增的測試類別、新建的
-      `test_pad_defaults_contract.py`）
-- [ ] 5.4 直接呼叫後端 API 驗證（不透過 UI）：驗證 `api_v2.py` 兩條資料流——
+      `test_pad_defaults_contract.py`）。
+      **執行紀錄**：752 passed / 2 failed（`test_prz_print_time.py::test_6_11_single_normal_layer_full_params`、
+      `test_subprocess_boundary_5_11.py::test_engine_runs_as_separate_process`），
+      另有 4 個檔案因缺 `httpx2` 套件無法 collect。以上皆用 `git stash` 驗證為
+      本次改動前即存在的既有問題，與 pad 參數無關，非本次回歸。本次新增/修改的
+      測試（`TestStandardPadGlobalParams`、`TestPadWallSlope`、
+      `TestZeroElevationPadFields`、`test_pad_defaults_contract.py`、
+      `test_pad_api_v2_intake.py`）全數通過。
+- [x] 5.4 直接呼叫後端 API 驗證（不透過 UI）：驗證 `api_v2.py` 兩條資料流——
       `_convert_v2_config_to_sla`（`/generate-supports`、`/export-support-points` 用）
       與 `_build_sla_config`（`/execute` 用）——都能正確接住本次 11 個新欄位並
       傳進 `SLAConfig`，`generate_config_ini` 產生的 `config.ini` 內容與送出值一致；
@@ -131,18 +138,18 @@
 
 ## 6. 完工發布（追蹤用 Artifact）
 
-- [ ] 6.1 用 Artifact 工具發布一份「工作結果說明」頁面，內容須包含：
+- [x] 6.1 用 Artifact 工具發布一份「工作結果說明」頁面，內容須包含：
       (a) 本次做了什麼——11 個 `pad_*` 參數的後端 API 開放，以及各欄位的
       型別／預設值／範圍；
       (b) 本次沒做什麼——前端 UI 串接（第 4 節）、引擎修改，以及為什麼；
       (c) 連結本次 openspec change 的 proposal／design／specs，方便日後回溯
-- [ ] 6.2 **上述 Artifact SHALL 完整收錄 design.md 的「D2 白話說明」、
+- [x] 6.2 **上述 Artifact SHALL 完整收錄 design.md 的「D2 白話說明」、
       「D3 白話說明」、「D4 白話說明」三個小節**。這三段是使用者指定保留的
       說明版本，SHALL 以白話敘述呈現（含 D2 的除以零推導、D3 的四列預設值
       對照表與「F2 之前／之後」的 ini 行為對比、D4 不擋的四個理由），
       SHALL NOT 壓縮成條列摘要或改寫成純技術描述。目的：讓沒有讀過原始碼的人，
       光看 Artifact 就能理解這三個決策的風險與理由
-- [ ] 6.3 **Artifact SHALL 另立一段醒目提醒：D4 的 5 個參數帶有生效條件。**
+- [x] 6.3 **Artifact SHALL 另立一段醒目提醒：D4 的 5 個參數帶有生效條件。**
       內容須包含：
       (a) 這 5 個參數（`pad_around_object_everywhere`、`pad_object_gap`、
       `pad_object_connector_stride`／`_width`／`_penetration`）只有在

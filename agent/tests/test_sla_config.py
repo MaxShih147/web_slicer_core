@@ -187,3 +187,127 @@ class TestSupportEnforcersOnly:
     def test_default_is_false(self):
         config = SLAConfig()
         assert config.support_enforcers_only is False
+
+
+# ---------------------------------------------------------------------------
+# add-pad-global-params change: 11 個底墊全域參數（僅後端範圍，F2）
+# ---------------------------------------------------------------------------
+
+STANDARD_PAD_FIELDS = {
+    "pad_wall_thickness": 2.0,
+    "pad_wall_height": 0.0,
+    "pad_brim_size": 1.6,
+    "pad_max_merge_distance": 50.0,
+    "pad_around_object": False,
+    "pad_around_object_everywhere": False,
+    "pad_object_gap": 1.0,
+    "pad_object_connector_stride": 10.0,
+    "pad_object_connector_width": 0.5,
+    "pad_object_connector_penetration": 0.3,
+}
+
+
+class TestStandardPadGlobalParams:
+    """1.1: 10 個標準底墊全域參數。"""
+
+    def test_custom_values_written_to_ini(self):
+        custom = {
+            "pad_wall_thickness": 3.5,
+            "pad_wall_height": 2.0,
+            "pad_brim_size": 2.5,
+            "pad_max_merge_distance": 40.0,
+            "pad_around_object": True,
+            "pad_around_object_everywhere": True,
+            "pad_object_gap": 1.5,
+            "pad_object_connector_stride": 8.0,
+            "pad_object_connector_width": 0.8,
+            "pad_object_connector_penetration": 0.4,
+        }
+        config = SLAConfig(**custom)
+        for field, value in custom.items():
+            assert getattr(config, field) == value
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = Path(tmpdir) / "config.ini"
+            generate_config_ini(config, ini_path)
+            content = ini_path.read_text()
+        assert "pad_wall_thickness = 3.5" in content
+        assert "pad_wall_height = 2.0" in content
+        assert "pad_brim_size = 2.5" in content
+        assert "pad_max_merge_distance = 40.0" in content
+        assert "pad_around_object = 1" in content
+        assert "pad_around_object_everywhere = 1" in content
+        assert "pad_object_gap = 1.5" in content
+        assert "pad_object_connector_stride = 8.0" in content
+        assert "pad_object_connector_width = 0.8" in content
+        assert "pad_object_connector_penetration = 0.4" in content
+
+    def test_defaults_match_engine(self):
+        """未提供時，套用與 PrintConfig.cpp 一致的引擎預設值。"""
+        config = SLAConfig()
+        for field, default in STANDARD_PAD_FIELDS.items():
+            assert getattr(config, field) == default
+
+
+class TestPadWallSlope:
+    """2.1: 底墊側壁斜度——合法範圍 45–90 度，範圍外一律拒絕。"""
+
+    @pytest.mark.parametrize("value", [45, 67.5, 90])
+    def test_legal_values_accepted(self, value):
+        config = SLAConfig(pad_wall_slope=value)
+        assert config.pad_wall_slope == value
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = Path(tmpdir) / "config.ini"
+            generate_config_ini(config, ini_path)
+            content = ini_path.read_text()
+        assert f"pad_wall_slope = {value}" in content
+
+    @pytest.mark.parametrize("value", [0, 44.9, 90.1, 120, -10])
+    def test_illegal_values_rejected(self, value):
+        with pytest.raises(ValueError):
+            SLAConfig(pad_wall_slope=value)
+
+    def test_default_is_90(self):
+        config = SLAConfig()
+        assert config.pad_wall_slope == 90.0
+
+
+class TestZeroElevationPadFields:
+    """3.1: zero-elevation 專屬欄位——不論開關狀態皆可設定，不做條件驗證。
+
+    引擎 SLAPrint.cpp:48-51 的 is_zero_elevation() 為
+    pad_enable AND pad_around_object；兩者同時為 true 才讀這 5 個值，
+    否則整組被引擎忽略，不報錯。API 層 SHALL NOT 對此加任何條件驗證。
+    """
+
+    ZERO_ELEVATION_FIELDS = {
+        "pad_around_object_everywhere": True,
+        "pad_object_gap": 2.5,
+        "pad_object_connector_stride": 5.0,
+        "pad_object_connector_width": 0.7,
+        "pad_object_connector_penetration": 0.6,
+    }
+
+    def test_settable_when_pad_enable_false(self):
+        config = SLAConfig(pad_enable=False, **self.ZERO_ELEVATION_FIELDS)
+        for field, value in self.ZERO_ELEVATION_FIELDS.items():
+            assert getattr(config, field) == value
+
+    def test_settable_when_pad_around_object_false(self):
+        config = SLAConfig(pad_around_object=False, **self.ZERO_ELEVATION_FIELDS)
+        for field, value in self.ZERO_ELEVATION_FIELDS.items():
+            assert getattr(config, field) == value
+
+    def test_no_validation_error_when_both_conditions_unmet(self):
+        """兩個開關都關著時，送出這 5 個值仍不觸發任何驗證錯誤。"""
+        config = SLAConfig(
+            pad_enable=False,
+            pad_around_object=False,
+            **self.ZERO_ELEVATION_FIELDS,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = Path(tmpdir) / "config.ini"
+            generate_config_ini(config, ini_path)  # 不應拋例外
+            content = ini_path.read_text()
+        assert "pad_object_gap = 2.5" in content

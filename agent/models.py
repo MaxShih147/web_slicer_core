@@ -136,6 +136,76 @@ class SLAConfig(BaseModel):
     # Pad settings
     pad_enable: bool = False
 
+    # Pad global parameters (F2/B2).
+    #
+    # Decision record: add-pad-global-params (this repo — code and docs share
+    # the same repo this time, unlike F1's).
+    #
+    # Trap: Pad.hpp's PadConfig struct has a SECOND, DIFFERENT set of defaults
+    # for pad_wall_thickness / pad_wall_height / pad_wall_slope /
+    # pad_object_connector_penetration. This backend runs the
+    # `--load config.ini` path, where PrintConfig.cpp's set_default_value is
+    # what actually applies — Pad.hpp's struct defaults only take effect when
+    # PadConfig is constructed directly in C++ without going through a config
+    # file, which this path never does. Defaults below MUST follow
+    # PrintConfig.cpp, NOT "correct" them to match Pad.hpp.
+    #
+    # Engine (PrintConfig.cpp:4716-4835) already registers and reads these
+    # options; this only opens the API entry point. Field names match the
+    # engine option key 1:1 so generate_config_ini's generic field-name-driven
+    # write works as-is (same mechanism as F1).
+    pad_wall_thickness: float = 2.0
+    pad_wall_height: float = 0.0
+    pad_brim_size: float = 1.6
+    pad_max_merge_distance: float = 50.0
+    pad_around_object: bool = False
+    pad_around_object_everywhere: bool = False
+    pad_object_gap: float = 1.0
+    pad_object_connector_stride: float = 10.0
+    pad_object_connector_width: float = 0.5
+    pad_object_connector_penetration: float = 0.3
+
+    # pad_wall_slope is the ONLY one of these 11 fields that gets an API-layer
+    # range guard (design.md D2). Reason: SLAPrint.cpp:148 converts this to
+    # radians and Pad.hpp:75's bottom_offset() divides by tan(wall_slope) —
+    # 0 degrees means tan(0) == 0, a division by zero producing inf/NaN that
+    # flows straight into geometry. PrintConfig.cpp registers min=45/max=90,
+    # but that range only applies to the GUI slider, not this --load
+    # config.ini path.
+    #
+    # This is NOT a general precedent. Contrast with F1's
+    # support_max_pillar_link_distance, which MUST NOT get a min-value guard
+    # because 0 is an engine-defined legal value ("no pillar linking"). The
+    # test here is "does this value have a defined engine semantics, or does
+    # it just blow up a formula" — not "add a range check to every field".
+    pad_wall_slope: float = 90.0
+
+    @field_validator('pad_wall_slope')
+    @classmethod
+    def validate_pad_wall_slope(cls, v: float) -> float:
+        if not (45 <= v <= 90):
+            raise ValueError(f"pad_wall_slope must be between 45 and 90 degrees, got {v}")
+        return v
+
+    # zero-elevation-only fields (design.md D4): pad_around_object_everywhere,
+    # pad_object_gap, pad_object_connector_stride/_width/_penetration (all
+    # declared above, alongside the other standard pad_* fields) are only
+    # read by the engine when is_zero_elevation() is true — SLAPrint.cpp:48-51
+    # defines that as `pad_enable AND pad_around_object` (both, not either).
+    # When that condition is false, the engine silently ignores these 5
+    # values — no error, no effect on output.
+    #
+    # These 5 fields SHALL NOT get any model_validator or conditional
+    # wiring here. Rejecting them when the switches are off would break
+    # save/load round-tripping (a saved param file always carries every
+    # field) for no engine-side benefit — the engine already handles the
+    # "off" case cleanly. Same precedent as F1's branchingsupport_* fields
+    # ("harmless to send, just inert").
+    #
+    # Also note: Pad.cpp:66's EPSILON guard makes
+    # pad_object_connector_stride/_width == 0 silently produce no connector
+    # sticks (not an error) — this is pre-existing engine behavior.
+
     # Hollow settings
     hollowing_enable: bool = False
     hollowing_min_thickness: float = 3.0
