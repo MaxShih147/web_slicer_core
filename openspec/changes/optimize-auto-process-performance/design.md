@@ -40,13 +40,22 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 
 驗證完成後，暫時性的 `[HOLLOW_FIT_PROFILE]` timing log（`hollow_load_ms`／`split_ms`／`hollow_fit_total_ms`）已依既定流程移除；正式程式碼只保留 `repair=False` 呼叫本身與說明安全性理由的註解。
 
-### D2：Ortho cleaned mesh 物件重用
+### D2：Ortho cleaned mesh 物件重用（已完成）
 
 **根因**：`input_path` 在 [ortho_pipeline.py:775](../../../agent/ortho_pipeline.py#L775) 被指定為 `model_clean.stl` 後不再改變。`_is_u_arch_from_low_sections(input_path)`（[ortho_pipeline.py:638](../../../agent/ortho_pipeline.py#L638)，呼叫於 [ortho_pipeline.py:778](../../../agent/ortho_pipeline.py#L778)）內部於 [ortho_pipeline.py:652](../../../agent/ortho_pipeline.py#L652) 呼叫 `load_trimesh(input_path)`；只要該次判斷未提前結束 pipeline（非 U-arch），Step 3 對齊在 [ortho_pipeline.py:1054](../../../agent/ortho_pipeline.py#L1054) 又對**同一個檔案**呼叫一次 `load_trimesh(input_path)`。兩次載入之間沒有任何會改變 `model_clean.stl` 內容的操作。
 
 **修法方向**：`_is_u_arch_from_low_sections()` 目前簽章為 `(input_path: Path) -> bool`，唯一呼叫點在 `run_ortho_pipeline()` 內（已確認無其他呼叫者，見 Impact）。改為由呼叫端先 `load_trimesh(input_path)` 一次，把得到的 mesh 物件同時傳給 `_is_u_arch_from_low_sections()`（簽章改為接受 mesh，內部不再自行載入）與 Step 3 對齊，取代 Step 3 那次重新讀取磁碟。
 
 **風險**：`_is_u_arch_from_low_sections()` 內部會呼叫 `m.section(...)` 等可能修改 mesh cache（但不修改幾何）的操作；需確認重用同一個物件不會讓 Step 3 對齊拿到與原本重新載入不同的頂點資料（理論上 trimesh 的 `section()` 不修改 `mesh.vertices`／`mesh.faces`，只讀取）。此點列入 task 的驗證項。
+
+**實作與驗證記錄**：
+
+- **重用對象的選擇**：source tracing 確認 `clean_input_for_manifold()` export 前的 in-memory mesh 與 `model_clean.stl` export→reload 後的 mesh，在 vertex ordering（reload 後依 trimesh STL 匯出的 face-major 順序重新去重編號，與 export 前因多次 `merge_vertices()`／頂點 remap 形成的順序不同）、face 索引、float64/float32 精度上並非完全相同語意，因此本次**不重用 pre-export mesh**（未修改 `clean_input_for_manifold()` 回傳型別），而是重用 **export 後第一次 `load_trimesh()` reload 出來的 mesh**。由於這次 reload 與原本 Step 3 那次 reload 讀的是同一份檔案、呼叫同一個 `load_trimesh()`、trimesh 的 `merge_vertices()` 在給定輸入下具確定性，兩次獨立 reload 理論上會得到逐位元組相同的 `.vertices`／`.faces`／`.bounds`——`agent/tests/test_ortho_clean_mesh_reuse.py::test_load_trimesh_reload_is_deterministic` 已用 `numpy.array_equal` 實測確認。
+- **`.copy()` 必要性**：`_is_u_arch_from_low_sections()` 對 mesh 的操作（`.bounds`、`.section()`）經 trimesh 4.11.1（專案 `.venv` 實際安裝版本）原始碼追蹤確認完全 read-only，只可能填入 trimesh 內部 `_cache`，不修改 `.vertices`／`.faces`／transform；`agent/tests/test_ortho_clean_mesh_reuse.py` 的 mutation 測試（U-arch／非 U-arch 兩案例）進一步以實測 pin 住此結論。因此**不需要 `.copy()`**——U-arch 判斷與 Step 3/6/10 直接共用同一個 `Trimesh` instance。
+- **U-arch=True 提前結束路徑**：`_complete_as_no_hollow()` 只使用 `input_path`（檔案路徑）落地 `ortho_result.stl`，不依賴 mesh 物件，因此該路徑行為完全不受本次 ownership 改動影響；`test_u_arch_pipeline_takes_early_return_without_second_load` 實際執行 `run_ortho_pipeline()`（`generate_hollow` 以 monkeypatch 替換為呼叫即失敗的 stub）確認：U-arch=True 時只 `load_trimesh()` 一次、Step 1 不會被觸發、`status.json`／`ortho_result.stl` 正常產出。
+- **`001_p.stl`／`005_p.stl` after benchmark**（各 3 runs）：`001_p.stl` 修改後單次 `shared_load_ms` avg 80.62 ms，較修改前兩次 reload 合計 avg 155.48 ms 減少約 74.86 ms/run；`005_p.stl` 修改前 `u_arch_load_ms` 因單次 outlier（1384.10 ms）不具代表性，改以「移除一個平均約 421 ms 的第二次 reload」描述——修改後單次 `shared_load_ms` avg 425.16 ms 與修改前正常單次 load（`step3_load_ms` avg 421.19 ms）量級一致，確認第二次 reload 已被移除。詳細數字見 `tasks.md` 群組 2 的量測記錄。
+- **SHA-256 byte-for-byte 驗證**：兩模型修改前／修改後各 3 runs 的 `ortho_result.stl` SHA-256 皆逐位元組相同（`001_p.stl`：`BB150F743F6370AE01E8E5577E1110902074C3D68CB24AF93F579F24473E0912`；`005_p.stl`：`2E06094A2F19DBD8004D573C71B4F93FDAC0B82897D86AF09575AC64AF3BD2F7`），Task 2.7 的 byte-for-byte 驗收線通過。
+- **Temporary profiling**：`[CLEAN_MESH_REUSE_PROFILE]` 系列 timing log（`u_arch_load_ms`／`step3_load_ms`／`reload_total_ms`，實作後改為單一 `shared_load_ms`）與本群組專用加入的 `import time` 已依既定流程移除；正式程式碼只保留單次 `load_trimesh()` 呼叫本身與必要註解。
 
 ### D3：Boolean Step 7～10 維持 Manifold 表示法
 
@@ -85,7 +94,7 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 ## Risks / Trade-offs
 
 - **[D1 面數門檻邊界情況未被端到端案例覆蓋]** 理論風險窄縮在單一 component 面數恰好落在 98～99 且有小洞的邊界；目前的實測案例未剛好命中此邊界。→ 已用真實 hollow mesh 驗證 face count／vertices／significant components 完全一致；若未來观察到判定差異，回滾為單一 commit revert（見 Migration Plan）。
-- **[D2 mesh 物件重用引入非預期的 cache 副作用]** `_is_u_arch_from_low_sections()` 對 mesh 呼叫 `.section()` 等方法可能填入 trimesh 內部 cache。→ task 驗證項包含比對「重用物件」與「原本兩次獨立載入」在 Step 3 對齊後的幾何是否一致。
+- **[D2 mesh 物件重用引入非預期的 cache 副作用]**（已解決）`_is_u_arch_from_low_sections()` 對 mesh 呼叫 `.section()` 等方法可能填入 trimesh 內部 cache。→ trimesh 4.11.1 原始碼追蹤 + `agent/tests/test_ortho_clean_mesh_reuse.py` 的 mutation 測試確認只填入 `_cache`，不修改 `.vertices`／`.faces`／`.bounds`；`001_p.stl`／`005_p.stl` 端到端 byte-for-byte SHA-256 驗證（修改前後皆一致）與新增的 integration-style 測試確認「重用物件」與「原本兩次獨立載入」在 Step 3 對齊後的幾何一致，未觀察到 regression。
 - **[D3 Boolean 中間表示法改變後幾何非 byte 相同]** Manifold 內部三角化與 Trimesh `process=True` 的頂點合併演算法不同，鏈式改動後的中間結果 face ordering／triangle 數可能與改動前不同。→ 驗收線明確定義為「幾何與 validity semantics 等價」（體積、`is_watertight`、bounds、boolean 結果的實際佔據空間），不要求 byte-for-byte 相同；`boolean_meshes()` 現有公開簽章不變，其他呼叫端不受影響。
 - **[D4 誤判 target 導致跳過必要特徵]** 若 `skip_projection_shape` 被錯誤地用在非 `INTRAORAL_SCAN` 的呼叫，會讓該次分類結果錯誤退化。→ 只在 `confirm_dental_model_type()` 內部依 `target` 條件式設置，不對外暴露為 API 參數；回歸測試直接斷言既有 spec 的「與完整分類的一致性」不變量對全部八種 target 仍成立。
 - **[D5 新寫入點遺漏驗證標記]** → 標記預設值為「需要驗證」（fail-safe），缺失時觸發驗證而非略過；回歸測試明確覆蓋此預設情況。
@@ -99,7 +108,7 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 |---|---|---|---|
 | 0 | 共用基準模型與量測慣例（不引入永久 framework） | — | — |
 | 1 | Hollow-fit split `repair=False`（已完成，待補：移除殘留的 temporary log） | D1 | 單一 commit revert |
-| 2 | Ortho cleaned mesh 物件重用 | D2 | 單一 commit revert |
+| 2 | Ortho cleaned mesh 物件重用（已完成） | D2 | 單一 commit revert |
 | 3 | Boolean Step 7～10 維持 Manifold 表示法 | D3 | 單一 commit revert |
 | 4 | `confirm-model-type` 略過 ProjectionShape | D4 | 單一 commit revert |
 | 5 | Upload／save 重複驗證去重 | D5 | 單一 commit revert |

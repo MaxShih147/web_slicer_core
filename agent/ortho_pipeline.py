@@ -634,7 +634,7 @@ _U_ARCH_MIN_VALID_SECTIONS = 2
 _U_ARCH_MIN_MATCHING_SECTIONS = 2
 
 
-def _is_u_arch_from_low_sections(input_path: Path) -> bool:
+def _is_u_arch_from_low_sections(mesh: "trimesh.Trimesh") -> bool:
     """Return True if the mesh appears to be a U-arch dental model.
 
     Slices at three low normalised Z heights and computes
@@ -644,11 +644,14 @@ def _is_u_arch_from_low_sections(input_path: Path) -> bool:
 
     Fails safe: any exception returns False so the pipeline continues to the
     normal hollow path.
+
+    mesh is only read here (bounds/section), never mutated, so the caller's
+    instance is safe to reuse afterwards (see run_ortho_pipeline Step 3).
     """
     try:
         from scipy.spatial import ConvexHull as _ConvexHull
 
-        m = load_trimesh(input_path)
+        m = mesh
         bb = m.bounds
         z_min = float(bb[0][2])
         height = float(bb[1][2]) - z_min
@@ -773,8 +776,12 @@ async def run_ortho_pipeline(
         logger.info(f"[ortho_pipeline:{job_id}] Pre-clean: {clean_stats}")
         input_path = cleaned_path
 
+        # ===== Load cleaned input once, reused for U-arch classification and =====
+        # ===== Step 3/6/10 below (see openspec Task 2: cleaned mesh reuse)   =====
+        input_mesh = load_trimesh(input_path)
+
         # ===== Pre-hollow model type classification =====
-        if _is_u_arch_from_low_sections(input_path):
+        if _is_u_arch_from_low_sections(input_mesh):
             _complete_as_no_hollow(
                 job_id, job_dir, input_path, output_dir, status_data, total_steps,
                 reason="Pre-hollow: U-arch detected, skipping hollow processing",
@@ -1041,7 +1048,7 @@ async def run_ortho_pipeline(
         _update_progress(job_id, 3, total_steps, "Aligning hollow to input model...", status_data)
         logger.info(f"[ortho_pipeline:{job_id}] Step 3: Aligning hollow")
 
-        input_mesh = load_trimesh(input_path)
+        # input_mesh already loaded above (shared with U-arch classification).
         input_center = (input_mesh.bounds[0] + input_mesh.bounds[1]) / 2
         hollow_mesh.apply_translation(input_center)
 
