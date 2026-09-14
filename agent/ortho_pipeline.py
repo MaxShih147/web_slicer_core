@@ -951,7 +951,14 @@ async def run_ortho_pipeline(
         _hollow_fits = False
         _skip_reasons: list[str] = []
         try:
-            _components = hollow_mesh.split(only_watertight=False)
+            # repair=False: this block only reads component .vertices/.bounds
+            # (width/radial checks) and .faces length (100-face significance
+            # gate). trimesh's default repair=True runs fill_holes() on every
+            # component before we ever look at it, which only patches
+            # single-triangle/quad boundary holes using existing vertices
+            # (no new vertices), so it cannot change the geometry we inspect
+            # here — it only costs time.
+            _components = hollow_mesh.split(only_watertight=False, repair=False)
             _significant = [c for c in _components if len(c.faces) >= 100]
             if not _significant:
                 logger.warning(
