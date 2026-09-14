@@ -23,26 +23,33 @@ def _engine_cli() -> Path:
     return cli
 
 
-@pytest.mark.asyncio
-async def test_engine_runs_as_separate_process():
-    """create_subprocess_exec must spawn a distinct PID for --help."""
+def test_engine_runs_as_separate_process():
+    """create_subprocess_exec must spawn a distinct PID for --help.
+
+    Driven synchronously via asyncio.run() so the test does not depend on
+    pytest-asyncio (which is not installed in this environment), matching
+    test_run_prusa_cli_streams.py.
+    """
     cli = _engine_cli()
     agent_pid = os.getpid()
 
-    proc = await asyncio.create_subprocess_exec(
-        str(cli),
-        "--help",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    assert proc.pid is not None
-    assert proc.pid != agent_pid, "engine must not share agent PID (in-process link forbidden)"
+    async def scenario():
+        proc = await asyncio.create_subprocess_exec(
+            str(cli),
+            "--help",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        assert proc.pid is not None
+        assert proc.pid != agent_pid, "engine must not share agent PID (in-process link forbidden)"
 
-    stdout, stderr = await proc.communicate()
-    assert proc.returncode == 0, (stderr or stdout).decode("utf-8", errors="replace")
-    text = (stdout + stderr).decode("utf-8", errors="replace")
-    assert "slicer-engine" in text.lower() or "Slicer Engine" in text
-    assert "PrusaSlicer" not in text
+        stdout, stderr = await proc.communicate()
+        assert proc.returncode == 0, (stderr or stdout).decode("utf-8", errors="replace")
+        text = (stdout + stderr).decode("utf-8", errors="replace")
+        assert "slicer-engine" in text.lower() or "Slicer Engine" in text
+        assert "PrusaSlicer" not in text
+
+    asyncio.run(scenario())
 
 
 def test_agent_process_does_not_map_engine_dll():

@@ -444,7 +444,7 @@ def test_drain_returns_a_timestamp_when_the_engine_reports_done():
             _reader(b" 88% => Rasterizing layers\n100% => Slicing done\n"), JOB
         )
 
-    finalizing_at = asyncio.run(scenario())
+    finalizing_at, _stdout = asyncio.run(scenario())
     assert isinstance(finalizing_at, float)
 
 
@@ -454,7 +454,8 @@ def test_drain_returns_none_when_the_engine_never_reports_done():
             _reader(b" 29% => Slicing model\n 88% => Rasterizing layers\n"), JOB
         )
 
-    assert asyncio.run(scenario()) is None
+    finalizing_at, _stdout = asyncio.run(scenario())
+    assert finalizing_at is None
 
 
 def test_drain_timestamp_precedes_the_archive_marker():
@@ -462,7 +463,7 @@ def test_drain_timestamp_precedes_the_archive_marker():
 
     async def scenario():
         payload = ("100% => Slicing done\n" + ARCHIVE_DONE_LINE + "\n").encode()
-        finalizing_at = await _drain_stdout_progress(_reader(payload), JOB)
+        finalizing_at, _stdout = await _drain_stdout_progress(_reader(payload), JOB)
         return finalizing_at, time.monotonic()
 
     finalizing_at, after = asyncio.run(scenario())
@@ -476,7 +477,8 @@ def test_drain_keeps_the_first_finalizing_timestamp():
         payload = b"100% => Slicing done\n100% => Slicing done\n"
         return await _drain_stdout_progress(_reader(payload), JOB)
 
-    assert isinstance(asyncio.run(scenario()), float)
+    finalizing_at, _stdout = asyncio.run(scenario())
+    assert isinstance(finalizing_at, float)
 
 
 def test_drain_timestamp_survives_an_unrecognized_done_label(caplog):
@@ -487,7 +489,8 @@ def test_drain_timestamp_survives_an_unrecognized_done_label(caplog):
         return await _drain_stdout_progress(_reader(b"100% => Slicing finished\n"), JOB)
 
     with caplog.at_level(logging.WARNING, logger="agent.jobs"):
-        assert asyncio.run(scenario()) is None
+        finalizing_at, _stdout = asyncio.run(scenario())
+    assert finalizing_at is None
 
 
 # --- 8.2 archive-tail duration logging ------------------------------------
