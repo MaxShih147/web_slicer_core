@@ -539,13 +539,24 @@ def _compute_derived_ratios(features: ModelFeatures) -> None:
 
 
 
-def extract_model_features(mesh: "trimesh.Trimesh") -> ModelFeatures:
+def extract_model_features(
+    mesh: "trimesh.Trimesh", skip_projection_shape: bool = False
+) -> ModelFeatures:
     """Run all four feature extraction groups and return a populated ModelFeatures.
 
     Each extraction group is isolated: a failure in one group does not prevent
     the others from running.  PCA axes are kept as a local variable and passed
     to ProjectionShape; they are not exposed in ModelFeatures.
     Derived ratios are computed centrally after all raw extractions complete.
+
+    skip_projection_shape: when True, skips the ProjectionShape group entirely
+    (its fields stay at their ModelFeatures default of None, same as an
+    algorithm failure would leave them). Only confirm_dental_model_type()
+    passes True, and only for target == DentalModelType.INTRAORAL_SCAN --
+    source tracing confirmed no branch reachable for that target reads any
+    ProjectionShape-derived field or signal (see design.md D4). Not exposed as
+    an API parameter; classify_dental_model() and all other confirm() targets
+    always run the full group.
     """
     features = ModelFeatures()
     _pca_axes = None  # intermediate, required by ProjectionShape; not stored in features
@@ -562,29 +573,30 @@ def extract_model_features(mesh: "trimesh.Trimesh") -> ModelFeatures:
         logger.error("PCA extraction failed: %s", _exc)
 
     # ----- ProjectionShape -----
-    try:
-        if _pca_axes is None:
-            raise ValueError("PCA axes not available")
-        _ps = projection_shape_gap_stats(mesh, _pca_axes)
-        if "error" in _ps:
-            pass
-        else:
-            features.projection_hull_area_mm2                   = _ps["hull_area_mm2"]
-            features.projection_occupied_area_mm2               = _ps["occupied_area_mm2"]
-            features.projection_gap_area_mm2                    = _ps["gap_area_mm2"]
-            features.projection_largest_gap_area_mm2            = _ps["largest_gap_area_mm2"]
-            features.projection_gap_ratio                       = _ps["gap_ratio"]
-            features.projection_largest_gap_ratio               = _ps["largest_gap_ratio"]
-            features.projection_gap_components                  = _ps["gap_components"]
-            features.projection_largest_gap_center_offset_ratio = _ps["largest_gap_center_offset_ratio"]
-            features.projection_largest_gap_contact_mm          = _ps["largest_gap_contact_mm"]
-            features.projection_largest_gap_contact_gt10        = _ps["largest_gap_contact_gt10"]
-            features.projection_medium_holes                    = _ps["medium_holes"]
-            features.projection_medium_hole_area                = _ps["medium_hole_area"]
-            features.projection_large_holes                     = _ps["large_holes"]
-            features.projection_large_hole_area                 = _ps["large_hole_area"]
-    except Exception as _exc:
-        logger.error("ProjectionShape extraction failed: %s", _exc)
+    if not skip_projection_shape:
+        try:
+            if _pca_axes is None:
+                raise ValueError("PCA axes not available")
+            _ps = projection_shape_gap_stats(mesh, _pca_axes)
+            if "error" in _ps:
+                pass
+            else:
+                features.projection_hull_area_mm2                   = _ps["hull_area_mm2"]
+                features.projection_occupied_area_mm2               = _ps["occupied_area_mm2"]
+                features.projection_gap_area_mm2                    = _ps["gap_area_mm2"]
+                features.projection_largest_gap_area_mm2            = _ps["largest_gap_area_mm2"]
+                features.projection_gap_ratio                       = _ps["gap_ratio"]
+                features.projection_largest_gap_ratio               = _ps["largest_gap_ratio"]
+                features.projection_gap_components                  = _ps["gap_components"]
+                features.projection_largest_gap_center_offset_ratio = _ps["largest_gap_center_offset_ratio"]
+                features.projection_largest_gap_contact_mm          = _ps["largest_gap_contact_mm"]
+                features.projection_largest_gap_contact_gt10        = _ps["largest_gap_contact_gt10"]
+                features.projection_medium_holes                    = _ps["medium_holes"]
+                features.projection_medium_hole_area                = _ps["medium_hole_area"]
+                features.projection_large_holes                     = _ps["large_holes"]
+                features.projection_large_hole_area                 = _ps["large_hole_area"]
+        except Exception as _exc:
+            logger.error("ProjectionShape extraction failed: %s", _exc)
 
     # ----- OpenBoundary -----
     try:
@@ -1388,8 +1400,15 @@ def confirm_dental_model_type(mesh: "trimesh.Trimesh", target: DentalModelType) 
     Implementation note: when drill detection is required this function reuses the
     already-computed features object and calls _decide_model_type_with_details()
     directly — it does NOT re-invoke classify_dental_model(mesh) from scratch.
+
+    Performance: for target == INTRAORAL_SCAN, the ProjectionShape feature group
+    is skipped entirely (skip_projection_shape=True) -- source tracing confirmed
+    no branch reachable for this target reads any ProjectionShape-derived field
+    or signal (see design.md D4). All other targets still run full extraction.
     """
-    features = extract_model_features(mesh)
+    features = extract_model_features(
+        mesh, skip_projection_shape=(target == DentalModelType.INTRAORAL_SCAN)
+    )
 
     # ---- P0: PCA failed ----
     if features.axis_l1_mm is None:

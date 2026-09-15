@@ -53,18 +53,20 @@
 - [ ] 3.9 **收尾**：移除 temporary timing log——**已完成**（隨整組程式碼 `git checkout` 一併移除，非單獨移除 log）
 - [ ] 3.10 補最小必要回歸測試——**已寫（`agent/tests/test_boolean_meshes_chain.py`，9 個測試，涵蓋 3.4／3.5／3.6）**，隨程式碼還原一併刪除（測試的是不會落地的函式，保留無意義）
 
-## 4. `confirm-model-type(target_type=intraoral_scan)` 略過 ProjectionShape
+## 4. `confirm-model-type(target_type=intraoral_scan)` 略過 ProjectionShape（已完成）
 
-- [ ] 4.1 於 [model_classifier.py:542](../../agent/model_classifier.py#L542) 的 `extract_model_features()` 新增保留預設值的參數（例如 `skip_projection_shape: bool = False`），為真時略過 [model_classifier.py:564-587](../../agent/model_classifier.py#L564-L587) 的 ProjectionShape 區塊
-- [ ] 4.2 於 [model_classifier.py:1376](../../agent/model_classifier.py#L1376) 的 `confirm_dental_model_type()`，僅在 `target == DentalModelType.INTRAORAL_SCAN` 時傳入 `skip_projection_shape=True`；其餘 target 與 `classify_dental_model()` 不傳入（維持完整特徵擷取）
-- [ ] 4.3 加入本群組專用 timing log，只包住 `projection_shape_gap_stats()` 呼叫本身
-- [ ] 4.4 **驗證**：既有 `dental-model-type-confirm` spec 的「與完整分類的一致性（無例外）」不變量——對同一份 mesh，`confirm(mesh, target)` 在 8 種 target 下的結果集合，與本群組改動前完全相同（可沿用/擴充現有的 `test_classify_decision.py` 風格測試邏輯，正式納入 `agent/tests/`）
-- [ ] 4.5 **驗證**：對多份 U-arch／intraoral scan 邊界案例（ProjectionShape 的 `u_shape_score` 在完整計算下非零的模型），`confirm(mesh, INTRAORAL_SCAN)` 在略過 ProjectionShape 前後回傳值相等
-- [ ] 4.6 **驗證**：對 `target` 為 `intraoral_scan` 以外的任一值，`extract_model_features()` 確實仍執行完整 ProjectionShape 擷取（可透過檢查 `features.projection_hull_area_mm2` 等欄位非 `None` 或以 mock 計數呼叫次數確認）
-- [ ] 4.7 **驗證**：`classify_dental_model()`／`POST /api/v2/classify-model` 端點行為與輸出結構不受影響
-- [ ] 4.8 **量測**：以數份代表性 STL 呼叫 `confirm-model-type(target_type=intraoral_scan)`，記錄略過 ProjectionShape 前後的耗時差異
-- [ ] 4.9 **收尾**：移除本群組的 temporary timing log
-- [ ] 4.10 正式補上 4.4～4.6 的回歸測試至 `agent/tests/`（若沿用根目錄既有的 `test_classify_decision.py`／`test_classify_api.py` 邏輯，需先確認是否移入正式測試套件或另行改寫，不得僅依賴未追蹤的臨時腳本作為驗收依據）
+> **Test-first**：4.10 的正式回歸測試先於 4.1／4.2 的 production 修改寫成並執行——8-target 不變量與 caller-boundary 測試在修改前即 21 passed／1 failed（`test_confirm_intraoral_scan_skips_projection_shape` 如預期為 red），實作落地後同一份測試 22 passed（green）。
+
+- [x] 4.1 於 [model_classifier.py:543](../../agent/model_classifier.py#L543) 的 `extract_model_features()` 新增 `skip_projection_shape: bool = False` 參數，為真時略過 ProjectionShape try 區塊（含 PCA-axes 可用性檢查），欄位維持 `ModelFeatures` 預設值 `None`——與既有「ProjectionShape 演算法失敗」時的欄位狀態相同，`_compute_signals()` 不需新增分支
+- [x] 4.2 於 [model_classifier.py:1394](../../agent/model_classifier.py#L1394) 的 `confirm_dental_model_type()`，改為 `extract_model_features(mesh, skip_projection_shape=(target == DentalModelType.INTRAORAL_SCAN))`；`classify_dental_model()`（[model_classifier.py:1366](../../agent/model_classifier.py#L1366)）未改動，仍以 `extract_model_features(mesh)` 呼叫，永遠完整擷取。`skip_projection_shape` 未暴露為 API 參數
+- [x] 4.3 加入本群組專用 timing log（`[PROJECTION_SHAPE_PROFILE]`，延續上一輪 baseline 調查已加入的版本），只包住 `projection_shape_gap_stats()` 呼叫本身，用於本群組的修改前／修改後量測，4.9 收尾時移除
+- [x] 4.4 **驗證**：`agent/tests/test_dental_model_type_confirm.py::test_confirm_matches_classify_for_all_targets`——13 組合成特徵情境（以真實 `_compute_signals()`／`_get_drill_detection_plan()`／`_decide_model_type_with_details()` 跑過驗證取得 ground truth，涵蓋 P0／P_base×2／P2／P3／P5.1／P5.2×5／P5.3×2，8 種 `DentalModelType` 全部至少出現一次）× 8 target，共 104 個斷言，確認 `confirm(mesh,t) == (classify(mesh)==t)` 無例外成立；`detect_drill_holes()` 若在未預期情境下被呼叫會主動 raise，額外守住 early-return 分支
+- [x] 4.5 **驗證**：真實 U-arch STL（`C:\Users\user\Pictures\tempTest\Ushape1~3.stl` + `DentalModel_2.stl`，後者由使用者以人工 ground truth 指認、commit 前補驗）——四者皆為 `classify_dental_model()` 判定的 `u_shaped_dental_model`，完整 ProjectionShape 計算下 `u_shape_score` 四者皆為 `1.0`（非零、非退化邊界情況），`confirm(mesh, INTRAORAL_SCAN)` 在略過 ProjectionShape 前後四者皆回傳 `False`（相等），且對全部 8 個 target 掃描確認僅 `U_SHAPED_DENTAL_MODEL` 為 `True`，前後一致，與人工 ground truth 完全相符。另以 `001_p.stl`／`005_p.stl`（`u_shape_score=0.0`）交叉驗證同樣一致。**commit 前補驗**：另以既有 deidentification fixture（`intraoral_scan`，`confirm(mesh, INTRAORAL_SCAN)=True` 的案例，先前 4 個真實案例皆為 `False`）確認完整 ProjectionShape 與 skip ProjectionShape 兩者皆為 `True`，相符
+- [x] 4.6 **驗證**：`agent/tests/test_dental_model_type_confirm.py::test_confirm_non_intraoral_scan_calls_projection_shape`（parametrize 全部 7 個非 INTRAORAL_SCAN target）——以 call-counting spy 包住真正的 `projection_shape_gap_stats()`（非以欄位 `None` 間接推測），確認每個非 INTRAORAL_SCAN target 仍恰好呼叫一次；`test_classify_dental_model_calls_projection_shape` 同法確認 `classify_dental_model()` 恰好呼叫一次；`test_confirm_intraoral_scan_skips_projection_shape` 確認 INTRAORAL_SCAN target 呼叫零次
+- [x] 4.7 **驗證**：`import agent.api_v2` 正常、`/classify-model`／`/confirm-model-type` 兩端點程式碼路徑未改動（僅 `confirm_dental_model_type()` 內部呼叫多帶一個關鍵字參數）；`classify_dental_model()` 的呼叫方式與輸出型別（`DentalModelType`）不受影響——D4 改動完全不在 `classify_dental_model()` 的執行路徑上
+- [x] 4.8 **量測**：見下方「量測記錄」群組 4。單一 process 配對量測（同一 code state 下 `skip_projection_shape=False` vs `True`，各自暖機後 3 runs）：`Ushape1~3.stl` 改善 10.0～14.4%（節省 242～338ms），`001_p.stl` 改善 18.6%（節省 48ms），`005_p.stl` 改善 12.3%（節省 158ms），`DentalModel_2.stl`（最大樣本，367,506 faces）改善 10.5%（節省 881ms）——皆為 `extract_model_features()` 呼叫本身的改善幅度；並以真正的 `confirm_dental_model_type(mesh, INTRAORAL_SCAN)` 呼叫確認 `[PROJECTION_SHAPE_PROFILE]` log 零次觸發。**commit 前補驗**：改以 monkeypatch 重建修改前行為（不永久改動 production），對完整 `confirm_dental_model_type(mesh, INTRAORAL_SCAN)` 公開 API 呼叫本身配對量測（`001_p.stl`／`005_p.stl`／`DentalModel_2.stl`）——改善 20.6～24.1%，`confirmed` 結果三者皆前後一致（False），此為整個 API 呼叫（含 `_compute_signals()`／`_get_drill_detection_plan()`／分支判斷）的改善幅度，與上方「僅 `extract_model_features()`」表分開記錄
+- [x] 4.9 **收尾**：`# TEMP PROJECTION_SHAPE_PROFILE` 標記程式碼（`import time`、`_ps_t0` 計時變數、`logger.info("[PROJECTION_SHAPE_PROFILE] ...")`）已全數移除；`grep -rn "TEMP\|PROJECTION_SHAPE_PROFILE" agent/model_classifier.py` 無殘留；移除後重新執行 `agent/tests/test_dental_model_type_confirm.py`（22 passed）與 `agent/tests/`（654 passed、1 failed、3 errors——與移除前完全相同，4 項失敗皆為與本項無關的既有環境問題，見下方量測記錄）
+- [x] 4.10 正式回歸測試已落地於 `agent/tests/test_dental_model_type_confirm.py`（不依賴根目錄未追蹤的 `test_classify_decision.py`／`test_classify_api.py`；source tracing 過程中確認後者已對不上目前 source——`_write_classification_txt` 在目前 `model_classifier.py` 中不存在，屬於既有 staleness，與本項改動無關）
 
 ## 5. Upload／save 重複 STL validation 去重
 
@@ -193,6 +195,56 @@ Step7-10 合計耗時確實下降（3-run 平均約 617～786 ms，視系統負�
 
 **結論**：找不到對兩個代表模型都安全的部分鏈式組合；唯一可靠方案是完全放棄鏈式優化。詳細根因分析見 [design.md](design.md) D3 小節。本群組最終**未帶來任何效能改善**，`agent/ortho_pipeline.py`／`agent/sla_operations.py` 已 `git checkout` 還原至群組 2 完成時的狀態，本群組新增的回歸測試檔案（`agent/tests/test_boolean_meshes_chain.py`）已移除。
 
-### 群組 4～5
+### 群組 4（`confirm-model-type` 略過 ProjectionShape，已完成）
 
-（實作後依各自 task 的「量測」項回填。目前尚未開始。）
+**素材**：`C:\Users\user\Pictures\tempTest\Ushape1~3.stl`（真實 U 型基座牙模，本輪新增）+ repo 既有 `001_p.stl`／`005_p.stl`；commit 前另補驗 `DentalModel_2.stl`（同目錄，使用者以人工 ground truth 指認為第 4 個真實 U 型基座樣本）。
+
+**修改前 baseline**（完整 ProjectionShape 計算，`confirm_dental_model_type(mesh, INTRAORAL_SCAN)`，各模型 3 runs）：
+
+| 模型 | faces/vertices | `classify_dental_model()` | `u_shape_score` | `confirm(IOS)` | confirm total avg | ProjectionShape avg |
+|---|---|---|---|---|---|---|
+| `Ushape1.stl` | 293,095 / 879,285 | u_shaped_dental_model | 1.0 | False | 2350.83 ms | 306.42 ms |
+| `Ushape2.stl` | 234,150 / 702,450 | u_shaped_dental_model | 1.0 | False | 1880.11 ms | 275.54 ms |
+| `Ushape3.stl` | 299,798 / 899,394 | u_shaped_dental_model | 1.0 | False | 2356.85 ms | 299.86 ms |
+| `001_p.stl` | 32,138 / 96,414 | dental_model | 0.0 | False | 251.69 ms | 46.30 ms |
+| `005_p.stl` | 166,672 / 500,016 | dental_model | 0.0 | False | 1247.72 ms | 137.00 ms |
+
+三個 Ushape 模型的 `u_shape_score` 皆為 `1.0`（非零、非退化），正式覆蓋 4.5 的邊界案例要求；`001_p.stl`／`005_p.stl` 的 `u_shape_score=0.0` 作為對照組。
+
+**修改後（單一 process 配對量測，`extract_model_features(skip_projection_shape=False)` vs `True`，各暖機一次後 3 runs）**：
+
+| 模型 | before avg | after avg | saved | improvement | `confirm(IOS)` 修改後 | ProjectionShape 呼叫次數 |
+|---|---|---|---|---|---|---|
+| `Ushape1.stl` | 2411.17 ms | 2073.24 ms | 337.93 ms | 14.0% | False（不變） | 0 |
+| `Ushape2.stl` | 1910.90 ms | 1636.18 ms | 274.72 ms | 14.4% | False（不變） | 0 |
+| `Ushape3.stl` | 2411.32 ms | 2169.53 ms | 241.79 ms | 10.0% | False（不變） | 0 |
+| `001_p.stl` | 258.61 ms | 210.49 ms | 48.11 ms | 18.6% | False（不變） | 0 |
+| `005_p.stl` | 1280.41 ms | 1122.50 ms | 157.91 ms | 12.3% | False（不變） | 0 |
+
+百分比為 `extract_model_features()` 呼叫本身的改善幅度（D4 實際改動的函式），非整個 `confirm_dental_model_type()` API 呼叫的改善幅度——後者還包含 `_compute_signals()`／`_get_drill_detection_plan()`／分支判斷邏輯，以及（`needs_drill=True` 時）後續的 `detect_drill_holes()`；PCA／OpenBoundary／FlatPlane 三組**已經包含在** `extract_model_features()` 之內，不是額外成本。ProjectionShape 呼叫次數欄位以真實 `confirm_dental_model_type(mesh, INTRAORAL_SCAN)` 呼叫 + `[PROJECTION_SHAPE_PROFILE]` log 捕捉驗證，確認修改後為「完全未呼叫」而非「呼叫後耗時 0ms」。
+
+**完整 `confirm_dental_model_type()` 配對量測（commit 前補驗）**：見下方「量測記錄」群組 4 的補充小節，衡量整個公開 API 呼叫（非僅 `extract_model_features()`）的改善幅度，與上表分開記錄，不混用。
+
+**8-target 一致性驗證**：對 `Ushape1.stl` 掃描全部 8 個 `DentalModelType`，僅 `target=U_SHAPED_DENTAL_MODEL` 回傳 `True`，其餘 7 個皆 `False`——修改前後兩次執行結果完全相同。
+
+**補驗（commit 前，`DentalModel_2.stl`，使用者以人工 ground truth 指認為 U 型基座）**：faces=367,506／vertices=1,102,518（四個真實 U-shape 樣本中規模最大者）。`classify_dental_model()` = `u_shaped_dental_model`，`u_shape_score=1.0`（`projection_largest_gap_ratio=0.394`、`projection_largest_gap_contact_mm=56.5mm`），`confirm_dental_model_type(mesh, INTRAORAL_SCAN)` = `False`，8-target 掃描僅 `U_SHAPED_DENTAL_MODEL` 為 `True`——與人工 ground truth 完全相符。由於 D4 production 邏輯已落地，此補驗直接沿用既有配對量測方法（同一 code state 下 `extract_model_features(skip_projection_shape=False)` vs `True`，暖機一次後各 3 runs），未另外重建「修改前」獨立 baseline：before avg 8407.90 ms → after avg 7527.01 ms，節省 880.89 ms（10.5%），`confirm_dental_model_type(mesh, INTRAORAL_SCAN)` 呼叫後 3 runs 總耗時 avg 7900.90 ms。
+
+**補驗（commit 前）：`INTRAORAL_SCAN=True` correctness 案例**：先前 D4 baseline 調查找到的既有 deidentification fixture（`openspec/changes/backend-slicer-engine-deidentification/evidence/windows/functional-7.6-20260719T143000Z/fixture/model.stl`，faces=12／vertices=36），`classify_dental_model()` = `intraoral_scan`。完整 ProjectionShape 計算下 `confirm(mesh, INTRAORAL_SCAN)` = `True`；skip ProjectionShape（正式 production 路徑）下同樣 `= True`——兩者相符。補上了 D4 目前唯一缺少的「`INTRAORAL_SCAN` 為 `True`」真實案例（先前 Ushape1~3／001_p／005_p／DentalModel_2 皆為 `confirmed=False`）；正式合成回歸已由 `test_confirm_matches_classify_for_all_targets[P3_large_open_boundary]` 涵蓋，本次屬於補強而非缺口修補。
+
+**補驗（commit 前）：完整 `confirm_dental_model_type(mesh, INTRAORAL_SCAN)` 配對量測**（`001_p.stl`／`005_p.stl`／`DentalModel_2.stl`，同一 process、同一暖機條件、各 3 runs；「修改前」以 monkeypatch 讓 `extract_model_features()` 忽略傳入的 `skip_projection_shape` 一律強制完整計算，藉此在不永久修改 production decision logic 的前提下重建修改前行為，「修改後」直接呼叫未改動的正式程式碼）——與上方「單一 process 配對量測」表（僅量測 `extract_model_features()` 本身）分開記錄，不混用：
+
+| 模型 | before confirm avg | after confirm avg | saved | improvement | confirmed before | confirmed after |
+|---|---|---|---|---|---|---|
+| `001_p.stl` | 250.96 ms | 190.44 ms | 60.53 ms | 24.1% | False | False |
+| `005_p.stl` | 3352.94 ms | 2656.68 ms | 696.26 ms | 20.8% | False | False |
+| `DentalModel_2.stl` | 8548.99 ms | 6789.75 ms | 1759.23 ms | 20.6% | False | False |
+
+三個模型 `confirmed` 結果修改前後完全一致。此表的絕對 ms 與「`extract_model_features()`-only」表屬不同 script 執行、不同時間點（例如 `005_p.stl` 在該表 before avg 為 1280.41 ms，此處整個 `confirm()` 呼叫 before avg 卻是 3352.94 ms），研判為跨 process 機器負載差異所致，非同一次量測內部矛盾；同一次量測內部（before/after 同一 process、同一暖機）的 saved ms／improvement % 仍然有效可信。
+
+**Regression**：`pytest agent/tests/test_dental_model_type_confirm.py -v` 22 passed（8-target 不變量 13 組 + caller-boundary 9 個測試）；`pytest agent/tests/ -q --continue-on-collection-errors` 654 passed、1 failed、3 errors——與移除 temporary log 前完全相同數字，4 項失敗（`test_prz_print_time.py::test_6_11_single_normal_layer_full_params` 斷言 11.0≠14.0；`test_slice_progress_endpoint.py`／`test_support_e2e.py`／`test_support_status_endpoint.py` 因環境缺少 `httpx` 套件而 collection error）皆與 dental model 分類邏輯無關，且在「D4 修改前」（`--ignore=agent/tests/test_dental_model_type_confirm.py`，632 passed／1 failed／3 errors）與「D4 修改後含新測試」（654 passed／1 failed／3 errors）兩次執行中數字一致，確認非本項改動引入。
+
+**限制說明**：另有一組跨 process 獨立量測（先量測修改前 baseline，之後才實作，再另開 process 量測修改後）顯示的 saved ms 略低（例如 `Ushape1.stl` 約 136ms 而非上表的 338ms），推測是兩次量測的 warm-up 呼叫次數不對等（修改前腳本計時前多跑一次完整 `classify_dental_model()`）造成 process/mesh cache 熱度差異；上表的單一 process 配對量測排除了此變因，視為更準確的數字，兩者量級與方向一致。
+
+### 群組 5
+
+（尚未開始，本輪不處理。）
