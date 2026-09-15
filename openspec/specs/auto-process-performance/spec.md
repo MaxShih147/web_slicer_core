@@ -1,7 +1,11 @@
 # auto-process-performance Specification
 
 ## Purpose
-TBD - created by archiving change optimize-auto-process-performance. Update Purpose after archive.
+
+定義 Auto Process（Ortho 自動化流程，`run_ortho_pipeline()`）與其周邊 API（`agent/ortho_pipeline.py`、`agent/model_classifier.py`、`agent/api_v2.py`）中，純效能／實作層級改動必須維持的正確性契約：Hollow-fit component split 的 `repair` 開關、Ortho cleaned mesh 物件重用、`confirm-model-type(target_type=intraoral_scan)` 的特徵擷取早退、以及 upload／save 對同一份 STL bytes 的重複驗證去重——這四項改動涵蓋的範圍與各自的等價判準。
+
+**本能力最重要的一條是驗收線的表達方式**：與光柵化輸出不同，本能力涵蓋的中間產物是 mesh 拓撲與 Boolean 運算結果，改動後可能出現不同的 triangle／vertex 排列順序，因此 MUST NOT 以「輸出檔案 byte-for-byte 完全相同」作為統一驗收線；每項改動改以其自訂的外部可觀察行為與幾何語意等價判準（fit 判定、reload 幾何、分類確認結果、驗證的接受／拒絕行為）驗證。這條線同時是一道收錄門檻——Boolean Step 7～10 維持 `manifold3d.Manifold` 中間表示法的鏈式優化，因無法在兩個代表模型上同時通過 `is_watertight` 等價判準，已調查並放棄，未收錄於本能力（過程與根因分析見 `openspec/changes/archive/2026-09-15-optimize-auto-process-performance/design.md` D3 小節）。
+
 ## Requirements
 ### Requirement: 純效能改動不得改變外部可觀察行為與幾何語意
 
