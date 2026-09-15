@@ -68,19 +68,21 @@
 - [x] 4.9 **收尾**：`# TEMP PROJECTION_SHAPE_PROFILE` 標記程式碼（`import time`、`_ps_t0` 計時變數、`logger.info("[PROJECTION_SHAPE_PROFILE] ...")`）已全數移除；`grep -rn "TEMP\|PROJECTION_SHAPE_PROFILE" agent/model_classifier.py` 無殘留；移除後重新執行 `agent/tests/test_dental_model_type_confirm.py`（22 passed）與 `agent/tests/`（654 passed、1 failed、3 errors——與移除前完全相同，4 項失敗皆為與本項無關的既有環境問題，見下方量測記錄）
 - [x] 4.10 正式回歸測試已落地於 `agent/tests/test_dental_model_type_confirm.py`（不依賴根目錄未追蹤的 `test_classify_decision.py`／`test_classify_api.py`；source tracing 過程中確認後者已對不上目前 source——`_write_classification_txt` 在目前 `model_classifier.py` 中不存在，屬於既有 staleness，與本項改動無關）
 
-## 5. Upload／save 重複 STL validation 去重
+## 5. Upload／save 重複 STL validation 去重（已完成）
 
-- [ ] 5.1 確認 `pending["models"]` 的全部寫入點：[api_v2.py:392](../../agent/api_v2.py#L392)（`upload_model_file()`，已驗證）、[api_v2.py:467](../../agent/api_v2.py#L467)（`use_model_from_job()`，未驗證）；`pending["support_stl"]` 的寫入點：[api_v2.py:436](../../agent/api_v2.py#L436)（`upload_support_file()`，已驗證）。實作前重新以 `grep` 確認無新寫入點加入
-- [ ] 5.2 於 `upload_model_file()`（[api_v2.py:392](../../agent/api_v2.py#L392)）與 `upload_support_file()`（[api_v2.py:436](../../agent/api_v2.py#L436)）寫入 `pending` 時，於已通過 [api_v2.py:389](../../agent/api_v2.py#L389)／[api_v2.py:434](../../agent/api_v2.py#L434) 驗證之後，加入標記（例如 `"validated": True`）
-- [ ] 5.3 `use_model_from_job()`（[api_v2.py:467](../../agent/api_v2.py#L467)）附加的項目 MUST NOT 設置該標記（維持缺失或顯式 `False`）
-- [ ] 5.4 `_save_model_to_job()`（[api_v2.py:207](../../agent/api_v2.py#L207)）於 [api_v2.py:211](../../agent/api_v2.py#L211) 呼叫 `_validate_stl_bytes()` 前，檢查 5.2 的標記；標記為真時略過該次呼叫，標記缺失或為假時維持現行的完整驗證
-- [ ] 5.5 加入本群組專用 timing log，只包住 `_save_model_to_job()` 內的驗證判斷與（若執行）`_validate_stl_bytes()` 呼叫
-- [ ] 5.6 **驗證**：透過 `upload_model_file()` 上傳合法 STL 後 execute，`_save_model_to_job()` 不再次執行完整 `trimesh.load()` parse（可用計數 mock 或 timing 差異確認），且模型正常落地、pipeline 正常執行
-- [ ] 5.7 **驗證**：透過 `use_model_from_job()` 引用其他 job 輸出後 execute，`_save_model_to_job()` 仍執行完整驗證——刻意引用一份格式錯誤或空 mesh 的檔案，確認仍回傳 `INVALID_MODEL`（422），與本群組改動前行為相同
-- [ ] 5.8 **驗證**：`pending["models"]` 項目不含驗證標記時（模擬未來遺漏設置標記的寫入路徑），`_save_model_to_job()` 仍執行完整驗證
-- [ ] 5.9 **量測**：以 `001_p.stl`、`005_p.stl` 走完整 upload → execute 流程，記錄 `_save_model_to_job()` 驗證耗時差異
-- [ ] 5.10 **收尾**：移除本群組的 temporary timing log
-- [ ] 5.11 補最小必要回歸測試至 `agent/tests/`，至少涵蓋 5.6／5.7／5.8 三個情境
+> **二輪調查修正**：初版任務描述誤判 `pending["models"]` 只有兩個寫入點、且誤將 `upload_support_file()` 視為與 `upload_model_file()` 同構的重複驗證路徑。實作前重新 `grep` 後兩點皆被推翻，詳見 5.1 與下方「呼叫範圍確認」修正記錄；`design.md` D5 小節已同步更新。
+
+- [x] 5.1 確認 `pending["models"]` 的全部寫入點——**重新 grep 後發現實際有三個，而非原假設的兩個**：[api_v2.py:391-398](../../agent/api_v2.py#L391-L398)（`upload_model_file()`，已驗證）、[api_v2.py:467-475](../../agent/api_v2.py#L467-L475)（`use_model_from_job()`，未驗證）、**[api_v2.py:338-360](../../agent/api_v2.py#L338-L360)（`add_models_to_slice_job()`，`POST /slices/{job_id}/models`，未驗證——初版調查完全遺漏此寫入點）**。另確認 `pending["support_stl"]` 的落地路徑（`execute` 內 [api_v2.py:504-507](../../agent/api_v2.py#L504-L507)）**直接 `open().write()`，完全不經過 `_save_model_to_job()`／`_validate_stl_bytes()`**，upload 時的驗證本來就是唯一一次，不存在重複驗證——`upload_support_file()` 因此排除於本群組範圍外，維持不變
+- [x] 5.2 於 `upload_model_file()`（[api_v2.py:391-398](../../agent/api_v2.py#L391-L398)）已通過 [api_v2.py:389](../../agent/api_v2.py#L389) 驗證之後，append 的 dict 加入 `"validated": True`。`upload_support_file()` 因 5.1 確認不涉及重複驗證，未修改
+- [x] 5.3 `use_model_from_job()`（[api_v2.py:467-475](../../agent/api_v2.py#L467-L475)）附加的項目顯式設 `"validated": False`；`add_models_to_slice_job()`（[api_v2.py:350-357](../../agent/api_v2.py#L350-L357)）同樣設 `"validated": False`，**且刻意放在 `{"id": model_id, **model, "validated": False}` 的 `**model` 展開之後**——該端點 body 是未經 schema 限制的任意 client dict，若標記放在展開之前，client 可在 request body 中夾帶 `"validated": true` 蓋掉系統值，讓自己的內容被誤判為已驗證；放在展開之後可確保這個欄位永遠由伺服器端決定
+- [x] 5.4 `_save_model_to_job()`（[api_v2.py:207-222](../../agent/api_v2.py#L207-L222)）改為 `if model_data.get("validated") is not True: _validate_stl_bytes(content, "model")`——用 `is not True`（非單純 falsy 判斷）確保標記缺失、顯式 `False`、或任何非布林 truthy 值都會觸發完整驗證
+- [x] 5.5 **量測方式**：本群組未在 production code 加入常駐 timing log——`_validate_stl_bytes()`／`_save_model_to_job()` 皆可在不修改 production code 的前提下由外部腳本直接量測 wall-clock 時間（呼叫真實函式、非 mock），因此改用 scratchpad 暫時性腳本（`d5_baseline_profile.py`／`d5_after_profile.py`，皆不在 repo 內，未 commit）分別在實作前／後各執行一次，取代「加 log → 移除 log」的既有模式
+- [x] 5.6 **驗證**：透過 `upload_model_file()` 上傳合法 STL，`_save_model_to_job()` 不再次執行完整 `trimesh.load()` parse——`test_save_skips_second_parse_for_validated_item` 以 spy 包住 `_validate_stl_bytes()` 確認呼叫次數為 0，且落地檔案 bytes 與原始上傳內容逐位元組相同
+- [x] 5.7 **驗證**：透過 `use_model_from_job()` 引用其他 job 輸出，`_save_model_to_job()` 仍執行完整驗證——`test_save_still_fully_validates_referenced_content` 確認 `_validate_stl_bytes()` 恰好呼叫一次；`test_save_still_rejects_corrupt_referenced_content` 刻意引用格式錯誤內容，確認仍回傳 `INVALID_MODEL`，與本群組改動前行為相同
+- [x] 5.8 **驗證**：`pending["models"]` 項目不含驗證標記、顯式為 `False`、或標記值為非布林 truthy（`"yes"`）時，`_save_model_to_job()` 皆執行完整驗證——`TestMissingOrFalseFlagStillValidates` 三個測試涵蓋。另外，`add_models_to_slice_job()` 的 request body 若夾帶 `"validated": true`，落地後仍被強制為 `False`，且搭配偽造 `stl_data` 時 `_save_model_to_job()` 仍完整驗證並拒絕——`TestAddModelsToSliceJobCannotBypassValidation` 兩個測試涵蓋（此為二輪調查新發現的攻擊面，見 design.md D5「風險」）
+- [x] 5.9 **量測**：以 `001_p.stl`、`005_p.stl` 直接呼叫 `upload_model_file()` → `_save_model_to_job()` 的真實函式序列（各 5 runs），記錄 `_save_model_to_job()` 驗證耗時差異——`001_p.stl` save 側由 avg 29.03ms 降至 0.92ms（約 −96.8%，合計 upload+save 由 63.73ms 降至 33.19ms，約 −47.9%）；`005_p.stl` save 側由 avg 190.93ms 降至 2.46ms（約 −98.7%，合計由 379.17ms 降至 207.20ms，約 −45.4%）。詳細數字見下方「量測記錄」群組 5
+- [x] 5.10 **收尾**：無 production timing log 需要移除（見 5.5）；scratchpad 量測腳本從未寫入 repo，無需清理
+- [x] 5.11 正式回歸測試已落地於 `agent/tests/test_save_model_to_job_validation.py`（11 個測試，涵蓋 5.6／5.7／5.8 全部情境，另加 `add_models_to_slice_job()` 的惡意標記防禦測試），延續本 repo 既有慣例直接呼叫 `api_v2` 模組函式，未新增 `TestClient`／`httpx` 依賴
 
 ## 6. 整合驗證與收尾
 
@@ -245,6 +247,33 @@ Step7-10 合計耗時確實下降（3-run 平均約 617～786 ms，視系統負�
 
 **限制說明**：另有一組跨 process 獨立量測（先量測修改前 baseline，之後才實作，再另開 process 量測修改後）顯示的 saved ms 略低（例如 `Ushape1.stl` 約 136ms 而非上表的 338ms），推測是兩次量測的 warm-up 呼叫次數不對等（修改前腳本計時前多跑一次完整 `classify_dental_model()`）造成 process/mesh cache 熱度差異；上表的單一 process 配對量測排除了此變因，視為更準確的數字，兩者量級與方向一致。
 
-### 群組 5
+### 群組 5（Upload／save 重複 STL validation 去重，已完成）
 
-（尚未開始，本輪不處理。）
+**素材**：`001_p.stl`（1,606,984 bytes）／`005_p.stl`（8,333,684 bytes），與 D1／D2 相同代表模型。量測方式：直接呼叫真實的 `api_v2.upload_model_file()` → `api_v2._save_model_to_job()` 函式序列（不經 HTTP／`TestClient`），各 5 runs。
+
+**Before（`dev` 修改前，即上一輪調查記錄的 baseline）**：
+
+| 模型 | upload avg（第一次驗證，不可省略） | save avg（第二次完整 parse，D5 目標移除） | 合計 avg |
+|---|---|---|---|
+| `001_p.stl` | 34.70 ms | 29.03 ms | 63.73 ms |
+| `005_p.stl` | 188.24 ms | 190.93 ms | 379.17 ms |
+
+**After（實作後，`upload_model_file()` 設 `validated=True`，`_save_model_to_job()` 略過第二次 parse）**：
+
+| 模型 | upload avg | save avg | 合計 avg |
+|---|---|---|---|
+| `001_p.stl` | 32.28 ms | 0.92 ms | 33.19 ms |
+| `005_p.stl` | 204.73 ms | 2.46 ms | 207.20 ms |
+
+**改善幅度**：
+
+| 模型 | save 側改善 | 合計改善 |
+|---|---|---|
+| `001_p.stl` | −28.11 ms（約 −96.8%） | −30.54 ms（約 −47.9%） |
+| `005_p.stl` | −188.47 ms（約 −98.7%） | −171.97 ms（約 −45.4%） |
+
+`after save avg` 剩餘的次毫秒級耗時是單純檔案寫入（`open().write()`），確認第二次 `trimesh.load()` 完整 parse 已消失而非只是變快。`upload` 側（第一次、不可省略的驗證）修改前後量級一致，差異屬機器負載雜訊，非 regression。
+
+**正確性驗證**：`test_save_skips_second_parse_for_validated_item` 確認略過驗證後落地檔案的 bytes 與原始上傳內容逐位元組相同；`use_model_from_job()`／`add_models_to_slice_job()`（含惡意標記注入）兩條未驗證來源在 `_save_model_to_job()` 仍完整驗證，格式錯誤內容仍正確回傳 `INVALID_MODEL`——與本項優化前行為相同。
+
+**Regression**：`pytest agent/tests/test_save_model_to_job_validation.py -v` 11 passed；`pytest agent/tests/ -q --continue-on-collection-errors` 665 passed、1 failed、3 errors——與 D4 完成時的既有基準（654 passed、1 failed、3 errors）相比，新增的 665−654=11 即本群組新增測試，既有的 1 failed（`test_prz_print_time.py`，與本項無關的既有環境問題）與 3 collection errors（缺少 `httpx`）數字不變，確認非本項引入。

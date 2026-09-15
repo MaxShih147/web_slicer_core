@@ -153,15 +153,50 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 
 **限制說明**：跨 process 的獨立量測（分別各自 3 runs 的「先量測修改前 baseline，之後才實作，再另開 process 量測修改後」）顯示的 saved ms 略低於上表（例如 `Ushape1.stl` 約 136ms 而非 338ms），推測主因是兩次量測的 warm-up 呼叫次數不同（修改前腳本在計時前多跑了一次完整 `classify_dental_model()`，修改後腳本沒有）造成製程/mesh cache 熱度不對等；上表的單一 process 配對量測（同一次呼叫暖機、同一 code state 下直接比較 `skip_projection_shape=False` vs `True`）排除了這個變因，視為本項改動更準確的效能數字，兩者量級一致（同為數十至數百毫秒級的改善），方向與可靠性結論不變。
 
-### D5：Upload／save 對相同 STL bytes 避免重複完整 parse
+### D5：Upload／save 對相同 STL bytes 避免重複完整 parse（已完成）
 
-**根因**：`_validate_stl_bytes()`（[api_v2.py:193](../../../agent/api_v2.py#L193)）對輸入 bytes 執行完整 `trimesh.load()`。`upload_model_file()`（[api_v2.py:364](../../../agent/api_v2.py#L364)）在 [api_v2.py:389](../../../agent/api_v2.py#L389) 呼叫一次後，把已驗證的 bytes 存進 `pending["models"]`；execute 時 `_save_model_to_job()`（[api_v2.py:207](../../../agent/api_v2.py#L207)）在 [api_v2.py:211](../../../agent/api_v2.py#L211) 對**同一份不可變 bytes** 再完整 parse 一次才落地寫檔。`upload_support_file()`（[api_v2.py:406](../../../agent/api_v2.py#L406)）同構。
+**根因**：`_validate_stl_bytes()`（[api_v2.py:193](../../../agent/api_v2.py#L193)）對輸入 bytes 執行完整 `trimesh.load()`。`upload_model_file()`（[api_v2.py:378](../../../agent/api_v2.py#L378)）在 [api_v2.py:389](../../../agent/api_v2.py#L389) 呼叫一次後，把已驗證的 bytes 存進 `pending["models"]`；`execute`／`generate-supports`／`generate-hollow`／`cut`／`ortho-process` 這 5 個呼叫端在落地時經 `_save_model_to_job()`（[api_v2.py:207](../../../agent/api_v2.py#L207)）在 [api_v2.py:221-222](../../../agent/api_v2.py#L221-L222) 對**同一份不可變 bytes** 再完整 parse 一次才寫檔。
 
-**呼叫範圍確認（安全邊界的關鍵）**：`pending["models"]` 只有兩個寫入點——`upload_model_file()`（已於 [api_v2.py:389](../../../agent/api_v2.py#L389) 驗證）與 `use_model_from_job()`（[api_v2.py:445](../../../agent/api_v2.py#L445)）。後者直接讀取**另一個 job 的既有輸出檔案**（例如 `boolean.stl`）並附加進 `pending["models"]`（[api_v2.py:467-472](../../../agent/api_v2.py#L467-L472)），**從未呼叫 `_validate_stl_bytes()`**——`_save_model_to_job()` 的驗證是這條路徑落地前**唯一**一次驗證。若不分來源一律略過 `_save_model_to_job()` 的驗證，會讓 `use_model_from_job()` 引用的內容完全不受驗證，是正確性倒退而非純效能改動。
+**呼叫範圍確認（二輪調查修正——安全邊界的關鍵）**：初版調查誤判 `pending["models"]` 只有兩個寫入點；重新 `grep` 確認實際有**三個**：
 
-**修法方向**：在 `pending["models"]` 的字典項加入一個標記（例如 `"validated": True`），只在 `upload_model_file()` 與 `upload_support_file()`（已呼叫 `_validate_stl_bytes()` 之後）設置；`use_model_from_job()` 附加的項目不設置此標記（或顯式設為 `False`）。`_save_model_to_job()` 只在該標記為真時略過 `_validate_stl_bytes()`，其餘情況（標記缺失或為假）維持現行的完整驗證。
+- `upload_model_file()`（[api_v2.py:391-398](../../../agent/api_v2.py#L391-L398)）——已於 [api_v2.py:389](../../../agent/api_v2.py#L389) 呼叫 `_validate_stl_bytes()` 驗證。
+- `use_model_from_job()`（[api_v2.py:445](../../../agent/api_v2.py#L445)）——直接讀取**另一個 job 的既有輸出檔案**（例如 `boolean.stl`）並附加進 `pending["models"]`（[api_v2.py:467-475](../../../agent/api_v2.py#L467-L475)），**從未呼叫 `_validate_stl_bytes()`**。
+- `add_models_to_slice_job()`（[api_v2.py:338-360](../../../agent/api_v2.py#L338-L360)，`POST /slices/{job_id}/models`）——初版調查完全遺漏的第三個寫入點。body 是 `V2ModelsAddRequest.models: List[Dict[str, Any]]`（任意 client 提供的 JSON dict），透過 `{"id": model_id, **model}` 直接展開進 `pending["models"]`，**同樣從未呼叫 `_validate_stl_bytes()`**。經實測確認：由於 JSON 無法攜帶原始 `bytes`，這條路徑目前在任何輸入下都無法讓 `_save_model_to_job()` 走到成功分支（`stl_data` 為字串／list 時 `_validate_stl_bytes()` 內的 `trimesh.load(io.BytesIO(...))` 會拋例外並轉成 `INVALID_MODEL`；沒有 `stl_data`/`vertices` 則是 `MISSING_BODY`/`VALIDATION_ERROR`），因此不構成新的正確性風險，但**必須**被驗證邏輯涵蓋，且需要額外注意 `**model` 展開帶來的一個新攻擊面（見下方「風險」）。
 
-**風險**：任何未來新增的 `pending["models"]` 寫入點，若忘記設置驗證標記，預設值 SHALL 為「需要驗證」（即標記缺失視同未驗證），避免新寫入點意外略過驗證——這點 SHALL 反映在 task 的回歸測試中（斷言預設/缺失狀態仍會觸發驗證）。
+`use_model_from_job()` 與 `add_models_to_slice_job()` 附加的內容 SHALL 不受本項優化影響，繼續在 `_save_model_to_job()` 完整驗證一次——這是這兩種來源落地前**唯一**一次驗證，不得省略。若不分來源一律略過 `_save_model_to_job()` 的驗證，會讓這兩條路徑引用／提交的內容完全不受驗證，是正確性倒退而非純效能改動。
+
+**`pending["support_stl"]` 不在本項範圍內（二輪調查修正）**：初版調查誤將 `upload_support_file()` 視為與 `upload_model_file()` 同構的重複驗證路徑。重新 trace `execute`（[api_v2.py:504-507](../../../agent/api_v2.py#L504-L507)）落地邏輯後確認：`support_stl` 落地時是**直接 `open(...).write(support_blob)`**，完全不經過 `_save_model_to_job()`／`_validate_stl_bytes()`，upload 時的驗證（[api_v2.py:434](../../../agent/api_v2.py#L434)）本來就是唯一一次，**不存在重複驗證**。因此 D5 不需要、也沒有為 `support_stl` 加上 `validated` 標記；`upload_support_file()` 本身未被本項優化修改。
+
+**落地方式（已完成）**：在 `pending["models"]` 的字典項加入 `"validated"` 標記：
+
+- `upload_model_file()`（[api_v2.py:391-398](../../../agent/api_v2.py#L391-L398)）：已呼叫 `_validate_stl_bytes()` 之後，append 的 dict 帶 `"validated": True`。
+- `use_model_from_job()`（[api_v2.py:467-475](../../../agent/api_v2.py#L467-L475)）：append 的 dict 顯式帶 `"validated": False`（server 端全自建 dict，無 client-controlled 展開，顯式 `False` 只是清楚表達 provenance）。
+- `add_models_to_slice_job()`（[api_v2.py:350-357](../../../agent/api_v2.py#L350-L357)）：`"validated": False` 刻意放在 `{"id": model_id, **model, "validated": False}` 的**最後一個 key**——`**model` 是任意 client 提供的 dict，若把 `"validated"` 放在 `**model` 之前或省略，client 可以在自己的 request body 裡夾帶 `"validated": true` 蓋掉系統值、讓自己的內容被視為已驗證。放在展開之後可確保這個欄位永遠由伺服器端決定，client 輸入無法覆寫。
+- `_save_model_to_job()`（[api_v2.py:207-222](../../../agent/api_v2.py#L207-L222)）：`if model_data.get("validated") is not True: _validate_stl_bytes(content, "model")`——用 `is not True`（而非單純 falsy 判斷）多一層防禦，即使未來有呼叫端誤塞非布林的 truthy 值（例如字串 `"yes"`）也不會被當成已驗證略過。
+
+**風險**：
+
+- 任何未來新增的 `pending["models"]` 寫入點，若忘記設置驗證標記，預設值 SHALL 為「需要驗證」（即標記缺失視同未驗證）——已用 `model_data.get("validated") is not True` 實作此 fail-safe 語意，`agent/tests/test_save_model_to_job_validation.py::TestMissingOrFalseFlagStillValidates` 涵蓋標記缺失／顯式 `False`／非布林 truthy 值三種情況。
+- **`add_models_to_slice_job()` 的 client-controlled dict 展開是本項調查中新發現的攻擊面**：`request.models` 是未經任何 schema 限制的 `Dict[str, Any]`，若 `"validated"` 標記的 key 名稱與 dict 建構順序沒處理好，client 理論上可以自行宣稱「我的內容已驗證」而讓 `_save_model_to_job()` 略過驗證。已用「`"validated": False` 放在 `**model` 展開之後」解決，`agent/tests/test_save_model_to_job_validation.py::TestAddModelsToSliceJobCannotBypassValidation` 直接以夾帶 `"validated": true` 的惡意 request body 驗證此防禦生效（標記仍被強制為 `False`，且非法 `stl_data` 仍被 `_save_model_to_job()` 擋下為 `INVALID_MODEL`）。
+
+**實作與驗證記錄**：
+
+- **正式回歸測試**（`agent/tests/test_save_model_to_job_validation.py`，11 個測試，延續本 repo 既有慣例——直接呼叫 `api_v2` 模組層函式，不透過 `fastapi.testclient.TestClient`，因為此 venv 未安裝 `httpx`）：
+  - `TestUploadModelFileSetsValidatedFlag`：`upload_model_file()` 後 `validated is True`；以 spy 包住 `_validate_stl_bytes()` 確認 `_save_model_to_job()` 對已驗證項目完全不再呼叫它，且落地內容與原始 bytes 逐位元組相同。
+  - `TestUseModelFromJobStillValidates`：`use_model_from_job()` 附加項目 `validated` 不為 `True`；對其呼叫 `_save_model_to_job()` 確認 `_validate_stl_bytes()` 仍恰好被呼叫一次；並以損毀內容確認仍正確回傳 `INVALID_MODEL`（與本項優化前行為相同）。
+  - `TestMissingOrFalseFlagStillValidates`：標記缺失／顯式 `False`／非布林 truthy 值（`"yes"`）三種情況皆觸發完整驗證。
+  - `TestAddModelsToSliceJobCannotBypassValidation`：client 於 request body 夾帶 `"validated": true` 時，落地後的 dict 仍被強制為 `False`；即使搭配偽造的 `stl_data` 字串，`_save_model_to_job()` 仍完整驗證並拒絕（`INVALID_MODEL`）；正常（無惡意標記）情況下 `add_models_to_slice_job()` 的項目同樣完整驗證。
+- **量測（`001_p.stl`／`005_p.stl`，直接呼叫 `upload_model_file()` → `_save_model_to_job()` 的真實函式序列，繞過 HTTP／`TestClient` 層，各 5 runs）**：
+
+  | 模型 | size | before `save` avg（第二次完整 parse） | after `save` avg | 改善 | before 合計 avg | after 合計 avg | 合計改善 |
+  |---|---|---|---|---|---|---|---|
+  | `001_p.stl` | 1,606,984 bytes | 29.03 ms | 0.92 ms | −28.11 ms（約 −96.8%） | 63.73 ms | 33.19 ms | −30.54 ms（約 −47.9%） |
+  | `005_p.stl` | 8,333,684 bytes | 190.93 ms | 2.46 ms | −188.47 ms（約 −98.7%） | 379.17 ms | 207.20 ms | −171.97 ms（約 −45.4%） |
+
+  `after save avg` 剩餘的次毫秒級耗時是單純的檔案寫入（`open(...).write()`），確認第二次 `trimesh.load()` 完整 parse 已消失，而非只是變快。`upload` 側耗時（即 `_validate_stl_bytes()` 的第一次、不可省略的驗證）修改前後量級一致（`001_p.stl` 34.70ms→32.28ms；`005_p.stl` 188.24ms→204.73ms，屬同等級的機器負載雜訊，非 regression）。
+- **正確性**：`test_save_skips_second_parse_for_validated_item` 額外斷言落地檔案的 bytes 與原始上傳內容逐位元組相同，確認略過驗證不影響寫入內容本身。
+- **回歸範圍**：`pytest agent/tests/ -q --continue-on-collection-errors`：665 passed、1 failed、3 errors——與 D4 完成時的既有基準（654 passed、1 failed、3 errors）相比，新增的 665−654=11 即本項新增測試，既有的 1 failed（`test_prz_print_time.py`，斷言 11.0≠14.0）與 3 collection errors（缺少 `httpx`）數字不變，確認非本項引入。
+- **Temporary profiling**：本輪未在 production code 中加入常駐 timing log；量測改採 scratchpad 暫時性腳本（`d5_baseline_profile.py`／`d5_after_profile.py`，直接呼叫真實函式量測，未寫入 repo），量測完成後不需要從 production code 移除任何東西，因為從未寫入。
 
 ## Risks / Trade-offs
 
@@ -169,7 +204,8 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 - **[D2 mesh 物件重用引入非預期的 cache 副作用]**（已解決）`_is_u_arch_from_low_sections()` 對 mesh 呼叫 `.section()` 等方法可能填入 trimesh 內部 cache。→ trimesh 4.11.1 原始碼追蹤 + `agent/tests/test_ortho_clean_mesh_reuse.py` 的 mutation 測試確認只填入 `_cache`，不修改 `.vertices`／`.faces`／`.bounds`；`001_p.stl`／`005_p.stl` 端到端 byte-for-byte SHA-256 驗證（修改前後皆一致）與新增的 integration-style 測試確認「重用物件」與「原本兩次獨立載入」在 Step 3 對齊後的幾何一致，未觀察到 regression。
 - **[D3 Boolean 中間表示法改變後幾何非 byte 相同]（風險已成真，非僅假設）** 實作後端到端驗證，`001_p.stl`／`005_p.stl` 的 `ortho_result.stl` 確實出現 `is_watertight` 從 `True` 變 `False` 的 regression——不是「face ordering 不同」這種良性差異，而是真正的 validity 倒退。根因是 STL 格式無共享頂點索引，鏈式運算累積 3 次無中間校正後，產生任何合理 tolerance 都無法無歧義焊接的近重合頂點。→ 嘗試 6 種修法（詳見 design.md D3「調查結果」小節）皆無法在兩個代表模型上同時通過，且瑕疵發生的交接點因模型而異，判定不存在安全的部分鏈式方案。**已放棄本項優化**，Step 7～10 維持修改前的逐步 `boolean_meshes()` 呼叫；`boolean_meshes()` 現有公開簽章與行為完全未變動。
 - **[D4 誤判 target 導致跳過必要特徵]**（已解決）若 `skip_projection_shape` 被錯誤地用在非 `INTRAORAL_SCAN` 的呼叫，會讓該次分類結果錯誤退化。→ 只在 `confirm_dental_model_type()` 內部依 `target` 條件式設置，不對外暴露為 API 參數；`agent/tests/test_dental_model_type_confirm.py` 的 8-target 不變量測試（13 組合成情境 × 8 target）與真實 `Ushape1~3.stl`（`u_shape_score=1.0` 的非退化邊界案例）8-target 掃描皆確認未觀察到任何 regression。
-- **[D5 新寫入點遺漏驗證標記]** → 標記預設值為「需要驗證」（fail-safe），缺失時觸發驗證而非略過；回歸測試明確覆蓋此預設情況。
+- **[D5 新寫入點遺漏驗證標記]**（已解決）標記預設值為「需要驗證」（fail-safe，`is not True` 判斷），缺失時觸發驗證而非略過；回歸測試明確覆蓋此預設情況。
+- **[D5 `add_models_to_slice_job()` 的 client-controlled dict 展開可能覆寫驗證標記]**（已解決，二輪調查新發現）該端點的 request body 是未經 schema 限制的 `Dict[str, Any]`，若標記欄位建構順序不當，client 可自行宣稱內容已驗證。→ `"validated": False` 放在 `{**model, "validated": False}` 的展開之後，確保 client 輸入永遠無法覆寫；`agent/tests/test_save_model_to_job_validation.py::TestAddModelsToSliceJobCannotBypassValidation` 以夾帶惡意標記的 request body 實測確認防禦生效。
 - **[量測結果與各項獨立 profiling 的估計值出入]** 5 項數字分別來自不同時間點的 source investigation，尚未在同一次端到端量測中彼此對照（僅 D1 已端到端實測）。→ 各項 task 的第一步都是建立最小必要 temporary timing 並重新實測，不直接沿用舊估計值；task 完成後移除 temporary timing。
 
 ## Migration Plan
@@ -183,7 +219,7 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 | 2 | Ortho cleaned mesh 物件重用（已完成） | D2 | 單一 commit revert |
 | 3 | Boolean Step 7～10 維持 Manifold 表示法 | D3 | **not viable（已調查放棄，未落地，無需 revert）** |
 | 4 | `confirm-model-type` 略過 ProjectionShape（已完成） | D4 | 單一 commit revert |
-| 5 | Upload／save 重複驗證去重 | D5 | 單一 commit revert |
+| 5 | Upload／save 重複驗證去重（已完成） | D5 | 單一 commit revert |
 | 6 | 整合驗證與收尾 | — | — |
 | 7 | 不在本變更範圍（僅記錄） | — | — |
 

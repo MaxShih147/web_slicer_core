@@ -14,7 +14,7 @@ Agent 的 Auto Process（Ortho 自動化流程）與其周邊 API 執行在**使
 - **Ortho cleaned mesh 物件重用**：`run_ortho_pipeline()` 對同一份 `model_clean.stl` 的 U-arch 判斷與 Step 3 對齊 SHALL 只 `load_trimesh()` 一次，重用已載入的 mesh 物件，而非各自從磁碟重新讀取。
 - ~~**Boolean Step 7～10 維持 Manifold 表示法**~~ **已調查、實作、benchmark，證實 not viable，放棄。** 已實作讓 Step 7～10 中間結果在鏈式呼叫之間維持 `manifold3d.Manifold` 的版本，但端到端驗證發現會在 `001_p.stl`／`005_p.stl` 至少一個代表模型上使 `ortho_result.stl` 失去 `is_watertight`，且找不到對兩者都安全的部分鏈式組合（嘗試矩陣與根因見 `design.md` D3 小節）。Step 7～10 維持修改前的逐步 `boolean_meshes()` 呼叫，本項不帶來效能改善。
 - **`confirm-model-type(target_type=intraoral_scan)` 略過 ProjectionShape**：當呼叫端只需要確認模型是否為 `intraoral_scan` 時，特徵擷取 SHALL 略過 `projection_shape_gap_stats()` 的計算——原始碼追蹤確認 `confirm_dental_model_type()` 對此 target 的**所有**分支（P0／P_base／P2／P3／needs_drill 早退／P5）皆不讀取 `u_shape_score`（唯一消費 ProjectionShape 特徵的訊號）。`classify_dental_model()`（不知道目標類型，必須支援全部八種分類）與其餘 target 的 `confirm_dental_model_type()` 呼叫 SHALL 不受影響，繼續計算完整特徵。
-- **Upload／save 對相同 STL bytes 避免重複完整 parse**：透過 `upload_model_file()` 或 `upload_support_file()` 上傳、且已通過 `_validate_stl_bytes()` 驗證的內容，SHALL 在 `_save_model_to_job()` 落地時略過第二次完整 parse。透過 `use_model_from_job()` 引用其他 job 產出檔案（從未經過上傳驗證）的內容 SHALL 不受影響，繼續在 `_save_model_to_job()` 完整驗證一次——這是落地前**唯一**一次驗證，不得省略。
+- **Upload／save 對相同 STL bytes 避免重複完整 parse**（已完成）：透過 `upload_model_file()` 上傳、且已通過 `_validate_stl_bytes()` 驗證的內容，SHALL 在 `_save_model_to_job()` 落地時略過第二次完整 parse（以 item-level `validated` 標記表達驗證 provenance）。透過 `use_model_from_job()` 引用其他 job 產出檔案、或透過 `add_models_to_slice_job()` 提交任意 request body（兩者皆從未經過上傳時的 `_validate_stl_bytes()` 驗證）的內容 SHALL 不受影響，繼續在 `_save_model_to_job()` 完整驗證一次——這是這兩種來源落地前**唯一**一次驗證，不得省略；即使呼叫端在 `add_models_to_slice_job()` 的 request body 中夾帶 `"validated": true`，也 MUST NOT 影響此驗證（見 `design.md` D5 小節的二輪調查修正）。`upload_support_file()` 上傳的 `support_stl` 內容經二輪 source tracing 確認：`execute` 落地時直接寫檔，本來就不會再次呼叫 `_validate_stl_bytes()`，不存在重複驗證，本項優化不涉及 `support_stl`。
 
 ## Capabilities
 
@@ -33,8 +33,8 @@ Agent 的 Auto Process（Ortho 自動化流程）與其周邊 API 執行在**使
 - `agent/ortho_pipeline.py`：Hollow-fit split 呼叫（已完成）；`_is_u_arch_from_low_sections()` 與 Step 3 對齊之間的 `load_trimesh()` 重複呼叫（已完成）；Step 7～10 的 `boolean_meshes()` 呼叫鏈（已調查並放棄，見 `design.md` D3 小節與 Non-Goals）。
 - `agent/sla_operations.py`：`boolean_meshes()`（已調查並放棄鏈式介面改動，見 `design.md` D3 小節與 Non-Goals）。
 - `agent/model_classifier.py`：`extract_model_features()`、`confirm_dental_model_type()`。
-- `agent/api_v2.py`：`upload_model_file()`、`upload_support_file()`、`use_model_from_job()`、`_save_model_to_job()`、`_validate_stl_bytes()`。
-- 測試：`agent/tests/test_ortho_hollow_split_repair.py`（已存在，Hollow-fit）；其餘 4 項各自於對應 task 補齊最小必要回歸測試。
+- `agent/api_v2.py`：`upload_model_file()`、`add_models_to_slice_job()`、`use_model_from_job()`、`_save_model_to_job()`、`_validate_stl_bytes()`。`upload_support_file()` 已重新 source tracing 確認不涉及重複驗證，未修改。
+- 測試：`agent/tests/test_ortho_hollow_split_repair.py`（已存在，Hollow-fit）；`agent/tests/test_save_model_to_job_validation.py`（新增，D5）；其餘各自於對應 task 補齊最小必要回歸測試。
 - 規格：新增 `openspec/specs/auto-process-performance/spec.md`（本提案 archive 時同步）。
 
 **明確排除於本提案之外（見 `design.md` Non-Goals）：**

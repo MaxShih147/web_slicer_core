@@ -205,10 +205,21 @@ def _validate_stl_bytes(content: bytes, field: str = "model") -> None:
 
 
 def _save_model_to_job(model_data: dict, input_path) -> None:
-    """Write model bytes to *input_path*, raising INVALID_MODEL / VALIDATION_ERROR as needed."""
+    """Write model bytes to *input_path*, raising INVALID_MODEL / VALIDATION_ERROR as needed.
+
+    Skips the full trimesh.load() parse in _validate_stl_bytes() only when
+    model_data["validated"] is exactly True — set solely by upload_model_file()
+    right after that same content already passed _validate_stl_bytes() once.
+    Any other source (use_model_from_job() reading another job's output,
+    add_models_to_slice_job() accepting arbitrary request bodies, or a future
+    write point that forgets to set the flag) defaults to "needs validation"
+    (missing key, False, or any non-True value) and gets the full parse here —
+    this is the only validation these sources ever receive before landing on disk.
+    """
     if "stl_data" in model_data:
         content = model_data["stl_data"]
-        _validate_stl_bytes(content, "model")
+        if model_data.get("validated") is not True:
+            _validate_stl_bytes(content, "model")
         with open(input_path, "wb") as f:
             f.write(content)
     elif "vertices" in model_data:
@@ -350,7 +361,10 @@ async def add_models_to_slice_job(job_id: str, request: V2ModelsAddRequest):
     model_ids = []
     for i, model in enumerate(request.models):
         model_id = f"model_{i}_{len(pending['models'])}"
-        pending["models"].append({"id": model_id, **model})
+        # "validated" is placed after **model so a client-supplied "validated"
+        # key in the request body can never mark this item as pre-validated
+        # (see design.md D5: this path's content is never _validate_stl_bytes()'d).
+        pending["models"].append({"id": model_id, **model, "validated": False})
         model_ids.append(model_id)
 
     return V2Response(
@@ -394,6 +408,7 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
         "filename": file.filename,
         "stl_data": content,
         "type": "file_upload",
+        "validated": True,
     })
 
     return V2Response(
@@ -469,6 +484,9 @@ async def use_model_from_job(job_id: str, source_job_id: str, source_file: str =
         "filename": "model.stl",
         "stl_data": content,
         "type": "server_reference",
+        # Never pre-validated: this content comes from another job's output
+        # file, not from a request that went through _validate_stl_bytes().
+        "validated": False,
     })
 
     return V2Response(
