@@ -38,18 +38,20 @@
 - [x] 2.9 **收尾**：移除本群組的 temporary timing log；`pytest agent/tests/` 全數通過（既有失敗項目除外，見群組 6）——`# TEMP CLEAN_MESH_REUSE_PROFILE`／`[CLEAN_MESH_REUSE_PROFILE]`／`shared_load_ms` 已全數移除（`grep` 確認無殘留）；本輪新增的 `import time` 亦已移除（確認全檔無其他用途後一併移除）；`pytest agent/tests/ -q --continue-on-collection-errors` 結果 626 passed、7 failed、3 collection errors，與移除前（未計入本群組新測試）的既有基準（619 passed、7 failed、3 collection errors）相比，failed／collection error 數量完全一致，新增的 626−619=7 皆為本群組新增測試，未觀察到新的 regression
 - [x] 2.10 補最小必要回歸測試（新增或併入 `agent/tests/`），至少涵蓋 2.5／2.6 的兩個驗證情境——新增 `agent/tests/test_ortho_clean_mesh_reuse.py`，共 7 個測試：reload 確定性（2.5）、U-arch 判斷 read-only（U-arch／非 U-arch 兩情境，2.6）、U-arch/非 U-arch 判定結果 pin、`run_ortho_pipeline()` 上 U-arch=True 提前結束路徑的 integration-style pin（2.6）、以及原始碼層級 pin（`load_trimesh(input_path)` 全檔僅 1 處、`_is_u_arch_from_low_sections` 簽章與呼叫點）
 
-## 3. Boolean Step 7～10 維持 Manifold representation
+## 3. Boolean Step 7～10 維持 Manifold representation（已調查、實作、benchmark，證實 not viable，已放棄）
 
-- [ ] 3.1 於 [sla_operations.py:770](../../agent/sla_operations.py#L770) 的 `boolean_meshes()` 新增內部介面，允許：(a) 輸入運算元可為已是 `manifold3d.Manifold` 的物件，不強制先轉成 `trimesh.Trimesh` 再轉回去；(b) 保留一個選項讓呼叫端取得 `manifold3d.Manifold` 結果而非 `trimesh.Trimesh`。既有公開呼叫方式（純 `Trimesh` in/out）SHALL 維持預設行為不變
-- [ ] 3.2 於 `run_ortho_pipeline()` 的 Step 7～10（[ortho_pipeline.py:1120](../../agent/ortho_pipeline.py#L1120)、[:1130](../../agent/ortho_pipeline.py#L1130)、[:1137](../../agent/ortho_pipeline.py#L1137)、[:1145](../../agent/ortho_pipeline.py#L1145)）改用 3.1 的介面，讓 `step7_mesh`／`step8_mesh`／`step9_mesh` 在鏈式交接時維持 `Manifold`；非鏈式運算元（`hex_mesh`、`drain_mesh`、`flipped_hollow`、`side_wall_mesh`、`input_mesh`）與 Step 10 最終輸出維持 `Trimesh` 邊界
-- [ ] 3.3 加入本群組專用 timing log，分別量測「每步皆物化為 Trimesh」與「鏈式維持 Manifold」兩種路徑下 Step 7～10 各自與合計的耗時
-- [ ] 3.4 **驗證**：以同一份 hex grid、drain holes、hollow、side wall drains 與 input model，分別在兩種路徑下執行，`ortho_result.stl` 的體積（volume）在容許誤差內相等
-- [ ] 3.5 **驗證**：兩次 `ortho_result.stl` 的 `is_watertight` 狀態相等
-- [ ] 3.6 **驗證**：確認非鏈式呼叫（例如既有的獨立 Boolean API 端點）呼叫 `boolean_meshes()` 的輸入輸出型別與行為與本群組改動前完全相同
-- [ ] 3.7 **驗證**：以 `001_p.stl`、`005_p.stl` 端到端執行完整 Auto Process，確認 Step 7～10 不拋例外、`ortho_result.stl` 正常匯出
-- [ ] 3.8 **量測**：確認 Boolean Step 7～10 合計耗時較舊估計（約 1.31 秒中間轉換成本）確實下降，記入下方「量測記錄」
-- [ ] 3.9 **收尾**：移除本群組的 temporary timing log
-- [ ] 3.10 補最小必要回歸測試，至少涵蓋 3.4／3.5／3.6 的驗證情境
+> **狀態總結**：3.1～3.9 皆已實際執行過一輪（含實作、timing、端到端 benchmark），但 3.5（`is_watertight` 驗證）未通過——`001_p.stl`／`005_p.stl` 兩個代表模型上，鏈式維持 `Manifold` 的實作在其中至少一個模型上總是產生 `is_watertight=False` 的 regression，且找不到對兩者都安全的部分鏈式組合（詳見 [design.md](design.md) D3 小節「調查結果」的 6 種嘗試與其結果表）。因此判定本群組 **not viable**，已用 `git checkout` 還原 `agent/ortho_pipeline.py`／`agent/sla_operations.py` 至群組 2 完成時的狀態（Step 7～10 回到逐步 `boolean_meshes()` 呼叫），並移除本群組新增的 `[BOOLEAN_MANIFOLD_PROFILE]` temporary timing 與回歸測試檔案。checkbox 維持未勾選，因為最終沒有任何程式碼異動留在 `dev` 分支上；下方逐項記錄仍保留過程供未來參考。
+
+- [ ] 3.1 於 `boolean_meshes()` 旁新增內部介面（`_boolean_meshes_chain()`／`_boolean_materialize_chain_result()`／`_boolean_ensure_trimesh()`），允許鏈式交接維持 `Manifold`——**已實作並驗證公開簽章不受影響**，但整體方向隨 3.5 失敗而還原，不保留在程式碼中
+- [ ] 3.2 於 `run_ortho_pipeline()` 的 Step 7～10 改用 3.1 的介面——**已實作並跑過完整 Auto Process**，隨 3.5 失敗還原
+- [ ] 3.3 加入本群組專用 timing log（`[BOOLEAN_MANIFOLD_PROFILE]`）——**已加入並用於 before／after 量測**，收尾時隨程式碼一併還原移除（見下方「量測記錄」）
+- [ ] 3.4 **驗證**：volume 在容許誤差內相等——**通過**（兩模型鏈式與非鏈式路徑 volume 完全一致，見量測記錄）
+- [ ] 3.5 **驗證**：`is_watertight` 狀態相等——**未通過，本群組失敗的關鍵驗證**。`001_p.stl` 在「只物化 Step 9→10 或只物化 Step 8→9」時可通過，但 `005_p.stl` 在同樣條件下仍為 `False`，唯一能讓兩者都通過的组合是「三個交接全部物化」（＝無優化）。詳細嘗試矩陣見 design.md
+- [ ] 3.6 **驗證**：非鏈式呼叫不受影響——**確認為真，但基礎前提有修正**：source tracing 發現 `boolean_meshes()` 目前**只有** Step 7～10 這 4 個呼叫點，獨立 Boolean API 端點實際呼叫的是另一條路徑（`perform_boolean()` → `boolean_operation()`，路徑版，完全不同函式），因此「非鏈式呼叫」目前是假設情境而非現存風險；`boolean_meshes()` 公開簽章與行為本身確認未被本群組改動觸及
+- [ ] 3.7 **驗證**：Step 7～10 不拋例外、`ortho_result.stl` 正常匯出——**通過**（兩模型 3 runs 皆 `status=completed`、檔案皆正常匯出），但正常匯出不代表幾何有效，3.5 才是真正擋下本群組的驗證
+- [ ] 3.8 **量測**：確認耗時下降——**確認下降**（Step 7～10 合計耗時，chain 版本 3-run 平均較 baseline 少約 30～45%，見量測記錄），但因 3.5 未通過，此效能改善不能兌現
+- [ ] 3.9 **收尾**：移除 temporary timing log——**已完成**（隨整組程式碼 `git checkout` 一併移除，非單獨移除 log）
+- [ ] 3.10 補最小必要回歸測試——**已寫（`agent/tests/test_boolean_meshes_chain.py`，9 個測試，涵蓋 3.4／3.5／3.6）**，隨程式碼還原一併刪除（測試的是不會落地的函式，保留無意義）
 
 ## 4. `confirm-model-type(target_type=intraoral_scan)` 略過 ProjectionShape
 
@@ -158,6 +160,39 @@
 - U-arch=True 的提前結束路徑（`_complete_as_no_hollow`）與重用前行為完全一致：只 load 一次、不觸發 Step 1、`status.json`／`ortho_result.stl` 正常產出
 - `pytest agent/tests/ -q --continue-on-collection-errors`：626 passed、7 failed、3 collection errors，與既有基準（619 passed、7 failed、3 collection errors）相比，failed／collection error 數量不變，新增的 7 個 passed 即本群組新增的回歸測試
 
-### 群組 3～5
+### 群組 3（Boolean Step 7～10 Manifold representation，已調查放棄）
+
+**Before baseline**（`001_p.stl`／`005_p.stl` 各 3 runs，`dev` 修改前）：
+
+| 模型 | Step7-10 合計 avg | 可避免 conversion 合計 avg | 佔比 |
+| --- | --- | --- | --- |
+| `001_p.stl` | 1065.3 ms | 488.4 ms | ~45.8% |
+| `005_p.stl` | 1048.5 ms | 417.9 ms | ~39.9% |
+
+功能 baseline：兩模型 3 runs 皆 `status=completed`、`is_watertight=True`；`001_p.stl` face=205904／vertices=102928／volume=35749.34870896107；`005_p.stl` face=311056／vertices=155506／volume=29274.965437936（同一模型跨 3 runs 完全一致）。
+
+**After（鏈式維持 Manifold 的實作，最終判定失敗，未採用）**：
+
+Step7-10 合計耗時確實下降（3-run 平均約 617～786 ms，視系統負載波動；早期低負載量測顯示較 baseline 下降約 30～45%），但功能驗證未通過：
+
+| 模型 | `is_watertight`（鏈式，僅 Step10 前物化一次） | volume |
+| --- | --- | --- |
+| `001_p.stl` | `False`（3/3 runs） | N/A |
+| `005_p.stl` | `False`（3/3 runs） | N/A |
+
+嘗試以「只物化特定一個交接」修復（見下表，`001_p.stl`／`005_p.stl` 端到端各測一次）：
+
+| 修法 | `001_p.stl` | `005_p.stl` |
+| --- | --- | --- |
+| 全程鏈式（不物化中間交接） | `False` | `False` |
+| 只物化 Step 9→10 | `True`（volume 與 baseline 一致） | `False` |
+| 只物化 Step 8→9 | `True` | `False` |
+| 同時物化 Step 8→9 與 9→10 | — | `False` |
+| 每交接改用 `Manifold.set_tolerance()`（1e-4／1e-3／1e-2 mm） | `False`（三值皆同） | `False`（三值皆同） |
+| 三個交接全部物化（＝回復原行為） | `True` | `True` |
+
+**結論**：找不到對兩個代表模型都安全的部分鏈式組合；唯一可靠方案是完全放棄鏈式優化。詳細根因分析見 [design.md](design.md) D3 小節。本群組最終**未帶來任何效能改善**，`agent/ortho_pipeline.py`／`agent/sla_operations.py` 已 `git checkout` 還原至群組 2 完成時的狀態，本群組新增的回歸測試檔案（`agent/tests/test_boolean_meshes_chain.py`）已移除。
+
+### 群組 4～5
 
 （實作後依各自 task 的「量測」項回填。目前尚未開始。）

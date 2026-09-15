@@ -8,12 +8,13 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 
 **Goals:**
 
-- 移除 5 項已確認根因、已有明確修法方向的重複運算，且不改變任何既有功能、API 契約或使用者可觀察到的輸出。
+- 移除已確認根因、已有明確修法方向的重複運算，且不改變任何既有功能、API 契約或使用者可觀察到的輸出。原始範圍列出 5 項；其中 D3（Boolean Step 7～10 維持 Manifold 表示法）實作並端到端驗證後證實無法在不違反 validity 驗收線的前提下達成，已放棄——詳見下方 D3 小節與 Non-Goals。
 - 為每項純效能改動建立各自適用的可驗證驗收線，避免「看起來一樣」式的驗收。
 - 延續 Hollow-fit 已建立的「最小 temporary timing → 實測 → 記錄 → 移除」量測模式，不建立新的永久 profiling framework。
 
 **Non-Goals:**
 
+- **不處理 Boolean Step 7～10 維持 Manifold 表示法（D3，已調查並放棄）。** 已完整實作、benchmark、除錯，證實鏈式維持 `manifold3d.Manifold` 會在 `001_p.stl`／`005_p.stl` 上產生 `is_watertight` regression，且沒有找到對兩個代表模型都安全的部分鏈式方案——詳見 D3 小節「調查結果」。Step 7～10 維持修改前的逐步 `boolean_meshes()` 呼叫，不帶來效能改善。
 - **不處理 Hex Grid raycast backend。** 瓶頸已 100% 定位在 raycast（99.7% 時間），但替代 backend 尚未 prototype——不知道要換成什麼，無法寫成可驗收的 task。
 - **不處理 Side-wall drains 幾何搜尋。** bottleneck 已確認，但具體演算法方案尚未決定。
 - **不處理 Surgical Guide `_grow_patches` 等。** profiling 已完成，但範圍本身尚未界定（可能拆成多個子優化），且屬於 `agent/auto_orient_surg_guide.py`——與 Ortho hollow／hex／boolean pipeline 不同的功能模組，即使範圍界定清楚，也應評估是否該獨立成另一個變更。
@@ -57,7 +58,9 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 - **SHA-256 byte-for-byte 驗證**：兩模型修改前／修改後各 3 runs 的 `ortho_result.stl` SHA-256 皆逐位元組相同（`001_p.stl`：`BB150F743F6370AE01E8E5577E1110902074C3D68CB24AF93F579F24473E0912`；`005_p.stl`：`2E06094A2F19DBD8004D573C71B4F93FDAC0B82897D86AF09575AC64AF3BD2F7`），Task 2.7 的 byte-for-byte 驗收線通過。
 - **Temporary profiling**：`[CLEAN_MESH_REUSE_PROFILE]` 系列 timing log（`u_arch_load_ms`／`step3_load_ms`／`reload_total_ms`，實作後改為單一 `shared_load_ms`）與本群組專用加入的 `import time` 已依既定流程移除；正式程式碼只保留單次 `load_trimesh()` 呼叫本身與必要註解。
 
-### D3：Boolean Step 7～10 維持 Manifold 表示法
+### D3：Boolean Step 7～10 維持 Manifold 表示法（已調查，證實 not viable，放棄）
+
+> **結論（2026-09-15 二輪調查後）**：本項已實作、benchmark、除錯過，最終確認**無法在不違反 validity 驗收線的前提下取得效能改善**，予以放棄。Step 7～10 維持現行「每步皆物化為 Trimesh」的實作，本節其餘內容保留作為調查記錄；`tasks.md` 群組 3 與下方「調查結果」小節記載完整根因與嘗試過的修法。
 
 **根因**：`boolean_meshes()`（[sla_operations.py:770](../../../agent/sla_operations.py#L770)）的簽章是 `(trimesh.Trimesh, trimesh.Trimesh) -> trimesh.Trimesh`：內部把兩個運算元各自轉成 `manifold3d.Manifold`（`trimesh_to_manifold()`，[sla_operations.py:787](../../../agent/sla_operations.py#L787)）、執行布林運算、再把結果轉回 `trimesh.Trimesh`（`manifold_to_trimesh()`，[sla_operations.py:793](../../../agent/sla_operations.py#L793)，內含 `process=True` 的頂點合併）。
 
@@ -66,6 +69,33 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 **修法方向**：新增一個內部變體（或為 `boolean_meshes()` 加一個保留預設值的參數，例如 `return_manifold: bool = False` 與允許輸入已是 `Manifold` 的運算元），讓 Step 7→8→9→10 之間傳遞 `manifold3d.Manifold` 而不強制每次都物化成 `Trimesh`。**只有非鏈式的運算元**（`hex_mesh`、`drain_mesh`、`flipped_hollow`、`side_wall_mesh`、`input_mesh`）與**最終輸出**（Step 10 的 `result_mesh`，需要 `.export()`）需要走 `Trimesh` 邊界。`boolean_meshes()` 現有的公開簽章（純 `Trimesh` in/out）SHALL 保留，供其他呼叫端（例如獨立的 Boolean API 端點）不受影響地繼續使用。
 
 **風險**：`manifold3d.Manifold` 物件沒有 `trimesh.Trimesh` 的全部方法；需確認 Step 8 的 `flipped_hollow = hollow_mesh.copy(); flip_mesh_faces(flipped_hollow)` 是否也適合改在 Manifold 層級完成，或維持在 Trimesh 層級（`flipped_hollow` 不是鏈式運算元，此項非必要）。第一版 SHALL 只處理鏈式交接，不擴大範圍去重寫 `flip_mesh_faces`。
+
+**調查結果（實作後發現的根因，判定 not viable）**：
+
+依上述修法方向實作後（`_boolean_meshes_chain()` 讓 Step 7～10 鏈式交接維持 `manifold3d.Manifold`，只在最終 Step 10 物化為 `Trimesh`），以 `001_p.stl`／`005_p.stl` 端到端驗證時發現**兩模型的 `ortho_result.stl` 皆不再 `is_watertight`**——直接違反本能力 spec 的「`is_watertight` 狀態 SHALL 相等」驗收線。
+
+根因追蹤：
+
+- `manifold3d.Manifold` 的鏈式運算結果在記憶體中**本身是合法、watertight 的 2-manifold**——以 `status()`（`Error.NoError`）、`genus()`（有限值）與直接對 `to_mesh()` 原始輸出（不經 trimesh 二次處理）建構 `Trimesh(process=False)` 三種方式交叉驗證皆確認為 `is_watertight=True`。
+- 問題出在 **STL 格式本身沒有共享頂點索引的概念**——`.export()` 會把每個三角形攤平成 3 個獨立座標點。任何下游消費者（切層軟體、本 benchmark 重新載入驗證、甚至本 pipeline 自己）都必須從原始座標重新用容忍值（tolerance）判斷哪些點該視為同一頂點才能重建拓撲。
+- 連續 3 次鏈式布林運算、中間完全不經過 trimesh 的 `merge_vertices()` 重新校正（re-snap）之後，會出現少量頂點彼此距離極近但不完全重合、精度落在「任何合理 tolerance 都無法無歧義判斷」的區間——即使 `.export()` 前的記憶體物件是正確的，`.export()` 後任何重新載入＋合併頂點的動作，都可能把這些點錯誤地焊接／未焊接，產生 non-manifold 的接縫。
+- 這個現象**與具體模型幾何相關**，不是單純的浮點精度問題（`manifold3d.Manifold.set_tolerance()`——在不物化的前提下對鏈式結果做 tolerance-based 重新簡化——測試 `1e-4`／`1e-3`／`1e-2` mm 三種值皆無效，face count 幾乎不變，代表問題並非「可合併但未合併」的簡單容忍值調整能解決的浮點雜訊，更像是幾何本身在特定交界處產生了真正的退化／相切結構）。
+
+**嘗試過的修法與結果**（`001_p.stl`／`005_p.stl` 各自端到端驗證，`✓`＝通過 `is_watertight` 驗收，`✗`＝未通過）：
+
+| 修法 | `001_p.stl` | `005_p.stl` |
+| --- | --- | --- |
+| 全程鏈式，僅 Step 10 前物化一次（原始修法方向） | ✗ | ✗ |
+| 物化前先把座標 snap 到固定精度網格（1e-5 mm）再合併 | ✗ | 未再測試（已由下一項證明無單一固定 handoff 可行） |
+| 只在 Step 9→10 交接處物化一次 | ✓ | ✗ |
+| 只在 Step 8→9 交接處物化一次 | ✓ | ✗ |
+| 同時在 Step 8→9 與 Step 9→10 交接處物化 | （未測試，因 9→10 單獨已足夠） | ✗ |
+| 每個鏈式交接皆呼叫 `Manifold.set_tolerance()`（不物化，改用 manifold3d 原生重新簡化） | ✗（測試 3 種 tolerance 值） | ✗（測試 3 種 tolerance 值） |
+| 三個交接（7→8、8→9、9→10）全部物化（＝回復原本逐步 materialize 行為） | ✓ | ✓ |
+
+**結論**：能同時讓兩個代表模型過關的組合，只有「三個交接全部物化」——也就是完全回到修改前的逐步 materialize 行為，不帶來任何效能改善。哪個交接會產生瑕疵是**模型幾何相關**（不同模型在不同步驟出現問題），因此**不存在一個對任意未來模型都安全的固定部分鏈式組合**；任何比「全部物化」更激進的鏈式簡化，都有為未知的第三個模型引入無聲 `is_watertight` regression 的風險，且該 regression 不會在型別檢查或例外拋出中顯現——只會在下游（切層、列印前檢查）才被發現。
+
+**決策**：本項優化在不違反 validity 驗收線的前提下無法帶來效能改善，**放棄**。已實作的 `_boolean_meshes_chain()`／`_boolean_ensure_trimesh()`／`_boolean_materialize_chain_result()` 與相關 `[BOOLEAN_MANIFOLD_PROFILE]` temporary timing 已還原（`git checkout`），Step 7～10 維持修改前的逐步 `boolean_meshes()` 呼叫。若未來要重新挑戰這個方向，建議的下一步不是繼續嘗試「該在哪個交接物化」，而是先搞清楚 manifold3d 鏈式布林運算在什麼幾何條件下會產生這種近重合但不精確重合的頂點（可能需要 manifold3d 專案本身的協助或原始碼層級除錯），否則任何經驗性選擇的部分鏈式方案都只是恰好在目前兩個測試模型上運氣好。
 
 ### D4：`confirm-model-type(target_type=intraoral_scan)` 略過 ProjectionShape
 
@@ -95,7 +125,7 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 
 - **[D1 面數門檻邊界情況未被端到端案例覆蓋]** 理論風險窄縮在單一 component 面數恰好落在 98～99 且有小洞的邊界；目前的實測案例未剛好命中此邊界。→ 已用真實 hollow mesh 驗證 face count／vertices／significant components 完全一致；若未來观察到判定差異，回滾為單一 commit revert（見 Migration Plan）。
 - **[D2 mesh 物件重用引入非預期的 cache 副作用]**（已解決）`_is_u_arch_from_low_sections()` 對 mesh 呼叫 `.section()` 等方法可能填入 trimesh 內部 cache。→ trimesh 4.11.1 原始碼追蹤 + `agent/tests/test_ortho_clean_mesh_reuse.py` 的 mutation 測試確認只填入 `_cache`，不修改 `.vertices`／`.faces`／`.bounds`；`001_p.stl`／`005_p.stl` 端到端 byte-for-byte SHA-256 驗證（修改前後皆一致）與新增的 integration-style 測試確認「重用物件」與「原本兩次獨立載入」在 Step 3 對齊後的幾何一致，未觀察到 regression。
-- **[D3 Boolean 中間表示法改變後幾何非 byte 相同]** Manifold 內部三角化與 Trimesh `process=True` 的頂點合併演算法不同，鏈式改動後的中間結果 face ordering／triangle 數可能與改動前不同。→ 驗收線明確定義為「幾何與 validity semantics 等價」（體積、`is_watertight`、bounds、boolean 結果的實際佔據空間），不要求 byte-for-byte 相同；`boolean_meshes()` 現有公開簽章不變，其他呼叫端不受影響。
+- **[D3 Boolean 中間表示法改變後幾何非 byte 相同]（風險已成真，非僅假設）** 實作後端到端驗證，`001_p.stl`／`005_p.stl` 的 `ortho_result.stl` 確實出現 `is_watertight` 從 `True` 變 `False` 的 regression——不是「face ordering 不同」這種良性差異，而是真正的 validity 倒退。根因是 STL 格式無共享頂點索引，鏈式運算累積 3 次無中間校正後，產生任何合理 tolerance 都無法無歧義焊接的近重合頂點。→ 嘗試 6 種修法（詳見 design.md D3「調查結果」小節）皆無法在兩個代表模型上同時通過，且瑕疵發生的交接點因模型而異，判定不存在安全的部分鏈式方案。**已放棄本項優化**，Step 7～10 維持修改前的逐步 `boolean_meshes()` 呼叫；`boolean_meshes()` 現有公開簽章與行為完全未變動。
 - **[D4 誤判 target 導致跳過必要特徵]** 若 `skip_projection_shape` 被錯誤地用在非 `INTRAORAL_SCAN` 的呼叫，會讓該次分類結果錯誤退化。→ 只在 `confirm_dental_model_type()` 內部依 `target` 條件式設置，不對外暴露為 API 參數；回歸測試直接斷言既有 spec 的「與完整分類的一致性」不變量對全部八種 target 仍成立。
 - **[D5 新寫入點遺漏驗證標記]** → 標記預設值為「需要驗證」（fail-safe），缺失時觸發驗證而非略過；回歸測試明確覆蓋此預設情況。
 - **[量測結果與各項獨立 profiling 的估計值出入]** 5 項數字分別來自不同時間點的 source investigation，尚未在同一次端到端量測中彼此對照（僅 D1 已端到端實測）。→ 各項 task 的第一步都是建立最小必要 temporary timing 並重新實測，不直接沿用舊估計值；task 完成後移除 temporary timing。
@@ -109,7 +139,7 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 | 0 | 共用基準模型與量測慣例（不引入永久 framework） | — | — |
 | 1 | Hollow-fit split `repair=False`（已完成，待補：移除殘留的 temporary log） | D1 | 單一 commit revert |
 | 2 | Ortho cleaned mesh 物件重用（已完成） | D2 | 單一 commit revert |
-| 3 | Boolean Step 7～10 維持 Manifold 表示法 | D3 | 單一 commit revert |
+| 3 | Boolean Step 7～10 維持 Manifold 表示法 | D3 | **not viable（已調查放棄，未落地，無需 revert）** |
 | 4 | `confirm-model-type` 略過 ProjectionShape | D4 | 單一 commit revert |
 | 5 | Upload／save 重複驗證去重 | D5 | 單一 commit revert |
 | 6 | 整合驗證與收尾 | — | — |
@@ -120,5 +150,5 @@ Auto Process（`run_ortho_pipeline()`，[agent/ortho_pipeline.py](../../../agent
 ## Open Questions
 
 - ~~**D1 的 temporary log 是否已清除？**~~ **已解決。** `[HOLLOW_FIT_PROFILE]` 相關的 `# TEMP HOLLOW_FIT_PROFILE` 標記程式碼（`import time`、三處 `logger.info(...)` 與其計時變數）已全數移除；`grep -rn "TEMP HOLLOW_FIT_PROFILE\|\[HOLLOW_FIT_PROFILE\]" agent/ortho_pipeline.py` 確認無殘留。正式程式碼只保留 `hollow_mesh.split(only_watertight=False, repair=False)` 與說明安全性理由的註解。tasks.md 的 1.9／1.10 已標記完成。
-- **D3 的 `flip_mesh_faces` 是否值得下放到 Manifold 層級？** 第一版故意不處理（`flipped_hollow` 不是鏈式運算元，收益有限）；若後續量測顯示這一步仍有可觀成本，可另開子項評估。
+- ~~**D3 的 `flip_mesh_faces` 是否值得下放到 Manifold 層級？**~~ **已失去意義。** D3 本身已判定 not viable 並放棄，鏈式交接不再存在，此問題不再適用。
 - **Prusa Hollow／Support C++ 何時具備併入條件？** 待兩項各自完成 C++ 內部分段 profiling、定位出具體修法後，再判斷是續開新變更或併入本提案的後續版本。

@@ -12,7 +12,7 @@ Agent 的 Auto Process（Ortho 自動化流程）與其周邊 API 執行在**使
 
 - **Hollow-fit component split 改用 `repair=False`**（已完成）：`hollow_mesh.split(only_watertight=False, repair=False)` 取代預設 `repair=True`，省去 trimesh 對每個 component 執行的 `fill_holes()`。Significant-component 篩選與後續幾何判定 SHALL 與修改前完全一致。
 - **Ortho cleaned mesh 物件重用**：`run_ortho_pipeline()` 對同一份 `model_clean.stl` 的 U-arch 判斷與 Step 3 對齊 SHALL 只 `load_trimesh()` 一次，重用已載入的 mesh 物件，而非各自從磁碟重新讀取。
-- **Boolean Step 7～10 維持 Manifold 表示法**：Step 7、8、9、10 之間傳遞的中間結果（`step7_mesh`、`step8_mesh`、`step9_mesh`）SHALL 在鏈式呼叫之間維持 `manifold3d.Manifold` 表示，只在鏈的起點（非鏈式產生的運算元）與終點（最終匯出）轉換為 `trimesh.Trimesh`，省去每個 Boolean 步驟之間不必要的 `Manifold → Trimesh → Manifold` 往返。
+- ~~**Boolean Step 7～10 維持 Manifold 表示法**~~ **已調查、實作、benchmark，證實 not viable，放棄。** 已實作讓 Step 7～10 中間結果在鏈式呼叫之間維持 `manifold3d.Manifold` 的版本，但端到端驗證發現會在 `001_p.stl`／`005_p.stl` 至少一個代表模型上使 `ortho_result.stl` 失去 `is_watertight`，且找不到對兩者都安全的部分鏈式組合（嘗試矩陣與根因見 `design.md` D3 小節）。Step 7～10 維持修改前的逐步 `boolean_meshes()` 呼叫，本項不帶來效能改善。
 - **`confirm-model-type(target_type=intraoral_scan)` 略過 ProjectionShape**：當呼叫端只需要確認模型是否為 `intraoral_scan` 時，特徵擷取 SHALL 略過 `projection_shape_gap_stats()` 的計算——原始碼追蹤確認 `confirm_dental_model_type()` 對此 target 的**所有**分支（P0／P_base／P2／P3／needs_drill 早退／P5）皆不讀取 `u_shape_score`（唯一消費 ProjectionShape 特徵的訊號）。`classify_dental_model()`（不知道目標類型，必須支援全部八種分類）與其餘 target 的 `confirm_dental_model_type()` 呼叫 SHALL 不受影響，繼續計算完整特徵。
 - **Upload／save 對相同 STL bytes 避免重複完整 parse**：透過 `upload_model_file()` 或 `upload_support_file()` 上傳、且已通過 `_validate_stl_bytes()` 驗證的內容，SHALL 在 `_save_model_to_job()` 落地時略過第二次完整 parse。透過 `use_model_from_job()` 引用其他 job 產出檔案（從未經過上傳驗證）的內容 SHALL 不受影響，繼續在 `_save_model_to_job()` 完整驗證一次——這是落地前**唯一**一次驗證，不得省略。
 
@@ -20,7 +20,7 @@ Agent 的 Auto Process（Ortho 自動化流程）與其周邊 API 執行在**使
 
 ### New Capabilities
 
-- `auto-process-performance`：定義「純效能改動不得改變可觀察行為與幾何語意」的共通契約，以及本提案 5 項改動各自的具體驗收線（regression gate）。與 `sla-raster-performance` 先例的差異：Boolean 表示法改變後，幾何等價的結果可能有不同 triangle／face ordering，因此驗收線 SHALL 以「可觀察行為與幾何語意等價」表達，而非要求輸出檔案 byte-for-byte 相同；各項改動自行定義該項適用的等價判準（fit 判定一致／幾何等價／Boolean 結果的幾何與 validity semantics 等價／model-type 確認結果一致／原本的接受或拒絕行為一致）。
+- `auto-process-performance`：定義「純效能改動不得改變可觀察行為與幾何語意」的共通契約，以及本提案各項改動各自的具體驗收線（regression gate）。原始範圍列出 5 項，其中 Boolean Step 7～10 維持 Manifold 表示法（D3）已調查並證實 not viable，放棄——詳見 `design.md`。與 `sla-raster-performance` 先例的差異：Boolean 表示法改變後，幾何等價的結果可能有不同 triangle／face ordering，因此驗收線 SHALL 以「可觀察行為與幾何語意等價」表達，而非要求輸出檔案 byte-for-byte 相同；各項改動自行定義該項適用的等價判準（fit 判定一致／幾何等價／Boolean 結果的幾何與 validity semantics 等價／model-type 確認結果一致／原本的接受或拒絕行為一致）。
 
 ### Modified Capabilities
 
@@ -30,8 +30,8 @@ Agent 的 Auto Process（Ortho 自動化流程）與其周邊 API 執行在**使
 
 **本 repo（web_slicer_core），僅 `agent/` Python 端，不觸及 `third_party/prusaslicer_fork`：**
 
-- `agent/ortho_pipeline.py`：Hollow-fit split 呼叫（已完成）；`_is_u_arch_from_low_sections()` 與 Step 3 對齊之間的 `load_trimesh()` 重複呼叫；Step 7～10 的 `boolean_meshes()` 呼叫鏈。
-- `agent/sla_operations.py`：`boolean_meshes()`——新增／調整內部介面以支援鏈式呼叫間傳遞 `manifold3d.Manifold` 而不強制每次都回傳 `trimesh.Trimesh`。
+- `agent/ortho_pipeline.py`：Hollow-fit split 呼叫（已完成）；`_is_u_arch_from_low_sections()` 與 Step 3 對齊之間的 `load_trimesh()` 重複呼叫（已完成）；Step 7～10 的 `boolean_meshes()` 呼叫鏈（已調查並放棄，見 `design.md` D3 小節與 Non-Goals）。
+- `agent/sla_operations.py`：`boolean_meshes()`（已調查並放棄鏈式介面改動，見 `design.md` D3 小節與 Non-Goals）。
 - `agent/model_classifier.py`：`extract_model_features()`、`confirm_dental_model_type()`。
 - `agent/api_v2.py`：`upload_model_file()`、`upload_support_file()`、`use_model_from_job()`、`_save_model_to_job()`、`_validate_stl_bytes()`。
 - 測試：`agent/tests/test_ortho_hollow_split_repair.py`（已存在，Hollow-fit）；其餘 4 項各自於對應 task 補齊最小必要回歸測試。

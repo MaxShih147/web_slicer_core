@@ -36,20 +36,7 @@
 - **THEN** Step 3 對齊使用的 `input_mesh` 在兩種方式下的 `.vertices`、`.faces`、`.bounds` SHALL 相等
 - **AND** U-arch 判斷結果（是否提前以 `_complete_as_no_hollow` 結束 pipeline）SHALL 相等
 
-### Requirement: Boolean Step 7～10 的中間表示法改變不得改變 Boolean 結果的幾何與 validity semantics
-
-`run_ortho_pipeline()` Step 7～10 之間，Boolean 中間結果改以 `manifold3d.Manifold` 表示（不強制每步都物化為 `trimesh.Trimesh`）SHALL 不改變最終 `ortho_result.stl` 的幾何語意：所佔據的體積、`is_watertight` 狀態，以及作為後續操作（`.export()`）輸入時的有效性 SHALL 與改動前每步皆轉換為 `Trimesh` 時等價。中間結果的具體 triangle／vertex 排列 MAY 不同，MUST NOT 以此作為缺陷判定依據。
-
-`boolean_meshes()` 現有的公開簽章（`trimesh.Trimesh` 輸入、`trimesh.Trimesh` 輸出）SHALL 保留，本能力涵蓋的改動 MUST NOT 改變其他呼叫端（非 `run_ortho_pipeline()` Step 7～10）觀察到的行為。
-
-#### Scenario: 鏈式 Boolean 結果體積與有效性等價
-- **WHEN** 以同一份 hex grid、drain holes、hollow、side wall drains 與 input model，分別在「Step 7～10 全程物化為 Trimesh」與「Step 7～10 鏈式保持 Manifold」兩種方式下執行
-- **THEN** 兩次 `ortho_result.stl` 的體積（volume）SHALL 在容許誤差內相等
-- **AND** 兩次 `ortho_result.stl` 的 `is_watertight` 狀態 SHALL 相等
-
-#### Scenario: 既有 Boolean API 呼叫端不受影響
-- **WHEN** 非 Step 7～10 鏈式呼叫（例如獨立的 Boolean API 端點）呼叫 `boolean_meshes()`
-- **THEN** 其輸入輸出型別與既有行為 SHALL 與本能力改動前完全相同
+> **Boolean Step 7～10 中間表示法（D3）已調查並放棄，未列入本次 ADDED Requirements。** 已實作「鏈式維持 `manifold3d.Manifold`」的版本並以 `001_p.stl`／`005_p.stl` 端到端驗證，證實會在至少一個代表模型上產生 `is_watertight` regression，且找不到對兩者都安全的部分鏈式組合。Step 7～10 維持修改前的逐步 `boolean_meshes()` 行為不變，因此本能力範圍內沒有新增或變更此處的 requirement。根因分析與嘗試矩陣見 [design.md](../../design.md) D3 小節；過程記錄見 [tasks.md](../../tasks.md) 群組 3。
 
 ### Requirement: confirm-model-type 略過 ProjectionShape 不得改變分類確認結果
 
