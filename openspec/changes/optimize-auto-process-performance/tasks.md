@@ -84,14 +84,14 @@
 - [x] 5.10 **收尾**：無 production timing log 需要移除（見 5.5）；scratchpad 量測腳本從未寫入 repo，無需清理
 - [x] 5.11 正式回歸測試已落地於 `agent/tests/test_save_model_to_job_validation.py`（11 個測試，涵蓋 5.6／5.7／5.8 全部情境，另加 `add_models_to_slice_job()` 的惡意標記防禦測試），延續本 repo 既有慣例直接呼叫 `api_v2` 模組函式，未新增 `TestClient`／`httpx` 依賴
 
-## 6. 整合驗證與收尾
+## 6. 整合驗證與收尾（已完成）
 
-- [ ] 6.1 確認群組 1～5 的所有 temporary timing log 皆已移除（`grep -rn "TEMP" agent/ortho_pipeline.py agent/sla_operations.py agent/model_classifier.py agent/api_v2.py` 應無相關殘留，或僅剩與本提案無關的既有標記）
-- [ ] 6.2 **驗證**：`pytest agent/tests/ -q`，確認本提案相關測試全數通過；既有失敗項目（若與本提案無關）逐一核對是否為變更前既有缺陷，記錄於下方「量測記錄」而非列為本提案的驗收阻擋
-- [ ] 6.3 **驗證**：以 `001_p.stl`、`005_p.stl` 各執行 2～3 次完整 Auto Process 端到端流程，確認 5 項改動疊加後仍能正常完成，`ortho_result.stl` 產出正常
-- [ ] 6.4 彙整量測表：對照各群組 baseline，列出 Hollow-fit check、Ortho mesh 載入、Boolean Step 7～10、confirm-model-type、upload/save 驗證的前後耗時變化，附於下方「量測記錄」
-- [ ] 6.5 確認每個群組（1～5）皆已各自獨立 commit（fork submodule 本提案未涉及，不需要分離 Python／fork commit）
-- [ ] 6.6 更新 `openspec/specs/auto-process-performance/spec.md`（archive 時同步至主規格）
+- [x] 6.1 確認群組 1～5 的所有 temporary timing log 皆已移除——`grep -rn "TEMP" agent/ortho_pipeline.py agent/sla_operations.py agent/model_classifier.py agent/api_v2.py` 無結果；額外以 `grep -rn "PROFILE" agent/*.py` 交叉確認，僅存的兩處命中（`agent/boundary_detection.py` 的 `BG_PROFILE`／`BG_PROFILE_LOG` 環境變數、`agent/tests/test_extract_sla_from_mechado.py` 的 `_PROFILES` parametrize 列表）皆與本提案無關（前者屬 Surgical Guide 既有除錯開關，非本提案範圍；後者是既有測試的參數化命名），非本提案殘留
+- [x] 6.2 **驗證**：`pytest agent/tests/ -q --continue-on-collection-errors` 結果 **665 passed、1 failed、3 errors**，與 D5 完成時記錄的既有基準完全相同。核對既有失敗／錯誤項目：`test_prz_print_time.py::test_6_11_single_normal_layer_full_params`（斷言 11.0≠14.0，屬 PRZ print-time 既有環境問題，與本提案觸及的 ortho/model_classifier/api_v2 無關）；3 個 collection errors（`test_slice_progress_endpoint.py`／`test_support_e2e.py`／`test_support_status_endpoint.py`）皆為 venv 缺少 `httpx` 套件導致 `fastapi.testclient` 匯入失敗，非本提案引入。四項與 D4／D5 量測記錄中已核對的既有基準數字（654 passed／1 failed／3 errors → 665 passed／1 failed／3 errors）一致，確認 D1～D5 疊加未產生新的 failed／error
+- [x] 6.3 **驗證**：以 `001_p.stl`、`005_p.stl`（來源：`C:\Users\user\Pictures\tempTest\`）各執行 3 次完整 Auto Process 端到端流程（直接呼叫 `run_ortho_pipeline()`，monkeypatch `get_job_dir()` 指向獨立暫時目錄，未經 HTTP 層）。兩模型全部 6 次 runs 皆 `status=completed`、`has_ortho_result=True`、`ortho_result.stl` 正常產出。以預設 trimesh 處理（`process=True`，合併重複頂點）重新載入驗證幾何：`001_p.stl` 3 runs 皆為 face=205904／vertices=102928／`is_watertight=True`／volume=35749.34870896107；`005_p.stl` 3 runs 皆為 face=311056／vertices=155506／`is_watertight=True`／volume=29274.965437936——與 design.md D3 小節記錄的「Before baseline」功能基準完全一致，確認 D1／D2／D4／D5 疊加後幾何語意無 regression。詳細數字見下方「量測記錄」群組 6
+- [x] 6.4 彙整量測表：已附於下方「量測記錄」群組 6，對照 D1／D2／D4／D5 各自 baseline 與現況耗時變化；D3 因 not viable 已放棄，列入表中僅作「無改善」記錄，不代表 regression
+- [x] 6.5 確認每個群組皆已各自獨立 commit——`git log --oneline` 核對：D1＝`a62a235`（perf(ortho): open Auto Process performance change, land Hollow-fit repair=False）、D2＝`0cc564a`（perf(ortho): reuse cleaned mesh across Auto Process）、D3＝`7e18abe`（docs(openspec): mark Boolean Step 7-10 Manifold-chain optimization as not viable，僅文件記錄，因程式碼已 `git checkout` 還原而無程式碼異動需要 commit）、D4＝`85f172a`（perf(classifier): skip projection shape for intraoral confirm）、D5＝`650b30a`（perf(api): dedupe upload/save STL validation）。另有 `6ac541a`（test(agent): fix stale progress/subprocess tests, declare shapely dependency）夾在 D2 與 D4 commit 之間，內容為既有測試修復與 `requirements.txt` 補上遺漏的 `shapely` 依賴，與本提案 5 項效能改動無關，不影響群組獨立性判斷
+- [x] 6.6 `openspec/changes/optimize-auto-process-performance/specs/auto-process-performance/spec.md`（本變更的 delta spec，`openspec/specs/auto-process-performance/` 主規格目錄尚不存在，將於 archive 時建立）核對後確認內容已與目前 proposal.md／design.md／tasks.md 最終狀態一致：涵蓋共用契約與 D1／D2／D4／D5 四項 requirement 的 scenario，並以獨立段落說明 D3 已調查放棄、不納入 ADDED Requirements。本輪核對未發現需要修改之處，無新增 commit
 
 ## 7. 不在本變更範圍（僅記錄）
 
@@ -277,3 +277,49 @@ Step7-10 合計耗時確實下降（3-run 平均約 617～786 ms，視系統負�
 **正確性驗證**：`test_save_skips_second_parse_for_validated_item` 確認略過驗證後落地檔案的 bytes 與原始上傳內容逐位元組相同；`use_model_from_job()`／`add_models_to_slice_job()`（含惡意標記注入）兩條未驗證來源在 `_save_model_to_job()` 仍完整驗證，格式錯誤內容仍正確回傳 `INVALID_MODEL`——與本項優化前行為相同。
 
 **Regression**：`pytest agent/tests/test_save_model_to_job_validation.py -v` 11 passed；`pytest agent/tests/ -q --continue-on-collection-errors` 665 passed、1 failed、3 errors——與 D4 完成時的既有基準（654 passed、1 failed、3 errors）相比，新增的 665−654=11 即本群組新增測試，既有的 1 failed（`test_prz_print_time.py`，與本項無關的既有環境問題）與 3 collection errors（缺少 `httpx`）數字不變，確認非本項引入。
+
+### 群組 6（整合驗證與收尾，已完成）
+
+**6.1 temporary timing log 殘留檢查**：`grep -rn "TEMP" agent/ortho_pipeline.py agent/sla_operations.py agent/model_classifier.py agent/api_v2.py` 無結果。交叉檢查 `grep -rn "PROFILE" agent/*.py`：僅 `agent/boundary_detection.py`（`BG_PROFILE`／`BG_PROFILE_LOG`，Surgical Guide 既有除錯開關，`agent/auto_orient_surg_guide.py` 範圍，非本提案）與 `agent/tests/test_extract_sla_from_mechado.py`（`_PROFILES`，既有測試參數化列表名稱）兩處命中，皆與 D1～D5 無關，非本提案殘留。
+
+**6.2 完整測試套件**：`pytest agent/tests/ -q --continue-on-collection-errors` → **665 passed、1 failed、3 errors**。
+
+| 既有問題 | 類型 | 根因 | 與本提案關聯 |
+|---|---|---|---|
+| `test_prz_print_time.py::test_6_11_single_normal_layer_full_params` | failed | 斷言 `11.0 == 14.0`，PRZ print-time 既有環境問題 | 無——本提案未觸及 `agent/prz_*` |
+| `test_slice_progress_endpoint.py` | collection error | venv 缺少 `httpx`，`fastapi.testclient` 匯入失敗 | 無——環境依賴缺失 |
+| `test_support_e2e.py` | collection error | 同上 | 無——環境依賴缺失 |
+| `test_support_status_endpoint.py` | collection error | 同上 | 無——環境依賴缺失 |
+
+與 D4／D5 各自完成時記錄的既有基準（654 passed／1 failed／3 errors → 665 passed／1 failed／3 errors）完全一致，確認 D1～D5 疊加未引入新的 failed／error。
+
+**6.3 端到端整合驗證**（`001_p.stl`／`005_p.stl` 各 3 runs，直接呼叫 `run_ortho_pipeline()`，monkeypatch `get_job_dir()` 指向獨立暫時目錄）：
+
+| 模型 | run | status | has_ortho_result | faces | vertices（merged） | is_watertight | volume |
+|---|---|---|---|---|---|---|---|
+| `001_p.stl` | 1～3 | completed | True | 205904 | 102928 | True | 35749.34870896107 |
+| `005_p.stl` | 1～3 | completed | True | 311056 | 155506 | True | 29274.965437936 |
+
+三項功能指標（face／vertex／volume／`is_watertight`）在兩模型的全部 3 runs 中完全一致，且與 design.md D3 小節記錄的「Before baseline」功能基準（`001_p.stl` face=205904／vertices=102928／volume=35749.34870896107；`005_p.stl` face=311056／vertices=155506／volume=29274.965437936，兩者 `is_watertight=True`）逐項相符，確認 D1／D2／D4／D5 疊加後幾何語意無 regression。
+
+**觀察（非 regression，僅記錄）**：`ortho_result.stl` 的 SHA-256 在 `001_p.stl`／`005_p.stl` 各自的 3 runs 中，run1／run2 相同但 run3 不同（face／vertex/volume 數字三者仍完全一致）。追蹤原因：Step 7～10 的 `boolean_meshes()` 鏈路本身（D3 已放棄鏈式優化，此段程式碼相對本提案開始前完全未變動）在多次獨立呼叫間，最終 STL 序列化的 triangle／vertex 排列順序並非跨 run 保證一致——與 design.md D3 小節「調查結果」描述的「STL 格式本身沒有共享頂點索引」現象同源，屬於 Boolean 鏈路既有、與本提案 D1／D2／D4／D5 五項改動無關的特性。本能力 spec（`specs/auto-process-performance/spec.md`）的共通契約本就因此不以「輸出檔案 byte-for-byte 完全相同」作為統一驗收線，改以幾何語意（face／vertex／volume／`is_watertight`）等價作為判準；上表已確認該判準通過。
+
+**6.4 D1～D5 彙整量測表**（各項百分比／絕對值取自對應群組小節的量測記錄，此處僅彙整對照，不重新量測）：
+
+| 項目 | 模型 | 修改前 | 修改後 | 改善 | 狀態 |
+|---|---|---|---|---|---|
+| Hollow-fit check（D1，不含 load） | `001_p.stl` | 2150.91 ms | avg 1647.35 ms（3 runs） | −23.4% | 已完成，production |
+| Hollow-fit check（D1，不含 load） | `005_p.stl` | 1837.59 ms | avg 1420.73 ms（3 runs） | −22.7% | 已完成，production |
+| Ortho cleaned mesh 載入（D2） | `001_p.stl` | 兩次 reload 合計 avg 155.48 ms | 單次 avg 80.62 ms | 約 −74.86 ms/run | 已完成，production |
+| Ortho cleaned mesh 載入（D2） | `005_p.stl` | 單次 load 量級 avg 421.19 ms（第二次 reload） | 移除，單次 avg 425.16 ms 涵蓋原本工作 | 省去一次完整 reload（約 421 ms/run 量級） | 已完成，production |
+| Boolean Step 7～10 中間表示法（D3） | `001_p.stl`／`005_p.stl` | Step7-10 合計 avg 1065.3／1048.5 ms | 同左（未變更） | 0%（鏈式版本雖曾測得約 30～45% 改善，但因 `is_watertight` regression 已放棄，未落地） | 已調查，not viable，已放棄 |
+| confirm-model-type 略過 ProjectionShape（D4，`extract_model_features()` 本身） | `Ushape1~3.stl`／`001_p.stl`／`005_p.stl`／`DentalModel_2.stl` | 見群組 4 表 | 見群組 4 表 | 10.0%～18.6%（前五者），10.5%（`DentalModel_2.stl`） | 已完成，production |
+| confirm-model-type 略過 ProjectionShape（D4，完整 `confirm_dental_model_type()` API） | `001_p.stl`／`005_p.stl`／`DentalModel_2.stl` | 見群組 4 補充表 | 見群組 4 補充表 | 24.1%／20.8%／20.6% | 已完成，production |
+| Upload/save 驗證去重（D5，save 側） | `001_p.stl`／`005_p.stl` | 29.03／190.93 ms | 0.92／2.46 ms | −96.8%／−98.7% | 已完成，production |
+| Upload/save 驗證去重（D5，合計） | `001_p.stl`／`005_p.stl` | 63.73／379.17 ms | 33.19／207.20 ms | −47.9%／−45.4% | 已完成，production |
+
+**6.5 各群組獨立 commit 核對**：`git log --oneline` 確認 D1＝`a62a235`、D2＝`0cc564a`、D3＝`7e18abe`（僅文件，程式碼已 `git checkout` 還原無需 commit）、D4＝`85f172a`、D5＝`650b30a`，彼此獨立。`6ac541a`（既有測試修復＋`requirements.txt` 補 `shapely`）夾在 D2／D4 之間，與本提案 5 項改動無關，不影響群組獨立性。
+
+**6.6 delta spec 核對**：`specs/auto-process-performance/spec.md` 核對後與 proposal.md／design.md／tasks.md 目前最終狀態一致（D1／D2／D4／D5 四項 requirement scenario 齊全，D3 以獨立段落註記已調查放棄、不納入 ADDED Requirements），無需修改。
+
+**archive 條件判斷**：D1、D2、D4、D5 已完成並進入 production，各自獨立 commit；D3 已完整調查並記錄放棄（production 維持原行為，無殘留程式碼或 temporary log）；群組 0、6 收尾任務全數完成；`pytest agent/tests/` 無新增 regression；端到端驗證通過。**目前已具備 archive 條件**（本輪僅完成 D6 收尾與紀錄，不執行實際 archive 操作）。
