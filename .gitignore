@@ -101,3 +101,29 @@ third_party/slicer-engine-qa-symbols/
 
 deploy/.env
 scripts/logs/
+
+
+#######################################
+# Raster benchmark working data
+#######################################
+
+# Generated fixtures (patient-derived STLs), frozen supports, engine copies and
+# run outputs. Only manifest, tools and text evidence are versioned.
+scripts/raster_bench/work/
+
+
+#######################################
+# Scratch models and slice outputs in the repository root
+#######################################
+
+# Ad-hoc test models and engine outputs dropped at the top level while
+# debugging. Leading slash: the root only, so fixtures in subdirectories stay
+# trackable.
+/*.stl
+/*.obj
+/*.svg
+/*.sl1
+/*.sl1_svg
+/*.pwmo
+/*.pwms
+/*.pwmx

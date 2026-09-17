@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "description": "Raster benchmark cases for openspec change optimize-raster-canvas-scan (spec: raster-performance-baseline). Source models are identified by file name and SHA-256 only; the models directory comes from --models or RASTER_BENCH_MODELS.",
+  "raster_params": {
+    "layer_height": 0.05,
+    "anti_aliasing": true,
+    "anti_aliasing_level": 1,
+    "gray_level": 1,
+    "blur": 0,
+    "gamma_correction": 1.0
+  },
+  "engine_env": {
+    "SLA_LAYER_RLE": "1"
+  },
+  "preview_scale": "agent.preview_scale.preview_scale_for(max(display_pixels_x, display_pixels_y))",
+  "run_matrix": {
+    "threads": [
+      1,
+      2,
+      8
+    ],
+    "repeats": 3
+  },
+  "machines": {
+    "sonic_mighty_revo_16k": {
+      "printer_model": "Sonic_Mighty",
+      "display_pixels_x": 15120,
+      "display_pixels_y": 6230,
+      "display_width": 211.68,
+      "display_height": 118.37,
+      "display_orientation": "landscape"
+    },
+    "sonic_mini_8k_s": {
+      "printer_model": "Sonic_Mini",
+      "display_pixels_x": 7536,
+      "display_pixels_y": 3240,
+      "display_width": 165.792,
+      "display_height": 71.28,
+      "display_orientation": "landscape"
+    }
+  },
+  "sources": {
+    "surgical_guide": {
+      "filename": "fixture-surgical-guide-18-19.stl",
+      "sha256": "2170334b7cdc547bc011bb7a841787c12eaf355b59c696aff46fa7926970df2e"
+    },
+    "crown": {
+      "filename": "fixture-crown-cad.stl",
+      "sha256": "ba7aeb3428f8288ec367faa3b491f7283eac340f11067e3347300297e163fc1e"
+    }
+  },
+  "cases": [
+    {
+      "id": "primary-16k-guide-x8",
+      "role": "primary",
+      "machine": "sonic_mighty_revo_16k",
+      "geometry": {
+        "type": "layout",
+        "source": "surgical_guide",
+        "offsets_mm": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            52.5,
+            0.0
+          ],
+          [
+            105.0,
+            0.0
+          ],
+          [
+            157.5,
+            0.0
+          ],
+          [
+            0.0,
+            47.5
+          ],
+          [
+            52.5,
+            47.5
+          ],
+          [
+            105.0,
+            47.5
+          ],
+          [
+            157.5,
+            47.5
+          ]
+        ]
+      },
+      "model": {
+        "sha256": "d4f571910b46664469d8a47837b348a54940f7c24d1ff21dddc6b60368d79d49",
+        "geometry_sha256": "698d2ca4b4a8c091bf9ab21df2a56a0e40e803775787b1dd2da96a55635da0fb"
+      },
+      "support": {
+        "mode": "frozen",
+        "sha256": "4a6993bb08b66347f35f56de8bc2042e96643997bf770b744d3f6bced65b2665",
+        "model_sha256": "d4f571910b46664469d8a47837b348a54940f7c24d1ff21dddc6b60368d79d49",
+        "frozen_with": {
+          "engine_exe_sha256": "105a657fa3db8b8327e46cadb6014c210a68246d98f44b1e7ccc97269f1b5b4c",
+          "engine_core_sha256": "97b6c2ee5bb3606c886d0384c55badd00e7f9c2372b6d18f04b847051b47af32"
+        }
+      }
+    },
+    {
+      "id": "secondary-8k-guide-x3",
+      "role": "secondary",
+      "machine": "sonic_mini_8k_s",
+      "geometry": {
+        "type": "layout",
+        "source": "surgical_guide",
+        "offsets_mm": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            52.5,
+            0.0
+          ],
+          [
+            105.0,
+            0.0
+          ]
+        ]
+      },
+      "model": {
+        "sha256": "7cbf7b278f15add02e7ebd524f69b646c802bdbb67e1aeb258b33d14a35a2d31",
+        "geometry_sha256": "9233c0072b4d283bdfc129be868012ebc6f9188c760fcc4846e771679b656dda"
+      },
+      "support": {
+        "mode": "frozen",
+        "sha256": "200244e07f461b108b74b3ee84b7051aa0b44c75a7d8a73238fce806494fd2fe",
+        "model_sha256": "7cbf7b278f15add02e7ebd524f69b646c802bdbb67e1aeb258b33d14a35a2d31",
+        "frozen_with": {
+          "engine_exe_sha256": "105a657fa3db8b8327e46cadb6014c210a68246d98f44b1e7ccc97269f1b5b4c",
+          "engine_core_sha256": "97b6c2ee5bb3606c886d0384c55badd00e7f9c2372b6d18f04b847051b47af32"
+        }
+      }
+    },
+    {
+      "id": "tiny-16k-crown-x1",
+      "role": "edge-tiny",
+      "machine": "sonic_mighty_revo_16k",
+      "geometry": {
+        "type": "layout",
+        "source": "crown",
+        "offsets_mm": [
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "model": {
+        "sha256": "3eaa5eba6b2b08e69b21f75643c96d8229880f83b568c207d95f100215e87af7",
+        "geometry_sha256": "b73380de1b34f5dd71facd5ff773782aa2845c419e244e1a847093dcfcaa12b5"
+      },
+      "support": {
+        "mode": "none",
+        "sha256": null
+      }
+    },
+    {
+      "id": "fullplate-16k-slab",
+      "role": "edge-fullplate",
+      "machine": "sonic_mighty_revo_16k",
+      "geometry": {
+        "type": "slab",
+        "size_mm": [
+          200.0,
+          110.0,
+          2.0
+        ]
+      },
+      "model": {
+        "sha256": "0bc33fe9530a99c1782e07c216b10c76ffa765a5fc1cbba9b4630de31406d0d1",
+        "geometry_sha256": "8c8e6f1fbd8b8d9b5b1ea4c7601478692b1e5ae6897ccbf449109610e06224f4"
+      },
+      "support": {
+        "mode": "none",
+        "sha256": null
+      }
+    }
+  ]
+}
