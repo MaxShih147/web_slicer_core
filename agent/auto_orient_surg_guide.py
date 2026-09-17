@@ -294,6 +294,14 @@ def _grow_patches(mesh: _Mesh) -> list[_Patch]:
     adj = mesh.adj
     cos_grow = math.cos(2.0 * math.pi / 180.0)
 
+    # Precompute all face-normal norms once (vectorized) instead of calling
+    # _norm() per candidate inside the BFS loop below -- a rejected (but
+    # non-degenerate) face is left unassigned and can be re-examined by
+    # other patch attempts, so its norm was previously recomputed on every
+    # such attempt. dtype: face_n is float32; np.linalg.norm(axis=1) on a
+    # float32 array returns float32.
+    face_n_norms = np.linalg.norm(face_n, axis=1)
+
     patches: list[_Patch] = []
     next_id = 0
 
@@ -301,7 +309,7 @@ def _grow_patches(mesh: _Mesh) -> list[_Patch]:
     for f0 in range(m):
         if patch_id[f0] != -1:
             continue
-        if _norm(face_n[f0]) < 0.5:
+        if face_n_norms[f0] < 0.5:
             patch_id[f0] = -2
             continue
 
@@ -309,6 +317,10 @@ def _grow_patches(mesh: _Mesh) -> list[_Patch]:
         next_id += 1
         P = _Patch(id=pid)
         n_seed = face_n[f0]
+        # Seed components kept as numpy float32 scalars (no Python float()
+        # cast) so the inline dot product below stays in float32 end-to-end,
+        # matching _dot()'s multiply/add order and precision exactly.
+        sx = n_seed[0]; sy = n_seed[1]; sz = n_seed[2]
 
         q = deque()
         q.append(f0)
@@ -319,43 +331,39 @@ def _grow_patches(mesh: _Mesh) -> list[_Patch]:
             for fn in adj[fidx]:
                 if patch_id[fn] != -1:
                     continue
-                n = face_n[fn]
-                if _norm(n) < 0.5:
+                if face_n_norms[fn] < 0.5:
                     patch_id[fn] = -2
                     continue
-                if _dot(n, n_seed) >= cos_grow:
+                n = face_n[fn]
+                if n[0] * sx + n[1] * sy + n[2] * sz >= cos_grow:
                     patch_id[fn] = pid
                     q.append(fn)
         patches.append(P)
 
-    # --- Step 5: per-patch avgNormal / area / center / maxAngleDeg ---
-    v = mesh.v
-    fi = mesh.fi
+    # --- Step 5: per-patch avgNormal / area / center ---
+    # Every consumer of these fields (drill-candidate filtering, quasi-candidate
+    # refinement) rejects patches with < 5 faces before reading .area/.avg_normal/
+    # .center (via "len(P.faces) < 5 or ..." short-circuit), so patches below that
+    # size are skipped here entirely and keep the _Patch dataclass defaults
+    # (area=0.0, avg_normal=zeros, center=zeros). Area is reused from
+    # mesh.face_area (already computed by _weld_and_build with the same formula)
+    # instead of being recomputed per face. maxAngleDeg is no longer computed:
+    # it has no reader (field kept on _Patch for compatibility, same as the
+    # equivalent port in model_classifier.py's _DrillPatchInfo).
+    face_area = mesh.face_area
+    face_c = mesh.face_c
     for P in patches:
-        sum_n = np.zeros(3, dtype=np.float64)
-        sum_c = np.zeros(3, dtype=np.float64)
-        area_sum = 0.0
-        for fidx in P.faces:
-            i0, i1, i2 = int(fi[fidx, 0]), int(fi[fidx, 1]), int(fi[fidx, 2])
-            p0, p1, p2 = v[i0], v[i1], v[i2]
-            A = 0.5 * _norm(_cross(p1 - p0, p2 - p0))
-            area_sum += A
-            sum_n += mesh.face_n[fidx].astype(np.float64) * A
-            sum_c += mesh.face_c[fidx].astype(np.float64) * A
-        P.area = float(area_sum)
-        P.avg_normal = _normalize(sum_n.astype(np.float32))
+        if len(P.faces) < 5:
+            continue
+        fidx_arr = np.asarray(P.faces, dtype=np.int64)
+        areas = face_area[fidx_arr].astype(np.float64)
+        area_sum = float(areas.sum())
+        P.area = area_sum
         if area_sum > 0.0:
+            sum_n = (face_n[fidx_arr].astype(np.float64) * areas[:, None]).sum(axis=0)
+            sum_c = (face_c[fidx_arr].astype(np.float64) * areas[:, None]).sum(axis=0)
+            P.avg_normal = _normalize(sum_n.astype(np.float32))
             P.center = (sum_c / area_sum).astype(np.float32)
-        else:
-            P.center = np.zeros(3, dtype=np.float32)
-
-        max_ang = 0.0
-        for fidx in P.faces:
-            c = _clampf(_dot(mesh.face_n[fidx], P.avg_normal), -1.0, 1.0)
-            ang = math.acos(c) * 180.0 / math.pi
-            if ang > max_ang:
-                max_ang = ang
-        P.max_angle_deg = max_ang
 
     return patches
 
@@ -528,15 +536,21 @@ def _is_drill_patch_by_edges(mesh: _Mesh, P: _Patch, ignore_angle: bool = False)
     vids2d = np.unique(fi[np.asarray(P.faces, dtype=np.int64)].reshape(-1).astype(np.int64))
     if vids2d.shape[0] < 3:
         return False
-    pts2d = np.empty((vids2d.shape[0], 2), dtype=np.float64)
-    for i in range(vids2d.shape[0]):
-        u, vv = project_to_plane(int(vids2d[i]))
-        pts2d[i, 0] = u
-        pts2d[i, 1] = vv
+    # Batched plane projection (replaces a per-vertex project_to_plane() loop):
+    # same double-precision arithmetic as project_to_plane() (q and the basis
+    # vectors are cast to float64 before the matmul), just vectorized.
+    q = v[vids2d].astype(np.float64) - center.astype(np.float64)
+    pts2d = np.column_stack([q @ ex.astype(np.float64), q @ ey.astype(np.float64)])
     centered = pts2d - pts2d.mean(axis=0)
-    # principal axes of the projected point cloud
-    cov = np.cov(centered.T)
-    _eigvals, eigvecs = np.linalg.eigh(cov)
+    # principal axes of the projected point cloud — direct 2x2 covariance via
+    # dot products (ddof=1, matching np.cov's default) instead of np.cov,
+    # avoiding its broadcasting/masked-array overhead for this fixed 2D case.
+    cx = centered[:, 0]; cy = centered[:, 1]
+    denom = centered.shape[0] - 1
+    cxx = np.dot(cx, cx) / denom
+    cxy = np.dot(cx, cy) / denom
+    cyy = np.dot(cy, cy) / denom
+    _eigvals, eigvecs = np.linalg.eigh(np.array([[cxx, cxy], [cxy, cyy]]))
     proj = centered @ eigvecs            # coords along the two principal axes
     extents = proj.max(axis=0) - proj.min(axis=0)
     long_edge = float(extents.max())   # PCA major-axis extent ≈ ring outer diameter
@@ -913,22 +927,65 @@ def detect_concave_faces(mesh: _Mesh, cylinders: list = None,
 
     If ``cylinders`` is given, faces whose center falls inside any drill-hole
     cylinder are excluded — bore-wall step concavities must not pollute the
-    tooth-fitting-side signal. Returns triangle indices."""
+    tooth-fitting-side signal. Returns triangle indices.
+
+    Interior edges are processed in fixed 16K-edge batches rather than as
+    one edge at a time or as a single model-wide batch: per-batch face-
+    index/center/normal/dot temporaries are released before the next batch
+    starts, so working memory is bounded by the chunk size instead of
+    growing with the model's total edge count. Math and accumulation
+    semantics are unchanged from a plain per-edge loop — float64 throughout,
+    an explicit 3-component dot product (no reduction that could reorder
+    the sum), the same `> 1e-6` test, and each side's vote decided
+    independently from its own face normal; `votes`/`total` are persisted
+    across all batches, so a face whose incident edges land in different
+    batches still accumulates exactly as if processed in one pass.
+    """
     fc = mesh.face_c.astype(np.float64)
     fn = mesh.face_n.astype(np.float64)
     m = mesh.fi.shape[0]
     votes = np.zeros(m, dtype=np.float64)
     total = np.zeros(m, dtype=np.float64)
+
+    chunk_edges = 16384
+
+    def _accumulate_chunk(f0_list, f1_list):
+        f0_arr = np.asarray(f0_list, dtype=np.int64)
+        f1_arr = np.asarray(f1_list, dtype=np.int64)
+
+        fc0 = fc[f0_arr]
+        fc1 = fc[f1_arr]
+        dx = fc1[:, 0] - fc0[:, 0]
+        dy = fc1[:, 1] - fc0[:, 1]
+        dz = fc1[:, 2] - fc0[:, 2]
+
+        fn0 = fn[f0_arr]
+        fn1 = fn[f1_arr]
+        dot0 = dx * fn0[:, 0] + dy * fn0[:, 1] + dz * fn0[:, 2]
+        dot1 = (-dx) * fn1[:, 0] + (-dy) * fn1[:, 1] + (-dz) * fn1[:, 2]
+
+        mask0 = (dot0 > 1e-6).astype(np.float64)
+        mask1 = (dot1 > 1e-6).astype(np.float64)
+
+        np.add.at(total, f0_arr, 1.0)
+        np.add.at(total, f1_arr, 1.0)
+        np.add.at(votes, f0_arr, mask0)
+        np.add.at(votes, f1_arr, mask1)
+
+    buf_f0: list = []
+    buf_f1: list = []
     for (f0, f1) in mesh.edge_faces.values():
         if f1 < 0:
             continue
-        d = fc[f1] - fc[f0]
-        if float(d @ fn[f0]) > 1e-6:
-            votes[f0] += 1.0
-        total[f0] += 1.0
-        if float((-d) @ fn[f1]) > 1e-6:
-            votes[f1] += 1.0
-        total[f1] += 1.0
+        buf_f0.append(f0)
+        buf_f1.append(f1)
+        if len(buf_f0) >= chunk_edges:
+            _accumulate_chunk(buf_f0, buf_f1)
+            buf_f0 = []
+            buf_f1 = []
+    if buf_f0:
+        _accumulate_chunk(buf_f0, buf_f1)
+
     with np.errstate(invalid="ignore", divide="ignore"):
         ratio = np.where(total > 0, votes / total, 0.0)
     concave = np.where(ratio >= ratio_thresh)[0]
