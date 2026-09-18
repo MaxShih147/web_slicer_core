@@ -119,17 +119,55 @@ def ray_seg_intersect_2d(
 # Mesh Slicing (ported from drillService.js sliceMeshAtZ_World)
 # =============================================================================
 
-def slice_mesh_at_z(mesh: trimesh.Trimesh, z_world: float, eps: float = 1e-3) -> List[np.ndarray]:
+def compute_face_z_bounds(mesh: trimesh.Trimesh) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute per-face Z min/max directly from mesh.vertices/mesh.faces.
+
+    Uses Z-only arrays rather than mesh.triangles to avoid materialising the
+    full (F, 3, 3) triangle array, and preserves the mesh's native Z dtype
+    (no float32 downcast).
+
+    Returns:
+        (face_z_min, face_z_max), each shape (F,)
+    """
+    vertex_z = np.asarray(mesh.vertices[:, 2])
+    faces = np.asarray(mesh.faces)
+
+    face_z_min = vertex_z[faces[:, 0]].copy()
+    np.minimum(face_z_min, vertex_z[faces[:, 1]], out=face_z_min)
+    np.minimum(face_z_min, vertex_z[faces[:, 2]], out=face_z_min)
+
+    face_z_max = vertex_z[faces[:, 0]].copy()
+    np.maximum(face_z_max, vertex_z[faces[:, 1]], out=face_z_max)
+    np.maximum(face_z_max, vertex_z[faces[:, 2]], out=face_z_max)
+
+    return face_z_min, face_z_max
+
+
+def slice_mesh_at_z(
+    mesh: trimesh.Trimesh,
+    z_world: float,
+    eps: float = 1e-3,
+    face_z_bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+) -> List[np.ndarray]:
     """
     Slice a mesh at a world-space Z plane, returning 2D polyline loops.
 
-    Iterates all triangles, finds edge-plane intersections at Z level,
-    chains segments into closed loops via spatial hashing.
+    A per-face Z min/max broad-phase filter first narrows the face loop down
+    to only faces whose Z range straddles z_world (a face outside that range
+    cannot contain any d0*d1<0 edge crossing, so this filter is exact, not
+    an approximation). The remaining scalar edge/intersection loop and the
+    spatial-hash loop-chaining below are unchanged.
 
     Args:
         mesh: trimesh.Trimesh to slice
         z_world: Z plane in world coordinates
         eps: Endpoint merge tolerance (mm)
+        face_z_bounds: Optional pre-computed (face_z_min, face_z_max) from
+            compute_face_z_bounds(mesh), reused across repeated slices of the
+            same mesh (e.g. the outer-shell retry lifts). If omitted, computed
+            internally from the mesh as passed in -- never cached beyond this
+            call, so a mutated mesh always gets fresh bounds.
 
     Returns:
         List of Nx2 numpy arrays (closed 2D polyline loops)
@@ -138,7 +176,17 @@ def slice_mesh_at_z(mesh: trimesh.Trimesh, z_world: float, eps: float = 1e-3) ->
     faces = mesh.faces
     segments = []
 
-    for face in faces:
+    if face_z_bounds is not None:
+        face_z_min, face_z_max = face_z_bounds
+    else:
+        face_z_min, face_z_max = compute_face_z_bounds(mesh)
+
+    candidate_face_ids = np.flatnonzero(
+        (face_z_min < z_world) & (face_z_max > z_world)
+    )
+
+    for face_id in candidate_face_ids:
+        face = faces[face_id]
         v0, v1, v2 = vertices[face[0]], vertices[face[1]], vertices[face[2]]
         pts = []
         for p0, p1 in [(v0, v1), (v1, v2), (v2, v0)]:
@@ -285,18 +333,27 @@ def generate_side_wall_drains(
 
     z_drain = bottom_z
 
-    # Slice both meshes
+    # Slice the inner shell first. It's only ever sliced at one Z level, so
+    # there's no retry to reuse bounds across -- slice_mesh_at_z() builds
+    # and holds its own face_z_bounds internally for this one call, and they
+    # go out of scope as soon as it returns.
     inner_loops = slice_mesh_at_z(inner_shell, z_drain)
+
+    # Outer shell bounds are computed once here (not cached on the mesh
+    # object or globally, so a mutated mesh never sees stale bounds) and
+    # reused across the retry lifts below, since none of those retries
+    # change outer_shell itself.
+    outer_face_z_bounds = compute_face_z_bounds(outer_shell)
 
     outer_slice_lift = 1.0
     z_outer_slice = z_drain + outer_slice_lift
-    outer_loops = slice_mesh_at_z(outer_shell, z_outer_slice)
+    outer_loops = slice_mesh_at_z(outer_shell, z_outer_slice, face_z_bounds=outer_face_z_bounds)
     if len(outer_loops) == 0:
         z_outer_slice = z_drain + 0.5
-        outer_loops = slice_mesh_at_z(outer_shell, z_outer_slice)
+        outer_loops = slice_mesh_at_z(outer_shell, z_outer_slice, face_z_bounds=outer_face_z_bounds)
     if len(outer_loops) == 0:
         z_outer_slice = z_drain + 2.0
-        outer_loops = slice_mesh_at_z(outer_shell, z_outer_slice)
+        outer_loops = slice_mesh_at_z(outer_shell, z_outer_slice, face_z_bounds=outer_face_z_bounds)
 
     if len(outer_loops) == 0 or len(inner_loops) == 0:
         logger.warning(
