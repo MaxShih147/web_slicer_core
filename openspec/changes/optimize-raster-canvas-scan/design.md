@@ -488,12 +488,12 @@ preview_block_row(dy, dx0, dx1, n):
 
 **引擎身分與資產過渡。**
 
-- fork 在 `10fcc6d96` 之上新增一個獨立 commit（下稱 `<H>`，前 9 碼 `<H9>`），不改寫 `10fcc6d96`。
-- 新的最終引擎必須由 `<H>` 建置（既有建置調整照舊留在工作區），複製到 `<work>/engines/final-<H9>/`，並在建置完成當下寫 `build_info.json`。提交前的測試建置不得用來定錨。
-- `<work>/engines/final-10fcc6d96/` 保留不動，作為封存紀錄的身分對照。D12「階段 3 的所有執行只准使用這一支」自此指 `final-<H9>`。
+- fork 在 `10fcc6d96` 之上新增一個獨立 commit（`22f2e310a`，完整雜湊 `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`），不改寫 `10fcc6d96`。
+- 新的最終引擎必須由 `22f2e310a` 建置（既有建置調整照舊留在工作區），複製到 `<work>/engines/final-22f2e310a/`，並在建置完成當下寫 `build_info.json`。提交前的測試建置不得用來定錨。
+- `<work>/engines/final-10fcc6d96/` 保留不動，作為封存紀錄的身分對照。D12「階段 3 的所有執行只准使用這一支」自此指 `final-22f2e310a`。
 - `run_bench.py` 的目錄名只含標籤、不含引擎，第 1 輪的紀錄會與重跑撞名。新引擎定錨後、第一次重跑前，把第 1 輪的 `p3-*` 執行、`acceptance/` 的產出與相關 log 移到 `<work>/superseded/<UTC 時間>-phase3-iter1-final-10fcc6d96/`，附 `archive.json`，只搬不刪。改動前引擎的 `p3-base-a1` 一併封存，因為門檻基準必須在同一工作階段重跑。Golden 與 step1、step2 的紀錄不動。
-- 重跑沿用 `p3-base-aN`／`p3-final-aN` 與原本的診斷標籤。排程腳本與 `acceptance_report.py` 以引擎名稱參數指向 `final-<H9>`，不修改工具程式碼。
-- tasks.md 的 3.1～3.6 取消勾選，依原順序以 `final-<H9>` 重做；第 1 輪的結果保留在 tasks.md 的紀錄中。evidence 另外存放第 1 輪的 `summary.json`（改名為 `iteration1-summary.json`）與 `final-10fcc6d96` 的 `build_info.json`，讓「未通過 → 修正 → 重新驗收」的過程可以追溯。
+- 重跑沿用 `p3-base-aN`／`p3-final-aN` 與原本的診斷標籤。排程腳本與 `acceptance_report.py` 以引擎名稱參數指向 `final-22f2e310a`，不修改工具程式碼。
+- tasks.md 的 3.1～3.6 取消勾選，依原順序以 `final-22f2e310a` 重做；第 1 輪的結果保留在 tasks.md 的紀錄中。evidence 另外存放第 1 輪的 `summary.json`（改名為 `iteration1-summary.json`）與 `final-10fcc6d96` 的 `build_info.json`，讓「未通過 → 修正 → 重新驗收」的過程可以追溯。
 
 ## Risks / Trade-offs
 
@@ -549,7 +549,7 @@ preview_block_row(dy, dx0, dx1, n):
   - 16K 幅面下 T = 40 的格子表為 378 × 156 = 58,968 格，加上 156 個列摘要，共 59,124 位元組，仍遠小於 L2 快取。
 
   後續影響：單元測試中依 T 推導的期望值（後處理呼叫次數、跨格拼接的同色段長度、預覽目標欄映射、格子座標）已全數改以 T = 40 重算。上方階段 0 表格中的「T=80 髒格子」欄位是當時的量測紀錄，不隨本決定改寫。
-- **模型與凍結支撐的內部共享位置**：比照 `scripts/README-surg-guide-regression.md`，目前也還沒有確定的路徑，需由團隊指定後寫進 `scripts/raster_bench/README.md`。在指定之前，驗收可以在本機路徑 `D:\tool\stl\phrozen\tooth` 進行，但不寫進任何入庫檔案。
+- **模型與凍結支撐的內部共享位置**：比照 `scripts/README-surg-guide-regression.md`，目前也還沒有確定的路徑，需由團隊指定後寫進 `scripts/raster_bench/README.md`。在指定之前，驗收可以在本機模型目錄進行，但不寫進任何入庫檔案。
 - **macOS 是否需要跑完整驗收矩陣（已定案，2026-09-17）：本變更不驗 macOS，延後至獨立變更。**
   - 目前沒有可建置的 Apple Silicon Mac，本變更的驗收只在 Windows x64 驗收機上執行與認定，tasks.md 3.10 標記為延後。
   - 正式環境是 macOS Apple Silicon，所以延後的不只是「跑一次指紋」：Mac 上的建置相容性、`[raster-scan]` 單元測試、`is_little_endian` 判斷、`ctz64` 的 `__builtin_ctzll` 分支、macOS 專屬 Golden 與指紋驗證，都由後續 macOS 變更負責。`run_bench.py` 在 Mac 上不量記憶體，引擎身分的檔名也須改用 Mac 的實際檔名。
