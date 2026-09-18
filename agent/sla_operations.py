@@ -2311,6 +2311,143 @@ def generate_drain_holes(
     return merged
 
 
+def _hex_grid_vertical_ray_intersects_location(mesh, ray_origins, ray_directions, chunk_size=16384):
+    """
+    Drop-in replacement for `mesh.ray.intersects_location(ray_origins, ray_directions)`
+    specialized for generate_hex_grid()'s fixed +Z ray batch.
+
+    trimesh's default RayMeshIntersector (trimesh.ray.ray_triangle) does its
+    broad-phase by building a 3D r-tree over every triangle in the mesh
+    (`mesh.triangles_tree`) -- an O(n_faces) acceleration structure that is
+    rebuilt from scratch every time generate_hex_grid() runs (the caller
+    translates the mesh in Step 3, which invalidates trimesh's hash-based
+    cache), even though it is only ever queried once with a small, fixed set
+    of rays. Profiling showed this tree build dominates raycast time.
+
+    For a ray with direction exactly (0, 0, 1), trimesh's own r-tree query
+    box (see trimesh.ray.ray_triangle.ray_bounds) degenerates to
+    [cx-eps, cx+eps] x [cy-eps, cy+eps] x [mesh_zmin-eps, mesh_zmax+eps] --
+    the Z term always spans the whole mesh (it's derived from the tree's
+    global bounds, not the ray's own extent), so it can never exclude a
+    triangle. The only real filter is XY overlap. This function computes
+    that XY overlap directly with vectorized NumPy (chunked over triangles
+    to bound peak memory), which is mathematically a superset of what the
+    r-tree would return -> no false negatives versus the reference
+    implementation, at the cost of never needing to build the r-tree.
+
+    Narrow-phase (plane intersection, barycentric containment test, epsilon,
+    forward-distance check, multiple-hit duplicate dedup) is copied verbatim
+    from trimesh 4.11.1's `ray_triangle.ray_triangle_id()` /
+    `RayMeshIntersector.intersects_id()` so hit results are identical to the
+    reference implementation, not merely equivalent.
+
+    Falls back to `mesh.ray.intersects_location()` unchanged whenever the
+    rays aren't exactly [0, 0, 1] -- this is only a specialized path for the
+    fixed vertical-ray case generate_hex_grid() constructs, never a general
+    raycasting replacement.
+    """
+    import numpy as np
+    from trimesh import grouping, intersections, util
+    from trimesh import triangles as triangles_mod
+    from trimesh.constants import tol
+
+    ray_origins = np.asanyarray(ray_origins, dtype=np.float64)
+    ray_directions = np.asanyarray(ray_directions, dtype=np.float64)
+
+    if len(ray_directions) == 0 or not np.allclose(ray_directions, [0.0, 0.0, 1.0]):
+        # Not the fixed vertical-ray case this helper is specialized for.
+        return mesh.ray.intersects_location(ray_origins, ray_directions)
+
+    triangles = np.asanyarray(mesh.triangles, dtype=np.float64)
+    n_faces = len(triangles)
+    empty = (
+        np.empty((0, 3), dtype=np.float64),
+        np.array([], dtype=np.int64),
+        np.array([], dtype=np.int64),
+    )
+    if n_faces == 0:
+        return empty
+
+    # Matches the buffer_dist trimesh.ray.ray_triangle.ray_bounds() uses to
+    # pad its r-tree query box (never overridden by intersects_location()).
+    buffer_dist = 1e-5
+    ray_x = ray_origins[:, 0]
+    ray_y = ray_origins[:, 1]
+
+    # ---- broad-phase: vectorized XY bbox containment, chunked over triangles ----
+    tri_chunks = []
+    ray_chunks = []
+    for start in range(0, n_faces, chunk_size):
+        end = min(start + chunk_size, n_faces)
+        chunk = triangles[start:end]
+        xy_min = chunk[:, :, :2].min(axis=1)  # (c, 2)
+        xy_max = chunk[:, :, :2].max(axis=1)  # (c, 2)
+
+        in_x = (ray_x[None, :] >= (xy_min[:, 0:1] - buffer_dist)) & (
+            ray_x[None, :] <= (xy_max[:, 0:1] + buffer_dist)
+        )
+        in_y = (ray_y[None, :] >= (xy_min[:, 1:2] - buffer_dist)) & (
+            ray_y[None, :] <= (xy_max[:, 1:2] + buffer_dist)
+        )
+        local_tri, local_ray = np.nonzero(in_x & in_y)
+        if len(local_tri) == 0:
+            continue
+        tri_chunks.append(local_tri + start)
+        ray_chunks.append(local_ray)
+
+    if not tri_chunks:
+        return empty
+
+    index_tri_c = np.concatenate(tri_chunks)
+    index_ray_c = np.concatenate(ray_chunks)
+
+    # ---- narrow-phase: verbatim from trimesh.ray.ray_triangle.ray_triangle_id() ----
+    triangle_candidates = triangles[index_tri_c]
+    line_origins = ray_origins[index_ray_c]
+    line_directions = ray_directions[index_ray_c]
+
+    plane_origins = triangle_candidates[:, 0, :]
+    plane_normals = mesh.face_normals[index_tri_c]
+
+    location, valid = intersections.planes_lines(
+        plane_origins=plane_origins,
+        plane_normals=plane_normals,
+        line_origins=line_origins,
+        line_directions=line_directions,
+    )
+
+    if len(triangle_candidates) == 0 or not valid.any():
+        return empty
+
+    barycentric = triangles_mod.points_to_barycentric(triangle_candidates[valid], location)
+
+    hit = np.logical_and(
+        (barycentric > -tol.zero).all(axis=1), (barycentric < (1 + tol.zero)).all(axis=1)
+    )
+
+    index_tri = index_tri_c[valid][hit]
+    index_ray = index_ray_c[valid][hit]
+    location = location[hit]
+
+    # only return points that are forward from the origin
+    vector = location - ray_origins[index_ray]
+    distance = util.diagonal_dot(vector, ray_directions[index_ray])
+    forward = distance > -1e-6
+
+    index_tri = index_tri[forward]
+    index_ray = index_ray[forward]
+    location = location[forward]
+
+    # generate_hex_grid() always wants multiple_hits=True semantics (it takes
+    # the max Z among all hits), so there is no first-hit-only branch here.
+
+    # ---- verbatim from RayMeshIntersector.intersects_id(return_locations=True) ----
+    if len(index_tri) == 0:
+        return location, index_ray, index_tri
+    unique = grouping.unique_rows(np.column_stack((location, index_ray)))[0]
+    return location[unique], index_ray[unique], index_tri[unique]
+
+
 def generate_hex_grid(
     radius: float = 5.0,
     fallback_height: float = 20.0,
@@ -2391,7 +2528,7 @@ def generate_hex_grid(
     if has_hollow and ray_origins_list:
         ray_origins = np.array(ray_origins_list, dtype=np.float64)
         ray_dirs = np.tile([0.0, 0.0, 1.0], (len(ray_origins_list), 1))
-        locations, index_ray, _ = hollow_mesh.ray.intersects_location(ray_origins, ray_dirs)
+        locations, index_ray, _ = _hex_grid_vertical_ray_intersects_location(hollow_mesh, ray_origins, ray_dirs)
 
         # Group hit Z values by ray index
         for i, (row, col, cx, cy) in enumerate(ray_cells):
