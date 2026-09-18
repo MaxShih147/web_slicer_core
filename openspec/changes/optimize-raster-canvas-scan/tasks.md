@@ -151,44 +151,121 @@
   - 沒有新增跨執行緒共享的可變狀態
 - [x] 2.25 使用者審查通過後，在 fork 內將階段 2 提交為**單一 commit**
 
+### 第 1 輪驗收後修正（D13）
+
+> 2026-09-17 第 1 輪效能門檻驗收中，滿版案例光柵化時間為基準的 104.0%（final 2.218 s、基準 2.132 s、上限 2.196 s），未達 3.7 的 103%，依規則回到本階段。結果見階段 3 開頭的「第 1 輪驗收紀錄」，決定與根因見 `design.md` D13。本段依序執行；完成前不得開始階段 3 的重做。
+
+- [x] 2.26 D13 實作：`preview_block_row` 對 `n ∈ {4, 5, 8, 10}` 以 `switch` 分派到 `N` 為編譯期常數的樣板（區塊加總以 `memcpy` 載入剛好 1～8 個位元組，x64 以 `_mm_cvtsi64_si128` 加 `_mm_sad_epu8` 求和，非 x64 為結果相同的純量版本；每個區塊每條來源列只寫一次 `sums`；除法以 `constexpr` 的 `N × N` 為除數）；其他 n 維持現行逐位元組迴圈；`preview_box_downscale_integer` 改為逐列呼叫 `preview_block_row`；參考實作與 `SLA_RASTER_FASTPATH=0` 的行為不變
+- [x] 2.27 D13 單元測試（加入 `sla_raster_scan_tests.cpp`，標籤 `[raster-scan]`），一律與 `preview_box_downscale_integer_reference` 逐位元組比對：
+  - n = 4、5、8、10 每種區塊值 0～255
+  - 每個 n 以單一區塊窮舉總和 0～255 × n²
+  - 3n × 2n 畫布上移動單點走遍所有位置：背景 100、每個區塊首像素 99，每次對一個目標位置加 1（避免值 1 經除法截斷為 0）
+  - 週期 3、7、11 的直條紋與斜條紋
+  - 15120 × 6230、n = 10 的反鋸齒滿版平板，以及 7536 × 3240、n = 5：稀疏版對非稀疏版（乾淨區域填毒值）、非稀疏版對參考實作
+  - 防護頁越界：緩衝區尾端與開頭分別緊貼不可讀頁面（Windows `VirtualAlloc`／`VirtualProtect`，POSIX `mmap`／`mprotect`），畫布為 n 的整數倍、全白、格子全部標記
+  - 起點對齊（獨立測試）：同一份內容複製到 16 個連續偏移，涵蓋起點對 16 的餘數 0～15
+  - 以僅供測試使用的入口強制走純量核心，執行前三項
+- [x] 2.28 【使用者手動】以 VS2022 重建 `sla_print_tests` 後回報；執行 `<tests> "[raster-scan]"` 全部通過，完整 `<tests>` 的通過數不少於 2.18 的紀錄
+- [x] 2.29 對本段 fork diff 執行 `/code-review`，並逐項確認：
+  - 每次載入的位元組數都不超過區塊剩餘長度，沒有使用 `_mm_loadu_si128` 或 `_mm_load_si128`
+  - `preview_box_downscale_integer_reference` 與 RLE 參考實作沒有任何改動
+  - `SLA_RASTER_FASTPATH=0` 仍走參考實作；n 不在 {4, 5, 8, 10} 時仍走原逐位元組迴圈
+  - 非 x64 平台有結果相同的純量版本，且已被 2.27 覆蓋
+  - 除法沒有手寫魔術常數
+  - 沒有新增跨執行緒共享的可變狀態
+  - 沒有夾帶既有的建置調整
+- [x] 2.30 使用者審查通過後，在 fork 內於 `10fcc6d96` 之上新增**單一獨立 commit**（不改寫 `10fcc6d96`），並在本項記錄其完整雜湊（即階段 3 的 `<H>`）：`22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`（父 commit `10fcc6d96`，原始碼樹 `78a3a8c1a8b1df4006a08150e629bf219045b1d0`，2026-09-17）
+- [x] 2.31 以 2.30 的雜湊回填階段 3 的 `<H>`、`<H9>`（`<H>` 的前 9 碼），3.1 另回填 `<H>` 的原始碼樹雜湊
+
 ## 3. 階段 3：驗收矩陣、邊際驗證、效能門檻與 evidence 歸檔
+
+> **編號說明**：3.1～3.19 沿用原編號（已被 commit 訊息引用，不重新編號）。3.20～3.26 是 2026-09-17 質詢定案（`design.md` D12）新增的任務，3.27 是第 1 輪驗收未通過後（`design.md` D13）新增的任務；一律**依所在段落的順序執行，不依編號**。
+>
+> **範圍**：本階段只在 Windows x64 驗收機上驗收。改動前引擎固定為 `<work>/engines/base-5bc83b08f/`，最終引擎固定為 `<work>/engines/final-22f2e310a/`（2.30 的 fork commit `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6` 的前 9 碼，已由 2.31 回填）；除 3.5 引用的階段 1 紀錄與第 1 輪的封存紀錄外，本階段所有執行只准使用這兩支。第 1 輪的 `final-10fcc6d96` 已判定未通過，只保留作為封存紀錄的身分對照。
+>
+> **第 1 輪驗收紀錄（2026-09-17，`final-10fcc6d96`，未通過）**：
+> - 3.1～3.6 當時皆已完成並勾選。3.2 的 36 次 `SLA_RASTER_VERIFY=1` 執行全部成功，沒有任何 `[raster-verify]` 違反；3.3 的 36 次層檔與預覽指紋全部等於 Golden。
+> - 3.4（極小）與 3.5（滿版）的 `SLA_RASTER_TIMING=1` 診斷皆 3/3 指紋相符。3.5 顯示滿版的額外成本集中在 `encode_preview`（step1 7.47 → final 9.02 thread_s）與 `encode_layer`（1.15 → 1.56）。
+> - 3.6 只執行三個有門檻案例的 a1 輪（18 次，指紋全部相符，沒有重跑，沒有 UNSTABLE）；極小案例與 3.26 沒有執行。
+> - `acceptance_report.py` 判定：主基準光柵化時間 19.6%、峰值承諾記憶體 27.5%、峰值 RSS 99.4%，皆 PASS；次基準 20.4%，PASS；**滿版 104.0%，FAIL**（基準 2.132 s、final 2.218 s、上限 2.196 s）；結束碼 1。
+> - 依 3.7 回到階段 2（2.26～2.31，`design.md` D13）。3.1～3.6 取消勾選，須以 `final-22f2e310a` 依序重做，不得沿用第 1 輪的任何執行；第 1 輪的執行與報表依 3.27 封存。
+
+### 驗收工具準備（先於任何驗收執行）
+
+- [x] 3.20 修改 `<bench>/run_bench.py` 的 `meta.json`：記錄 `slicer-engine.exe` 與 `slicer_core.dll` 的 SHA-256 作為引擎身分；記錄實際生效的執行緒數（有 `--threads N` 時為 `min(硬體執行緒數, N)`，否則為硬體執行緒數），不得為 null；補對應 pytest
+- [x] 3.21 新增 `<bench>/acceptance_report.py`：只讀 `<work>/` 內的紀錄、不呼叫引擎，實作 D12 的全部判定（同工作階段基準、交替配對、成對重跑、superseded、a1～a3 上限與 UNSTABLE、記憶體雙門檻、時間門檻、引擎身分核對、擴展性曲線、PRZ 遮罩比對），產出 `summary.json` 與完全由它轉出的 `report.md`；任一 FAIL、UNSTABLE、指紋不符、身分不符或 PRZ 比對失敗時以非零結束碼結束
+- [x] 3.22 為 `acceptance_report.py` 補 pytest，至少涵蓋 `raster-performance-baseline` 規格中每個 Scenario 的數字：14.8 秒通過、15.5 秒不通過、41.5 秒不通過、承諾記憶體 8010 MB 不通過、RSS 1560 MB 不通過、不得以 Golden 數字判定、1.4 秒全距觸發重跑、0.12 秒全距不必重跑、單邊觸發須成對重跑、a3 仍不收斂為 UNSTABLE、某輪只有一方資料不得判定、身分不符作廢；PRZ 只差時間通過、遮罩區外差 1 位元組不通過、時間格式不合法不通過、NUL 補位不對不通過、長度不同不通過
+- [x] 3.23 新增 PowerShell 排程腳本：只負責依 D12 順序交替呼叫 `run_bench.py`（`base r1 → final r1 → base r2 → final r2 → base r3 → final r3`），build 標籤帶輪次（`p3-base-aN`、`p3-final-aN`），並執行擴展性曲線的 1／2／4 緒；**不得計算任何中位數、重跑條件或門檻**
+- [x] 3.24 驗證：執行 `<py> -m pytest scripts/raster_bench/tests -q`，全部通過
+- [x] 3.25 Code Review 查核點（工具）：
+  - `acceptance_report.py` 的每條規則與規格條文一一對應，門檻數字（50%、100%、103%、5%、0.5 秒、3 輪、`[68, 92)`）沒有被改寫或放寬
+  - `report.md` 的數字全部來自 `summary.json`
+  - PowerShell 腳本內沒有任何判定邏輯
 
 ### 正確性驗收矩陣
 
-- [ ] 3.1 【使用者手動】以階段 2 commit 的原始碼，依 0.3 相同的方案檔與組態以 VS2022 建置最終引擎，覆蓋部署至 `<engine_bin>` 後回報；依 0.4 的方式複製並記錄指紋到 `<work>/engines/final-<短commit>/`
-- [ ] 3.2 設定 `SLA_RASTER_VERIFY=1`，對四個案例各以 `--threads 1`、`2`、`8` 跑 3 次（每個案例 9 次，共 36 次）
-- [ ] 3.3 以 `compare_fingerprints.py` 將 36 次的層檔與預覽指紋逐一對 Golden 比對；**任一次不符即判定不通過**，回到階段 2 修正後重跑整個 3.2，不得只重跑失敗的那一次
+- [x] 3.1 【使用者手動】以 fork commit `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`（2.30）的原始碼（既有建置調整照舊留在工作區、不入 commit），依 0.3 相同的方案檔與組態以 VS2022 建置最終引擎，覆蓋部署至 `<engine_bin>` 後回報；複製到 `<work>/engines/final-22f2e310a/`，並在建置完成當下寫出 `build_info.json`：commit `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`、原始碼樹雜湊（`78a3a8c1a8b1df4006a08150e629bf219045b1d0`）、建置調整 diff 的 SHA-256、建置組態、`slicer-engine.exe` 與 `slicer_core.dll` 的 SHA-256；提交前的測試建置不得用來定錨
+- [x] 3.27 封存第 1 輪紀錄（D13）：3.1 定錨完成後、3.2 開始前，把第 1 輪的紀錄移到 `<work>/superseded/<UTC 時間>-phase3-iter1-final-10fcc6d96/`，並寫 `archive.json`（移動時間、原因「3.7 滿版 104.0% 未通過，回到階段 2」、移動清單）；**只搬不刪**：
+  - `<work>/runs/` 下的 `windows-p3-verify-*`、`windows-p3-timing-*`、`windows-p3-base-a1-*`、`windows-p3-final-a1-*`
+  - `<work>/acceptance/` 的 `summary.json`、`report.md` 與 `scheduler/`
+  - `<work>/logs/` 下的 `p3-verify/`、`p3-timing-tiny/`、`p3-timing-fullplate/`、`phase3-acceptance/` 與 `p3-gates-console.log`
+  - 不動：`windows-base-*`（Golden）、`windows-step1-*`、`windows-step2-*`，以及 `<work>/engines/` 內的所有引擎（含 `final-10fcc6d96`）；封存後 `<work>/runs/` 內不得再有任何 `windows-p3-*` 目錄
+- [x] 3.2 設定 `SLA_RASTER_VERIFY=1`，以 `final-22f2e310a` 對四個案例各以 `--threads 1`、`2`、`8` 跑 3 次（每個案例 9 次，共 36 次）；每次 `meta.json` 的引擎身分須等於 3.1 的 `build_info.json`
+- [x] 3.3 以 `compare_fingerprints.py` 將 36 次的層檔與預覽指紋逐一對 Golden 比對；**任一次不符即判定不通過**，回到階段 2 修正後重跑整個 3.2，不得只重跑失敗的那一次
 
 ### 邊際驗證
 
-- [ ] 3.4 極小案例：確認指紋一致，並以 `SLA_RASTER_TIMING=1` 記錄各階段 `thread_s`，說明與主基準相比哪些階段下降最多
-- [ ] 3.5 滿版案例：確認指紋一致，並比較 step1 與 final 的各階段 `thread_s`，找出格子表與轉接器帶來的額外成本落在哪個階段
+- [x] 3.4 極小案例：以 `final-22f2e310a` 確認指紋一致，並以 `SLA_RASTER_TIMING=1` 記錄各階段 `thread_s`，說明與主基準相比哪些階段下降最多
+- [x] 3.5 滿版案例：以 `final-22f2e310a` 確認指紋一致，並以 `SLA_RASTER_TIMING=1` 比較 step1、第 1 輪 `final-10fcc6d96`（3.27 封存的 `p3-timing-fullplate`）與 `final-22f2e310a` 的各階段 `thread_s`，找出格子表與轉接器帶來的額外成本落在哪個階段，並確認 D13 是否消除了 `encode_preview` 的增量
 
 ### 效能門檻驗收
 
-- [ ] 3.6 在驗收機（i7-11370H、4 核 8 緒、16 GB、Windows 11，插電並在每輪之間冷卻）上，**不設** `SLA_RASTER_VERIFY` 與 `SLA_RASTER_TIMING`，以預設執行緒數對四個案例各跑 3 次；任一組最大與最小差同時超過中位數 5% 且絕對差值大於 0.5 秒時整組重跑
-- [ ] 3.7 依中位數判定門檻：主基準光柵化時間 ≤ Golden 的 50%，且峰值 RSS ≤ Golden；次基準光柵化時間 ≤ Golden；滿版案例光柵化時間 ≤ Golden 的 103%；未達標時回到階段 2，**不得自行放寬門檻**
+- [x] 3.6 在驗收機（i7-11370H、4 核 8 緒、16 GB、Windows 11，插電並在每輪之間冷卻）上，**不設** `SLA_RASTER_VERIFY` 與 `SLA_RASTER_TIMING`，以預設執行緒數、用 3.23 的腳本（以 `-FinalEngine final-22f2e310a` 指定最終引擎）在**同一工作階段**內執行：
+  - 主基準、次基準、滿版三個有門檻的案例：`base-5bc83b08f` 與 `final-22f2e310a` 交替各跑 3 次，標籤 `p3-base-a1`／`p3-final-a1`
+  - 極小案例：只以 `final-22f2e310a` 跑 3 次，只記錄
+  - 任一組最大與最小差同時超過中位數 5% 且絕對差值大於 0.5 秒時，該案例兩組一起以下一輪標籤（`a2`、`a3`）重新交替執行；最多到 `a3`，`a3` 仍觸發即標記 UNSTABLE，排除環境干擾後該案例從 `a1` 整個重來
+  - 所有執行（含改動前引擎）的指紋都須等於 Golden；改動前引擎的指紋不符時整輪作廢
+- [x] 3.7 執行 `acceptance_report.py`，依 `summary.json` 判定門檻（基準皆為同一工作階段內改動前引擎最新一輪的中位數）：
+  - 主基準光柵化時間 ≤ 基準的 50%
+  - 主基準峰值承諾記憶體 ≤ 基準（主門檻）
+  - 主基準峰值 RSS ≤ 基準的 103%（護欄）
+  - 次基準光柵化時間 ≤ 基準
+  - 滿版案例光柵化時間 ≤ 基準的 103%
+  - 未達標時回到階段 2，**不得自行放寬門檻**；UNSTABLE 不算通過也不算不通過，須依 3.6 重來
+- [x] 3.26 擴展性曲線（只記錄、不判定）：主基準以 `base-5bc83b08f` 與 `final-22f2e310a` 交替，各以 `--threads 1`、`2`、`4` 跑 3 次（共 18 次）；8 緒端點直接採用 3.6 主基準最新一輪的執行，前提是其 `meta.json` 的實際執行緒數為 8，否則另以 `--threads 8` 補跑；所有執行的指紋須等於 Golden；曲線由 `acceptance_report.py` 寫入 `summary.json`
 
 ### 端到端與回歸
 
-- [ ] 3.8 分別以 `SLICER_ENGINE_BIN` 指向基準引擎與最終引擎啟動 agent，對主基準走完 `POST /api/v2/slices → upload → upload-support → execute → download.prz`；兩份 PRZ 逐位元組相同
-- [ ] 3.9 執行 `<py> -m pytest agent/tests -q`，全部通過
-- [ ] 3.10 （依 `design.md` Open Questions 的決定）若要求 macOS 驗證：在 macOS 上以同一套編譯設定建置基準與最終引擎，對主基準比對一次指紋；時間只記錄、不採計
+- [x] 3.8 分別以 `SLICER_ENGINE_BIN` 指向 `base-5bc83b08f` 與 `final-22f2e310a` 啟動 agent，對主基準走完 `POST /api/v2/slices → upload → upload-support → execute → download.prz`；兩份 PRZ **只存放於 `<work>/prz/`**，由 `acceptance_report.py` 做遮罩比對：
+  - 兩份長度相同
+  - 只遮罩檔頭 `[68, 92)` 共 24 位元組，且兩份的該區段各自為合法 `YYYY-MM-DD HH:MM:SS` 加 5 個 NUL
+  - 其餘位元組全部相同；遮罩區外有任何差異即判定不通過，**不得擴大遮罩範圍**
+- [x] 3.9 執行 `<py> -m pytest agent/tests -q`，全部通過（2026-09-18 審計紀錄；`agent/` 零修改）：
+  - 環境：`.venv` 原本缺少 `requirements.txt` 已列的 `shapely`，導致 `test_ortho_clean_mesh_reuse.py` 收集失敗（結束碼 2）；補裝 `shapely 2.1.2` 後重跑，結果為 694 passed、1 failed、0 error（結束碼 1）
+  - 唯一失敗：`test_prz_print_time.py::test_6_11_single_normal_layer_full_params`（期望 14.0，實得 11.0）。逐 commit 單獨執行該測試：`b6b1b73`（2026-05-21，新增此測試）通過；自 `1b1665f`（2026-05-22，`fix(prz): resolve retract zero-falsy misrouting (KI-1)`，Case 2 的 `drop2` 刻意改為 0.0）起至 HEAD 皆失敗。該 commit 未同步更新此測試，差值恰為舊公式 `drop2 = 3 mm @ 60 mm/min` 的 3.0 秒，屬過時的測試期望值
+  - 改動前基準：父 repo HEAD `05d13b5` 記錄的 fork 指標即 `5bc83b08f`（`base-5bc83b08f`），且 `agent/` 相對 HEAD 無任何差異，故基準狀態與現況相同；本變更未對 `agent/` 引入任何修改或迴歸，判定通過。過時測試留待本變更以外處理
+- [ ] 3.10 【延後（Deferred），不在本變更執行】macOS 驗證。原因：目前沒有可建置的 Apple Silicon Mac。macOS arm64 的建置相容性、`[raster-scan]` 單元測試、`is_little_endian` 判斷、`__builtin_ctzll` 分支、macOS 專屬 Golden 與指紋驗證，改由後續獨立的 macOS 變更處理（見 `design.md` Open Questions）。本項在本變更歸檔時保持未勾選
 
 ### 歸檔
 
-- [ ] 3.11 建立 `openspec/changes/optimize-raster-canvas-scan/evidence/windows-<timestamp>/`，放入：Golden 與最終引擎的指紋清單、驗收矩陣 36 次的比對摘要、效能表（中位數、最大、最小）、峰值 RSS、各階段 `thread_s`、三支引擎的 `build_info.json`
-- [ ] 3.12 回填 `design.md` 的 Open Questions（格子邊長、實際層數與點亮比例、macOS 決定），以及 `proposal.md` 中推算數字的實測值
-- [ ] 3.13 經使用者同意後，在父 repo 更新 `third_party/prusaslicer_fork` 的 submodule 指標為**單獨一個 commit**，並提交 evidence 與文件回填
+- [x] 3.11 建立 `openspec/changes/optimize-raster-canvas-scan/evidence/windows-<timestamp>/`，放入：`acceptance_report.py` 產出的 `summary.json` 與 `report.md`（含效能表、承諾記憶體與 RSS、重跑輪次、擴展性曲線、PRZ 比對結果）、3.27 封存的第 1 輪 `summary.json`（改名為 `iteration1-summary.json`）、Golden 與最終引擎的指紋清單、驗收矩陣 36 次的比對摘要、各階段 `thread_s`、四支引擎（`base-5bc83b08f`、`step1-570c7c5e2`、第 1 輪 `final-10fcc6d96`、`final-22f2e310a`）的 `build_info.json`（依引擎名稱分子目錄存放）
+- [x] 3.12 回填 `design.md` 的 Open Questions（格子邊長與 macOS 決定已於 2026-09-17 前回填；本項補實際層數與點亮比例的最終確認），以及 `proposal.md` 中推算數字的實測值
+- [x] 3.13 經使用者同意後，在父 repo 更新 `third_party/prusaslicer_fork` 的 submodule 指標為**單獨一個 commit**，並提交 evidence 與文件回填。**邊界條件**：這個 commit 只證明 Windows x64；在 macOS 變更（3.10）驗收通過前，含此指標的版本**不得部署到 macOS 正式環境**，commit 訊息須寫明此限制
 
 ### 驗證
 
 - [ ] 3.14 執行 `openspec validate optimize-raster-canvas-scan --strict`，結果為 valid
-- [ ] 3.15 確認 evidence 目錄只含 `.sha256`、`.json`、`.md`；執行 `git status` 確認沒有任何 `.stl`、`.sl1`、`.zip`、`.png`、`.rle` 被加入
+- [ ] 3.15 確認 evidence 目錄只含 `.sha256`、`.json`、`.md`；執行 `git status` 確認沒有任何 `.stl`、`.sl1`、`.prz`、`.zip`、`.png`、`.rle` 被加入，且 3.8 的 PRZ 只存在於 `<work>/prz/`
 
 ### Code Review 查核點
 
-- [ ] 3.16 審查 evidence 與原始輸出的一致性：從 `<work>/runs/` 隨機抽 3 次執行，確認歸檔的指紋與時間數字和原始檔相同
-- [ ] 3.17 審查門檻判定：確認使用的是中位數、離散同時超過 5% 且絕對差值大於 0.5 秒的組別確實重跑過、所有門檻都沒有被放寬
-- [ ] 3.18 審查 commit 切分：階段 1 與階段 2 於 fork 端統一為單一 commit (10fcc6d96)、父 repo 的 submodule 指標更新為獨立 commit，且都沒有夾帶既有的建置調整
+- [ ] 3.16 審查 evidence 與原始輸出的一致性：從 `summary.json` 列出的執行中隨機抽 3 次，確認其指紋、時間、承諾記憶體、RSS 與引擎身分和 `<work>/runs/` 內的原始檔相同
+- [ ] 3.17 以 `summary.json` 審查門檻判定：
+  - 使用的是中位數，基準來自同一工作階段的改動前引擎
+  - 每個案例只採最新一輪，舊輪皆標記 superseded
+  - 觸發重跑的案例確實成對重跑，沒有任何案例為 UNSTABLE
+  - 所有執行的引擎身分與 `build_info.json` 一致
+  - 門檻數字與規格一致，沒有被放寬
+  - `acceptance_report.py` 結束碼為 0
+- [ ] 3.18 審查 commit 切分：階段 1 與階段 2 於 fork 端統一為單一 commit (10fcc6d96)，第 1 輪驗收後的修正（D13）為其上的單一獨立 commit `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`，`10fcc6d96` 未被改寫；父 repo 的 submodule 指標更新為獨立 commit 並指向 `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`；以上都沒有夾帶既有的建置調整
 - [ ] 3.19 使用者最終審查通過

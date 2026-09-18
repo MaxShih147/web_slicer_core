@@ -1,0 +1,120 @@
+{
+  "role": "base (unmodified engine for golden baseline)",
+  "recorded_at_utc": "2026-09-14T05:04:02Z",
+  "fork": {
+    "commit": "5bc83b08fe6f5191a02102e0abba464e430a40d4",
+    "branch": null,
+    "status_short": [
+      " M .gitignore",
+      " M src/libslic3r/CMakeLists.txt",
+      " M src/slic3r/CMakeLists.txt"
+    ],
+    "uncommitted_build_tweaks": {
+      "diff_stat": [
+        " .gitignore                   | 9 +++++++++",
+        " src/libslic3r/CMakeLists.txt | 6 +++++-",
+        " src/slic3r/CMakeLists.txt    | 2 +-",
+        " 3 files changed, 15 insertions(+), 2 deletions(-)"
+      ],
+      "diff_sha256": "83230c3fab55c97d8135f6db71f043655b9d0f537c4a7c0f869891eca1ffe790"
+    },
+    "tree": "561f61f0252ae5e22648cfbdad46e6b0f26fbbb4",
+    "identity_note": "Engine identity is the source tree hash, not the commit id. At 2026-09-14 13:08:31 +0800 the fork HEAD was checked out from 5bc83b08f to dev (e2de10e0e, merge commits only); both commits have tree 561f61f02 and `git diff 5bc83b08f e2de10e0e` is empty.",
+    "equivalent_commits": [
+      "5bc83b08fe6f5191a02102e0abba464e430a40d4",
+      "e2de10e0e (dev)"
+    ]
+  },
+  "build": {
+    "method": "manual VS2022 build by user, deployed to slicer-engine/bin",
+    "solution": "third_party/prusaslicer_fork/build/PrusaSlicer.sln",
+    "configuration": "Release | x64",
+    "projects": [
+      "PrusaSlicer_app_console",
+      "OCCTWrapper"
+    ],
+    "output_mtime": {
+      "slicer-engine.exe": "2026-09-14T14:05:19+08:00",
+      "slicer_core.dll": "2026-09-14T14:05:16+08:00",
+      "OCCTWrapper.dll": "2026-09-14T14:04:44+08:00"
+    },
+    "cmake_cache": {
+      "BUNDLE_QA_CRASH_HARNESS": "OFF",
+      "CMAKE_CXX_FLAGS_RELEASE": "/MD /O2 /Ob2 /DNDEBUG",
+      "CMAKE_PREFIX_PATH": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\deps\\build\\out_deps\\usr\\local",
+      "SLIC3R_BUILD_TESTS": "ON",
+      "SLIC3R_GUI": "ON",
+      "SLIC3R_MSVC_COMPILE_PARALLEL": "ON",
+      "SLIC3R_STATIC": "ON",
+      "CMAKE_GENERATOR": "Visual Studio 17 2022",
+      "CMAKE_GENERATOR_PLATFORM": ""
+    },
+    "archived_at_utc": "2026-09-14T06:08:51Z",
+    "source_dir": "slicer-engine/bin",
+    "files": {
+      "slicer-engine.exe": {
+        "sha256": "105a657fa3db8b8327e46cadb6014c210a68246d98f44b1e7ccc97269f1b5b4c",
+        "bytes": 164352
+      },
+      "slicer_core.dll": {
+        "sha256": "97b6c2ee5bb3606c886d0384c55badd00e7f9c2372b6d18f04b847051b47af32",
+        "bytes": 66608640
+      },
+      "OCCTWrapper.dll": {
+        "sha256": "cd63aa74bdceec839bf9d71848cb2b5278a5de25334ab70be592240912e096d7",
+        "bytes": 15412736
+      },
+      "libgmp-10.dll": {
+        "sha256": "fec43cb18ce0ec8a5dd6ad1db745747167310ccb92b5acff0d445a8b3013f009",
+        "bytes": 543027
+      },
+      "libmpfr-4.dll": {
+        "sha256": "09b3b868b96433991fc15c9c5ae6f9a44c62d2e21194110442607917391ed927",
+        "bytes": 436011
+      }
+    },
+    "resources": {
+      "file_count": 1003,
+      "digest_sha256": "d7630601ff237ca2f45b1be04c20ab9775e242058c134608f62074c6d091c48b",
+      "digest_rule": "sha256 of sorted '<relpath>  <sha256>' lines joined by \n"
+    },
+    "copy_matches_source": true,
+    "deployed_matches_vs_build_output": {
+      "slicer-engine.exe": true,
+      "slicer_core.dll": true,
+      "OCCTWrapper.dll": true
+    },
+    "fork_state_at_archive": {
+      "tree": "561f61f0252ae5e22648cfbdad46e6b0f26fbbb4",
+      "uncommitted_build_tweaks_diff_sha256": "83230c3fab55c97d8135f6db71f043655b9d0f537c4a7c0f869891eca1ffe790",
+      "matches_0_1": true
+    },
+    "engine_build_id_txt": {
+      "value": "20260904T070913Z",
+      "note": "stale: not updated by manual VS2022 builds; NOT used as engine identity"
+    },
+    "not_archived": [
+      "WebView2Loader.dll (excluded by user instruction)",
+      "engine_build_id.txt (stale)"
+    ]
+  },
+  "verification_0_5": {
+    "run_at_utc": "2026-09-14T06:09:36Z",
+    "environment": "PATH restricted to C:/Windows/System32 and C:/Windows; none of the engine DLLs exist there",
+    "help": {
+      "exit_code": 0,
+      "banner": "Slicer Engine 1.0.5 (with GUI support)"
+    },
+    "export_sla": {
+      "command": "SLA_LAYER_RLE=1 slicer-engine.exe --export-sla --output model.sl1 --load config.ini model.stl",
+      "input": "openspec/changes/backend-slicer-engine-deidentification/evidence/windows/functional-7.6-20260719T143000Z/fixture/{model.stl,config.ini}",
+      "exit_code": 0,
+      "stderr_lines": 0,
+      "sl1_bytes": 70363,
+      "zip_test": "OK",
+      "rle_layers": 400,
+      "has_config_ini": true
+    },
+    "webview2loader_required": false
+  }
+}

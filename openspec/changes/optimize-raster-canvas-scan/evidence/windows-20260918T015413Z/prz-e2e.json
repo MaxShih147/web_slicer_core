@@ -1,0 +1,81 @@
+{
+  "generated_at_utc": "2026-09-18T01:54:13Z",
+  "task": "3.8",
+  "agent_runs": {
+    "base": {
+      "role": "base",
+      "engine": "base-5bc83b08f",
+      "exe_sha256": "105a657fa3db8b8327e46cadb6014c210a68246d98f44b1e7ccc97269f1b5b4c",
+      "core_sha256": "97b6c2ee5bb3606c886d0384c55badd00e7f9c2372b6d18f04b847051b47af32",
+      "case": "primary-16k-guide-x8",
+      "model_stl_sha256": "d4f571910b46664469d8a47837b348a54940f7c24d1ff21dddc6b60368d79d49",
+      "support_stl_sha256": "4a6993bb08b66347f35f56de8bc2042e96643997bf770b744d3f6bced65b2665",
+      "request_sha256": "e7aa9127ec7ab6b10ae2f9581419b392670b327814843f3dc9b4b582c39bcf51",
+      "started_at_utc": "2026-09-18T01:36:42Z",
+      "job_id": "16734239",
+      "slice_wall_s": 31.19,
+      "layer_count": 592,
+      "prz": {
+        "path": "prz/base.prz",
+        "bytes": 103667342,
+        "sha256": "813cb4ae5f94c56bbf033c42733ce7db584ebcda7d05b39b7b42fe1aabe92281"
+      },
+      "agent_exit_code": 1,
+      "port_free_after": true,
+      "finished_at_utc": "2026-09-18T01:37:22Z"
+    },
+    "final": {
+      "role": "final",
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "case": "primary-16k-guide-x8",
+      "model_stl_sha256": "d4f571910b46664469d8a47837b348a54940f7c24d1ff21dddc6b60368d79d49",
+      "support_stl_sha256": "4a6993bb08b66347f35f56de8bc2042e96643997bf770b744d3f6bced65b2665",
+      "request_sha256": "e7aa9127ec7ab6b10ae2f9581419b392670b327814843f3dc9b4b582c39bcf51",
+      "started_at_utc": "2026-09-18T01:37:38Z",
+      "job_id": "059c1bd4",
+      "slice_wall_s": 13.11,
+      "layer_count": 592,
+      "prz": {
+        "path": "prz/final.prz",
+        "bytes": 103667342,
+        "sha256": "cd5406df71505fe62a88aca39f3dec67efd4726ad7076446209b1b2835ef12cc"
+      },
+      "agent_exit_code": 1,
+      "port_free_after": true,
+      "finished_at_utc": "2026-09-18T01:37:58Z"
+    }
+  },
+  "acceptance_report_prz": {
+    "mask": [
+      68,
+      92
+    ],
+    "base": {
+      "name": "base.prz",
+      "bytes": 103667342,
+      "sha256": "813cb4ae5f94c56bbf033c42733ce7db584ebcda7d05b39b7b42fe1aabe92281"
+    },
+    "final": {
+      "name": "final.prz",
+      "bytes": 103667342,
+      "sha256": "cd5406df71505fe62a88aca39f3dec67efd4726ad7076446209b1b2835ef12cc"
+    },
+    "problems": [],
+    "first_difference_offset": null,
+    "result": "PASS"
+  },
+  "independent_check": {
+    "same_length": true,
+    "bytes": 103667342,
+    "time_field_base": "2026-09-18 09:37:19",
+    "time_field_final": "2026-09-18 09:37:55",
+    "differing_offsets": [
+      85,
+      86
+    ],
+    "differing_outside_mask": 0
+  },
+  "note": "PRZ files stay in <work>/prz/ only; this record holds hashes and offsets, no PRZ bytes."
+}

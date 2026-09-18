@@ -1,0 +1,167 @@
+{
+  "role": "step1 (D8 reference switch + D9 timing + D2 RLE SWAR + D3 preview row-major)",
+  "recorded_at_utc": "2026-09-15T05:29:49Z",
+  "fork": {
+    "head_commit": "e2de10e0e7c52bfb44b3f3414b844a9a8f7141ec",
+    "head_tree": "561f61f0252ae5e22648cfbdad46e6b0f26fbbb4",
+    "tree": "570c7c5e2de7ab4763a243aedd59c04e733f46c7",
+    "tree_rule": "git write-tree of a temporary index: read-tree HEAD, add -u (tracked modifications), add tests/sla_print/sla_raster_scan_tests.cpp; untracked test run leftovers excluded",
+    "status_short_tracked": [
+      " M .gitignore",
+      " M src/libslic3r/CMakeLists.txt",
+      " M src/libslic3r/Format/SLAArchiveWriter.hpp",
+      " M src/libslic3r/SLA/RasterBase.cpp",
+      " M src/libslic3r/SLA/RasterBase.hpp",
+      " M src/libslic3r/SLAPrintSteps.cpp",
+      " M src/slic3r/CMakeLists.txt",
+      " M tests/sla_print/CMakeLists.txt"
+    ],
+    "new_source_files": [
+      "tests/sla_print/sla_raster_scan_tests.cpp"
+    ],
+    "uncommitted_diff": {
+      "diff_stat": [
+        " .gitignore                                |   9 +",
+        " src/libslic3r/CMakeLists.txt              |   6 +-",
+        " src/libslic3r/Format/SLAArchiveWriter.hpp |  39 ++-",
+        " src/libslic3r/SLA/RasterBase.cpp          | 174 ++++++++++++-",
+        " src/libslic3r/SLA/RasterBase.hpp          |  40 +++",
+        " src/libslic3r/SLAPrintSteps.cpp           |  94 ++++++-",
+        " src/slic3r/CMakeLists.txt                 |   2 +-",
+        " tests/sla_print/CMakeLists.txt            |   3 +-",
+        " tests/sla_print/sla_raster_scan_tests.cpp | 411 ++++++++++++++++++++++++++++++",
+        " 9 files changed, 766 insertions(+), 12 deletions(-)"
+      ],
+      "diff_sha256": "9499761e7ab4f858c59c692b0d8e8c27335a1eef15c73d854b5e960862af5be1"
+    },
+    "identity_note": "Engine identity is the source tree hash. HEAD commit/tree are unchanged from base (tree 561f61f02); all step1 changes are uncommitted."
+  },
+  "build": {
+    "method": "manual VS2022 build by user",
+    "solution": "third_party/prusaslicer_fork/build/PrusaSlicer.sln",
+    "configuration": "Release | x64",
+    "projects": [
+      "PrusaSlicer_app_console",
+      "OCCTWrapper"
+    ],
+    "output_mtime": {
+      "slicer-engine.exe": "2026-09-15T13:27:23+08:00",
+      "slicer_core.dll": "2026-09-15T13:27:21+08:00",
+      "OCCTWrapper.dll": "2026-09-15T13:26:54+08:00"
+    },
+    "latest_source_mtime": "2026-09-15T13:10:12+08:00",
+    "cmake_cache": {
+      "BUNDLE_QA_CRASH_HARNESS": "OFF",
+      "CMAKE_CXX_FLAGS_RELEASE": "/MD /O2 /Ob2 /DNDEBUG",
+      "CMAKE_PREFIX_PATH": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\deps\\build\\out_deps\\usr\\local",
+      "SLIC3R_BUILD_TESTS": "ON",
+      "SLIC3R_GUI": "ON",
+      "SLIC3R_MSVC_COMPILE_PARALLEL": "ON",
+      "SLIC3R_STATIC": "ON",
+      "CMAKE_GENERATOR": "Visual Studio 17 2022",
+      "CMAKE_GENERATOR_PLATFORM": ""
+    },
+    "archived_at_utc": "2026-09-15T05:29:49Z",
+    "files": {
+      "slicer-engine.exe": {
+        "sha256": "0892571a72dc0b6dc3312082869cdf8b01fdd0cde460e3c70c093ab91bf87bcd",
+        "bytes": 164352,
+        "copied_from": "vs_build/src/Release"
+      },
+      "slicer_core.dll": {
+        "sha256": "81094485add8eb10fb795f0b7c7b35daf646131f3b8bdca14d80a7b92991a261",
+        "bytes": 66619392,
+        "copied_from": "vs_build/src/Release"
+      },
+      "OCCTWrapper.dll": {
+        "sha256": "27912bc45f0e4845d3f8dee3ca0c2af3de9af1da28244aeef1315d089e152a72",
+        "bytes": 15412736,
+        "copied_from": "vs_build/src/Release"
+      },
+      "libgmp-10.dll": {
+        "sha256": "fec43cb18ce0ec8a5dd6ad1db745747167310ccb92b5acff0d445a8b3013f009",
+        "bytes": 543027,
+        "copied_from": "slicer-engine/bin"
+      },
+      "libmpfr-4.dll": {
+        "sha256": "09b3b868b96433991fc15c9c5ae6f9a44c62d2e21194110442607917391ed927",
+        "bytes": 436011,
+        "copied_from": "slicer-engine/bin"
+      }
+    },
+    "resources": {
+      "file_count": 1003,
+      "digest_sha256": "826bc1e902299a0b07e5f3a4d048f698384836876a53c274ff1b7fcb817d4ff9",
+      "digest_rule": "sha256 of sorted '<relpath>  <sha256>' lines joined by \n",
+      "same_as_base": true,
+      "same_as_base_rule": "per-file: identical relative paths and identical sha256 for all files",
+      "digest_note": "digest_sha256 differs from base's d7630601... although every file is identical: base's digest was computed by a script that was not kept, and its exact line format could not be reconstructed. Compare resources per file, not by digest, across the two archives."
+    },
+    "copy_matches_source": true,
+    "same_as_base": {
+      "slicer-engine.exe": false,
+      "slicer_core.dll": false,
+      "OCCTWrapper.dll": false,
+      "libgmp-10.dll": true,
+      "libmpfr-4.dll": true
+    },
+    "engine_bin_vs_vs_build_output": {
+      "matches": {
+        "slicer-engine.exe": false,
+        "slicer_core.dll": false,
+        "OCCTWrapper.dll": false
+      },
+      "engine_bin_sha256": {
+        "slicer-engine.exe": "4a1f0ceb34032f7c62cffa6e5f2cf78805f8717336b30d9b4df1880c9e09f45e",
+        "slicer_core.dll": "008f3c445023d233efe58d1a88229908d15c3af1f31720195eca555e32ddb74f",
+        "OCCTWrapper.dll": "6936af4fb361c9ab75abef2566b3b73a48ea743d11d056c44fceccef0bffc614"
+      },
+      "engine_bin_mtime": {
+        "slicer-engine.exe": "2026-09-15T13:17:13+08:00",
+        "slicer_core.dll": "2026-09-15T13:17:11+08:00",
+        "OCCTWrapper.dll": "2026-09-15T13:13:20+08:00"
+      },
+      "note": "slicer-engine/bin holds an earlier build (13:1x) than vs_build/src/Release (13:2x). Both postdate the last source edit, so the difference is most likely MSVC link timestamps, not source. Archived from vs_build/src/Release; slicer-engine/bin was not modified."
+    },
+    "engine_build_id_txt": {
+      "value": "20260904T070913Z",
+      "note": "stale: not updated by manual VS2022 builds; NOT used as engine identity"
+    },
+    "not_archived": [
+      "WebView2Loader.dll (not needed by CLI, per 0.5)",
+      "engine_build_id.txt (stale)"
+    ],
+    "engine_bin_redeployed": {
+      "checked_at_utc": "2026-09-15T05:36:00Z",
+      "note": "user copied vs_build/src/Release over slicer-engine/bin after archiving; supersedes engine_bin_vs_vs_build_output",
+      "files_match_archive": {
+        "slicer-engine.exe": true,
+        "slicer_core.dll": true,
+        "OCCTWrapper.dll": true,
+        "libgmp-10.dll": true,
+        "libmpfr-4.dll": true
+      },
+      "resources_per_file_match_archive": true
+    }
+  },
+  "verification_1_11": {
+    "run_at_utc": "2026-09-15T05:31:32Z",
+    "environment": "PATH restricted to C:/Windows/System32 and C:/Windows; none of the engine DLLs exist there; inherited SLA_* removed",
+    "help": {
+      "exit_code": 0,
+      "banner": "Slicer Engine 1.0.5 (with GUI support)"
+    },
+    "export_sla": {
+      "command": "SLA_LAYER_RLE=1 slicer-engine.exe --export-sla --output model.sl1 --load config.ini model.stl",
+      "input": "openspec/changes/backend-slicer-engine-deidentification/evidence/windows/functional-7.6-20260719T143000Z/fixture/{model.stl,config.ini}",
+      "input_model_bytes": 3282,
+      "exit_code": 0,
+      "stderr_lines": 0,
+      "sl1_bytes": 70366,
+      "zip_test": "OK",
+      "rle_layers": 400,
+      "has_config_ini": true
+    },
+    "note": "Same input and command as verification_0_5; this checks the engine runs standalone, not output equality (that is 1.12)."
+  }
+}

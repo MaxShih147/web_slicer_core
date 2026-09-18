@@ -1,0 +1,955 @@
+{
+  "generated_at_utc": "2026-09-18T01:54:13Z",
+  "tasks": [
+    "3.2",
+    "3.3"
+  ],
+  "golden": {
+    "primary-16k-guide-x8": "windows-base-primary-16k-guide-x8-tdefault-r1",
+    "secondary-8k-guide-x3": "windows-base-secondary-8k-guide-x3-tdefault-r1",
+    "fullplate-16k-slab": "windows-base-fullplate-16k-slab-tdefault-r1",
+    "tiny-16k-crown-x1": "windows-base-tiny-16k-crown-x1-tdefault-r1"
+  },
+  "total": 36,
+  "all_exit_0": true,
+  "raster_verify_lines_total": 0,
+  "all_match": true,
+  "runs": [
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t1-r1",
+      "case": "primary-16k-guide-x8",
+      "threads": 1,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t1-r2",
+      "case": "primary-16k-guide-x8",
+      "threads": 1,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t1-r3",
+      "case": "primary-16k-guide-x8",
+      "threads": 1,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t2-r1",
+      "case": "primary-16k-guide-x8",
+      "threads": 2,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t2-r2",
+      "case": "primary-16k-guide-x8",
+      "threads": 2,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t2-r3",
+      "case": "primary-16k-guide-x8",
+      "threads": 2,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t8-r1",
+      "case": "primary-16k-guide-x8",
+      "threads": 8,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t8-r2",
+      "case": "primary-16k-guide-x8",
+      "threads": 8,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-primary-16k-guide-x8-t8-r3",
+      "case": "primary-16k-guide-x8",
+      "threads": 8,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t1-r1",
+      "case": "secondary-8k-guide-x3",
+      "threads": 1,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t1-r2",
+      "case": "secondary-8k-guide-x3",
+      "threads": 1,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t1-r3",
+      "case": "secondary-8k-guide-x3",
+      "threads": 1,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t2-r1",
+      "case": "secondary-8k-guide-x3",
+      "threads": 2,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t2-r2",
+      "case": "secondary-8k-guide-x3",
+      "threads": 2,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t2-r3",
+      "case": "secondary-8k-guide-x3",
+      "threads": 2,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t8-r1",
+      "case": "secondary-8k-guide-x3",
+      "threads": 8,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t8-r2",
+      "case": "secondary-8k-guide-x3",
+      "threads": 8,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-secondary-8k-guide-x3-t8-r3",
+      "case": "secondary-8k-guide-x3",
+      "threads": 8,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "preview": {
+        "base": 592,
+        "test": 592,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t1-r1",
+      "case": "fullplate-16k-slab",
+      "threads": 1,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t1-r2",
+      "case": "fullplate-16k-slab",
+      "threads": 1,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t1-r3",
+      "case": "fullplate-16k-slab",
+      "threads": 1,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t2-r1",
+      "case": "fullplate-16k-slab",
+      "threads": 2,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t2-r2",
+      "case": "fullplate-16k-slab",
+      "threads": 2,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t2-r3",
+      "case": "fullplate-16k-slab",
+      "threads": 2,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t8-r1",
+      "case": "fullplate-16k-slab",
+      "threads": 8,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t8-r2",
+      "case": "fullplate-16k-slab",
+      "threads": 8,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-fullplate-16k-slab-t8-r3",
+      "case": "fullplate-16k-slab",
+      "threads": 8,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "preview": {
+        "base": 40,
+        "test": 40,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t1-r1",
+      "case": "tiny-16k-crown-x1",
+      "threads": 1,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t1-r2",
+      "case": "tiny-16k-crown-x1",
+      "threads": 1,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t1-r3",
+      "case": "tiny-16k-crown-x1",
+      "threads": 1,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t2-r1",
+      "case": "tiny-16k-crown-x1",
+      "threads": 2,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t2-r2",
+      "case": "tiny-16k-crown-x1",
+      "threads": 2,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t2-r3",
+      "case": "tiny-16k-crown-x1",
+      "threads": 2,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t8-r1",
+      "case": "tiny-16k-crown-x1",
+      "threads": 8,
+      "repeat": 1,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t8-r2",
+      "case": "tiny-16k-crown-x1",
+      "threads": 8,
+      "repeat": 2,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    },
+    {
+      "run": "windows-p3-verify-tiny-16k-crown-x1-t8-r3",
+      "case": "tiny-16k-crown-x1",
+      "threads": 8,
+      "repeat": 3,
+      "engine": "final-22f2e310a",
+      "exe_sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+      "core_sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+      "env": {
+        "SLA_LAYER_RLE": "1",
+        "SLA_RASTER_VERIFY": "1"
+      },
+      "slice_exit_code": 0,
+      "raster_verify_lines": 0,
+      "layers": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "preview": {
+        "base": 186,
+        "test": 186,
+        "match": true
+      },
+      "compare_result": "MATCH"
+    }
+  ]
+}

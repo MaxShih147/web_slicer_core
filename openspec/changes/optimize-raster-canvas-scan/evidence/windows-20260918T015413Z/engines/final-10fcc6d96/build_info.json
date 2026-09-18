@@ -1,0 +1,97 @@
+{
+  "role": "final (Phase 3 acceptance engine: stage 1 + stage 2, tile edge T = 40)",
+  "recorded_at_utc": "2026-09-17T04:30:22Z",
+  "fork": {
+    "commit": "10fcc6d96e469e9464a0c143b45373c304aa7026",
+    "commit_date": "2026-09-17T08:07:19+08:00",
+    "branch": "feat/phase2-tile-tracking-t40",
+    "status_short": [
+      " M .gitignore",
+      " M src/libslic3r/CMakeLists.txt",
+      " M src/slic3r/CMakeLists.txt"
+    ],
+    "uncommitted_build_tweaks": {
+      "diff_stat": [
+        " .gitignore                   | 9 +++++++++",
+        " src/libslic3r/CMakeLists.txt | 6 +++++-",
+        " src/slic3r/CMakeLists.txt    | 2 +-",
+        " 3 files changed, 15 insertions(+), 2 deletions(-)"
+      ],
+      "diff_sha256": "83230c3fab55c97d8135f6db71f043655b9d0f537c4a7c0f869891eca1ffe790",
+      "same_as_base_5bc83b08f": true
+    },
+    "tree": "4e2963b2a46d5941631478efd730afd67b300c46",
+    "identity_note": "Built from fork commit 10fcc6d96 with only the pre-existing build tweaks uncommitted (tasks.md commit rule). The acceptance tools identify this engine by the SHA-256 of slicer-engine.exe and slicer_core.dll in build.files, not by engine_build_id.txt."
+  },
+  "build": {
+    "method": "manual VS2022 build by user from fork commit 10fcc6d96, deployed to slicer-engine/bin",
+    "solution": "third_party/prusaslicer_fork/build/PrusaSlicer.sln",
+    "configuration": "Release | x64",
+    "output_mtime": {
+      "slicer-engine.exe": "2026-09-17T12:16:52+08:00",
+      "slicer_core.dll": "2026-09-17T12:16:50+08:00",
+      "OCCTWrapper.dll": "2026-09-17T12:12:25+08:00"
+    },
+    "latest_tracked_source_mtime": {
+      "file": "src/libslic3r/SLA/RasterBase.hpp",
+      "mtime": "2026-09-17T08:05:36+08:00"
+    },
+    "outputs_newer_than_sources": true,
+    "cmake_cache": {
+      "BUNDLE_QA_CRASH_HARNESS": "OFF",
+      "CMAKE_CXX_FLAGS_RELEASE": "/MD /O2 /Ob2 /DNDEBUG",
+      "CMAKE_PREFIX_PATH": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\deps\\build\\out_deps\\usr\\local",
+      "SLIC3R_BUILD_TESTS": "ON",
+      "SLIC3R_GUI": "ON",
+      "SLIC3R_MSVC_COMPILE_PARALLEL": "ON",
+      "SLIC3R_STATIC": "ON",
+      "CMAKE_GENERATOR": "Visual Studio 17 2022",
+      "CMAKE_GENERATOR_PLATFORM": ""
+    },
+    "archived_at_utc": "2026-09-17T04:26:47Z",
+    "source_dir": "slicer-engine/bin",
+    "files": {
+      "slicer-engine.exe": {
+        "sha256": "73a057055d6d232b6793ae0e0c0b3c8ccae7d12d79d0db4acd5bb685221fc6ee",
+        "bytes": 164352
+      },
+      "slicer_core.dll": {
+        "sha256": "772ce1cd1832b9ad2d8f088d774653b570c32a4cdb6c65908565d936f3a399aa",
+        "bytes": 66634240
+      },
+      "OCCTWrapper.dll": {
+        "sha256": "2839cd1762b9e1c3da9dac5d538265b33f1de6da90f96073c905e488964eee9d",
+        "bytes": 15412736
+      },
+      "libgmp-10.dll": {
+        "sha256": "fec43cb18ce0ec8a5dd6ad1db745747167310ccb92b5acff0d445a8b3013f009",
+        "bytes": 543027
+      },
+      "libmpfr-4.dll": {
+        "sha256": "09b3b868b96433991fc15c9c5ae6f9a44c62d2e21194110442607917391ed927",
+        "bytes": 436011
+      },
+      "WebView2Loader.dll": {
+        "sha256": "6db06648a749eba26d859fad4d4e2625c28b8c60e8770bc76c7ea445424543f5",
+        "bytes": 136088
+      }
+    },
+    "resources": {
+      "file_count": 1003,
+      "digest_sha256": "826bc1e902299a0b07e5f3a4d048f698384836876a53c274ff1b7fcb817d4ff9",
+      "digest_rule": "sha256 (UTF-8) of sorted '<posix relpath>  <sha256>' lines joined by \n, no trailing newline",
+      "identical_to_base_5bc83b08f": true,
+      "note": "base-5bc83b08f recorded digest d7630601... under a rule that could not be reproduced; identical_to_base_5bc83b08f compares every file hash directly"
+    },
+    "copy_matches_source": true,
+    "deployed_matches_vs_build_output": {
+      "slicer-engine.exe": true,
+      "slicer_core.dll": true,
+      "OCCTWrapper.dll": true
+    },
+    "engine_build_id_txt": {
+      "value": "20260904T070913Z",
+      "note": "stale: not updated by manual VS2022 builds; NOT used as engine identity"
+    }
+  }
+}
