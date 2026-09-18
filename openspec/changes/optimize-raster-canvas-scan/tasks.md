@@ -254,18 +254,18 @@
 
 ### 驗證
 
-- [ ] 3.14 執行 `openspec validate optimize-raster-canvas-scan --strict`，結果為 valid
-- [ ] 3.15 確認 evidence 目錄只含 `.sha256`、`.json`、`.md`；執行 `git status` 確認沒有任何 `.stl`、`.sl1`、`.prz`、`.zip`、`.png`、`.rle` 被加入，且 3.8 的 PRZ 只存在於 `<work>/prz/`
+- [x] 3.14 執行 `openspec validate optimize-raster-canvas-scan --strict`，結果為 valid
+- [x] 3.15 確認 evidence 目錄只含 `.sha256`、`.json`、`.md`；執行 `git status` 確認沒有任何 `.stl`、`.sl1`、`.prz`、`.zip`、`.png`、`.rle` 被加入，且 3.8 的 PRZ 只存在於 `<work>/prz/`
 
 ### Code Review 查核點
 
-- [ ] 3.16 審查 evidence 與原始輸出的一致性：從 `summary.json` 列出的執行中隨機抽 3 次，確認其指紋、時間、承諾記憶體、RSS 與引擎身分和 `<work>/runs/` 內的原始檔相同
-- [ ] 3.17 以 `summary.json` 審查門檻判定：
+- [x] 3.16 審查 evidence 與原始輸出的一致性：從 `summary.json` 列出的執行中隨機抽 3 次，確認其指紋、時間、承諾記憶體、RSS 與引擎身分和 `<work>/runs/` 內的原始檔相同
+- [x] 3.17 以 `summary.json` 審查門檻判定：
   - 使用的是中位數，基準來自同一工作階段的改動前引擎
   - 每個案例只採最新一輪，舊輪皆標記 superseded
   - 觸發重跑的案例確實成對重跑，沒有任何案例為 UNSTABLE
   - 所有執行的引擎身分與 `build_info.json` 一致
   - 門檻數字與規格一致，沒有被放寬
   - `acceptance_report.py` 結束碼為 0
-- [ ] 3.18 審查 commit 切分：階段 1 與階段 2 於 fork 端統一為單一 commit (10fcc6d96)，第 1 輪驗收後的修正（D13）為其上的單一獨立 commit `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`，`10fcc6d96` 未被改寫；父 repo 的 submodule 指標更新為獨立 commit 並指向 `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`；以上都沒有夾帶既有的建置調整
-- [ ] 3.19 使用者最終審查通過
+- [x] 3.18 審查 commit 切分：階段 1 與階段 2 於 fork 端統一為單一 commit (10fcc6d96)，第 1 輪驗收後的修正（D13）為其上的單一獨立 commit `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`，`10fcc6d96` 未被改寫；父 repo 的 submodule 指標更新為獨立 commit 並指向 `22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6`；以上都沒有夾帶既有的建置調整
+- [x] 3.19 使用者最終審查通過
