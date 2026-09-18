@@ -14,7 +14,9 @@ One invocation is one run. Its output goes to
   preview.sha256   the same for the preview zip images
   timing.json      total wall time, rasterizing wall time from the progress lines,
                    parsed ``[raster-timing]`` stderr lines, peak working set
-  meta.json        platform, engine identity, inputs, environment, parameter hash
+  meta.json        platform, engine identity (SHA-256 of slicer-engine.exe and
+                   slicer_core.dll), effective thread count, inputs, environment,
+                   parameter hash
   stdout.log / stderr.log
   config.ini       only for a variant with --raster-param: the config actually loaded
 
@@ -83,6 +85,14 @@ PLATFORM_LABELS = {"win32": "windows", "darwin": "macos"}
 # Peak memory is only measured where GetProcessMemoryInfo exists. Elsewhere the
 # run still produces fingerprints and timings, with memory recorded as null.
 MEMORY_PROBE_SUPPORTED = os.name == "nt"
+# Most of the engine's code is in this library, so its hash is half of the engine
+# identity. engine_build_id.txt is not used: engines built from different sources
+# have reported the same build id. The macOS library name is left for the macOS
+# acceptance change; there the identity is the executable hash alone.
+ENGINE_CORE = "slicer_core.dll" if os.name == "nt" else None
+META_SCHEMA_VERSION = 2
+IS_WINDOWS = os.name == "nt"
+ALL_PROCESSOR_GROUPS = 0xFFFF
 
 
 class BenchError(Exception):
@@ -348,14 +358,20 @@ def verify_inputs(manifest: dict, case: dict, fixture_dir: Path, scratch: Path) 
 
 
 def engine_identity(engine_dir: Path) -> dict:
+    """SHA-256 of the executable and, on Windows, the core library; a missing one refuses the run."""
     exe = engine_dir / fx.ENGINE_EXE
     if not exe.is_file():
         raise BenchError(f"engine not found: {exe}")
-    core = engine_dir / "slicer_core.dll"
+    core_sha = None
+    if ENGINE_CORE is not None:
+        core = engine_dir / ENGINE_CORE
+        if not core.is_file():
+            raise BenchError(f"engine core library not found: {core}; the engine identity needs its SHA-256")
+        core_sha = fx.sha256_file(core)
     identity = {
         "dir_name": engine_dir.name,
         "exe_sha256": fx.sha256_file(exe),
-        "core_sha256": fx.sha256_file(core) if core.is_file() else None,
+        "core_sha256": core_sha,
         "fork_commit": None,
         "fork_tree": None,
     }
@@ -365,6 +381,115 @@ def engine_identity(engine_dir: Path) -> dict:
         identity["fork_commit"] = fork.get("commit")
         identity["fork_tree"] = fork.get("tree")
     return identity
+
+
+def threads_from_affinity(process_mask: int, group_processors: int, all_group_processors: int) -> int:
+    """Processor count oneTBB 2021.5 sizes its pool to on Windows (misc_ex.cpp:283-327).
+
+    TBB counts the bits of the process affinity mask. When that equals the
+    processors of the current group (GetNativeSystemInfo), the process is not
+    restricted and TBB uses every processor of every group instead.
+    """
+    nproc = process_mask.bit_count()
+    if nproc == 0:
+        # Documented for GetProcessAffinityMask: both masks are 0 when the process
+        # has threads in several processor groups.
+        raise BenchError("process affinity mask is 0 (threads in several processor groups); "
+                         "cannot tell how many threads the engine will use")
+    if nproc == group_processors:
+        if all_group_processors < nproc:
+            raise BenchError(f"GetActiveProcessorCount returned {all_group_processors}, "
+                             f"fewer than the {nproc} processors in the affinity mask")
+        return all_group_processors
+    return nproc
+
+
+def _load_kernel32():
+    """kernel32 with the prototypes _windows_hardware_threads needs."""
+    import ctypes
+    from ctypes import wintypes
+
+    dword_ptr = ctypes.c_size_t  # DWORD_PTR is pointer-sized: 64 bits on x64, 32 on x86
+
+    class SYSTEM_INFO(ctypes.Structure):
+        _fields_ = [
+            ("wProcessorArchitecture", wintypes.WORD),  # with wReserved: the dwOemId union
+            ("wReserved", wintypes.WORD),
+            ("dwPageSize", wintypes.DWORD),
+            ("lpMinimumApplicationAddress", ctypes.c_void_p),
+            ("lpMaximumApplicationAddress", ctypes.c_void_p),
+            ("dwActiveProcessorMask", dword_ptr),
+            ("dwNumberOfProcessors", wintypes.DWORD),
+            ("dwProcessorType", wintypes.DWORD),
+            ("dwAllocationGranularity", wintypes.DWORD),
+            ("wProcessorLevel", wintypes.WORD),
+            ("wProcessorRevision", wintypes.WORD),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.GetCurrentProcess.argtypes = []
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.GetProcessAffinityMask.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(dword_ptr), ctypes.POINTER(dword_ptr),
+    ]
+    kernel32.GetProcessAffinityMask.restype = wintypes.BOOL
+    kernel32.GetNativeSystemInfo.argtypes = [ctypes.POINTER(SYSTEM_INFO)]
+    kernel32.GetNativeSystemInfo.restype = None
+    kernel32.GetActiveProcessorCount.argtypes = [wintypes.WORD]
+    kernel32.GetActiveProcessorCount.restype = wintypes.DWORD
+    return kernel32, dword_ptr, SYSTEM_INFO
+
+
+def _windows_hardware_threads() -> int:
+    """Mirror TBB's count for this process; the engine child inherits its affinity.
+
+    Any failure refuses the run. os.cpu_count() is not a fallback: it ignores the
+    affinity mask and honours PYTHON_CPU_COUNT, so it can record a plausible but
+    wrong count.
+    """
+    import ctypes
+
+    try:
+        kernel32, dword_ptr, system_info = _load_kernel32()
+        process_mask, system_mask = dword_ptr(0), dword_ptr(0)
+        # GetCurrentProcess returns a pseudo handle; there is nothing to close.
+        if not kernel32.GetProcessAffinityMask(
+            kernel32.GetCurrentProcess(), ctypes.byref(process_mask), ctypes.byref(system_mask)
+        ):
+            raise BenchError(f"GetProcessAffinityMask failed: WinError {ctypes.get_last_error()}")
+        info = system_info()
+        kernel32.GetNativeSystemInfo(ctypes.byref(info))
+        all_groups = kernel32.GetActiveProcessorCount(ALL_PROCESSOR_GROUPS)
+        if all_groups == 0:
+            raise BenchError(f"GetActiveProcessorCount failed: WinError {ctypes.get_last_error()}")
+    except (OSError, AttributeError, TypeError, ctypes.ArgumentError) as exc:
+        # main() catches OSError but not the others; wrap all for one clear refusal.
+        raise BenchError(f"cannot query processor affinity through kernel32: {exc}") from exc
+    return threads_from_affinity(process_mask.value, info.dwNumberOfProcessors, all_groups)
+
+
+def hardware_threads() -> tuple[int, str]:
+    """(processors the engine's thread pool sizes itself to, how that was determined)."""
+    if IS_WINDOWS:
+        return _windows_hardware_threads(), "GetProcessAffinityMask"
+    affinity = getattr(os, "sched_getaffinity", None)
+    if affinity is not None:
+        # Linux: oneTBB reads the affinity set as well.
+        return len(affinity(0)), "sched_getaffinity"
+    # macOS has no affinity API. cpu_count() follows PYTHON_CPU_COUNT and
+    # -X cpu_count (Python 3.13+), which the engine ignores.
+    if os.environ.get("PYTHON_CPU_COUNT") or "cpu_count" in sys._xoptions:
+        raise BenchError("PYTHON_CPU_COUNT or -X cpu_count is set; cpu_count() would not match the engine")
+    count = os.cpu_count()
+    if not count:
+        raise BenchError("cannot determine the number of hardware threads; meta.json must record it")
+    return count, "cpu_count"
+
+
+def effective_threads(requested: int | None) -> tuple[int, str]:
+    """Thread count the engine actually uses (fork src/libslic3r/Thread.cpp:242-243) and its source."""
+    hardware, source = hardware_threads()
+    return (hardware if requested is None else min(hardware, requested)), source
 
 
 def engine_env(manifest: dict, raster_env: dict[str, str], disable_rle: bool = False) -> tuple[dict, list[str]]:
@@ -484,6 +609,7 @@ def main(argv: list[str] | None = None) -> int:
         if run_dir.exists():
             raise BenchError(f"run directory already exists, refusing to overwrite: {run_dir}")
         engine = engine_identity(engine_dir)
+        threads, threads_source = effective_threads(args.threads)
 
         runs_dir.mkdir(parents=True, exist_ok=True)
         partial = Path(tempfile.mkdtemp(prefix=f".partial-{run_id}-", dir=runs_dir))
@@ -572,13 +698,18 @@ def main(argv: list[str] | None = None) -> int:
             "support_stl_sha256": inputs["support_stl_sha256"],
         }
         meta = {
-            "schema_version": 1,
+            # 2: "threads" is the effective count, never null; the --threads value
+            # (null for the engine default) moved to "threads_requested", and
+            # "threads_source" names how the processor count was determined.
+            "schema_version": META_SCHEMA_VERSION,
             "run_id": run_id,
             "platform": args.platform,
             "build": args.build,
             "case": case["id"],
             "machine": case["machine"],
-            "threads": args.threads,
+            "threads": threads,
+            "threads_requested": args.threads,
+            "threads_source": threads_source,
             "cpu_count": os.cpu_count(),
             "repeat": args.repeat,
             "variant": {"label": variant or None, "disable_rle": args.disable_rle,

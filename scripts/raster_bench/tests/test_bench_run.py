@@ -22,20 +22,29 @@ import run_bench as rb
 from conftest import case_of, write_zip
 
 RASTER_TIMING = {"layers": 2, "threads": 8, "wall_s": 1.2, "thread_s": {"reset": 0.1}}
+# The bench fixture stubs hardware_threads; tests that need the real one take it from here.
+REAL_HARDWARE_THREADS = rb.hardware_threads
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 @pytest.fixture
 def bench(manifest, tmp_path):
-    """A work dir with built slab fixtures, a fake engine dir and the synthetic manifest loaded."""
+    """A work dir with built slab fixtures, a fake engine dir and the synthetic manifest loaded.
+
+    The machine is pinned to 8 hardware threads so thread counts in meta.json do
+    not depend on the machine running the tests.
+    """
     work = tmp_path / "work"
     for case_id in ("slab", "slab-frozen"):
         fx.build_case(manifest, case_of(manifest, case_id), None, work)
     engine = tmp_path / "engine"
     engine.mkdir()
     (engine / fx.ENGINE_EXE).write_bytes(b"fake engine")
-    with mock.patch.object(rb.fx, "load_manifest", side_effect=lambda: json.loads(json.dumps(manifest))):
+    if rb.ENGINE_CORE is not None:
+        (engine / rb.ENGINE_CORE).write_bytes(b"fake core library")
+    with mock.patch.object(rb.fx, "load_manifest", side_effect=lambda: json.loads(json.dumps(manifest))), \
+            mock.patch.object(rb, "hardware_threads", return_value=(8, "test")):
         yield {"work": work, "engine": engine, "manifest": manifest, "tmp": tmp_path}
 
 
@@ -116,7 +125,9 @@ def test_successful_run_writes_fingerprints_timing_and_meta(bench, capsys):
     assert timing["total_wall_s"] == 2.0
 
     meta = json.loads((run_dir / "meta.json").read_text())
-    assert meta["threads"] == 8 and meta["repeat"] == 1 and meta["platform"] == "windows"
+    assert meta["threads"] == 8 and meta["threads_requested"] == 8
+    assert meta["schema_version"] == 2 and meta["repeat"] == 1 and meta["platform"] == "windows"
+    assert meta["engine"]["exe_sha256"] == fx.sha256_file(bench["engine"] / fx.ENGINE_EXE)
     assert meta["counts"] == {"layers": 2, "preview": 2}
     assert meta["excluded_entries"]["layers"] == ["config.ini", "prusaslicer.ini"]
     assert meta["env"] == {"SLA_LAYER_RLE": "1"}
@@ -147,6 +158,215 @@ def test_default_threads_omits_flag(bench):
     assert code == 0
     assert "--threads" not in calls[0]["cmd"]
     assert runs(bench) == ["windows-base-slab-tdefault-r1"]
+
+
+def test_default_threads_records_hardware_count_not_null(bench):
+    code, _, _ = run_main(bench)
+    meta = json.loads((bench["work"] / "runs" / "windows-base-slab-tdefault-r1" / "meta.json").read_text())
+
+    assert code == 0
+    assert meta["threads"] == 8
+    assert meta["threads_requested"] is None
+
+
+def test_requested_threads_are_capped_at_hardware_count(bench):
+    code, calls, _ = run_main(bench, "--threads", "12")
+    meta = json.loads((bench["work"] / "runs" / "windows-base-slab-t12-r1" / "meta.json").read_text())
+
+    assert code == 0
+    assert calls[0]["cmd"][calls[0]["cmd"].index("--threads") + 1] == "12"
+    assert meta["threads"] == 8
+    assert meta["threads_requested"] == 12
+
+
+def test_meta_records_threads_source(bench):
+    code, _, _ = run_main(bench)
+    meta = json.loads((bench["work"] / "runs" / "windows-base-slab-tdefault-r1" / "meta.json").read_text())
+
+    assert code == 0
+    assert meta["threads_source"] == "test"
+
+
+@pytest.mark.parametrize("requested, expected", [(None, 6), (1, 1), (6, 6), (16, 6)])
+def test_effective_threads_follows_engine_rule(monkeypatch, requested, expected):
+    monkeypatch.setattr(rb, "hardware_threads", lambda: (6, "fake"))
+    assert rb.effective_threads(requested) == (expected, "fake")
+
+
+# ── hardware thread count: the oneTBB rule (pure) ─────────────────────────────
+
+@pytest.mark.parametrize("mask, group, all_groups, expected", [
+    (0xFF, 8, 8, 8),                 # unrestricted, one group
+    (0x0F, 8, 8, 4),                 # affinity restricted to four processors
+    (0x01, 8, 8, 1),                 # a single processor
+    ((1 << 64) - 1, 64, 128, 128),   # unrestricted, two full groups
+])
+def test_threads_from_affinity_follows_tbb_rule(mask, group, all_groups, expected):
+    assert rb.threads_from_affinity(mask, group, all_groups) == expected
+
+
+def test_zero_affinity_mask_is_refused():
+    with pytest.raises(rb.BenchError, match="several processor groups"):
+        rb.threads_from_affinity(0, 8, 8)
+
+
+def test_all_groups_count_below_mask_is_refused():
+    with pytest.raises(rb.BenchError, match="GetActiveProcessorCount returned 4"):
+        rb.threads_from_affinity(0xFF, 8, 4)
+
+
+# ── hardware thread count: Windows call failures (fake kernel32) ──────────────
+
+class FakeKernel32:
+    """Stands in for kernel32; each call's return value is configurable."""
+
+    def __init__(self, affinity_ok=True, process_mask=0xFF, processors=8, all_groups=8):
+        self.affinity_ok, self.process_mask = affinity_ok, process_mask
+        self.processors, self.all_groups = processors, all_groups
+
+    def GetCurrentProcess(self):
+        return -1
+
+    def GetProcessAffinityMask(self, handle, process_mask, system_mask):
+        if not self.affinity_ok:
+            return 0
+        process_mask._obj.value = self.process_mask
+        system_mask._obj.value = self.process_mask
+        return 1
+
+    def GetNativeSystemInfo(self, info):
+        info._obj.dwNumberOfProcessors = self.processors
+
+    def GetActiveProcessorCount(self, group):
+        return self.all_groups
+
+
+def fake_loader(kernel32):
+    """A _load_kernel32 replacement; only dwNumberOfProcessors of SYSTEM_INFO is read."""
+    import ctypes
+
+    class SystemInfo(ctypes.Structure):
+        _fields_ = [("dwNumberOfProcessors", ctypes.c_ulong)]
+
+    return lambda: (kernel32, ctypes.c_size_t, SystemInfo)
+
+
+def test_fake_kernel32_restricted_affinity_is_counted(monkeypatch):
+    monkeypatch.setattr(rb, "_load_kernel32", fake_loader(FakeKernel32(process_mask=0b1010)))
+    assert rb._windows_hardware_threads() == 2
+
+
+def test_affinity_call_failure_is_refused(monkeypatch):
+    monkeypatch.setattr(rb, "_load_kernel32", fake_loader(FakeKernel32(affinity_ok=False)))
+    with pytest.raises(rb.BenchError, match="GetProcessAffinityMask failed"):
+        rb._windows_hardware_threads()
+
+
+def test_active_processor_count_failure_is_refused(monkeypatch):
+    monkeypatch.setattr(rb, "_load_kernel32", fake_loader(FakeKernel32(all_groups=0)))
+    with pytest.raises(rb.BenchError, match="GetActiveProcessorCount failed"):
+        rb._windows_hardware_threads()
+
+
+@pytest.mark.parametrize("error", [OSError("kernel32 not loadable"), AttributeError("no GetActiveProcessorCount")])
+def test_kernel32_load_error_is_refused(monkeypatch, error):
+    def broken():
+        raise error
+
+    monkeypatch.setattr(rb, "_load_kernel32", broken)
+    with pytest.raises(rb.BenchError, match="cannot query processor affinity") as exc:
+        rb._windows_hardware_threads()
+    assert exc.value.__cause__ is error
+
+
+# ── hardware thread count: the real Windows call ──────────────────────────────
+
+@pytest.mark.skipif(os.name != "nt", reason="GetProcessAffinityMask is Windows-only")
+def test_real_affinity_count_is_within_cpu_count():
+    count, source = rb.hardware_threads()
+    assert 1 <= count <= os.cpu_count()
+    assert source == "GetProcessAffinityMask"
+
+
+def _hardware_threads_in_child(extra_env: dict) -> str:
+    import subprocess
+
+    env = {k: v for k, v in os.environ.items() if k != "PYTHON_CPU_COUNT"}
+    env.update(extra_env)
+    code = (f"import sys; sys.path.insert(0, {str(Path(rb.__file__).parent)!r}); "
+            "import run_bench; print(run_bench.hardware_threads()[0])")
+    result = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True)
+    return result.stdout.strip()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="GetProcessAffinityMask is Windows-only")
+def test_python_cpu_count_override_is_ignored():
+    assert _hardware_threads_in_child({"PYTHON_CPU_COUNT": "1"}) == _hardware_threads_in_child({})
+
+
+# ── hardware thread count: non-Windows fallbacks ──────────────────────────────
+
+def test_posix_uses_sched_getaffinity(monkeypatch):
+    monkeypatch.setattr(rb, "IS_WINDOWS", False)
+    monkeypatch.setattr(rb.os, "sched_getaffinity", lambda pid: {0, 1, 2}, raising=False)
+    assert rb.hardware_threads() == (3, "sched_getaffinity")
+
+
+@pytest.mark.parametrize("env, xoptions", [({"PYTHON_CPU_COUNT": "4"}, {}), ({}, {"cpu_count": "4"})])
+def test_macos_refuses_cpu_count_override(monkeypatch, env, xoptions):
+    monkeypatch.setattr(rb, "IS_WINDOWS", False)
+    monkeypatch.delattr(rb.os, "sched_getaffinity", raising=False)
+    monkeypatch.delenv("PYTHON_CPU_COUNT", raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(rb.sys, "_xoptions", xoptions)
+    with pytest.raises(rb.BenchError, match="PYTHON_CPU_COUNT or -X cpu_count"):
+        rb.hardware_threads()
+
+
+def test_macos_falls_back_to_cpu_count(monkeypatch):
+    monkeypatch.setattr(rb, "IS_WINDOWS", False)
+    monkeypatch.delattr(rb.os, "sched_getaffinity", raising=False)
+    monkeypatch.delenv("PYTHON_CPU_COUNT", raising=False)
+    monkeypatch.setattr(rb.sys, "_xoptions", {})
+    monkeypatch.setattr(rb.os, "cpu_count", lambda: 10)
+    assert rb.hardware_threads() == (10, "cpu_count")
+
+
+def test_macos_unknown_cpu_count_is_refused(monkeypatch):
+    monkeypatch.setattr(rb, "IS_WINDOWS", False)
+    monkeypatch.delattr(rb.os, "sched_getaffinity", raising=False)
+    monkeypatch.delenv("PYTHON_CPU_COUNT", raising=False)
+    monkeypatch.setattr(rb.sys, "_xoptions", {})
+    monkeypatch.setattr(rb.os, "cpu_count", lambda: None)
+    with pytest.raises(rb.BenchError, match="hardware threads"):
+        rb.hardware_threads()
+
+
+@pytest.mark.skipif(rb.ENGINE_CORE is None, reason="the core library is part of the identity on Windows only")
+def test_meta_records_sha256_of_both_engine_binaries(bench):
+    code, _, _ = run_main(bench)
+    engine = json.loads((bench["work"] / "runs" / "windows-base-slab-tdefault-r1" / "meta.json").read_text())["engine"]
+
+    assert code == 0
+    assert engine["exe_sha256"] == fx.sha256_file(bench["engine"] / fx.ENGINE_EXE)
+    assert engine["core_sha256"] == fx.sha256_file(bench["engine"] / rb.ENGINE_CORE)
+    assert engine["exe_sha256"] != engine["core_sha256"]
+
+
+@pytest.mark.skipif(rb.ENGINE_CORE is None, reason="the core library is part of the identity on Windows only")
+def test_same_build_id_different_core_gives_different_identity(bench):
+    (bench["engine"] / "engine_build_id.txt").write_text("20260904T070913Z")
+    run_main(bench)
+    (bench["engine"] / rb.ENGINE_CORE).write_bytes(b"another core library")
+    run_main(bench, "--repeat", "2")
+    first, second = (
+        json.loads((bench["work"] / "runs" / f"windows-base-slab-tdefault-r{n}" / "meta.json").read_text())["engine"]
+        for n in (1, 2)
+    )
+
+    assert first["exe_sha256"] == second["exe_sha256"]
+    assert first["core_sha256"] != second["core_sha256"]
 
 
 def test_archives_are_deleted_unless_kept(bench):
@@ -372,6 +592,37 @@ def test_missing_engine_is_refused(bench, capsys):
     code, _, patched = run_main(bench)
 
     assert_refused(bench, capsys, code, patched, "engine not found")
+
+
+@pytest.mark.skipif(rb.ENGINE_CORE is None, reason="the core library is part of the identity on Windows only")
+def test_missing_core_library_is_refused(bench, capsys):
+    (bench["engine"] / rb.ENGINE_CORE).unlink()
+    code, _, patched = run_main(bench)
+
+    assert_refused(bench, capsys, code, patched, "engine core library not found")
+
+
+def test_unknown_thread_count_refuses_run_without_partial(bench, capsys):
+    with mock.patch.object(rb, "hardware_threads",
+                           side_effect=rb.BenchError("cannot determine the number of hardware threads")):
+        code, _, patched = run_main(bench)
+
+    assert_refused(bench, capsys, code, patched, "cannot determine the number of hardware threads")
+    assert not (bench["work"] / "runs").exists()
+
+
+def test_kernel32_failure_through_main_refuses_run(bench, capsys, monkeypatch):
+    def broken():
+        raise AttributeError("function 'GetActiveProcessorCount' not found")
+
+    # Undo the fixture's stub so main() goes through the Windows query itself.
+    monkeypatch.setattr(rb, "hardware_threads", REAL_HARDWARE_THREADS)
+    monkeypatch.setattr(rb, "IS_WINDOWS", True)
+    monkeypatch.setattr(rb, "_load_kernel32", broken)
+    code, _, patched = run_main(bench)
+
+    assert_refused(bench, capsys, code, patched, "cannot query processor affinity", "GetActiveProcessorCount")
+    assert not (bench["work"] / "runs").exists()
 
 
 def test_existing_run_directory_is_never_overwritten(bench, capsys):
