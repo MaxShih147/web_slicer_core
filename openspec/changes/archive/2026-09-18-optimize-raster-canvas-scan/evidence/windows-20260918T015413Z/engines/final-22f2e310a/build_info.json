@@ -1,0 +1,101 @@
+{
+  "role": "final (Phase 3 acceptance engine, round 2: stage 1 + stage 2 at 10fcc6d96, plus the D13 fixed-block SSE2 preview kernel; tile edge T = 40)",
+  "recorded_at_utc": "2026-09-17T07:48:46Z",
+  "fork": {
+    "commit": "22f2e310ae6cdbeb3f9f0419fcc8e9d03b4e3fe6",
+    "parent": "10fcc6d96e469e9464a0c143b45373c304aa7026",
+    "commit_date": "2026-09-17T15:19:15+08:00",
+    "branch": "feat/phase2-tile-tracking-t40",
+    "status_short": [
+      " M .gitignore",
+      " M src/libslic3r/CMakeLists.txt",
+      " M src/slic3r/CMakeLists.txt"
+    ],
+    "uncommitted_build_tweaks": {
+      "diff_stat": [
+        " .gitignore                   | 9 +++++++++",
+        " src/libslic3r/CMakeLists.txt | 6 +++++-",
+        " src/slic3r/CMakeLists.txt    | 2 +-",
+        " 3 files changed, 15 insertions(+), 2 deletions(-)"
+      ],
+      "diff_sha256": "83230c3fab55c97d8135f6db71f043655b9d0f537c4a7c0f869891eca1ffe790",
+      "same_as_base_5bc83b08f": true,
+      "same_as_final_10fcc6d96": true
+    },
+    "tree": "78a3a8c1a8b1df4006a08150e629bf219045b1d0",
+    "identity_note": "Built from fork commit 22f2e310a (D13 on top of 10fcc6d96) with only the pre-existing build tweaks uncommitted (tasks.md commit rule). The acceptance tools identify this engine by the SHA-256 of slicer-engine.exe and slicer_core.dll in build.files, not by engine_build_id.txt."
+  },
+  "build": {
+    "method": "manual VS2022 build by user from fork commit 22f2e310a, deployed to slicer-engine/bin",
+    "solution": "third_party/prusaslicer_fork/build/PrusaSlicer.sln",
+    "configuration": "Release | x64",
+    "output_mtime": {
+      "slicer-engine.exe": "2026-09-17T15:32:39+08:00",
+      "slicer_core.dll": "2026-09-17T15:32:37+08:00",
+      "OCCTWrapper.dll": "2026-09-17T15:31:59+08:00"
+    },
+    "latest_tracked_source_mtime": {
+      "file": "src/libslic3r/SLA/RasterBase.hpp",
+      "mtime": "2026-09-17T14:29:33+08:00"
+    },
+    "outputs_newer_than_sources": true,
+    "outputs_newer_than_commit": true,
+    "cmake_cache": {
+      "BUNDLE_QA_CRASH_HARNESS": "OFF",
+      "CMAKE_CXX_FLAGS_RELEASE": "/MD /O2 /Ob2 /DNDEBUG",
+      "CMAKE_PREFIX_PATH": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\deps\\build\\out_deps\\usr\\local",
+      "SLIC3R_BUILD_TESTS": "ON",
+      "SLIC3R_GUI": "ON",
+      "SLIC3R_MSVC_COMPILE_PARALLEL": "ON",
+      "SLIC3R_STATIC": "ON",
+      "CMAKE_GENERATOR": "Visual Studio 17 2022",
+      "CMAKE_GENERATOR_PLATFORM": ""
+    },
+    "archived_at_utc": "2026-09-17T07:48:40Z",
+    "source_dir": "slicer-engine/bin",
+    "files": {
+      "slicer-engine.exe": {
+        "sha256": "30b55401e6090e7cac45cac7ab560246b7ab87d54eb3ed6d87d24633bf74b85d",
+        "bytes": 164352
+      },
+      "slicer_core.dll": {
+        "sha256": "55c01333c8368e1fc77cfa9715fad63a577582045b167db2df8c9e6ea7cf6597",
+        "bytes": 66639872
+      },
+      "OCCTWrapper.dll": {
+        "sha256": "7f57c2e0b04106b84c7c631c89dad1a6ba310f6ab311a87ca48680ec01be0dfb",
+        "bytes": 15412736
+      },
+      "libgmp-10.dll": {
+        "sha256": "fec43cb18ce0ec8a5dd6ad1db745747167310ccb92b5acff0d445a8b3013f009",
+        "bytes": 543027
+      },
+      "libmpfr-4.dll": {
+        "sha256": "09b3b868b96433991fc15c9c5ae6f9a44c62d2e21194110442607917391ed927",
+        "bytes": 436011
+      },
+      "WebView2Loader.dll": {
+        "sha256": "6db06648a749eba26d859fad4d4e2625c28b8c60e8770bc76c7ea445424543f5",
+        "bytes": 136088
+      }
+    },
+    "resources": {
+      "file_count": 1003,
+      "digest_sha256": "826bc1e902299a0b07e5f3a4d048f698384836876a53c274ff1b7fcb817d4ff9",
+      "digest_rule": "sha256 (UTF-8) of '<posix relpath>  <sha256>' lines sorted by plain string order, joined by \n, no trailing newline (same rule as final-10fcc6d96)",
+      "identical_to_base_5bc83b08f": true,
+      "identical_to_final_10fcc6d96_digest": true,
+      "note": "base-5bc83b08f recorded d7630601...: the same lines in case-insensitive path order (pathlib on Windows), which reproduces it exactly; identical_to_base_5bc83b08f compares every file hash directly"
+    },
+    "copy_matches_source": true,
+    "deployed_matches_vs_build_output": {
+      "slicer-engine.exe": true,
+      "slicer_core.dll": true,
+      "OCCTWrapper.dll": true
+    },
+    "engine_build_id_txt": {
+      "value": "20260904T070913Z",
+      "note": "stale: not updated by manual VS2022 builds; NOT used as engine identity"
+    }
+  }
+}

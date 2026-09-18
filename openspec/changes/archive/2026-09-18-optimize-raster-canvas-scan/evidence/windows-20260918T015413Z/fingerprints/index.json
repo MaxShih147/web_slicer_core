@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-09-18T01:54:13Z",
+  "cases": {
+    "primary-16k-guide-x8": {
+      "golden_run": "windows-base-primary-16k-guide-x8-tdefault-r1",
+      "final_run": "windows-p3-final-a1-primary-16k-guide-x8-tdefault-r1",
+      "final_engine": "final-22f2e310a",
+      "lists_identical": true
+    },
+    "secondary-8k-guide-x3": {
+      "golden_run": "windows-base-secondary-8k-guide-x3-tdefault-r1",
+      "final_run": "windows-p3-final-a1-secondary-8k-guide-x3-tdefault-r1",
+      "final_engine": "final-22f2e310a",
+      "lists_identical": true
+    },
+    "fullplate-16k-slab": {
+      "golden_run": "windows-base-fullplate-16k-slab-tdefault-r1",
+      "final_run": "windows-p3-final-a1-fullplate-16k-slab-tdefault-r1",
+      "final_engine": "final-22f2e310a",
+      "lists_identical": true
+    },
+    "tiny-16k-crown-x1": {
+      "golden_run": "windows-base-tiny-16k-crown-x1-tdefault-r1",
+      "final_run": "windows-p3-final-a1-tiny-16k-crown-x1-tdefault-r1",
+      "final_engine": "final-22f2e310a",
+      "lists_identical": true
+    }
+  }
+}

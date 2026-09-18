@@ -1,0 +1,423 @@
+{
+  "generated_at_utc": "2026-09-18T01:54:13Z",
+  "note": "Diagnostics only (SLA_RASTER_TIMING=1, default threads = 8). Not acceptance measurements.",
+  "tiny-16k-crown-x1": {
+    "step1-570c7c5e2": {
+      "runs": [
+        {
+          "run": "windows-step1-tiny-16k-crown-x1-tdefault-r1",
+          "engine": "step1-570c7c5e2",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 5.484483,
+          "thread_s": {
+            "reset": 16.359247,
+            "draw_model": 0.121892,
+            "postprocess": 7.214973,
+            "draw_support": 0.000514,
+            "encode_layer": 7.836144,
+            "encode_preview": 9.135717
+          }
+        },
+        {
+          "run": "windows-step1-tiny-16k-crown-x1-tdefault-r2",
+          "engine": "step1-570c7c5e2",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 5.199412,
+          "thread_s": {
+            "reset": 15.527336,
+            "draw_model": 0.116899,
+            "postprocess": 7.112756,
+            "draw_support": 0.000434,
+            "encode_layer": 7.533712,
+            "encode_preview": 8.577332
+          }
+        },
+        {
+          "run": "windows-step1-tiny-16k-crown-x1-tdefault-r3",
+          "engine": "step1-570c7c5e2",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 5.449628,
+          "thread_s": {
+            "reset": 15.390333,
+            "draw_model": 0.102538,
+            "postprocess": 7.203261,
+            "draw_support": 0.000527,
+            "encode_layer": 8.160175,
+            "encode_preview": 9.194297
+          }
+        }
+      ],
+      "median_thread_s": {
+        "reset": 15.527336,
+        "draw_model": 0.116899,
+        "postprocess": 7.203261,
+        "draw_support": 0.000514,
+        "encode_layer": 7.836144,
+        "encode_preview": 9.135717
+      },
+      "median_thread_s_sum": 39.819871,
+      "median_wall_s": 5.449628
+    },
+    "final-10fcc6d96 (round 1)": {
+      "runs": [
+        {
+          "run": "windows-p3-timing-tiny-tiny-16k-crown-x1-tdefault-r1",
+          "engine": "final-10fcc6d96",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 0.356545,
+          "thread_s": {
+            "reset": 1.417828,
+            "draw_model": 0.061743,
+            "postprocess": 0.013458,
+            "draw_support": 1.8e-05,
+            "encode_layer": 0.069147,
+            "encode_preview": 0.850553
+          }
+        },
+        {
+          "run": "windows-p3-timing-tiny-tiny-16k-crown-x1-tdefault-r2",
+          "engine": "final-10fcc6d96",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 0.363716,
+          "thread_s": {
+            "reset": 1.339972,
+            "draw_model": 0.053818,
+            "postprocess": 0.013333,
+            "draw_support": 2.3e-05,
+            "encode_layer": 0.058733,
+            "encode_preview": 0.952594
+          }
+        },
+        {
+          "run": "windows-p3-timing-tiny-tiny-16k-crown-x1-tdefault-r3",
+          "engine": "final-10fcc6d96",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 0.34994,
+          "thread_s": {
+            "reset": 1.389189,
+            "draw_model": 0.061225,
+            "postprocess": 0.022779,
+            "draw_support": 2.3e-05,
+            "encode_layer": 0.068127,
+            "encode_preview": 0.795095
+          }
+        }
+      ],
+      "median_thread_s": {
+        "reset": 1.389189,
+        "draw_model": 0.061225,
+        "postprocess": 0.013458,
+        "draw_support": 2.3e-05,
+        "encode_layer": 0.068127,
+        "encode_preview": 0.850553
+      },
+      "median_thread_s_sum": 2.382575,
+      "median_wall_s": 0.356545
+    },
+    "final-22f2e310a": {
+      "runs": [
+        {
+          "run": "windows-p3-timing-tiny-tiny-16k-crown-x1-tdefault-r1",
+          "engine": "final-22f2e310a",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 0.537171,
+          "thread_s": {
+            "reset": 2.638454,
+            "draw_model": 0.079761,
+            "postprocess": 0.041728,
+            "draw_support": 2e-05,
+            "encode_layer": 0.051786,
+            "encode_preview": 0.812386
+          }
+        },
+        {
+          "run": "windows-p3-timing-tiny-tiny-16k-crown-x1-tdefault-r2",
+          "engine": "final-22f2e310a",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 0.401998,
+          "thread_s": {
+            "reset": 1.446751,
+            "draw_model": 0.038714,
+            "postprocess": 0.011747,
+            "draw_support": 2.2e-05,
+            "encode_layer": 0.05504,
+            "encode_preview": 0.855174
+          }
+        },
+        {
+          "run": "windows-p3-timing-tiny-tiny-16k-crown-x1-tdefault-r3",
+          "engine": "final-22f2e310a",
+          "layers": 186,
+          "threads": 8,
+          "wall_s": 0.326654,
+          "thread_s": {
+            "reset": 1.213945,
+            "draw_model": 0.056502,
+            "postprocess": 0.01443,
+            "draw_support": 2e-05,
+            "encode_layer": 0.054749,
+            "encode_preview": 0.86378
+          }
+        }
+      ],
+      "median_thread_s": {
+        "reset": 1.446751,
+        "draw_model": 0.056502,
+        "postprocess": 0.01443,
+        "draw_support": 2e-05,
+        "encode_layer": 0.054749,
+        "encode_preview": 0.855174
+      },
+      "median_thread_s_sum": 2.427626,
+      "median_wall_s": 0.401998
+    }
+  },
+  "fullplate-16k-slab": {
+    "step1-570c7c5e2": {
+      "runs": [
+        {
+          "run": "windows-step1-fullplate-16k-slab-tdefault-r1",
+          "engine": "step1-570c7c5e2",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 2.224395,
+          "thread_s": {
+            "reset": 3.449856,
+            "draw_model": 2.836708,
+            "postprocess": 1.140245,
+            "draw_support": 7.8e-05,
+            "encode_layer": 1.145893,
+            "encode_preview": 7.820622
+          }
+        },
+        {
+          "run": "windows-step1-fullplate-16k-slab-tdefault-r2",
+          "engine": "step1-570c7c5e2",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 2.054176,
+          "thread_s": {
+            "reset": 3.46472,
+            "draw_model": 2.553339,
+            "postprocess": 1.007562,
+            "draw_support": 6.8e-05,
+            "encode_layer": 1.098614,
+            "encode_preview": 7.052233
+          }
+        },
+        {
+          "run": "windows-step1-fullplate-16k-slab-tdefault-r3",
+          "engine": "step1-570c7c5e2",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 2.225559,
+          "thread_s": {
+            "reset": 3.796051,
+            "draw_model": 3.341143,
+            "postprocess": 1.274548,
+            "draw_support": 9.5e-05,
+            "encode_layer": 1.166354,
+            "encode_preview": 7.470417
+          }
+        }
+      ],
+      "median_thread_s": {
+        "reset": 3.46472,
+        "draw_model": 2.836708,
+        "postprocess": 1.140245,
+        "draw_support": 7.8e-05,
+        "encode_layer": 1.145893,
+        "encode_preview": 7.470417
+      },
+      "median_thread_s_sum": 16.058061,
+      "median_wall_s": 2.224395
+    },
+    "final-10fcc6d96 (round 1)": {
+      "runs": [
+        {
+          "run": "windows-p3-timing-fullplate-fullplate-16k-slab-tdefault-r1",
+          "engine": "final-10fcc6d96",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 2.394732,
+          "thread_s": {
+            "reset": 2.683283,
+            "draw_model": 2.977797,
+            "postprocess": 0.996193,
+            "draw_support": 7.4e-05,
+            "encode_layer": 1.557735,
+            "encode_preview": 9.021488
+          }
+        },
+        {
+          "run": "windows-p3-timing-fullplate-fullplate-16k-slab-tdefault-r2",
+          "engine": "final-10fcc6d96",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 2.244089,
+          "thread_s": {
+            "reset": 2.669763,
+            "draw_model": 2.917402,
+            "postprocess": 1.158765,
+            "draw_support": 7.6e-05,
+            "encode_layer": 1.480471,
+            "encode_preview": 8.240063
+          }
+        },
+        {
+          "run": "windows-p3-timing-fullplate-fullplate-16k-slab-tdefault-r3",
+          "engine": "final-10fcc6d96",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 2.344668,
+          "thread_s": {
+            "reset": 2.608346,
+            "draw_model": 2.912171,
+            "postprocess": 0.97932,
+            "draw_support": 8.4e-05,
+            "encode_layer": 1.598332,
+            "encode_preview": 9.107
+          }
+        }
+      ],
+      "median_thread_s": {
+        "reset": 2.669763,
+        "draw_model": 2.917402,
+        "postprocess": 0.996193,
+        "draw_support": 7.6e-05,
+        "encode_layer": 1.557735,
+        "encode_preview": 9.021488
+      },
+      "median_thread_s_sum": 17.162657,
+      "median_wall_s": 2.344668
+    },
+    "final-22f2e310a": {
+      "runs": [
+        {
+          "run": "windows-p3-timing-fullplate-fullplate-16k-slab-tdefault-r1",
+          "engine": "final-22f2e310a",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 1.710992,
+          "thread_s": {
+            "reset": 2.553015,
+            "draw_model": 3.142814,
+            "postprocess": 1.211021,
+            "draw_support": 0.033987,
+            "encode_layer": 1.738835,
+            "encode_preview": 3.442866
+          }
+        },
+        {
+          "run": "windows-p3-timing-fullplate-fullplate-16k-slab-tdefault-r2",
+          "engine": "final-22f2e310a",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 1.625253,
+          "thread_s": {
+            "reset": 2.671372,
+            "draw_model": 2.944399,
+            "postprocess": 1.185836,
+            "draw_support": 8.6e-05,
+            "encode_layer": 1.591479,
+            "encode_preview": 3.466545
+          }
+        },
+        {
+          "run": "windows-p3-timing-fullplate-fullplate-16k-slab-tdefault-r3",
+          "engine": "final-22f2e310a",
+          "layers": 40,
+          "threads": 8,
+          "wall_s": 1.75263,
+          "thread_s": {
+            "reset": 2.718818,
+            "draw_model": 3.353005,
+            "postprocess": 1.213519,
+            "draw_support": 7.7e-05,
+            "encode_layer": 1.48431,
+            "encode_preview": 3.687672
+          }
+        }
+      ],
+      "median_thread_s": {
+        "reset": 2.671372,
+        "draw_model": 3.142814,
+        "postprocess": 1.211021,
+        "draw_support": 8.6e-05,
+        "encode_layer": 1.591479,
+        "encode_preview": 3.466545
+      },
+      "median_thread_s_sum": 12.083317,
+      "median_wall_s": 1.710992
+    }
+  },
+  "primary-16k-guide-x8": {
+    "step1-570c7c5e2": {
+      "runs": [
+        {
+          "run": "windows-step1-primary-16k-guide-x8-tdefault-r1",
+          "engine": "step1-570c7c5e2",
+          "layers": 592,
+          "threads": 8,
+          "wall_s": 16.874848,
+          "thread_s": {
+            "reset": 44.164797,
+            "draw_model": 7.378618,
+            "postprocess": 21.323432,
+            "draw_support": 3.400182,
+            "encode_layer": 24.579496,
+            "encode_preview": 31.541671
+          }
+        },
+        {
+          "run": "windows-step1-primary-16k-guide-x8-tdefault-r2",
+          "engine": "step1-570c7c5e2",
+          "layers": 592,
+          "threads": 8,
+          "wall_s": 16.66953,
+          "thread_s": {
+            "reset": 43.647473,
+            "draw_model": 7.52986,
+            "postprocess": 21.470172,
+            "draw_support": 3.319117,
+            "encode_layer": 23.951591,
+            "encode_preview": 31.626226
+          }
+        },
+        {
+          "run": "windows-step1-primary-16k-guide-x8-tdefault-r3",
+          "engine": "step1-570c7c5e2",
+          "layers": 592,
+          "threads": 8,
+          "wall_s": 16.591881,
+          "thread_s": {
+            "reset": 43.106384,
+            "draw_model": 6.928315,
+            "postprocess": 21.306084,
+            "draw_support": 3.198108,
+            "encode_layer": 23.66864,
+            "encode_preview": 30.767356
+          }
+        }
+      ],
+      "median_thread_s": {
+        "reset": 43.647473,
+        "draw_model": 7.378618,
+        "postprocess": 21.323432,
+        "draw_support": 3.319117,
+        "encode_layer": 23.951591,
+        "encode_preview": 31.541671
+      },
+      "median_thread_s_sum": 131.161902,
+      "median_wall_s": 16.66953
+    }
+  }
+}

@@ -1,0 +1,751 @@
+{
+  "schema_version": 1,
+  "tool": "scripts/raster_bench/acceptance_report.py",
+  "generated_at_utc": "2026-09-17T05:54:39Z",
+  "platform": "windows",
+  "sections": [
+    "gates",
+    "curve"
+  ],
+  "labels": {
+    "base": "p3-base",
+    "final": "p3-final"
+  },
+  "engines": {
+    "base": {
+      "dir": "base-5bc83b08f",
+      "problems": [],
+      "fork_commit": "5bc83b08fe6f5191a02102e0abba464e430a40d4",
+      "fork_tree": "561f61f0252ae5e22648cfbdad46e6b0f26fbbb4",
+      "exe_sha256": "105a657fa3db8b8327e46cadb6014c210a68246d98f44b1e7ccc97269f1b5b4c",
+      "core_sha256": "97b6c2ee5bb3606c886d0384c55badd00e7f9c2372b6d18f04b847051b47af32"
+    },
+    "final": {
+      "dir": "final-10fcc6d96",
+      "problems": [],
+      "fork_commit": "10fcc6d96e469e9464a0c143b45373c304aa7026",
+      "fork_tree": "4e2963b2a46d5941631478efd730afd67b300c46",
+      "exe_sha256": "73a057055d6d232b6793ae0e0c0b3c8ccae7d12d79d0db4acd5bb685221fc6ee",
+      "core_sha256": "772ce1cd1832b9ad2d8f088d774653b570c32a4cdb6c65908565d936f3a399aa"
+    }
+  },
+  "gates": {
+    "primary-16k-guide-x8": {
+      "case": "primary-16k-guide-x8",
+      "rounds": [
+        {
+          "round": 1,
+          "superseded": false,
+          "complete": true,
+          "triggers_rerun": false,
+          "threads": [
+            8
+          ],
+          "groups": {
+            "base": {
+              "rasterizing_wall_s": {
+                "values": [
+                  22.6983,
+                  23.2463,
+                  22.8226
+                ],
+                "median": 22.8226,
+                "min": 22.6983,
+                "max": 23.2463,
+                "spread": 0.548
+              },
+              "peak_pagefile_usage_bytes": {
+                "values": [
+                  8436654080,
+                  8439869440,
+                  8422862848
+                ],
+                "median": 8436654080,
+                "min": 8422862848,
+                "max": 8439869440,
+                "spread": 17006592
+              },
+              "peak_working_set_bytes": {
+                "values": [
+                  1529425920,
+                  1528348672,
+                  1521152000
+                ],
+                "median": 1528348672,
+                "min": 1521152000,
+                "max": 1529425920,
+                "spread": 8273920
+              }
+            },
+            "final": {
+              "rasterizing_wall_s": {
+                "values": [
+                  4.27,
+                  4.4747,
+                  4.5102
+                ],
+                "median": 4.4747,
+                "min": 4.27,
+                "max": 4.5102,
+                "spread": 0.2402
+              },
+              "peak_pagefile_usage_bytes": {
+                "values": [
+                  2329911296,
+                  2323267584,
+                  2305568768
+                ],
+                "median": 2323267584,
+                "min": 2305568768,
+                "max": 2329911296,
+                "spread": 24342528
+              },
+              "peak_working_set_bytes": {
+                "values": [
+                  1530556416,
+                  1518964736,
+                  1512591360
+                ],
+                "median": 1518964736,
+                "min": 1512591360,
+                "max": 1530556416,
+                "spread": 17965056
+              }
+            }
+          }
+        }
+      ],
+      "latest_round": 1,
+      "checks": [
+        {
+          "metric": "rasterizing_wall_s",
+          "rule": "final median <= 50% of base median",
+          "base_median": 22.8226,
+          "final_median": 4.4747,
+          "limit": 11.4113,
+          "ratio_percent": 19.606442736585667,
+          "result": "PASS"
+        },
+        {
+          "metric": "peak_pagefile_usage_bytes",
+          "rule": "final median <= 100% of base median",
+          "base_median": 8436654080,
+          "final_median": 2323267584,
+          "limit": 8436654080.0,
+          "ratio_percent": 27.537784078495726,
+          "result": "PASS"
+        },
+        {
+          "metric": "peak_working_set_bytes",
+          "rule": "final median <= 103% of base median",
+          "base_median": 1528348672,
+          "final_median": 1518964736,
+          "limit": 1574199132.16,
+          "ratio_percent": 99.38600816869098,
+          "result": "PASS"
+        }
+      ],
+      "status": "PASS"
+    },
+    "secondary-8k-guide-x3": {
+      "case": "secondary-8k-guide-x3",
+      "rounds": [
+        {
+          "round": 1,
+          "superseded": false,
+          "complete": true,
+          "triggers_rerun": false,
+          "threads": [
+            8
+          ],
+          "groups": {
+            "base": {
+              "rasterizing_wall_s": {
+                "values": [
+                  6.3713,
+                  6.4146,
+                  6.146
+                ],
+                "median": 6.3713,
+                "min": 6.146,
+                "max": 6.4146,
+                "spread": 0.2686
+              },
+              "peak_pagefile_usage_bytes": {
+                "values": [
+                  2389192704,
+                  2363621376,
+                  2412326912
+                ],
+                "median": 2389192704,
+                "min": 2363621376,
+                "max": 2412326912,
+                "spread": 48705536
+              },
+              "peak_working_set_bytes": {
+                "values": [
+                  607309824,
+                  578506752,
+                  628359168
+                ],
+                "median": 607309824,
+                "min": 578506752,
+                "max": 628359168,
+                "spread": 49852416
+              }
+            },
+            "final": {
+              "rasterizing_wall_s": {
+                "values": [
+                  1.3021,
+                  1.2857,
+                  1.3808
+                ],
+                "median": 1.3021,
+                "min": 1.2857,
+                "max": 1.3808,
+                "spread": 0.0951
+              },
+              "peak_pagefile_usage_bytes": {
+                "values": [
+                  818176000,
+                  833355776,
+                  828710912
+                ],
+                "median": 828710912,
+                "min": 818176000,
+                "max": 833355776,
+                "spread": 15179776
+              },
+              "peak_working_set_bytes": {
+                "values": [
+                  688459776,
+                  719581184,
+                  703213568
+                ],
+                "median": 703213568,
+                "min": 688459776,
+                "max": 719581184,
+                "spread": 31121408
+              }
+            }
+          }
+        }
+      ],
+      "latest_round": 1,
+      "checks": [
+        {
+          "metric": "rasterizing_wall_s",
+          "rule": "final median <= 100% of base median",
+          "base_median": 6.3713,
+          "final_median": 1.3021,
+          "limit": 6.3713,
+          "ratio_percent": 20.43695949021393,
+          "result": "PASS"
+        }
+      ],
+      "status": "PASS"
+    },
+    "fullplate-16k-slab": {
+      "case": "fullplate-16k-slab",
+      "rounds": [
+        {
+          "round": 1,
+          "superseded": false,
+          "complete": true,
+          "triggers_rerun": false,
+          "threads": [
+            8
+          ],
+          "groups": {
+            "base": {
+              "rasterizing_wall_s": {
+                "values": [
+                  2.2329,
+                  2.1192,
+                  2.132
+                ],
+                "median": 2.132,
+                "min": 2.1192,
+                "max": 2.2329,
+                "spread": 0.1137
+              },
+              "peak_pagefile_usage_bytes": {
+                "values": [
+                  1295364096,
+                  1302532096,
+                  1291194368
+                ],
+                "median": 1295364096,
+                "min": 1291194368,
+                "max": 1302532096,
+                "spread": 11337728
+              },
+              "peak_working_set_bytes": {
+                "values": [
+                  822521856,
+                  821956608,
+                  820469760
+                ],
+                "median": 821956608,
+                "min": 820469760,
+                "max": 822521856,
+                "spread": 2052096
+              }
+            },
+            "final": {
+              "rasterizing_wall_s": {
+                "values": [
+                  2.2179,
+                  2.1391,
+                  2.2514
+                ],
+                "median": 2.2179,
+                "min": 2.1391,
+                "max": 2.2514,
+                "spread": 0.1123
+              },
+              "peak_pagefile_usage_bytes": {
+                "values": [
+                  882864128,
+                  887500800,
+                  882380800
+                ],
+                "median": 882864128,
+                "min": 882380800,
+                "max": 887500800,
+                "spread": 5120000
+              },
+              "peak_working_set_bytes": {
+                "values": [
+                  824823808,
+                  825016320,
+                  824786944
+                ],
+                "median": 824823808,
+                "min": 824786944,
+                "max": 825016320,
+                "spread": 229376
+              }
+            }
+          }
+        }
+      ],
+      "latest_round": 1,
+      "checks": [
+        {
+          "metric": "rasterizing_wall_s",
+          "rule": "final median <= 103% of base median",
+          "base_median": 2.132,
+          "final_median": 2.2179,
+          "limit": 2.19596,
+          "ratio_percent": 104.02908067542214,
+          "result": "FAIL"
+        }
+      ],
+      "status": "FAIL"
+    }
+  },
+  "record_only": {
+    "tiny-16k-crown-x1": {
+      "case": "tiny-16k-crown-x1",
+      "judged": false,
+      "round": null,
+      "status": "INCOMPLETE",
+      "reason": "final engine needs repeats 1..3 at the default thread count"
+    }
+  },
+  "curve": {
+    "case": "primary-16k-guide-x8",
+    "judged": false,
+    "status": "INCOMPLETE",
+    "points": [
+      {
+        "engine": "base",
+        "threads": 1,
+        "status": "INCOMPLETE",
+        "reason": "needs repeats 1..3"
+      },
+      {
+        "engine": "base",
+        "threads": 2,
+        "status": "INCOMPLETE",
+        "reason": "needs repeats 1..3"
+      },
+      {
+        "engine": "base",
+        "threads": 4,
+        "status": "INCOMPLETE",
+        "reason": "needs repeats 1..3"
+      },
+      {
+        "engine": "base",
+        "threads": 8,
+        "status": "PASS",
+        "source": "gate round a1 (default threads, effective 8)",
+        "runs": [
+          "windows-p3-base-a1-primary-16k-guide-x8-tdefault-r1",
+          "windows-p3-base-a1-primary-16k-guide-x8-tdefault-r2",
+          "windows-p3-base-a1-primary-16k-guide-x8-tdefault-r3"
+        ],
+        "effective_threads": [
+          8
+        ],
+        "rasterizing_wall_s": {
+          "values": [
+            22.6983,
+            23.2463,
+            22.8226
+          ],
+          "median": 22.8226,
+          "min": 22.6983,
+          "max": 23.2463,
+          "spread": 0.548
+        },
+        "peak_pagefile_usage_bytes": {
+          "values": [
+            8436654080,
+            8439869440,
+            8422862848
+          ],
+          "median": 8436654080,
+          "min": 8422862848,
+          "max": 8439869440,
+          "spread": 17006592
+        },
+        "peak_working_set_bytes": {
+          "values": [
+            1529425920,
+            1528348672,
+            1521152000
+          ],
+          "median": 1528348672,
+          "min": 1521152000,
+          "max": 1529425920,
+          "spread": 8273920
+        }
+      },
+      {
+        "engine": "final",
+        "threads": 1,
+        "status": "INCOMPLETE",
+        "reason": "needs repeats 1..3"
+      },
+      {
+        "engine": "final",
+        "threads": 2,
+        "status": "INCOMPLETE",
+        "reason": "needs repeats 1..3"
+      },
+      {
+        "engine": "final",
+        "threads": 4,
+        "status": "INCOMPLETE",
+        "reason": "needs repeats 1..3"
+      },
+      {
+        "engine": "final",
+        "threads": 8,
+        "status": "PASS",
+        "source": "gate round a1 (default threads, effective 8)",
+        "runs": [
+          "windows-p3-final-a1-primary-16k-guide-x8-tdefault-r1",
+          "windows-p3-final-a1-primary-16k-guide-x8-tdefault-r2",
+          "windows-p3-final-a1-primary-16k-guide-x8-tdefault-r3"
+        ],
+        "effective_threads": [
+          8
+        ],
+        "rasterizing_wall_s": {
+          "values": [
+            4.27,
+            4.4747,
+            4.5102
+          ],
+          "median": 4.4747,
+          "min": 4.27,
+          "max": 4.5102,
+          "spread": 0.2402
+        },
+        "peak_pagefile_usage_bytes": {
+          "values": [
+            2329911296,
+            2323267584,
+            2305568768
+          ],
+          "median": 2323267584,
+          "min": 2305568768,
+          "max": 2329911296,
+          "spread": 24342528
+        },
+        "peak_working_set_bytes": {
+          "values": [
+            1530556416,
+            1518964736,
+            1512591360
+          ],
+          "median": 1518964736,
+          "min": 1512591360,
+          "max": 1530556416,
+          "spread": 17965056
+        }
+      }
+    ]
+  },
+  "runs": [
+    {
+      "run_id": "windows-p3-base-a1-fullplate-16k-slab-tdefault-r1",
+      "case": "fullplate-16k-slab",
+      "engine": "base",
+      "round": 1,
+      "repeat": 1,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-fullplate-16k-slab-tdefault-r2",
+      "case": "fullplate-16k-slab",
+      "engine": "base",
+      "round": 1,
+      "repeat": 2,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-fullplate-16k-slab-tdefault-r3",
+      "case": "fullplate-16k-slab",
+      "engine": "base",
+      "round": 1,
+      "repeat": 3,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-primary-16k-guide-x8-tdefault-r1",
+      "case": "primary-16k-guide-x8",
+      "engine": "base",
+      "round": 1,
+      "repeat": 1,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-primary-16k-guide-x8-tdefault-r2",
+      "case": "primary-16k-guide-x8",
+      "engine": "base",
+      "round": 1,
+      "repeat": 2,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-primary-16k-guide-x8-tdefault-r3",
+      "case": "primary-16k-guide-x8",
+      "engine": "base",
+      "round": 1,
+      "repeat": 3,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-secondary-8k-guide-x3-tdefault-r1",
+      "case": "secondary-8k-guide-x3",
+      "engine": "base",
+      "round": 1,
+      "repeat": 1,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-secondary-8k-guide-x3-tdefault-r2",
+      "case": "secondary-8k-guide-x3",
+      "engine": "base",
+      "round": 1,
+      "repeat": 2,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-base-a1-secondary-8k-guide-x3-tdefault-r3",
+      "case": "secondary-8k-guide-x3",
+      "engine": "base",
+      "round": 1,
+      "repeat": 3,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-fullplate-16k-slab-tdefault-r1",
+      "case": "fullplate-16k-slab",
+      "engine": "final",
+      "round": 1,
+      "repeat": 1,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-fullplate-16k-slab-tdefault-r2",
+      "case": "fullplate-16k-slab",
+      "engine": "final",
+      "round": 1,
+      "repeat": 2,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-fullplate-16k-slab-tdefault-r3",
+      "case": "fullplate-16k-slab",
+      "engine": "final",
+      "round": 1,
+      "repeat": 3,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-primary-16k-guide-x8-tdefault-r1",
+      "case": "primary-16k-guide-x8",
+      "engine": "final",
+      "round": 1,
+      "repeat": 1,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-primary-16k-guide-x8-tdefault-r2",
+      "case": "primary-16k-guide-x8",
+      "engine": "final",
+      "round": 1,
+      "repeat": 2,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-primary-16k-guide-x8-tdefault-r3",
+      "case": "primary-16k-guide-x8",
+      "engine": "final",
+      "round": 1,
+      "repeat": 3,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-secondary-8k-guide-x3-tdefault-r1",
+      "case": "secondary-8k-guide-x3",
+      "engine": "final",
+      "round": 1,
+      "repeat": 1,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-secondary-8k-guide-x3-tdefault-r2",
+      "case": "secondary-8k-guide-x3",
+      "engine": "final",
+      "round": 1,
+      "repeat": 2,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    },
+    {
+      "run_id": "windows-p3-final-a1-secondary-8k-guide-x3-tdefault-r3",
+      "case": "secondary-8k-guide-x3",
+      "engine": "final",
+      "round": 1,
+      "repeat": 3,
+      "threads": 8,
+      "threads_requested": null,
+      "threads_source": "GetProcessAffinityMask",
+      "fingerprint_matches_golden": true,
+      "superseded": false,
+      "excluded": null,
+      "void": null
+    }
+  ],
+  "problems": [],
+  "verdict": "FAIL"
+}

@@ -1,11 +1,5 @@
-# sla-raster-performance Specification
+## MODIFIED Requirements
 
-## Purpose
-
-定義 SLA 光柵化階段的效能不變式與正確性契約：raster 實例的生命週期與執行緒綁定約束（`draw_binary()` 暫時抽換 gamma LUT 的 race-free 前提，在 raster 由「每層新建」改為「重用」之後如何維持）、重用實例在每層使用前的清除範圍與 `apply_postprocess()` 全緩衝掃描的相容條件，以及 blur 後處理實作重寫可以改動什麼、不可以改動什麼。
-
-**本能力最重要的一條是驗收標準本身**：所有納入此處的改動皆為純效能改動，驗收線是 `.sl1` 內每一層層檔的 SHA-256 與改動前逐一相等。任何一個位元不同即視為缺陷，不接受「目視相同」或「差異在容差內」。這條線同時是一道**收錄門檻**——在數學上無法保證位元一致的優化（例如把 stack blur 加 α 混合重新推導為單一 3×3 卷積）因捨入路徑不同而被明確排除在本能力之外，若要採用必須另行定義容差驗收並取得產品端同意。
-## Requirements
 ### Requirement: 純效能改動不得改變任何層檔位元
 
 本能力涵蓋的所有改動（raster 重用、blur 後處理實作重寫、降取樣快路徑、編碼器同色段跳過、寫入格子表稀疏走訪）SHALL 屬純效能改動：以同一份輸入與同一組參數，改動前後產出的 `.sl1` 中**每一層層檔的 SHA-256 SHALL 完全一致**，產出的預覽封存中**每一張預覽圖的 SHA-256 亦 SHALL 完全一致**。
@@ -41,24 +35,6 @@
 - **WHEN** 以同一份輸入分別用 `--threads 1`、`--threads 2`、`--threads 8` 執行切片
 - **THEN** 三次執行的層檔與預覽圖 SHA-256 SHALL 逐一相等
 - **AND** SHALL 等於未修改引擎的結果
-
-### Requirement: 重用的 raster 必須與單一執行緒綁定
-
-當 raster 由「每層新建」改為重用時，每個 raster 實例 SHALL 與單一執行緒綁定，MUST NOT 被跨執行緒共用或經由工作竊取（work stealing）取得。
-
-此約束為正確性必要條件而非效能考量：`draw_binary()` 會暫時將 rasterizer 的 gamma 查表換成門檻函式、繪製後再還原，該操作在多執行緒共用同一 raster 時會產生資料競爭。原實作以「每層一個 raster 實例」隱含保證了此性質，重用會直接移除該保證。
-
-綁定 SHALL 由型別層面保證（例如執行緒區域儲存），MUST NOT 僅依賴呼叫端約定。原始碼中陳述「每層一個 raster 實例使其免於競爭」的註解 SHALL 同步更新，以免後續讀者依據已失效的前提做出錯誤修改。
-
-#### Scenario: raster 不跨執行緒共用
-- **WHEN** 光柵化以 N 個執行緒併發執行
-- **THEN** 存活的 raster 實例數 SHALL 不超過 N
-- **AND** 任一 raster 實例在其生命週期內 SHALL 只被單一執行緒存取
-
-#### Scenario: 二值繪製後 gamma 正確還原
-- **WHEN** 同一個重用的 raster 連續處理多層，且其中某些層含支撐幾何（觸發 `draw_binary()`）
-- **THEN** 每一層模型軌的抗鋸齒結果 SHALL 與未重用時相同
-- **AND** 對應層檔的 SHA-256 SHALL 與未重用時相等
 
 ### Requirement: 重用的 raster 在每層使用前須完全清除
 
@@ -103,19 +79,7 @@
 - **WHEN** 依序處理「滿版層 → 空層 → 只在右下角單一像素寫入的層 → 大面積層」
 - **THEN** 每一層的層檔 SHALL 與以全新 raster 處理同一層的結果逐位元組相同
 
-### Requirement: blur 後處理的實作重寫須保持逐位元組等價
-
-blur 後處理的實作重寫 SHALL 保持與原演算法逐位元組等價的輸出。重寫的目的 SHALL 限於改善記憶體存取型態（例如將縱向處理改為分帶處理，使工作集常駐於快取），MUST NOT 改變演算法本身或其捨入路徑。
-
-重新推導的等價卷積核（例如將 `blur = 1` 的堆疊模糊加 α 混合合併為單一固定 3×3 卷積）雖在數學上等價，但捨入路徑不同、無法保證位元一致，因此 SHALL 不納入本能力。
-
-#### Scenario: 分帶處理與原實作輸出相同
-- **WHEN** 對同一張像素緩衝分別以原縱向處理與分帶處理執行 blur 後處理
-- **THEN** 兩者產生的像素緩衝 SHALL 逐位元組相同
-
-#### Scenario: 各級 blur 強度皆維持等價
-- **WHEN** `blur` 分別為 `1`、`2`、`3`
-- **THEN** 每一種強度下，重寫前後的層檔 SHA-256 SHALL 逐一相等
+## ADDED Requirements
 
 ### Requirement: RLE 編碼器的同色段跳過須保持最大同色段分解
 
@@ -369,4 +333,3 @@ SL1 格式的後處理 SHALL 僅在 `blur = 0` 時宣告旗標為是。`blur > 0
 #### Scenario: 未啟用計時
 - **WHEN** 未設定 `SLA_RASTER_TIMING`
 - **THEN** stderr MUST NOT 含有以 `[raster-timing]` 開頭的行
-
