@@ -628,8 +628,8 @@ def clean_input_for_manifold(in_path: Path, out_path: Path, weld_tol: float = 0.
     stats["merged_verts"] = before - len(mesh.vertices)
 
     edges_sorted = mesh.edges_sorted
-    ue, c = np.unique(edges_sorted, axis=0, return_counts=True)
-    bd_verts = np.unique(ue[c == 1])
+    boundary_idx = trimesh.grouping.group_rows(edges_sorted, require_count=1)
+    bd_verts = np.unique(edges_sorted[boundary_idx])
     if len(bd_verts) > 0:
         pos = mesh.vertices[bd_verts]
         pairs = cKDTree(pos).query_pairs(r=weld_tol)
