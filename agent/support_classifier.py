@@ -29,6 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Union
 
+from .engine_rules import find_code
 from .models import JobStatus
 
 # Neutral supportOutcome value — NOT an error code; rides on a COMPLETED job.
@@ -57,6 +58,15 @@ MODEL_MISMATCH_CODE = "SUPPORT_POINTS_MODEL_MISMATCH"
 # ─── Step 1: known SLAPrint::validate() messages → specific support code ───────
 # Distinctive English substrings taken from src/libslic3r/SLAPrint.cpp::validate().
 # The messages are mutually exclusive; list order only fixes determinism.
+#
+# merge-engine-result-classifiers: classify_support_result() no longer reads
+# this constant — the real Step 1 lookup queries the shared
+# agent.engine_rules.ENGINE_RULES table (flow="support") instead, so a fix
+# like adding PAD_CONFIG_INVALID to the support flow is a one-line `flows`
+# edit in engine_rules.py, not a second hand-copy here. This tuple is kept,
+# frozen at its original five entries, purely because test_support_classifier
+# .py imports and pins it (`test_validate_map_covers_all_five_specific_codes`)
+# — it documents "what this flow used to see" and no longer needs updating.
 VALIDATE_CODE_MAP = (
     ("Cannot proceed without support points", "SUPPORT_POINTS_REQUIRED"),
     ("Elevation is too low for object", "SUPPORT_ELEVATION_TOO_LOW"),
@@ -68,10 +78,15 @@ VALIDATE_CODE_MAP = (
 # validate() errors that are genuine failures but not support-specific. Matched
 # at Step 1 (before the stdout markers) so a validate failure always wins over a
 # stray marker, per the "Step 1 first" ordering. They route to the fallback code.
-NONSPECIFIC_VALIDATE_MARKERS = (
-    "xposition time is out of printer profile bounds",  # "Exposition"/"Initial exposition"
-    "Disabling the 'Use tilt' function",
-)
+#
+# "Disabling the 'Use tilt' function" moved to ENGINE_RULES as an explicit
+# fallback_by_design=True row (Task 2.4) — the Step 1 `find_code()` call above
+# now catches it, so it is removed from here rather than kept as a second,
+# driftable copy. The exposition message stays local: it is genuinely
+# support-flow-only behavior (the slice flow has its own specific
+# EXPOSURE_TIME_OUT_OF_RANGE code for the same string), and this change's
+# scope is limited to the one marker Task 2.4 named.
+NONSPECIFIC_VALIDATE_MARKERS = ("xposition time is out of printer profile bounds",)
 
 # ─── Step 2: model placement failure (printed on stdout) ──────────────────────
 OUT_OF_BOUNDS_MARKER = "no object is fully inside the print volume"
@@ -127,13 +142,22 @@ def classify_support_result(
         )
 
     # ── Step 1: known validate() errors on stderr ────────────────────────────
-    for needle, code in VALIDATE_CODE_MAP:
-        if needle in err:
-            return SupportClassification(
-                status=JobStatus.FAILED,
-                error_code=code,
-                detail=err.strip() or None,
-            )
+    # Queries the shared ENGINE_RULES table (not VALIDATE_CODE_MAP above —
+    # see its docstring) so a fix like PAD_CONFIG_INVALID gaining the
+    # "support" flow (Task 2.2) takes effect here with no code change.
+    rule = find_code("support", err)
+    if rule is not None and not rule.fallback_by_design:
+        return SupportClassification(
+            status=JobStatus.FAILED,
+            error_code=rule.code,
+            detail=err.strip() or None,
+        )
+    if rule is not None and rule.fallback_by_design:
+        return SupportClassification(
+            status=JobStatus.FAILED,
+            error_code=FALLBACK_CODE,
+            detail=_raw_appendix(out, err),
+        )
     for needle in NONSPECIFIC_VALIDATE_MARKERS:
         if needle in err:
             # Attributed to the fallback code, so the debug appendix MUST carry

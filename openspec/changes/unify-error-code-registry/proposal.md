@@ -36,7 +36,7 @@
 | `agent/tools/error_codes.py` | 新檔（產生器） |
 | `agent/errors.py` | 不改實作，新增契約測試覆蓋 |
 | `agent/api_v2.py` | 移除 `_ERROR_CODE_FACTORIES` 手抄 dict |
-| `docs/err_code_spec.md` | 改為自動產生（唯讀） |
+| `docs/err_code_spec.md` | 「Error Code Reference」表格區塊改為自動產生（唯讀）；其餘章節（Error Response Format、Endpoints）維持手動維護，不受 `--write` 管理（見 tasks.md 2.2 訂正） |
 | `docs/error_codes.json` | 新檔（自動產生，供跨 repo 對帳） |
 | `agent/tests/` | 新增 2 支契約測試 |
 | DS-Online | 本單不動；下游由 `open-support-param-panel` 消費 `error_codes.json` |

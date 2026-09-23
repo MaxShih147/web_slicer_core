@@ -704,11 +704,15 @@ async def generate_hollow(
         )
 
     if not hollow_stl.exists():
+        # merge-engine-result-classifiers Task 4.2: carry the engine's own
+        # stderr — the canned message below is only a fallback for the rare
+        # case where the engine printed nothing at all, not a guess at why.
+        detail = stderr.decode("utf-8", errors="replace").strip()
         return OperationResult(
             success=False,
             operation=OperationType.GENERATE_HOLLOW,
             job_id=job_id,
-            error="Hollow interior mesh was not generated.",
+            error=detail or "Hollow interior mesh was not generated.",
         )
 
     return OperationResult(
@@ -936,11 +940,17 @@ async def cut_with_plane(
         )
 
     if not combined_stl.exists():
+        # merge-engine-result-classifiers Tasks 4.2/4.3: carry the engine's
+        # own stderr instead of guessing a cause. The previous canned message
+        # ("The cut height may be outside the model bounds") asserted a
+        # specific reason that may not be true; the fallback below only
+        # states what happened (no output file), not why.
+        detail = stderr.decode("utf-8", errors="replace").strip()
         return OperationResult(
             success=False,
             operation=OperationType.CUT,
             job_id=job_id,
-            error="Cut operation did not produce output file. The cut height may be outside the model bounds.",
+            error=detail or "Cut operation did not produce an output file.",
         )
 
     # Separate the combined STL into upper and lower parts

@@ -14,6 +14,15 @@ the C locale so validate() messages stay English.
 
 7.3 negative check: a deliberately mutated marker MUST NOT be found in the
 source — proving these assertions have teeth (a drifted string would fail).
+
+Task 3.2/3.3 (unify-error-code-registry) extends this same file with a
+registry-wide version of the same contract: every `owner="engine"` entry in
+agent/error_codes.py must have its engine_needles findable in the fork
+source, across the full set of files those needles are known to live in
+(support-generation's three files above, plus three more for the
+slicing-only needles: LoadPrintData.cpp, SLA/Pad.cpp, SLAPrintSteps.cpp).
+Reuses this file's read/skip/fixture machinery rather than duplicating it in
+a new file.
 """
 
 from pathlib import Path
@@ -21,6 +30,7 @@ from pathlib import Path
 import pytest
 
 from agent import sla_operations
+from agent.error_codes import ALL
 from agent.support_classifier import (
     HAS_SUPPORT_MARKERS,
     MODEL_MISMATCH_MARKER,
@@ -38,6 +48,16 @@ _SLAPRINT_CPP = _FORK / "libslic3r" / "SLAPrint.cpp"
 _PROCESS_ACTIONS_CPP = _FORK / "CLI" / "ProcessActions.cpp"
 # the support-point/model mismatch marker (Step 0) is defined here:
 _SUPPORT_POINT_IO_HPP = _FORK / "libslic3r" / "SLA" / "SupportPointIO.hpp"
+# slicing-only needles (agent/slicing_classifier.py) that live outside the
+# three support-generation files above:
+_LOAD_PRINT_DATA_CPP = _FORK / "CLI" / "LoadPrintData.cpp"  # "Error: file is empty:"
+_PAD_CPP = _FORK / "libslic3r" / "SLA" / "Pad.cpp"  # "Pad brim size is too small"
+_SLAPRINT_STEPS_CPP = _FORK / "libslic3r" / "SLAPrintSteps.cpp"  # can-not-be-sliced / unprintable / no-pad
+# merge-engine-result-classifiers Task 3.4: SUPPORT_POINT_SAMPLING_FAILED's needle
+# lives here, not in any of the files above.
+_UNIFORM_SUPPORT_ISLAND_CPP = (
+    _FORK / "libslic3r" / "SLA" / "SupportIslands" / "UniformSupportIsland.cpp"
+)
 
 
 def _read_source(path: Path) -> str:
@@ -59,6 +79,56 @@ def process_actions_src():
 @pytest.fixture(scope="module")
 def support_point_io_src():
     return _read_source(_SUPPORT_POINT_IO_HPP)
+
+
+@pytest.fixture(scope="module")
+def load_print_data_src():
+    return _read_source(_LOAD_PRINT_DATA_CPP)
+
+
+@pytest.fixture(scope="module")
+def pad_cpp_src():
+    return _read_source(_PAD_CPP)
+
+
+@pytest.fixture(scope="module")
+def slaprint_steps_src():
+    return _read_source(_SLAPRINT_STEPS_CPP)
+
+
+@pytest.fixture(scope="module")
+def uniform_support_island_src():
+    return _read_source(_UNIFORM_SUPPORT_ISLAND_CPP)
+
+
+@pytest.fixture(scope="module")
+def engine_needle_corpus(
+    slaprint_src,
+    process_actions_src,
+    support_point_io_src,
+    load_print_data_src,
+    pad_cpp_src,
+    slaprint_steps_src,
+    uniform_support_island_src,
+):
+    """Combined text of every fork file known to emit an owner='engine' needle
+    from agent/error_codes.py (Task 3.2)."""
+    return "\n".join(
+        [
+            slaprint_src,
+            process_actions_src,
+            support_point_io_src,
+            load_print_data_src,
+            pad_cpp_src,
+            slaprint_steps_src,
+            uniform_support_island_src,
+        ]
+    )
+
+
+_ENGINE_NEEDLE_CASES = [
+    (spec.code, needle) for spec in ALL if spec.owner == "engine" for needle in spec.engine_needles
+]
 
 
 class TestValidateMessageContract:
@@ -194,6 +264,59 @@ class TestNegativeCheck:
         combined = slaprint_src + process_actions_src
         assert original in combined  # the real one is there
         assert mutated not in combined  # the drifted one is not — contract has teeth
+
+
+class TestErrorCodeRegistryEngineContract:
+    """3.2: every owner='engine' code in agent/error_codes.py must carry an
+    engine_needles string that still exists in the fork source. This is the
+    registry-wide generalization of the checks above — those are pinned to
+    specific classifier constants, this one walks the full registry so a
+    future owner='engine' addition is covered automatically."""
+
+    @pytest.mark.parametrize(
+        "code,needle", _ENGINE_NEEDLE_CASES, ids=[f"{c}:{n[:24]}" for c, n in _ENGINE_NEEDLE_CASES]
+    )
+    def test_needle_present_in_fork_source(self, code, needle, engine_needle_corpus):
+        assert needle in engine_needle_corpus, (
+            f"{code}: engine_needles entry {needle!r} not found in any of the "
+            f"fork files this test scans — either the registry's needle drifted "
+            f"from the engine string, or it moved to a file not yet added to "
+            f"engine_needle_corpus's fixture list"
+        )
+
+    def test_every_engine_code_has_at_least_one_case(self):
+        """Sanity: the parametrize list above actually covers every
+        owner='engine' code (guards against silently losing coverage if a
+        future code is added with engine_needles but this list isn't
+        regenerated from ALL)."""
+        codes_with_cases = {code for code, _ in _ENGINE_NEEDLE_CASES}
+        engine_codes = {spec.code for spec in ALL if spec.owner == "engine"}
+        assert codes_with_cases == engine_codes
+
+
+class TestErrorCodeRegistryNegativeCheck:
+    """3.3: prove the registry-wide contract has teeth — a plausible drifted
+    variant of a needle from each of the newly-added fork files must NOT be
+    found."""
+
+    MUTATIONS = [
+        ("Error: file is empty:", "Error: file empty:"),
+        ("Pad brim size is too small", "Pad brim size is too tiny"),
+        ("can not be sliced", "cannot be sliced"),
+        ("There are unprintable objects", "There is an unprintable object"),
+        ("No pad can be generated", "No pad could be generated"),
+        ("SLA support point generator has failed.", "SLA support point generator failed."),
+        ("the object transform is", "the object's transform is"),
+    ]
+
+    @pytest.mark.parametrize("original,mutated", MUTATIONS)
+    def test_mutation_differs_from_original(self, original, mutated):
+        assert mutated != original
+
+    @pytest.mark.parametrize("original,mutated", MUTATIONS)
+    def test_mutated_needle_is_not_in_corpus(self, original, mutated, engine_needle_corpus):
+        assert original in engine_needle_corpus  # the real one is there
+        assert mutated not in engine_needle_corpus  # the drifted one is not
 
 
 class TestLocalePinned:

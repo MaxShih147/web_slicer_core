@@ -113,7 +113,10 @@ set VS_GENERATOR=Visual Studio 17 2022
 set "VSWhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 if exist "%VSWhere%" (
     for /f "usebackq delims=" %%v in (`"%VSWhere%" -latest -property catalog_productLineVersion 2^>nul`) do set "VS_VER=%%v"
-    if "!VS_VER!"=="18" set VS_GENERATOR=Visual Studio 18 2026
+    rem CMake (as of 3.31, incl. the bundled 3.27.9 above) has no "Visual Studio 18 2026"
+    rem generator yet -- `cmake --help` lists 17 2022 as the newest known name. Until a
+    rem CMake release adds it, fall back to 2022 (this machine has both installed).
+    if "!VS_VER!"=="18" set VS_GENERATOR=Visual Studio 17 2022
     if "!VS_VER!"=="17" set VS_GENERATOR=Visual Studio 17 2022
     if "!VS_VER!"=="16" set VS_GENERATOR=Visual Studio 16 2019
     if "!VS_VER!"=="15" set VS_GENERATOR=Visual Studio 15 2017

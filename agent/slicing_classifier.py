@@ -35,11 +35,21 @@ from typing import Optional, Union
 # support flow matches on, pinned against the fork source by
 # test_support_string_contract.py. Importing it here means the contract test
 # protects this path too, instead of a second copy drifting unnoticed.
+from .engine_rules import find_code
 from .support_classifier import MODEL_MISMATCH_CODE, MODEL_MISMATCH_MARKER
 
 # ─── Path A: stderr patterns — validate() errors (exit ≠ 0) ──────────────────
 # Taken from SLAPrint.cpp::validate() and SLA/Pad.cpp::PadConfig::validate().
 # Ordered most-specific first; first match wins.
+#
+# merge-engine-result-classifiers: classify_slice_result() no longer reads
+# this constant — both Step 1 (below) and Step 6.x now query the shared
+# agent.engine_rules.ENGINE_RULES table (flow="slice") instead, so a fix like
+# SUPPORT_POINTS_REQUIRED gaining the "slice" flow (Task 2.3) takes effect
+# with no code change here. This tuple is kept, frozen at its original six
+# entries, purely because test_slicing_classifier.py imports and pins it
+# (`test_validate_map_covers_expected_six_codes`) — it documents "what this
+# flow used to see" and no longer needs updating.
 _VALIDATE_CODE_MAP: tuple[tuple[str, str], ...] = (
     ("Elevation is too low for object",                "SUPPORT_ELEVATION_TOO_LOW"),
     ("The endings of the support pillars",             "SUPPORT_PAD_GAP_CONFLICT"),
@@ -76,6 +86,19 @@ _EMPTY_MODEL_CODE = "INVALID_MODEL"
 # matching "<basename>:" reliably identifies a parse-time exception (not a
 # validate/process message).
 _INVALID_MODEL_CODE = "INVALID_MODEL"
+
+# merge-engine-result-classifiers D3/Task 1.4: these two codes are ONLY
+# detected in Path B (exit_code == 0, output file absent) — Path A (exit != 0)
+# has no equivalent check for either marker, so classification for them
+# structurally depends on exit_code staying 0. This is the "unexploded bomb":
+# the fork has 15 `return 1` sites inside `bool` functions in
+# CLI/ProcessActions.cpp; once those are fixed to `return false` (see the
+# deferred `engine-error-code-table` change), the same failures will exit 1
+# and land unclassified in Path A's Step 4 instead of here.
+# test_exit_code_independence.py documents this with xfail(strict=True) on
+# exactly these two codes. Removable once that change adds an
+# exit-code-independent check for both markers in Path A too.
+_LEGACY_EXIT0_ONLY_CODES = (_OUT_OF_BOUNDS_CODE, _EMPTY_MODEL_CODE)
 
 
 @dataclass(frozen=True)
@@ -144,10 +167,13 @@ def classify_slice_result(
 
     # ── Path A: non-zero exit ─────────────────────────────────────────────────
     if exit_code != 0:
-        # Step 1: validate() patterns
-        for needle, code in _VALIDATE_CODE_MAP:
-            if needle in err:
-                return SliceClassification(error=err.strip() or None, error_code=code)
+        # Step 1: validate() patterns — queries the shared ENGINE_RULES table
+        # (not _VALIDATE_CODE_MAP above — see its docstring) so a fix like
+        # SUPPORT_POINTS_REQUIRED gaining the "slice" flow (Task 2.3) takes
+        # effect here with no code change.
+        rule = find_code("slice", err)
+        if rule is not None:
+            return SliceClassification(error=err.strip() or None, error_code=rule.code)
 
         # Step 2: process() exception patterns
         for needle, code in _PROCESS_CODE_MAP:
@@ -179,11 +205,12 @@ def classify_slice_result(
 
         # Step 6.x: validate() errors — the fork's process_actions() returns 1 (bool
         # true) on validate failure, so the process exits 0 even though validate()
-        # wrote a recognisable error to stderr.  Reuse the same map as Path A Step 1
-        # so there is only one source of truth for the needle→code mapping.
-        for needle, code in _VALIDATE_CODE_MAP:
-            if needle in err:
-                return SliceClassification(error=err.strip() or None, error_code=code)
+        # wrote a recognisable error to stderr. Reuses the same ENGINE_RULES
+        # query as Path A Step 1 so there is only one source of truth for the
+        # needle -> code mapping.
+        rule = find_code("slice", err)
+        if rule is not None:
+            return SliceClassification(error=err.strip() or None, error_code=rule.code)
 
         # Step 7: other zero-exit / no-output — unclassified
         return SliceClassification(error="Output file not created", error_code=None)

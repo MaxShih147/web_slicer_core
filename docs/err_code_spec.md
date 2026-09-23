@@ -1,3 +1,8 @@
+<!-- AUTO-GENERATED (partial): the "Error Code Reference" table below is produced by
+`python -m agent.tools.error_codes --write` from `agent/error_codes.py` — do not hand-edit
+that table. Everything else in this file (Error Response Format, Endpoints) is
+hand-maintained prose and is left untouched by --write. -->
+
 ## Error Response Format
 
 ```json
@@ -21,6 +26,7 @@
 | `INTERNAL_ERROR` | 500 | true | 非預期的伺服器錯誤 |
 | `VALIDATION_ERROR` | 400 | false | 請求參數格式或值域錯誤（型別錯誤、非法 enum 值、content-type 不符等） |
 | `MISSING_BODY` | 400 | false | 必要欄位或檔案缺失 |
+| `CONFIG_VALIDATION_ERROR` | 422 | false | 切片／支撐設定欄位未通過驗證（如 pad_wall_slope 超出 45–90 度範圍、非法列舉值），訊息含欄位名 |
 | `JOB_NOT_FOUND` | 404 | false | 指定的 job_id 不存在 |
 | `JOB_ALREADY_EXECUTED` | 409 | false | Job 已執行，不再接受修改 |
 | `JOB_STILL_PROCESSING` | 200 | true | Job 尚未完成，無法下載結果 |
@@ -29,6 +35,7 @@
 | `INVALID_MODEL` | 422 | false | STL 內容損壞、格式無效、或幾何載入失敗 |
 | `FILE_NOT_FOUND` | 404 | false | 輸出檔案不存在（job 完成但檔案遺失） |
 | `BOOLEAN_FAILED` | 422 | false | Boolean 幾何計算失敗（non-manifold、self-intersecting 等） |
+| `BOOLEAN_INVALID_MESH` | 422 | false | Boolean 運算前偵測到模型網格本身含幾何錯誤（如 non-manifold），無法處理 |
 | `NO_DRAIN_HOLES` | 422 | false | 在目前幾何中找不到可放置 drain hole 的 wall edge |
 | `NO_HEX_GRID_CELLS` | 422 | false | Hex grid 演算法未產生任何 cell，參數可能超出 hollow mesh 範圍 |
 | `HOLLOW_GENERATION_FAILED` | 422 | false | PrusaSlicer 無法產生 hollow interior mesh（幾何太薄、太複雜等） |
@@ -39,6 +46,9 @@
 | `SUPPORT_PAD_GAP_CONFLICT` | 422 | false | 支撐柱底部落於物件與 pad 的間隙（pillar/pad gap 衝突） |
 | `MODEL_OUT_OF_BOUNDS` | 422 | false | 沒有物件完全落在成型體積內（`no object is fully inside the print volume`） |
 | `SUPPORT_GENERATION_FAILED` | 422 | false | 支撐生成失敗且無法歸因至更具體代碼（fail-closed fallback，附原始 stdout/stderr） |
+| `SUPPORT_POINTS_MODEL_MISMATCH` | 422 | false | 匯入的支撐點與目前模型不符（依指紋比對判定），不可重試，只能對目前模型重新產生支撐點 |
+| `SUPPORT_POINT_SAMPLING_FAILED` | 422 | false | 引擎的支撐點取樣演算法失敗，無法在此模型上取樣出支撐島；建議微調模型擺放角度後重試（`SLA support point generator has failed.`） |
+| `SHRINKAGE_COMPENSATION_INVALID` | 422 | false | 物件的縮放與收縮補償使轉換矩陣不可逆（零縮放或零收縮補償），支撐點座標無法映射回輸入模型（`the object transform is not invertible`） |
 | `PAD_CONFIG_INVALID` | 422 | false | Pad brim 過小，無法在目前組態下產生底座（`Pad brim size is too small`） |
 | `EXPOSURE_TIME_OUT_OF_RANGE` | 422 | false | 曝光時間超出印表機設定檔的允許範圍（`Exposition/Initial exposition time is out of printer profile bounds`） |
 | `MODEL_MESH_UNSLICEABLE` | 422 | false | 模型幾何無法切片（幾何破損或 non-manifold，`can not be sliced`） |
@@ -130,23 +140,25 @@
 
 **切片失敗（背景執行，透過 `GET /api/v2/slices/{job_id}` 輪詢時以 HTTP 200 + `success:false` 回傳具體 code）：**
 
-目前 Web API 可達（9 個具體 code + JOB_FAILED fallback）：
+目前 Web API 可達（11 個具體 code + JOB_FAILED fallback）：
 
 - INVALID_MODEL // STL parse 失敗 / 空模型（LoadPrintData 無法載入模型）
 - SUPPORT_ELEVATION_TOO_LOW // 物件抬升高度過低（`Elevation is too low for object`，需傳 supports_enable=true）
+- SUPPORT_POINTS_REQUIRED // 缺少必要支撐點（`Cannot proceed without support points`；merge-engine-result-classifiers 補上切片路徑）
 - EXPOSURE_TIME_OUT_OF_RANGE // 曝光時間超出印表機設定檔範圍
 - SUPPORT_HEAD_PENETRATION_INVALID // head penetration 值無效（`Invalid Head penetration`）
 - SUPPORT_HEAD_TOO_WIDE // pinhead 直徑無效（`Invalid pinhead diameter`）
+- SUPPORT_PAD_GAP_CONFLICT // 支撐柱底與 pad 間隙衝突（`The endings of the support pillars`）
+- PAD_CONFIG_INVALID // pad brim 過小（`Pad brim size is too small`）
+- SUPPORT_POINT_SAMPLING_FAILED // 支撐點取樣演算法失敗（`SLA support point generator has failed.`；merge-engine-result-classifiers 新增）
+- SHRINKAGE_COMPENSATION_INVALID // 收縮補償導致轉換矩陣不可逆（`the object transform is`；merge-engine-result-classifiers 新增）
 - MODEL_OUT_OF_BOUNDS // 沒有物件完全落在成型體積內（stdout 路徑，exit 0 特殊情境）
 - MODEL_MESH_UNSLICEABLE // 模型幾何無法切片（`can not be sliced`）
 - UNPRINTABLE_OBJECT // 模型含無法列印的層（`There are unprintable objects`）
 - PAD_GENERATION_FAILED // 無法產生底座 mesh（`No pad can be generated`，需傳 pad_enable=true）
 - JOB_FAILED // 其餘無法歸因的切片失敗（fallback）
 
-分類器支援、但目前 SLAConfig 未暴露必要設定、現階段 Web API 不可達：
-
-- PAD_CONFIG_INVALID // pad brim 過小（`Pad brim size is too small`；pad 幾何參數不在 SLAConfig）
-- SUPPORT_PAD_GAP_CONFLICT // 支撐柱底與 pad 間隙衝突（`The endings of the support pillars`；pad_around_object 不在 SLAConfig，Prusa 預設 false）
+**訂正（2026-09-18，add-support-param-validation Task 7.6）**：原本這裡另列一段「分類器支援、但 SLAConfig 未暴露必要設定、現階段 Web API 不可達」，內容是 `PAD_CONFIG_INVALID`／`SUPPORT_PAD_GAP_CONFLICT`——那是舊註記，`pad_wall_thickness`／`pad_brim_size`／`pad_around_object` 現在都已經是 `SLAConfig` 的欄位，兩者已可由 Web API 觸發，故移除該段、併入上方可達清單（呼應 `specs/slicing-error-codes/spec.md` 的「Web API 可達性更新」）。
 
 ---
 
@@ -170,6 +182,9 @@
 - SUPPORT_ELEVATION_TOO_LOW // 抬升高度過低
 - SUPPORT_POINTS_REQUIRED // 缺少必要支撐點
 - SUPPORT_PAD_GAP_CONFLICT // 支撐柱底與 pad 間隙衝突
+- PAD_CONFIG_INVALID // pad brim 過小（merge-engine-result-classifiers 補上支撐路徑，訂正見上方 execute 端點註記）
+- SUPPORT_POINT_SAMPLING_FAILED // 支撐點取樣演算法失敗（merge-engine-result-classifiers 新增）
+- SHRINKAGE_COMPENSATION_INVALID // 收縮補償導致轉換矩陣不可逆（merge-engine-result-classifiers 新增）
 - MODEL_OUT_OF_BOUNDS // 沒有物件完全落在成型體積內
 - SUPPORT_GENERATION_FAILED // 無法歸因的 fail-closed fallback（附原始 stdout/stderr）
 

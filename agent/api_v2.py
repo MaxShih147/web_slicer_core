@@ -15,7 +15,7 @@ import shutil
 import time
 import traceback as tb
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
 
 if TYPE_CHECKING:
     from .prz_decoder import PrzFile
@@ -23,15 +23,17 @@ if TYPE_CHECKING:
 import trimesh
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
+from .error_codes import ALL as ALL_ERROR_CODES
+from . import param_rules
 from .errors import (
     APIError,
     boolean_failed,
     boolean_invalid_mesh,
-    exposure_time_out_of_range,
+    config_validation_error,
+    factory_registry,
     file_not_found,
-    hollow_generation_failed,
     internal_error,
     invalid_model,
     job_already_executed,
@@ -39,21 +41,10 @@ from .errors import (
     job_not_found,
     job_still_processing,
     missing_body,
-    model_mesh_unsliceable,
     model_not_found,
-    model_out_of_bounds,
     no_drain_holes,
     no_hex_grid_cells,
-    pad_config_invalid,
-    pad_generation_failed,
-    support_elevation_too_low,
-    support_generation_failed,
-    support_head_penetration_invalid,
-    support_head_too_wide,
-    support_pad_gap_conflict,
-    support_points_model_mismatch,
     support_points_required,
-    unprintable_object,
     validation_error,
 )
 from .jobs import (
@@ -123,6 +114,39 @@ class V2ConfigUpdateRequest(BaseModel):
     # Full Mechado config (Title Case "Print.*") for PRZ physical print-time sync;
     # kept separate from the snake_case slicing `config`. Optional / backward-compatible.
     prz_config: Optional[Dict[str, Any]] = None
+
+
+class SupportParamValidateRequest(BaseModel):
+    """POST /support-params/validate — spec: "整組參數，不做白名單". Every
+    SLAConfig field (snake_case, matching SupportEditor.vue's data-field
+    attributes) rides as a top-level key alongside the four control fields
+    below; extra="allow" is what makes that possible without a whitelist."""
+    model_config = ConfigDict(extra="allow")
+
+    flow: Literal["support", "slice", "slice_imported"]
+    manual_point_count: Optional[int] = None
+    per_point: Optional[List[Dict[str, Any]]] = None
+    printer_bounds: Optional[Dict[str, float]] = None
+
+
+class ValidateProblemOut(BaseModel):
+    code: str
+    fields: List[str]
+    suggestion: str
+    values: Dict[str, float] = {}
+
+
+class ClampedFieldOut(BaseModel):
+    field: str
+    original: float
+    effective: float
+
+
+class SupportParamValidateResponse(BaseModel):
+    ok: bool
+    problems: List[ValidateProblemOut]
+    clamped: List[ClampedFieldOut]
+    unknown: List[str]
 
 
 class V2ModelsAddRequest(BaseModel):
@@ -237,6 +261,16 @@ def _validate_stl_bytes(content: bytes, field: str = "model") -> None:
         raise invalid_model(f"{field} STL content is corrupted or format is invalid: {exc}")
 
 
+def _config_validation_message(exc: ValidationError) -> str:
+    """add-support-param-validation Task 4.2: field name(s) + reason for a
+    SLAConfig construction failure, e.g. 'pad_wall_slope: pad_wall_slope must
+    be between 45 and 90 degrees, got 35'. Never called with an empty
+    ValidationError (pydantic always reports at least one error)."""
+    return "; ".join(
+        f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}" for err in exc.errors()
+    )
+
+
 def _save_model_to_job(model_data: dict, input_path) -> None:
     """Write model bytes to *input_path*, raising INVALID_MODEL / VALIDATION_ERROR as needed."""
     if "stl_data" in model_data:
@@ -250,27 +284,20 @@ def _save_model_to_job(model_data: dict, input_path) -> None:
         raise missing_body("Model must contain stl_data; please use file upload")
 
 
-_ERROR_CODE_FACTORIES = {
-    # ── support generation ────────────────────────────────────────────────────
-    "HOLLOW_GENERATION_FAILED":        hollow_generation_failed,
-    "SUPPORT_HEAD_TOO_WIDE":           support_head_too_wide,
-    "SUPPORT_HEAD_PENETRATION_INVALID":support_head_penetration_invalid,
-    "SUPPORT_ELEVATION_TOO_LOW":       support_elevation_too_low,
-    "SUPPORT_POINTS_REQUIRED":         support_points_required,
-    "SUPPORT_PAD_GAP_CONFLICT":        support_pad_gap_conflict,
-    "MODEL_OUT_OF_BOUNDS":             model_out_of_bounds,
-    "SUPPORT_GENERATION_FAILED":       support_generation_failed,
-    "SUPPORT_POINTS_MODEL_MISMATCH":   support_points_model_mismatch,
-    # ── slicing (shared + new) ────────────────────────────────────────────────
-    # Codes shared with support generation are re-used as-is above; the ones
-    # below are either slicing-only or newly introduced in this change.
-    "INVALID_MODEL":                   invalid_model,
-    "PAD_CONFIG_INVALID":              pad_config_invalid,
-    "EXPOSURE_TIME_OUT_OF_RANGE":      exposure_time_out_of_range,
-    "MODEL_MESH_UNSLICEABLE":          model_mesh_unsliceable,
-    "UNPRINTABLE_OBJECT":              unprintable_object,
-    "PAD_GENERATION_FAILED":           pad_generation_failed,
-}
+# Derived from agent/error_codes.py + agent/errors.py at import time — no
+# hand-maintained code -> factory dict (unify-error-code-registry Task 4.1).
+# A registered code with no matching factory must fail HERE, at load, rather
+# than silently degrading to JOB_FAILED the first time a job hits that code.
+_ERROR_CODE_FACTORIES = factory_registry()
+
+_codes_without_factories = [
+    spec.code for spec in ALL_ERROR_CODES if spec.code not in _ERROR_CODE_FACTORIES
+]
+if _codes_without_factories:
+    raise RuntimeError(
+        "agent/error_codes.py declares codes with no matching factory in "
+        f"agent/errors.py: {_codes_without_factories}"
+    )
 
 
 def _error_from_status(status_data: dict) -> APIError:
@@ -351,12 +378,35 @@ async def create_slice_job(request: V2SliceCreateRequest):
         raise internal_error(str(exc))
 
 
+def _raise_for_first_problem(problems: List[ValidateProblemOut]) -> None:
+    """slice-config-intake Task 5.2: turn the first param_rules problem into
+    the matching registry-derived APIError (422). Reuses _ERROR_CODE_FACTORIES
+    (unify-error-code-registry) rather than a second code->factory mapping."""
+    problem = problems[0]
+    factory = _ERROR_CODE_FACTORIES.get(problem.code, config_validation_error)
+    raise factory(problem.suggestion)
+
+
 @router.put("/slices/{job_id}/config", response_model=V2Response)
 async def update_slice_job_config(job_id: str, request: V2ConfigUpdateRequest):
     """
     Update the config for a slice job.
+
+    Validates against the merged (existing + incoming) config using the same
+    param_rules.py / _run_param_validation() the /validate endpoint uses
+    (slice-config-intake spec.md: "MUST NOT 另寫一套判斷") — a violation is
+    rejected with 422 and the config is not saved. Uses the 'slice' profile
+    (the superset of support_params + slice_only) since at save time it is
+    not yet known whether this job will end up self-generating supports,
+    importing them, or skipping them — 'slice' is the conservative choice
+    that catches everything 'support' would and more.
     """
     pending = _require_pending(job_id)
+
+    merged_config = {**pending["config"], **request.config} if request.isAppend else dict(request.config)
+    validation = _run_param_validation("slice", merged_config)
+    if not validation.ok:
+        _raise_for_first_problem(validation.problems)
 
     if request.isAppend:
         pending["config"].update(request.config)
@@ -367,6 +417,82 @@ async def update_slice_job_config(job_id: str, request: V2ConfigUpdateRequest):
         pending["prz_config"] = request.prz_config
 
     return V2Response(success=True, message="Config updated")
+
+
+_SLA_CONFIG_FIELDS = set(SLAConfig.model_fields.keys())
+
+
+def _run_param_validation(
+    flow: str,
+    raw_params: Dict[str, Any],
+    *,
+    manual_point_count: Optional[int] = None,
+    per_point: Optional[List[Dict[str, Any]]] = None,
+    printer_bounds: Optional[Dict[str, float]] = None,
+) -> SupportParamValidateResponse:
+    """Shared core of POST /support-params/validate and (Task 5.2) PUT
+    /config's own validation — D6: pure function, no job, no disk, no engine.
+
+    unknown[] fields are dropped before evaluation (SLAConfig.extra stays
+    'ignore', design.md Non-Goal) rather than passed through; clamped[] is
+    computed from the RAW pre-validation values, then merged into a full
+    SLAConfig to get the actual effective values the rules run against —
+    if that construction fails (a genuinely malformed value, e.g. an
+    out-of-range pad_wall_slope or an unrecognised enum), each pydantic
+    error becomes a problems[] entry instead of raising, so this function
+    never throws.
+    """
+    unknown = sorted(k for k in raw_params if k not in _SLA_CONFIG_FIELDS)
+    known_params = {k: v for k, v in raw_params.items() if k in _SLA_CONFIG_FIELDS}
+
+    merged = SLAConfig().model_dump()
+    merged.update(known_params)
+
+    clamped = [
+        ClampedFieldOut(field=c.field, original=c.original, effective=c.effective)
+        for c in param_rules.compute_clamps(merged)
+    ]
+
+    try:
+        effective = SLAConfig(**merged).model_dump()
+    except ValidationError as exc:
+        problems = [
+            ValidateProblemOut(
+                code="CONFIG_VALIDATION_ERROR",
+                fields=[str(loc) for loc in err["loc"]],
+                suggestion=err["msg"],
+            )
+            for err in exc.errors()
+        ]
+        return SupportParamValidateResponse(ok=False, problems=problems, clamped=clamped, unknown=unknown)
+
+    rule_problems = param_rules.evaluate(
+        flow,
+        effective,
+        manual_point_count=manual_point_count,
+        printer_bounds=printer_bounds,
+        per_point=per_point,
+    )
+    problems = [
+        ValidateProblemOut(code=p.code, fields=list(p.fields), suggestion=p.suggestion, values=p.values)
+        for p in rule_problems
+    ]
+    return SupportParamValidateResponse(ok=len(problems) == 0, problems=problems, clamped=clamped, unknown=unknown)
+
+
+@router.post("/support-params/validate", response_model=SupportParamValidateResponse)
+async def validate_support_params(request: SupportParamValidateRequest):
+    """Stateless pre-check: predicts 7 of the engine's validate() failures
+    without invoking the engine (design.md D6). Never builds a job, never
+    touches disk. See support-param-validation spec.md."""
+    body = request.model_dump()
+    flow = body.pop("flow")
+    manual_point_count = body.pop("manual_point_count")
+    per_point = body.pop("per_point")
+    printer_bounds = body.pop("printer_bounds")
+    return _run_param_validation(
+        flow, body, manual_point_count=manual_point_count, per_point=per_point, printer_bounds=printer_bounds
+    )
 
 
 @router.post("/slices/{job_id}/models", response_model=V2Response)
@@ -571,6 +697,8 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
         return V2Response(success=True, message="Slicing started", data={"currentConfig": config})
     except APIError:
         raise
+    except ValidationError as exc:
+        raise config_validation_error(_config_validation_message(exc))
     except Exception as exc:
         raise internal_error(str(exc))
 
@@ -614,6 +742,8 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
         return V2Response(success=True, message="Support generation started", data={"currentConfig": config})
     except APIError:
         raise
+    except ValidationError as exc:
+        raise config_validation_error(_config_validation_message(exc))
     except Exception as exc:
         raise internal_error(str(exc))
 
@@ -661,6 +791,8 @@ async def export_support_points_only(job_id: str, background_tasks: BackgroundTa
         )
     except APIError:
         raise
+    except ValidationError as exc:
+        raise config_validation_error(_config_validation_message(exc))
     except Exception as exc:
         raise internal_error(str(exc))
 

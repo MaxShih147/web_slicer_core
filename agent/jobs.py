@@ -450,8 +450,15 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
     import_support_points_file = support_points_input_path(job_dir)
     import_support_points = import_support_points_file.exists()
     if import_support and config is not None:
-        config.supports_enable = False
-        config.pad_enable = False
+        # add-support-param-validation Task 6.2: reset EVERY support_*/pad_*
+        # field to its backend default, not just the two enable switches. The
+        # engine ignores all of them in this mode (design.md D2), but leaving
+        # the user's values in config.ini/config.json otherwise looks like
+        # live state a future reader could reasonably trust.
+        _defaults = SLAConfig()
+        for _field_name in SLAConfig.model_fields:
+            if _field_name.startswith("support_") or _field_name.startswith("pad_"):
+                setattr(config, _field_name, getattr(_defaults, _field_name))
 
     # Check if supports are enabled
     supports_enabled = config.supports_enable if config else False

@@ -48,10 +48,12 @@
 
 | owner | 數量 | 內容 |
 |---|---|---|
-| `engine` | 14 | 引擎在自己的 process 裡就能判斷的。含 `SUPPORT_HEAD_TOO_WIDE`、`PAD_CONFIG_INVALID`、`MODEL_OUT_OF_BOUNDS`、`INVALID_MODEL`、`HOLLOW_GENERATION_FAILED` 等 |
-| `python` | 14 | 需要知道 job、檔案系統、HTTP 才能判斷的。含 `JOB_NOT_FOUND`、`NO_DRAIN_HOLES`、`BOOLEAN_FAILED`、`JOB_FAILED`、`SUPPORT_GENERATION_FAILED` 等 |
+| `engine` | 13 | 引擎在自己的 process 裡就能判斷的，且有專屬的 needle 字串可比對。含 `SUPPORT_HEAD_TOO_WIDE`、`PAD_CONFIG_INVALID`、`MODEL_OUT_OF_BOUNDS`、`INVALID_MODEL` 等 |
+| `python` | 15 | 需要知道 job、檔案系統、HTTP 才能判斷的，或雖然源頭是引擎執行結果、但判斷點在 Python（如檢查 exit code / 輸出檔是否存在）。含 `JOB_NOT_FOUND`、`NO_DRAIN_HOLES`、`BOOLEAN_FAILED`、`JOB_FAILED`、`HOLLOW_GENERATION_FAILED`、`SUPPORT_GENERATION_FAILED` 等 |
 
-**理由**：後續 `engine-error-code-table`（C++ 出 code）只實作 `owner=engine` 那 14 個。B 群的概念（job 目錄、HTTP status、pydantic）不該進引擎。現在先標好，屆時直接篩選即可。
+**理由**：後續 `engine-error-code-table`（C++ 出 code）只實作 `owner=engine` 那 13 個。B 群的概念（job 目錄、HTTP status、pydantic，或需綜合 exit code／檔案是否產生等多重條件）不該進引擎。現在先標好，屆時直接篩選即可。
+
+**訂正記錄（2026-09-17）**：本節原寫 `engine=14 / python=14`，並把 `HOLLOW_GENERATION_FAILED` 列為 engine 群範例。實作前對照實際程式碼（`agent/sla_operations.py` 的 `generate_hollow`、`agent/api_v2.py` 的 boolean/hex-grid/drain-hole 呼叫點）發現這四個（`HOLLOW_GENERATION_FAILED`、`BOOLEAN_FAILED`、`BOOLEAN_INVALID_MESH`、`NO_DRAIN_HOLES`、`NO_HEX_GRID_CELLS`）皆由 Python 檢查 exit code 或輸出檔是否存在來判斷，並無專屬 engine needle 字串；`SUPPORT_GENERATION_FAILED` 同理是「兩支 classifier 皆比對不到」時的 fallback，沒有專屬 needle。依 `error-code-registry` spec 「owner=engine 但 engine_needles 為空 MUST 拋錯」的規則，以上五者只能歸為 `python`，故正確分群為 `engine=13 / python=15`。
 
 **判準**：引擎在自己的 process 裡就能判斷的 → `engine`。需要 job、檔案系統、HTTP、或需綜合多次執行結果的 → `python`。
 
