@@ -11,9 +11,11 @@ import subprocess
 import time
 import uuid
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Optional
 
+from . import profiling
 from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .engine_job_queue import serialized_engine_job
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
@@ -357,7 +359,10 @@ _STDERR_CHUNK_SIZE = 65536
 
 
 async def _drain_stdout_progress(
-    stream, job_id: str
+    stream,
+    job_id: str,
+    *,
+    on_stage: Optional[Callable[[str, float], None]] = None,
 ) -> tuple[Optional[float], bytes]:
     """逐行讀 stdout，把進度事件寫進 job_progress，並回傳原始 bytes。
 
@@ -369,9 +374,14 @@ async def _drain_stdout_progress(
     （``STAGE_FINALIZING``）當下的 :func:`time.monotonic` 時間點，供呼叫端
     量測封存尾段；該行未出現時為 ``None``。取第一次出現的時間，且用
     monotonic 而非 wall clock，不受系統時間調整影響。
+
+    ``on_stage``（add-slice-pipeline-profiling）：量測用旁路。階段識別碼改變時，
+    在 ``set_job_progress`` 之後以 ``(stage, time.perf_counter())`` 呼叫；
+    回呼拋出的例外一律吞掉，不影響進度寫入與回傳值。預設 ``None`` 時行為不變。
     """
     finalizing_at: Optional[float] = None
     chunks: list[bytes] = []
+    last_stage: Optional[str] = None
 
     while True:
         raw = await stream.readline()
@@ -390,6 +400,13 @@ async def _drain_stdout_progress(
 
         set_job_progress(job_id, percent, stage)
 
+        if on_stage is not None and stage != last_stage:
+            last_stage = stage
+            try:
+                on_stage(stage, time.perf_counter())
+            except Exception:
+                logger.debug("on_stage callback failed for job %s", job_id, exc_info=True)
+
     return finalizing_at, b"".join(chunks)
 
 
@@ -406,6 +423,40 @@ async def _drain_stderr(stream) -> bytes:
         chunks.append(chunk)
 
     return b"".join(chunks)
+
+
+# --- 切片管線量測旁路（add-slice-pipeline-profiling） -------------------------
+# 只量測、不改行為：旗標關閉時不傳 on_stage，profiling 各函式本身也是空操作；
+# 旗標開啟時任何量測失敗都只記 debug log，絕不影響切片結果。
+
+# 階段切換時額外打的邊界點；只取第一次出現，與 finalizing_at 的取法一致。
+_PROFILE_STAGE_MARKS = {
+    STAGE_FINALIZING: "engine-finalizing",
+    STAGE_ARCHIVED: "engine-archived",
+}
+
+
+def _profile(fn, *args) -> None:
+    try:
+        fn(*args)
+    except Exception:
+        logger.debug("profiling call %s failed", getattr(fn, "__name__", fn), exc_info=True)
+
+
+def _profile_stage_hook(job_id: str) -> Optional[Callable[[str, float], None]]:
+    """給 ``_drain_stdout_progress`` 的 ``on_stage``；旗標關閉時回傳 ``None``。"""
+    if not profiling.is_enabled():
+        return None
+    marked: set[str] = set()
+
+    def on_stage(stage: str, t: float) -> None:
+        profiling.record_stage(job_id, stage, t)
+        for name in ("engine-first-stage", _PROFILE_STAGE_MARKS.get(stage)):
+            if name is not None and name not in marked:
+                marked.add(name)
+                profiling.mark(job_id, name, t)
+
+    return on_stage
 
 
 @serialized_engine_job
@@ -491,6 +542,7 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         # PNG-expecting fallback.
         slice_env = {**_english_locale_env(), "SLA_LAYER_RLE": "1"}
 
+        _profile(profiling.mark, job_id, "engine-spawn")
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
@@ -501,10 +553,15 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         # 兩個串流並行 drain（design D2）。只讀 stdout 會在 stderr 管線緩衝區
         # 填滿時死鎖；務必兩條 task 同時跑完再 wait() 收退出碼。
         (finalizing_at, stdout), stderr = await asyncio.gather(
-            _drain_stdout_progress(process.stdout, job_id),
+            _drain_stdout_progress(
+                process.stdout, job_id, on_stage=_profile_stage_hook(job_id)
+            ),
             _drain_stderr(process.stderr),
         )
         await process.wait()
+        _profile(profiling.mark, job_id, "engine-exited")
+        _profile(profiling.measure, job_id, "engine-startup", "engine-spawn", "engine-first-stage")
+        _profile(profiling.measure, job_id, "archive-tail", "engine-finalizing", "engine-archived")
 
         # 封存尾段耗時：引擎自報 100% 之後仍要寫出 .sl1 與 preview 封存檔，這段
         # 期間完全沒有進度事件。前端需要這個數字才能合理配置該段的進度條寬度
@@ -562,6 +619,9 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
         if EXPORT_PROJECT_3MF:
             await export_project_3mf(job_id, input_file, job_dir / "output")
 
+        _profile(profiling.mark, job_id, "post-process-end")
+        _profile(profiling.measure, job_id, "post-process", "engine-exited", "post-process-end")
+
         write_job_status(
             job_id,
             JobStatus.COMPLETED,
@@ -570,6 +630,9 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
             resin_volume_ml=resin_volume_ml,
             has_support_mesh=has_support_mesh,
         )
+        # since-complete（design D1）以此為起點。
+        _profile(profiling.mark, job_id, "completed")
+        _profile(profiling.write_profile_json, job_id, job_dir)
 
     except Exception as e:
         write_job_status(job_id, JobStatus.FAILED, error=str(e))

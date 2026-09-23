@@ -7,8 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import logging
 from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any, TypeVar
+
+from . import profiling
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 Work = Callable[[], Awaitable[T]]
@@ -34,8 +39,10 @@ class EngineJobQueue:
 
     async def run(self, job_id: str, work: Work[T]) -> T:
         self._pending_job_ids.append(job_id)
+        _profile_mark(job_id, "queue-enter")
         try:
             async with self._lock:
+                _profile_mark(job_id, "queue-acquired")
                 if job_id in self._pending_job_ids:
                     self._pending_job_ids.remove(job_id)
                 self._running_job_id = job_id
@@ -47,6 +54,16 @@ class EngineJobQueue:
         finally:
             if job_id in self._pending_job_ids:
                 self._pending_job_ids.remove(job_id)
+
+
+def _profile_mark(job_id: str, name: str) -> None:
+    """queue-wait 量測旁路（add-slice-pipeline-profiling）：失敗只記 debug，不影響佇列。"""
+    try:
+        profiling.mark(job_id, name)
+        if name == "queue-acquired":
+            profiling.measure(job_id, "queue-wait", "queue-enter", "queue-acquired")
+    except Exception:
+        logger.debug("queue profiling failed for job %s", job_id, exc_info=True)
 
 
 _queue = EngineJobQueue()

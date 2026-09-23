@@ -23,6 +23,7 @@ import trimesh
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, ValidationError
+from starlette.concurrency import iterate_in_threadpool
 
 from .errors import (
     APIError,
@@ -54,6 +55,7 @@ from .errors import (
     unprintable_object,
     validation_error,
 )
+from . import profiling
 from .jobs import (
     create_job,
     create_job_id,
@@ -282,6 +284,65 @@ def _require_completed(status_data: dict, job_id: str) -> None:
 router = APIRouter(prefix="/api/v2", tags=["v2-slices"])
 
 
+# --- 切片管線量測旁路（add-slice-pipeline-profiling, design D1/D3） ------------
+# 計時只放在 Server-Timing header，不動任何 response body；旗標關閉時不加 header，
+# 量測失敗只記 debug log。``response`` 為 None 表示被直接呼叫（非經由 HTTP），略過。
+
+
+def _set_srv_handle(response: Optional[Response], started: float) -> None:
+    if response is None or not profiling.is_enabled():
+        return
+    try:
+        dur_ms = (time.perf_counter() - started) * 1000.0
+        response.headers["Server-Timing"] = f"srv-handle;dur={dur_ms:.1f}"
+    except Exception:
+        logger.debug("srv-handle Server-Timing failed", exc_info=True)
+
+
+def _set_completed_breakdown(response: Optional[Response], job_id: str) -> None:
+    """COMPLETED 狀態回應：引擎分解 + since-complete（皆為後端同一 perf_counter 時鐘）。"""
+    if response is None or not profiling.is_enabled():
+        return
+    try:
+        now = time.perf_counter()
+        snap = profiling.snapshot(job_id)
+        if snap is None:
+            return
+        extra = {}
+        completed_at = snap["marks"].get("completed")
+        if completed_at is not None:
+            extra["since-complete"] = (now - completed_at) * 1000.0
+        value = profiling.server_timing(job_id, extra=extra)
+        if value:
+            response.headers["Server-Timing"] = value
+    except Exception:
+        logger.debug("status Server-Timing failed for job %s", job_id, exc_info=True)
+
+
+async def _timed_prz_stream(job_id: str, job_dir, chunks):
+    """包住 PRZ 編碼串流，記錄 prz-encode（第一次被拉取 → 串流結束）。
+
+    StreamingResponse 在編碼前就送出 header，所以耗時只能寫進 profile 紀錄，
+    由之後的 GET /slices/{id} 帶出（design D1）。編碼仍透過
+    ``iterate_in_threadpool`` 在執行緒上跑——與 StreamingResponse 對同步
+    generator 的處理相同，不會改成佔住 event loop。只在完整送完時記錄；
+    中途斷線或編碼失敗不記，避免把不完整的區間當成數據。
+    """
+    started = time.perf_counter()
+    finished = False
+    try:
+        async for chunk in iterate_in_threadpool(chunks):
+            yield chunk
+        finished = True
+    finally:
+        if finished:
+            try:
+                profiling.add_span(job_id, "prz-encode", (time.perf_counter() - started) * 1000.0)
+                profiling.write_profile_json(job_id, job_dir)
+            except Exception:
+                logger.debug("prz-encode profiling failed for job %s", job_id, exc_info=True)
+
+
 def _evict_expired_sessions() -> None:
     """Evict PRZ sessions whose last_access timestamp is older than 1800 seconds."""
     now = time.time()
@@ -375,13 +436,16 @@ async def add_models_to_slice_job(job_id: str, request: V2ModelsAddRequest):
 
 
 @router.post("/slices/{job_id}/upload", response_model=V2Response)
-async def upload_model_file(job_id: str, file: UploadFile = File(...)):
+async def upload_model_file(
+    job_id: str, file: UploadFile = File(...), response: Response = None
+):
     """
     Upload an STL file to a slice job.
 
     This is the recommended way to add models - upload the file directly.
     The file will be stored and used when execute is called.
     """
+    started = time.perf_counter()
     pending = _require_pending(job_id)
 
     if not file or not file.filename:
@@ -411,6 +475,7 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
         "validated": True,
     })
 
+    _set_srv_handle(response, started)
     return V2Response(
         success=True,
         message=f"File '{file.filename}' uploaded",
@@ -419,7 +484,9 @@ async def upload_model_file(job_id: str, file: UploadFile = File(...)):
 
 
 @router.post("/slices/{job_id}/upload-support", response_model=V2Response)
-async def upload_support_file(job_id: str, file: UploadFile = File(...)):
+async def upload_support_file(
+    job_id: str, file: UploadFile = File(...), response: Response = None
+):
     """
     Upload a separate support-mesh STL for the slice job.
 
@@ -428,6 +495,7 @@ async def upload_support_file(job_id: str, file: UploadFile = File(...)):
     --import-support-stl, with self-generated supports/pad disabled. Sharing the
     model's world origin (Contract A) keeps the two aligned without a transform.
     """
+    started = time.perf_counter()
     pending = _require_pending(job_id)
 
     if not file or not file.filename:
@@ -450,6 +518,7 @@ async def upload_support_file(job_id: str, file: UploadFile = File(...)):
 
     pending["support_stl"] = content
 
+    _set_srv_handle(response, started)
     return V2Response(
         success=True,
         message=f"Support file '{file.filename}' uploaded",
@@ -497,12 +566,15 @@ async def use_model_from_job(job_id: str, source_job_id: str, source_file: str =
 
 
 @router.post("/slices/{job_id}/execute", response_model=V2Response)
-async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
+async def execute_slice_job(
+    job_id: str, background_tasks: BackgroundTasks, response: Response = None
+):
     """
     Execute the slice job (start slicing).
 
     This triggers the actual PrusaSlicer process.
     """
+    started = time.perf_counter()
     if job_id not in _pending_jobs:
         if job_exists(job_id):
             raise job_already_executed(job_id)
@@ -536,6 +608,7 @@ async def execute_slice_job(job_id: str, background_tasks: BackgroundTasks):
         sla_config = _build_sla_config(prz_cfg, config, pending.get("center"))
         del _pending_jobs[job_id]
         background_tasks.add_task(run_slicing, job_id, sla_config)
+        _set_srv_handle(response, started)
         return V2Response(success=True, message="Slicing started", data={"currentConfig": config})
     except APIError:
         raise
@@ -987,6 +1060,7 @@ async def get_preview_zip_v2(job_id: str):
     Get a ZIP of downscaled WebP preview images for layer display.
     Pre-generated in background after slicing; generated on-demand if not ready.
     """
+    started = time.perf_counter()
     status_data = _job_status_or_raise(job_id)
     _require_completed(status_data, job_id)
 
@@ -1000,7 +1074,9 @@ async def get_preview_zip_v2(job_id: str):
 
     # Prefer PrusaSlicer-generated preview ZIP (much faster)
     if prusa_preview_path.exists():
-        return FileResponse(prusa_preview_path, media_type="application/zip", filename="preview.zip")
+        resp = FileResponse(prusa_preview_path, media_type="application/zip", filename="preview.zip")
+        _set_srv_handle(resp, started)
+        return resp
 
     # Fallback: Python-generated preview
     import asyncio
@@ -1010,7 +1086,9 @@ async def get_preview_zip_v2(job_id: str):
     except Exception as exc:
         raise internal_error(f"Failed to generate preview: {exc}")
 
-    return FileResponse(preview_path, media_type="application/zip", filename="preview.zip")
+    resp = FileResponse(preview_path, media_type="application/zip", filename="preview.zip")
+    _set_srv_handle(resp, started)
+    return resp
 
 
 def _rle_sl1_to_png_zip(sl1_path) -> bytes:
@@ -1139,15 +1217,19 @@ async def download_prz_v2(job_id: str, request: Request):
 
     from .prz_encoder import encode_prz_streaming
 
+    stream = encode_prz_streaming(
+        config=config,
+        sl1_path=sl1_path,
+        timing=timing,
+        resin_volume_mm3=(status_data.get("resin_volume_ml") or 0) * 1000,
+        preview_small_rgb=preview_small_rgb,
+        preview_large_rgb=preview_large_rgb,
+    )
+    if profiling.is_enabled():
+        stream = _timed_prz_stream(job_id, get_job_dir(job_id), stream)
+
     return StreamingResponse(
-        encode_prz_streaming(
-            config=config,
-            sl1_path=sl1_path,
-            timing=timing,
-            resin_volume_mm3=(status_data.get("resin_volume_ml") or 0) * 1000,
-            preview_small_rgb=preview_small_rgb,
-            preview_large_rgb=preview_large_rgb,
-        ),
+        stream,
         media_type="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=model.prz"},
     )
@@ -1538,7 +1620,7 @@ async def confirm_model_type_endpoint(
 
 
 @router.get("/slices/{job_id}", response_model=V2Response)
-async def get_slice_job_status(job_id: str):
+async def get_slice_job_status(job_id: str, response: Response = None):
     """
     Get the status of a slice job.
     """
@@ -1589,6 +1671,10 @@ async def get_slice_job_status(job_id: str):
             if progress is not None:
                 response_data["progress"] = progress
 
+            # Engine breakdown only once the job is COMPLETED (design D1).
+            if status_data["status"] == JobStatus.COMPLETED.value:
+                _set_completed_breakdown(response, job_id)
+
             return V2Response(success=True, data=response_data)
 
     # Check pending jobs (not yet executed)
@@ -1632,16 +1718,18 @@ async def get_slice_uchars(job_id: str):
 
 
 @router.get("/slices/{job_id}/gcode", response_model=V2Response)
-async def get_slice_gcode(job_id: str):
+async def get_slice_gcode(job_id: str, response: Response = None):
     """
     Get G-code for the slice job.
 
     Note: PrusaSlicer SLA output is .sl1 (images), not G-code.
     This endpoint returns metadata about the slicing result.
     """
+    started = time.perf_counter()
     status_data = _job_status_or_raise(job_id)
     _require_completed(status_data, job_id)
 
+    _set_srv_handle(response, started)
     # SLA doesn't produce G-code in the traditional sense
     # Return slicing metadata instead
     return V2Response(
