@@ -68,6 +68,14 @@ def point_in_polygon_2d(poly: np.ndarray, px: float, py: float) -> bool:
     """
     Test if a point is inside a 2D polygon using ray casting.
 
+    Vectorized over polygon edges (NumPy elementwise ops replace the
+    per-edge Python loop) -- same parity-toggle ray-casting test as before,
+    evaluated for all edges at once. Each edge's crossing condition and
+    x-intercept are computed independently of every other edge, so this is
+    a mathematically exact reformulation (sequential XOR-toggle == parity of
+    the true-count) with no floating-point reordering relative to the
+    scalar version.
+
     Args:
         poly: Nx2 numpy array of 2D points
         px, py: Test point coordinates
@@ -75,16 +83,19 @@ def point_in_polygon_2d(poly: np.ndarray, px: float, py: float) -> bool:
     Returns:
         True if point is inside
     """
-    n = len(poly)
-    inside = False
-    j = n - 1
-    for i in range(n):
-        xi, yi = poly[i]
-        xj, yj = poly[j]
-        if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi) + xi):
-            inside = not inside
-        j = i
-    return inside
+    x = poly[:, 0]
+    y = poly[:, 1]
+    xj = np.roll(x, 1)
+    yj = np.roll(y, 1)
+    crosses = (y > py) != (yj > py)
+    # crosses[i] True implies y[i] != yj[i] (same value can't straddle py on
+    # both sides), so the divisor below is never 0 where it's actually used;
+    # substitute a dummy 1.0 divisor elsewhere so no edge -- horizontal or
+    # otherwise -- ever hits an actual 0/0 division.
+    denom = np.where(crosses, yj - y, 1.0)
+    xints = (xj - x) * (py - y) / denom + x
+    hits = crosses & (px < xints)
+    return bool(np.count_nonzero(hits) % 2)
 
 
 def ray_seg_intersect_2d(
