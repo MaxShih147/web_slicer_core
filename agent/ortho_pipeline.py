@@ -126,6 +126,49 @@ def ray_seg_intersect_2d(
     return None
 
 
+def _ray_polygon_nearest_hit_t(
+    ox: float, oy: float, dx: float, dy: float,
+    ax: np.ndarray, ay: np.ndarray, ex: np.ndarray, ey: np.ndarray,
+) -> Optional[float]:
+    """
+    Vectorized nearest-hit search over a fixed polygon's edges for a single
+    ray -- replaces the per-edge Python loop in evaluate_sample_idx()
+    (inside generate_side_wall_drains()) that called ray_seg_intersect_2d()
+    once per edge and kept the caller-side "t > 0.01 and t < best_t"
+    running minimum. ray_seg_intersect_2d() itself is unchanged.
+
+    ax, ay, ex, ey: precomputed per-edge arrays -- edge start coordinates
+    and edge vectors (b - a), where b is the next polygon point (wrapping
+    from the last point back to the first). Built once per
+    generate_side_wall_drains() call and reused across every
+    evaluate_sample_idx() call in that call, since the polygon itself never
+    changes within one generate_side_wall_drains() call.
+
+    Same qualifying conditions as ray_seg_intersect_2d() plus its caller:
+    abs(denom) >= 1e-12, inclusive 0 <= u <= 1, and t > 0.01 (which
+    subsumes ray_seg_intersect_2d()'s own t >= 0 check, since 0.01 > 0).
+    Returns the smallest qualifying t, or None if no edge qualifies. Ties
+    in t select the same value regardless of which edge produced it, since
+    only the winning t -- not an edge index -- is ever retained by the
+    caller, exactly mirroring what the scalar loop's "best_t" accumulator
+    recorded.
+    """
+    denom = dx * ey - dy * ex
+    valid = np.abs(denom) >= 1e-12
+    # valid=False entries (parallel, collinear, or zero-length edges) never
+    # contribute -- masked out via `hit` below -- so substitute a dummy 1.0
+    # divisor there rather than dividing by the real (possibly zero) denom.
+    safe_denom = np.where(valid, denom, 1.0)
+    dax = ax - ox
+    day = ay - oy
+    t = (dax * ey - day * ex) / safe_denom
+    u = (dax * dy - day * dx) / safe_denom
+    hit = valid & (u >= 0) & (u <= 1) & (t > 0.01)
+    if not np.any(hit):
+        return None
+    return float(np.min(np.where(hit, t, np.inf)))
+
+
 # =============================================================================
 # Mesh Slicing (ported from drillService.js sliceMeshAtZ_World)
 # =============================================================================
@@ -377,6 +420,19 @@ def generate_side_wall_drains(
     outer_poly = max(outer_loops, key=lambda lp: abs(poly_area_2d(lp)))
     inner_poly = max(inner_loops, key=lambda lp: abs(poly_area_2d(lp)))
 
+    # Precompute inner_poly edge arrays once for this call (inner_poly is
+    # fixed for the remainder of generate_side_wall_drains()), so the ray
+    # search inside evaluate_sample_idx() below does a single NumPy pass
+    # per candidate instead of a per-edge Python loop. inner_b wraps the
+    # last polygon point back to the first, matching the scalar loop's
+    # `j = (i + 1) % len(inner_poly)`.
+    inner_ax = inner_poly[:, 0]
+    inner_ay = inner_poly[:, 1]
+    inner_bx = np.roll(inner_ax, -1)
+    inner_by = np.roll(inner_ay, -1)
+    inner_ex = inner_bx - inner_ax
+    inner_ey = inner_by - inner_ay
+
     # Resample outer_poly at uniform arc length
     N_SAMPLES = 360
     n_pts = len(outer_poly)
@@ -436,17 +492,10 @@ def generate_side_wall_drains(
             nx = -nx
             ny = -ny
         # Ray to inner wall
-        best_t = float('inf')
-        for i in range(len(inner_poly)):
-            j = (i + 1) % len(inner_poly)
-            t = ray_seg_intersect_2d(
-                sx, sy, nx, ny,
-                inner_poly[i][0], inner_poly[i][1],
-                inner_poly[j][0], inner_poly[j][1],
-            )
-            if t is not None and t > 0.01 and t < best_t:
-                best_t = t
-        if best_t == float('inf'):
+        best_t = _ray_polygon_nearest_hit_t(
+            sx, sy, nx, ny, inner_ax, inner_ay, inner_ex, inner_ey,
+        )
+        if best_t is None:
             return None
         if best_t < 0.6 * T or best_t > 3.0 * T:
             return None
