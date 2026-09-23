@@ -220,6 +220,7 @@ if defined BUILD_DEPS (
             -DDEP_DEBUG=OFF ^
             -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON ^
             -DCMAKE_FIND_USE_PACKAGE_REGISTRY=FALSE ^
+            -DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF ^
             -DPrusaSlicer_deps_PACKAGE_EXCLUDES="wxWidgets"
 
         if !errorlevel! neq 0 (
@@ -314,6 +315,7 @@ if defined CONFIGURE_SLICER (
         -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON ^
         -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON ^
         -DCMAKE_FIND_USE_PACKAGE_REGISTRY=FALSE ^
+        -DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF ^
         -DIlmBase_DIR="%DEPS_DESTDIR%\lib\cmake\IlmBase" ^
         -DOpenEXR_DIR="%DEPS_DESTDIR%\lib\cmake\OpenEXR"
 

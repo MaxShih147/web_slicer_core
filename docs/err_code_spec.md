@@ -49,6 +49,7 @@ hand-maintained prose and is left untouched by --write. -->
 | `SUPPORT_POINTS_MODEL_MISMATCH` | 422 | false | 匯入的支撐點與目前模型不符（依指紋比對判定），不可重試，只能對目前模型重新產生支撐點 |
 | `SUPPORT_POINT_SAMPLING_FAILED` | 422 | false | 引擎的支撐點取樣演算法失敗，無法在此模型上取樣出支撐島；建議微調模型擺放角度後重試（`SLA support point generator has failed.`） |
 | `SHRINKAGE_COMPENSATION_INVALID` | 422 | false | 物件的縮放與收縮補償使轉換矩陣不可逆（零縮放或零收縮補償），支撐點座標無法映射回輸入模型（`the object transform is not invertible`） |
+| `SUPPORT_MESH_EXPORT_FAILED` | 500 | true | 支撐已產生，但引擎無法把支撐 mesh 寫成 STL 檔（伺服器端寫檔失敗，可重試，`Failed to export support mesh`） |
 | `PAD_CONFIG_INVALID` | 422 | false | Pad brim 過小，無法在目前組態下產生底座（`Pad brim size is too small`） |
 | `EXPOSURE_TIME_OUT_OF_RANGE` | 422 | false | 曝光時間超出印表機設定檔的允許範圍（`Exposition/Initial exposition time is out of printer profile bounds`） |
 | `MODEL_MESH_UNSLICEABLE` | 422 | false | 模型幾何無法切片（幾何破損或 non-manifold，`can not be sliced`） |

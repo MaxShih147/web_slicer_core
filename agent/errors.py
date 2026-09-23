@@ -246,6 +246,21 @@ def support_point_sampling_failed(detail: str = None) -> APIError:
     )
 
 
+def support_mesh_export_failed(detail: str = None) -> APIError:
+    """The support was generated, but its STL could not be written.
+
+    500 and retryable, unlike the other support codes: a failed file write is
+    the server's disk or permissions, not a setting the user can fix, so the
+    same request may well succeed the next time.
+    """
+    return APIError(
+        "SUPPORT_MESH_EXPORT_FAILED",
+        detail or "The support mesh was generated but could not be written to disk",
+        500,
+        retryable=True,
+    )
+
+
 def shrinkage_compensation_invalid(detail: str = None) -> APIError:
     return APIError(
         "SHRINKAGE_COMPENSATION_INVALID",

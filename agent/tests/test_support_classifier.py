@@ -163,9 +163,12 @@ class TestStep0ModelMismatch:
 
     def test_absent_marker_does_not_trigger_the_code(self):
         """Teeth: an ordinary failure must not pick up this code by accident."""
+        # A real engine failure line that carries no code of its own. (It
+        # used to be the support mesh one, until engine-error-code-table D6
+        # gave that failure its own code.)
         result = classify_support_result(
             stdout="Slicing model",
-            stderr="Failed to export support mesh",
+            stderr="Failed to export support tree to model_tree.json",
             support_stl_exists=False,
         )
         assert result.error_code == FALLBACK_CODE
@@ -331,19 +334,23 @@ class TestStep4HasSupport:
         assert result.error_code == FALLBACK_CODE
 
 
-class TestStep5FailClosed:
-    def test_write_failure_no_marker_fails_closed(self):
-        """3.6 / spec: 'Failed to export support mesh', no STL, no positive
-        marker → FAILED + fallback (NOT SUPPORT_NOT_NEEDED)."""
+class TestSupportMeshExportFailed:
+    def test_write_failure_has_its_own_code(self):
+        """engine-error-code-table D6 (moved here from TestStep5FailClosed):
+        'Failed to export support mesh', no STL, no positive marker → FAILED +
+        SUPPORT_MESH_EXPORT_FAILED (NOT SUPPORT_NOT_NEEDED). Written as the
+        pre-change engine prints it: English on stderr, no PHZ_ERROR line."""
         result = classify_support_result(
             stdout="Slicing model\n",
             stderr="Failed to export support mesh",
             support_stl_exists=False,
         )
         assert result.status == JobStatus.FAILED
-        assert result.error_code == FALLBACK_CODE
+        assert result.error_code == "SUPPORT_MESH_EXPORT_FAILED"
         assert result.support_outcome != SUPPORT_NOT_NEEDED
 
+
+class TestStep5FailClosed:
     def test_conflicting_markers_fail_closed(self):
         """3.6 / spec: both a success marker and a not-needed marker → fail-closed."""
         result = classify_support_result(

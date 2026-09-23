@@ -29,7 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from .engine_rules import find_code
+from .engine_rules import engine_codes, find_code
 from .models import JobStatus
 
 # Neutral supportOutcome value — NOT an error code; rides on a COMPLETED job.
@@ -128,12 +128,14 @@ def classify_support_result(
     """Classify a support-only CLI run from its text output (never the exit code)."""
     out = _to_text(stdout)
     err = _to_text(stderr)
+    declared = engine_codes(out)
 
     # ── Step 0: imported points reject the model → dedicated code ────────────
     # Scanned on both streams for the same reason as Step 2: the marker goes to
     # stderr today, and a future stream reshuffle must not silently downgrade
     # this to the fallback code.
-    if MODEL_MISMATCH_MARKER in err or MODEL_MISMATCH_MARKER in out:
+    if (MODEL_MISMATCH_CODE in declared
+            or MODEL_MISMATCH_MARKER in err or MODEL_MISMATCH_MARKER in out):
         return SupportClassification(
             status=JobStatus.FAILED,
             error_code=MODEL_MISMATCH_CODE,
@@ -145,7 +147,7 @@ def classify_support_result(
     # Queries the shared ENGINE_RULES table (not VALIDATE_CODE_MAP above —
     # see its docstring) so a fix like PAD_CONFIG_INVALID gaining the
     # "support" flow (Task 2.2) takes effect here with no code change.
-    rule = find_code("support", err)
+    rule = find_code("support", err, out)
     if rule is not None and not rule.fallback_by_design:
         return SupportClassification(
             status=JobStatus.FAILED,
@@ -170,7 +172,8 @@ def classify_support_result(
             )
 
     # ── Step 2: model out of bounds (marker on stdout; scan stderr too) ───────
-    if OUT_OF_BOUNDS_MARKER in out or OUT_OF_BOUNDS_MARKER in err:
+    if (OUT_OF_BOUNDS_CODE in declared
+            or OUT_OF_BOUNDS_MARKER in out or OUT_OF_BOUNDS_MARKER in err):
         return SupportClassification(
             status=JobStatus.FAILED,
             error_code=OUT_OF_BOUNDS_CODE,

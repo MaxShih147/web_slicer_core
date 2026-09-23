@@ -6,16 +6,19 @@ codes (originally 28, see openspec/changes/unify-error-code-registry/design.md;
 30 after merge-engine-result-classifiers Task 3.1 added
 SUPPORT_POINT_SAMPLING_FAILED and SHRINKAGE_COMPENSATION_INVALID, both
 owner="engine"; 31 after add-support-param-validation Task 4 added
-CONFIG_VALIDATION_ERROR, owner="python"). This test pins the shape of that
-registry: every code declared exactly once, all required fields populated,
-`owner` restricted to the two known values with the exact split those changes
-together produce (15 engine / 16 python), and every `owner="engine"` record
+CONFIG_VALIDATION_ERROR, owner="python"; 32 after engine-error-code-table
+Task 5.1 added SUPPORT_MESH_EXPORT_FAILED, owner="engine" — the engine
+prints it itself when the support STL cannot be written). This test pins the
+shape of that registry: every code declared exactly once, all required fields
+populated, `owner` restricted to the two known values with the exact split
+those changes together produce (16 engine / 16 python), and every
+`owner="engine"` record
 carrying at least
 one engine_needles string (required by ErrorCodeSpec.__post_init__ and by the
 error-code-registry spec's "owner 為 engine 但 engine_needles 為空 MUST 拋錯"
 scenario).
 
-The owner-split expectation (15/15) is an independently-sourced literal, not
+The owner-split expectation (16/16) is an independently-sourced literal, not
 derived from ALL itself — it comes from manually classifying each code against
 agent/sla_operations.py, agent/api_v2.py, agent/support_classifier.py and
 agent/slicing_classifier.py (see unify-error-code-registry/design.md's
@@ -32,8 +35,8 @@ import pytest
 
 from agent.error_codes import ALL, ErrorCodeSpec
 
-EXPECTED_TOTAL = 31
-EXPECTED_OWNER_COUNTS = collections.Counter({"engine": 15, "python": 16})
+EXPECTED_TOTAL = 32
+EXPECTED_OWNER_COUNTS = collections.Counter({"engine": 16, "python": 16})
 
 
 class TestRegistryShape:

@@ -273,6 +273,18 @@ _SUPPORT: Tuple[ErrorCodeSpec, ...] = (
         # actual engine stderr.
         engine_needles=("the object transform is",),
     ),
+    # engine-error-code-table D6. 500 + retryable, unlike the rest of this
+    # group: a file that could not be written is the server's disk or
+    # permissions, not a setting the user got wrong. Support flow only — in a
+    # slice the .sl1 is already written and the failure is reported and dropped.
+    ErrorCodeSpec(
+        code="SUPPORT_MESH_EXPORT_FAILED",
+        http_status=500,
+        retryable=True,
+        owner="engine",
+        note="支撐已產生，但引擎無法把支撐 mesh 寫成 STL 檔（伺服器端寫檔失敗，可重試，`Failed to export support mesh`）",
+        engine_needles=("Failed to export support mesh",),
+    ),
 )
 
 # ─── slicing codes ──────────────────────────────────────────────────────────────

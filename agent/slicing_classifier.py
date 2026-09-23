@@ -5,22 +5,29 @@ Mirrors the support_classifier approach for the main slice flow.  Called by
 run_slicing() after the CLI process exits; classifies both failure paths:
 
   A) Non-zero exit — classify stderr for known validate() / process() messages.
-  B) Zero exit + missing output file — scan stdout/stderr for the two special
-     cases that produce exit 0 but no .sl1:
-       • F-17 model-out-of-bounds  (message written to stdout by ProcessActions)
-       • F-06 empty STL geometry   (message written to stderr by LoadPrintData)
+  B) Zero exit + missing output file — the same validate() scan, for engines
+     that still exit 0 on a validate failure.
+
+Two "nothing to print" cases apply to either path, whatever the exit code:
+  • F-17 model-out-of-bounds  (message written to stdout by ProcessActions)
+  • F-06 empty STL geometry   (message written to stderr by LoadPrintData)
 
 Decision order (first match wins):
   Step 0  (either path) support-point/model mismatch -> FAILED +
                                                         SUPPORT_POINTS_MODEL_MISMATCH
-  Step 1  validate() patterns on stderr              -> FAILED + specific code
-  Step 2  process() exception patterns on stderr     -> FAILED + specific code
-  Step 3  STL parse error pattern on stderr          -> FAILED + INVALID_MODEL
-  Step 4  unclassified non-zero exit                 -> FAILED, no code (JOB_FAILED)
-  Step 5  (zero-exit) model-out-of-bounds on stdout  -> FAILED + MODEL_OUT_OF_BOUNDS
-  Step 6  (zero-exit) empty model on stderr          -> FAILED + INVALID_MODEL
+  Step 5  (either path) model-out-of-bounds          -> FAILED + MODEL_OUT_OF_BOUNDS
+  Step 6  (either path) empty model on stderr        -> FAILED + INVALID_MODEL
+  Step 1  (non-zero) validate() patterns on stderr   -> FAILED + specific code
+  Step 2  (non-zero) process() exception patterns    -> FAILED + specific code
+  Step 3  (non-zero) STL parse error pattern         -> FAILED + INVALID_MODEL
+  Step 4  (non-zero) unclassified                    -> FAILED, no code (JOB_FAILED)
+  Step 6.x (zero-exit) validate() patterns           -> FAILED + specific code
   Step 7  (zero-exit) other missing-output           -> FAILED, no code (JOB_FAILED)
   —       exit 0 + output present                    -> None  (success, caller handles)
+
+Steps 5 and 6 keep their numbers from when they sat on the zero-exit path only
+(engine-error-code-table Section 6 moved them); the tests refer to them by
+number.
 
 All needle strings are English substrings of the untranslated C++ messages.
 The slicer locale must be pinned to English (enforced separately) for Steps 1-3
@@ -35,7 +42,7 @@ from typing import Optional, Union
 # support flow matches on, pinned against the fork source by
 # test_support_string_contract.py. Importing it here means the contract test
 # protects this path too, instead of a second copy drifting unnoticed.
-from .engine_rules import find_code
+from .engine_rules import ENGINE_ERROR_PREFIX, engine_codes, find_code
 from .support_classifier import MODEL_MISMATCH_CODE, MODEL_MISMATCH_MARKER
 
 # ─── Path A: stderr patterns — validate() errors (exit ≠ 0) ──────────────────
@@ -87,19 +94,6 @@ _EMPTY_MODEL_CODE = "INVALID_MODEL"
 # validate/process message).
 _INVALID_MODEL_CODE = "INVALID_MODEL"
 
-# merge-engine-result-classifiers D3/Task 1.4: these two codes are ONLY
-# detected in Path B (exit_code == 0, output file absent) — Path A (exit != 0)
-# has no equivalent check for either marker, so classification for them
-# structurally depends on exit_code staying 0. This is the "unexploded bomb":
-# the fork has 15 `return 1` sites inside `bool` functions in
-# CLI/ProcessActions.cpp; once those are fixed to `return false` (see the
-# deferred `engine-error-code-table` change), the same failures will exit 1
-# and land unclassified in Path A's Step 4 instead of here.
-# test_exit_code_independence.py documents this with xfail(strict=True) on
-# exactly these two codes. Removable once that change adds an
-# exit-code-independent check for both markers in Path A too.
-_LEGACY_EXIT0_ONLY_CODES = (_OUT_OF_BOUNDS_CODE, _EMPTY_MODEL_CODE)
-
 
 @dataclass(frozen=True)
 class SliceClassification:
@@ -112,6 +106,16 @@ class SliceClassification:
     """
     error: Optional[str]
     error_code: Optional[str]
+
+
+def _with_engine_lines(error: str, stdout: str) -> str:
+    """Append the engine's own PHZ_ERROR lines to an unclassified error.
+    Reached when the engine declared a code this flow does not map — e.g. one
+    from an engine newer than this registry (engine-error-code-table D5). The
+    code must not become the error_code, but the line is what a person
+    debugging it needs, so it rides along in the detail."""
+    lines = [line for line in stdout.splitlines() if line.startswith(ENGINE_ERROR_PREFIX)]
+    return "\n".join([error, *lines]) if lines else error
 
 
 def _decode(stream: Union[str, bytes, bytearray, None]) -> str:
@@ -145,6 +149,7 @@ def classify_slice_result(
     """
     out = _decode(stdout)
     err = _decode(stderr)
+    declared = engine_codes(out)
 
     # ── Step 0: imported support points do not describe this model ────────
     # Sits ahead of BOTH paths: before the exit-code split, before the
@@ -159,11 +164,30 @@ def classify_slice_result(
     # Why before the success return: an .sl1 must never be accepted from a run
     # that rejected its own point list. The abort cannot produce one today,
     # so this only pins the fail-closed direction.
-    if MODEL_MISMATCH_MARKER in err or MODEL_MISMATCH_MARKER in out:
+    if (MODEL_MISMATCH_CODE in declared
+            or MODEL_MISMATCH_MARKER in err or MODEL_MISMATCH_MARKER in out):
         return SliceClassification(
             error=(err.strip() or out.strip()) or None,
             error_code=MODEL_MISMATCH_CODE,
         )
+
+    # ── Steps 5-6: nothing to print (either path) ─────────────────────────────
+    # Checked for any failed run, whatever the exit code, ahead of Step 1 as
+    # they always were on the zero-exit path, so both paths keep one order.
+    # merge-engine-result-classifiers left these two on the zero-exit path only,
+    # as a named legacy branch; engine-error-code-table Section 6 removed it.
+    if exit_code != 0 or not output_file_exists:
+        # Step 5: F-17 model out of bounds (stdout; also scan stderr defensively)
+        if (_OUT_OF_BOUNDS_CODE in declared
+                or _OUT_OF_BOUNDS_MARKER in out or _OUT_OF_BOUNDS_MARKER in err):
+            return SliceClassification(
+                error=(out.strip() or err.strip()) or None,
+                error_code=_OUT_OF_BOUNDS_CODE,
+            )
+
+        # Step 6: F-06 empty model geometry (stderr)
+        if _EMPTY_MODEL_CODE in declared or _EMPTY_MODEL_MARKER in err:
+            return SliceClassification(error=err.strip() or None, error_code=_EMPTY_MODEL_CODE)
 
     # ── Path A: non-zero exit ─────────────────────────────────────────────────
     if exit_code != 0:
@@ -171,11 +195,15 @@ def classify_slice_result(
         # (not _VALIDATE_CODE_MAP above — see its docstring) so a fix like
         # SUPPORT_POINTS_REQUIRED gaining the "slice" flow (Task 2.3) takes
         # effect here with no code change.
-        rule = find_code("slice", err)
+        rule = find_code("slice", err, out)
         if rule is not None:
             return SliceClassification(error=err.strip() or None, error_code=rule.code)
 
-        # Step 2: process() exception patterns
+        # Step 2: process() exception patterns — the code the engine declared
+        # first, the English needle second (engine-error-code-table D4).
+        for _needle, code in _PROCESS_CODE_MAP:
+            if code in declared:
+                return SliceClassification(error=err.strip() or None, error_code=code)
         for needle, code in _PROCESS_CODE_MAP:
             if needle in err:
                 return SliceClassification(error=err.strip() or None, error_code=code)
@@ -186,34 +214,25 @@ def classify_slice_result(
 
         # Step 4: unclassified — preserve backward-compatible error string
         return SliceClassification(
-            error=f"Exit code {exit_code}: {err}",
+            error=_with_engine_lines(f"Exit code {exit_code}: {err}", out),
             error_code=None,
         )
 
     # ── Path B: zero exit but output file absent ──────────────────────────────
     if not output_file_exists:
-        # Step 5: F-17 model out of bounds (stdout; also scan stderr defensively)
-        if _OUT_OF_BOUNDS_MARKER in out or _OUT_OF_BOUNDS_MARKER in err:
-            return SliceClassification(
-                error=(out.strip() or err.strip()) or None,
-                error_code=_OUT_OF_BOUNDS_CODE,
-            )
-
-        # Step 6: F-06 empty model geometry (stderr)
-        if _EMPTY_MODEL_MARKER in err:
-            return SliceClassification(error=err.strip() or None, error_code=_EMPTY_MODEL_CODE)
-
         # Step 6.x: validate() errors — the fork's process_actions() returns 1 (bool
         # true) on validate failure, so the process exits 0 even though validate()
         # wrote a recognisable error to stderr. Reuses the same ENGINE_RULES
         # query as Path A Step 1 so there is only one source of truth for the
         # needle -> code mapping.
-        rule = find_code("slice", err)
+        rule = find_code("slice", err, out)
         if rule is not None:
             return SliceClassification(error=err.strip() or None, error_code=rule.code)
 
         # Step 7: other zero-exit / no-output — unclassified
-        return SliceClassification(error="Output file not created", error_code=None)
+        return SliceClassification(
+            error=_with_engine_lines("Output file not created", out), error_code=None
+        )
 
     # exit 0 + output present → success; caller proceeds normally
     return None

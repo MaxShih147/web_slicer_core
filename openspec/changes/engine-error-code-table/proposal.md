@@ -10,17 +10,20 @@
 
 ## What Changes
 
-- **引擎新增 error code string table。** 在 C++ 側建立 `code → message` 的單一對照表，涵蓋 `owner=engine` 的 16 個代號（原 14 ＋ `merge-engine-result-classifiers` 新增的 2 個）。message 只服務 log 與 CLI 使用者，**不傳給 Python 或前端**。
+- **引擎新增 error code string table。** 在 C++ 側建立 `code → message` 的單一對照表，涵蓋 `owner=engine` 的 15 個代號（原 13 ＋ `merge-engine-result-classifiers` 新增的 2 個；原寫 16／14，已依程式碼訂正）。message 只服務 log 與 CLI 使用者，**不傳給 Python 或前端**。
 - **引擎輸出結構化錯誤行。** 失敗時印一行機器可讀的 JSON 到 **stdout**（不是 stderr，stderr 混了太多雜訊）：
 
   ```
-  PHZ_ERROR {"code":"PAD_CONFIG_INVALID","fields":["pad_wall_slope","pad_brim_size"],"values":{"required_min_slope":51.4,"actual":45.0}}
+  PHZ_ERROR {"code":"PAD_CONFIG_INVALID","fields":["pad_wall_slope","pad_wall_thickness","pad_brim_size"],"values":{"min_pad_wall_slope":51.4,"pad_wall_slope":50}}
   ```
+
+  （實作時訂正：`values` 的 key 與 `/support-params/validate` 回傳的同名，前端不必分兩套讀法。）
 
   `fields` 使用後端 `SLAConfig` 的 snake_case 欄位名（前端 `data-field` 已一致，無需轉換）。
 - **Python 新增 `EngineCode` 比對器**，插在 `ENGINE_RULES` 每列 `matchers` 的**最前面**。字串比對降為第二層。規則列的 `code` / `flows` / `stream` 欄位不動。
 - **15 處 `return 1` 改為 `return false`**（`CLI/ProcessActions.cpp` L400 · 417 · 426 · 432 · 436 · 442 · 451 · 457 · 477 · 484 · 500 · 512 · 516 · 679 · 737）。
-- **D6：內部警告改印 stdout。** `Support mesh is empty`、`Pad skipped: the support tree is empty`、`Failed to export support mesh to ...` 目前只進 BOOST_LOG 或無代號，改成輸出結構化錯誤行並登錄代號。
+- **D6：支撐 mesh 寫檔失敗改為有代號的失敗。** `Failed to export support mesh to ...` 目前只印 stderr、沒有代號，而且後面沒有 return，支撐流程會 exit 0。改為在**支撐專用模式**輸出結構化錯誤行、登錄新代號 `SUPPORT_MESH_EXPORT_FAILED`，並 `return false`。切片模式照同檔預覽 ZIP 的先例維持原狀：`.sl1` 已寫好，支撐 STL 只給 UI 用，不讓它拖垮切片。
+  - （實作時訂正：原寫三個訊息。另外兩個 `Support mesh is empty`、`Pad skipped: ...` 查證後是**警告**，引擎會繼續跑完，之後印出 `(pad only)` 或 `No support/pad mesh generated`，現行 spec 規定這時為 `COMPLETED` + `SUPPORT_NOT_NEEDED`。印成錯誤行會讓分類器把這些正常完成判成失敗，因此不做。若要讓使用者看到這類警告，需另設計「完成的 job 也能帶警告」的管道，另開單。）
 - **拆除 legacy exit-code 分支。** 刪掉 `merge-engine-result-classifiers` 留下的 `_LEGACY_EXIT0_ONLY_CODES`，並把 `test_exit_code_independence.py` 的兩個 `xfail` 改為正常斷言。
 - **匯出機器可讀的引擎代號清單**，供 Python 登錄檔的契約測試逐項對帳。
 - **字串層退場**：本單**保留**字串比對作為第二層。下一版 bundle 出過之後才刪（條件見 `merge-engine-result-classifiers` design D2）。
@@ -36,18 +39,19 @@
 ### Modified Capabilities
 
 - `engine-result-classification`：`matchers` 新增 `EngineCode` 型別並置於最前；分類完全不再依賴離開代碼（legacy 分支移除）。
+- `support-generation-error-codes`：支撐 mesh 寫檔失敗從 fail-closed fallback 改為專屬代號 `SUPPORT_MESH_EXPORT_FAILED`（D6）。
 
 ## Impact
 
 | 對象 | 影響 |
 |---|---|
-| `third_party/prusaslicer_fork` | **需重建引擎**。新增 string table、結構化輸出、15 處回傳型別修正、D6 警告改印 stdout |
+| `third_party/prusaslicer_fork` | **需重建引擎**。新增 string table、結構化輸出、15 處回傳型別修正、D6 支撐 mesh 寫檔失敗 |
 | `agent/engine_rules.py` | 新增 `EngineCode` 比對器 |
 | `agent/slicing_classifier.py` | 移除 `_LEGACY_EXIT0_ONLY_CODES` |
-| `agent/error_codes.py` | 新增 D6 三個代號；新增引擎清單對帳 |
+| `agent/error_codes.py` | 新增 D6 一個代號（原寫三個，見 D6 訂正）；新增引擎清單對帳 |
 | `agent/tests/test_exit_code_independence.py` | 兩個 `xfail` 改為正常斷言 |
 | `Bundle-Launcher/bundle-win/slicer-engine/` | **換 binary**，並更新 `artifact-manifest.json`、`engine_build_id.txt`、`sbom.spdx.json`、`source-chain.json`、`scan-report.json` |
-| DS-Online | 需補 D6 三個新代號的 i18n；其餘不受影響 |
+| DS-Online | 需補 D6 新代號 `SUPPORT_MESH_EXPORT_FAILED` 的四語系文案；其餘不受影響 |
 
 **前置條件**：`merge-engine-result-classifiers` 必須先完成並關單。未解開 exit-code 相依就動 C++，`INVALID_MODEL` 與 `MODEL_OUT_OF_BOUNDS` 會退化成 `JOB_FAILED`。
 

@@ -184,6 +184,13 @@
       "note": "物件的縮放與收縮補償使轉換矩陣不可逆（零縮放或零收縮補償），支撐點座標無法映射回輸入模型（`the object transform is not invertible`）"
     },
     {
+      "code": "SUPPORT_MESH_EXPORT_FAILED",
+      "http_status": 500,
+      "retryable": true,
+      "owner": "engine",
+      "note": "支撐已產生，但引擎無法把支撐 mesh 寫成 STL 檔（伺服器端寫檔失敗，可重試，`Failed to export support mesh`）"
+    },
+    {
       "code": "PAD_CONFIG_INVALID",
       "http_status": 422,
       "retryable": false,

@@ -21,40 +21,76 @@ model-out-of-bounds marker, the support flow's positive "has supports" /
 marker.
 
 `exit_code` is deliberately NOT a field here (design D3): the fork's
-`validate()` failures return process exit 0 in several paths (`return 1`
-inside `bool` functions), so exit code is not a reliable classification
-signal. The one place exit code still matters (`output_file_exists` aside)
-is call-site-local legacy handling — see
-`slicing_classifier._LEGACY_EXIT0_ONLY_CODES`.
+`validate()` failures used to return process exit 0 (`return 1` inside `bool`
+functions), and engines built before engine-error-code-table Section 4 still
+do, so exit code is not a reliable classification signal. No code needs
+`exit_code == 0` any more; the call-site legacy branch that did was removed in
+engine-error-code-table Section 6.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
+
+# engine-error-code-table D2: the engine reports a failure as one stdout line,
+# "PHZ_ERROR " followed by a JSON object carrying at least "code".
+ENGINE_ERROR_PREFIX = "PHZ_ERROR "
+
+
+def engine_codes(stdout: str) -> Tuple[str, ...]:
+    """Every code the engine declared on stdout, in output order. A line that
+    is not valid JSON, or has no string "code", is skipped: a garbled report
+    must fall back to the string layer, not break classification."""
+    codes = []
+    for line in stdout.splitlines():
+        if not line.startswith(ENGINE_ERROR_PREFIX):
+            continue
+        try:
+            payload = json.loads(line[len(ENGINE_ERROR_PREFIX):])
+        except ValueError:
+            continue
+        code = payload.get("code") if isinstance(payload, dict) else None
+        if isinstance(code, str):
+            codes.append(code)
+    return tuple(codes)
+
+
+@dataclass(frozen=True)
+class EngineCode:
+    """Matches when the engine itself declared `code` on stdout
+    (engine-error-code-table). Placed ahead of Substring in every row: the
+    engine is the side that actually made the decision, the English text is
+    only a translatable message about it."""
+
+    code: str
+
+    def matches(self, stderr: str, stdout: str) -> bool:
+        return self.code in engine_codes(stdout)
 
 
 @dataclass(frozen=True)
 class Substring:
-    """Matches when `text` is a substring of the engine output. The only
-    matcher type today; `matchers` is a list so a future matcher type (e.g. a
-    structured `EngineCode` matcher once the engine outputs codes directly,
-    see the deferred `engine-error-code-table` change) can be inserted ahead
-    of it without changing any rule's other fields."""
+    """Matches when `text` is a substring of the engine's stderr. Kept as the
+    second layer until a bundle with the coded engine has shipped (design D4,
+    merge-engine-result-classifiers design D2)."""
 
     text: str
 
-    def matches(self, haystack: str) -> bool:
-        return self.text in haystack
+    def matches(self, stderr: str, stdout: str) -> bool:
+        return self.text in stderr
+
+
+Matcher = Union[EngineCode, Substring]
 
 
 @dataclass(frozen=True)
 class Rule:
     code: str
     flows: Tuple[str, ...]  # "support" and/or "slice"
-    stream: str  # "stdout" | "stderr" | "both" — informational; every rule
-    # today is "stderr", and both classifiers already scan only stderr for
-    # these messages, so this field is not yet consulted by find_code().
-    matchers: Tuple[Substring, ...]
+    stream: str  # "stdout" | "stderr" | "both" — informational: the stream
+    # the row's Substring reads. EngineCode always reads stdout (design D2).
+    matchers: Tuple[Matcher, ...]
     priority: int
     fallback_by_design: bool = False
 
@@ -70,35 +106,35 @@ ENGINE_RULES: Tuple[Rule, ...] = (
         # code for this message and fell all the way to bare JOB_FAILED.
         flows=("support", "slice"),
         stream="stderr",
-        matchers=(Substring("Cannot proceed without support points"),),
+        matchers=(EngineCode("SUPPORT_POINTS_REQUIRED"), Substring("Cannot proceed without support points"),),
         priority=10,
     ),
     Rule(
         code="SUPPORT_ELEVATION_TOO_LOW",
         flows=("support", "slice"),
         stream="stderr",
-        matchers=(Substring("Elevation is too low for object"),),
+        matchers=(EngineCode("SUPPORT_ELEVATION_TOO_LOW"), Substring("Elevation is too low for object"),),
         priority=20,
     ),
     Rule(
         code="SUPPORT_PAD_GAP_CONFLICT",
         flows=("support", "slice"),
         stream="stderr",
-        matchers=(Substring("The endings of the support pillars"),),
+        matchers=(EngineCode("SUPPORT_PAD_GAP_CONFLICT"), Substring("The endings of the support pillars"),),
         priority=30,
     ),
     Rule(
         code="SUPPORT_HEAD_PENETRATION_INVALID",
         flows=("support", "slice"),
         stream="stderr",
-        matchers=(Substring("Invalid Head penetration"),),
+        matchers=(EngineCode("SUPPORT_HEAD_PENETRATION_INVALID"), Substring("Invalid Head penetration"),),
         priority=40,
     ),
     Rule(
         code="SUPPORT_HEAD_TOO_WIDE",
         flows=("support", "slice"),
         stream="stderr",
-        matchers=(Substring("Invalid pinhead diameter"),),
+        matchers=(EngineCode("SUPPORT_HEAD_TOO_WIDE"), Substring("Invalid pinhead diameter"),),
         priority=50,
     ),
     Rule(
@@ -107,7 +143,7 @@ ENGINE_RULES: Tuple[Rule, ...] = (
         # code for this message and fell all the way to SUPPORT_GENERATION_FAILED.
         flows=("slice", "support"),
         stream="stderr",
-        matchers=(Substring("Pad brim size is too small"),),
+        matchers=(EngineCode("PAD_CONFIG_INVALID"), Substring("Pad brim size is too small"),),
         priority=60,
     ),
     Rule(
@@ -116,7 +152,7 @@ ENGINE_RULES: Tuple[Rule, ...] = (
         stream="stderr",
         # Covers both "Exposition time..." (F-12) and "Initial exposition
         # time..." (F-13).
-        matchers=(Substring("xposition time is out of printer profile bounds"),),
+        matchers=(EngineCode("EXPOSURE_TIME_OUT_OF_RANGE"), Substring("xposition time is out of printer profile bounds"),),
         priority=70,
     ),
     # Task 2.4 (D5): a known validate() message with deliberately no dedicated
@@ -140,7 +176,7 @@ ENGINE_RULES: Tuple[Rule, ...] = (
         code="SUPPORT_POINT_SAMPLING_FAILED",
         flows=("support", "slice"),
         stream="stderr",
-        matchers=(Substring("SLA support point generator has failed."),),
+        matchers=(EngineCode("SUPPORT_POINT_SAMPLING_FAILED"), Substring("SLA support point generator has failed."),),
         priority=90,
     ),
     Rule(
@@ -150,19 +186,36 @@ ENGINE_RULES: Tuple[Rule, ...] = (
         # Shortened to the pre-line-break half of the source's split string
         # literal — see the matching comment on this code's engine_needles
         # in agent/error_codes.py.
-        matchers=(Substring("the object transform is"),),
+        matchers=(EngineCode("SHRINKAGE_COMPENSATION_INVALID"), Substring("the object transform is"),),
         priority=100,
+    ),
+    # engine-error-code-table D6. Support flow only: in a slice the .sl1 is
+    # already written when the support STL fails, and the engine reports the
+    # failure and drops it (like a failed preview ZIP), so the slice stands.
+    Rule(
+        code="SUPPORT_MESH_EXPORT_FAILED",
+        flows=("support",),
+        stream="stderr",
+        matchers=(EngineCode("SUPPORT_MESH_EXPORT_FAILED"), Substring("Failed to export support mesh"),),
+        priority=110,
     ),
 )
 
 
-def find_code(flow: str, text: str) -> Optional[Rule]:
-    """Return the highest-priority (lowest `priority` number) rule for `flow`
-    whose matcher hits `text`, or None. Callers distinguish
-    `fallback_by_design` rules from specific-code rules via the returned
-    `Rule.fallback_by_design` flag."""
+def find_code(flow: str, stderr: str, stdout: str = "") -> Optional[Rule]:
+    """Return the rule for `flow` that the engine output hits, or None.
+
+    Matchers are tried in tiers: every rule's EngineCode first, then every
+    rule's Substring — a code the engine declared always wins over an English
+    message, whatever the rule priorities (spec: 命中 EngineCode 時直接採用).
+    Within a tier, the lowest `priority` number wins. Only rules listed for
+    `flow` are consulted, so a code the engine declares for a failure this
+    flow deliberately routes elsewhere (e.g. EXPOSURE_TIME_OUT_OF_RANGE in the
+    support flow) is not picked up here either. Callers distinguish
+    `fallback_by_design` rules via the returned `Rule.fallback_by_design`."""
     candidates = sorted((r for r in ENGINE_RULES if flow in r.flows), key=lambda r: r.priority)
-    for rule in candidates:
-        if any(m.matches(text) for m in rule.matchers):
-            return rule
+    for tier in (EngineCode, Substring):
+        for rule in candidates:
+            if any(isinstance(m, tier) and m.matches(stderr, stdout) for m in rule.matchers):
+                return rule
     return None
