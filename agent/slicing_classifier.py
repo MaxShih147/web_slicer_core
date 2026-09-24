@@ -35,14 +35,14 @@ to remain reliable.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional, Union
+from dataclasses import dataclass, replace
+from typing import Dict, Optional, Tuple, Union
 
 # Single source of truth for the mismatch marker/code: the same literal the
 # support flow matches on, pinned against the fork source by
 # test_support_string_contract.py. Importing it here means the contract test
 # protects this path too, instead of a second copy drifting unnoticed.
-from .engine_rules import ENGINE_ERROR_PREFIX, engine_codes, find_code
+from .engine_rules import ENGINE_ERROR_PREFIX, engine_codes, engine_error_for, find_code
 from .support_classifier import MODEL_MISMATCH_CODE, MODEL_MISMATCH_MARKER
 
 # ─── Path A: stderr patterns — validate() errors (exit ≠ 0) ──────────────────
@@ -103,9 +103,14 @@ class SliceClassification:
     ``error``      — human-readable detail forwarded to write_job_status();
                      passed as ``detail`` to the APIError factory.
     ``error_code`` — specific code string, or None → generic JOB_FAILED.
+    ``fields`` / ``values`` — the engine's own report for ``error_code``
+                     (SLAConfig field names; thresholds and actual settings),
+                     or None when the engine did not declare that code.
     """
     error: Optional[str]
     error_code: Optional[str]
+    fields: Optional[Tuple[str, ...]] = None
+    values: Optional[Dict[str, float]] = None
 
 
 def _with_engine_lines(error: str, stdout: str) -> str:
@@ -127,6 +132,25 @@ def _decode(stream: Union[str, bytes, bytearray, None]) -> str:
 
 
 def classify_slice_result(
+    exit_code: int,
+    stdout: Union[str, bytes, None],
+    stderr: Union[str, bytes, None],
+    input_filename: str,
+    output_file_exists: bool,
+) -> Optional[SliceClassification]:
+    """Classify a slice CLI run (see ``_classify``), then attach the engine's
+    fields and values when it declared the code the run was attributed to
+    (engine-error-code-table Task 8.1)."""
+    result = _classify(exit_code, stdout, stderr, input_filename, output_file_exists)
+    if result is None:
+        return None
+    reported = engine_error_for(_decode(stdout), result.error_code)
+    if reported is None:
+        return result
+    return replace(result, fields=reported.fields, values=reported.values)
+
+
+def _classify(
     exit_code: int,
     stdout: Union[str, bytes, None],
     stderr: Union[str, bytes, None],

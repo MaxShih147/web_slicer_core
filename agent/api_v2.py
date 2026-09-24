@@ -1976,6 +1976,14 @@ async def get_slice_job_status(job_id: str):
                 # distinguish "still running" (success:true) from "failed" (success:false)
                 # without interpreting a 409 as a client-side error.
                 err = _error_from_status(status_data)
+                failure_data = {"retryable": err.retryable, "traceId": err.trace_id}
+                # The engine's own fields and values for this code
+                # (engine-error-code-table Task 8.2). Omitted, never null,
+                # when there are none: same rule as `progress` below.
+                if status_data.get("error_fields") is not None:
+                    failure_data["fields"] = status_data["error_fields"]
+                if status_data.get("error_values") is not None:
+                    failure_data["values"] = status_data["error_values"]
                 from fastapi.responses import JSONResponse
                 return JSONResponse(
                     status_code=200,
@@ -1983,7 +1991,7 @@ async def get_slice_job_status(job_id: str):
                         "success": False,
                         "code": err.code,
                         "message": err.message,
-                        "data": {"retryable": err.retryable, "traceId": err.trace_id},
+                        "data": failure_data,
                     },
                 )
             response_data = {

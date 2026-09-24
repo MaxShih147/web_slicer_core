@@ -26,10 +26,10 @@ the stdout markers (Step 2-4) are raw literals and are not translated.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional, Union
+from dataclasses import dataclass, replace
+from typing import Dict, Optional, Tuple, Union
 
-from .engine_rules import engine_codes, find_code
+from .engine_rules import engine_codes, engine_error_for, find_code
 from .models import JobStatus
 
 # Neutral supportOutcome value — NOT an error code; rides on a COMPLETED job.
@@ -106,6 +106,11 @@ class SupportClassification:
     support_outcome: Optional[str] = None
     has_support_mesh: bool = False
     detail: Optional[str] = None
+    # The engine's own report for error_code (SLAConfig field names;
+    # thresholds and actual settings), or None when it did not declare that
+    # code (engine-error-code-table Task 8.1).
+    fields: Optional[Tuple[str, ...]] = None
+    values: Optional[Dict[str, float]] = None
 
 
 def _to_text(stream: Union[str, bytes, bytearray, None]) -> str:
@@ -125,7 +130,21 @@ def classify_support_result(
     stderr: Union[str, bytes, None],
     support_stl_exists: bool,
 ) -> SupportClassification:
-    """Classify a support-only CLI run from its text output (never the exit code)."""
+    """Classify a support-only CLI run from its text output (never the exit
+    code), then attach the engine's fields and values when it declared the
+    code the run was attributed to."""
+    result = _classify(stdout, stderr, support_stl_exists)
+    reported = engine_error_for(_to_text(stdout), result.error_code)
+    if reported is None:
+        return result
+    return replace(result, fields=reported.fields, values=reported.values)
+
+
+def _classify(
+    stdout: Union[str, bytes, None],
+    stderr: Union[str, bytes, None],
+    support_stl_exists: bool,
+) -> SupportClassification:
     out = _to_text(stdout)
     err = _to_text(stderr)
     declared = engine_codes(out)

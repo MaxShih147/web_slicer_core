@@ -31,18 +31,48 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 # engine-error-code-table D2: the engine reports a failure as one stdout line,
 # "PHZ_ERROR " followed by a JSON object carrying at least "code".
 ENGINE_ERROR_PREFIX = "PHZ_ERROR "
 
 
-def engine_codes(stdout: str) -> Tuple[str, ...]:
-    """Every code the engine declared on stdout, in output order. A line that
-    is not valid JSON, or has no string "code", is skipped: a garbled report
-    must fall back to the string layer, not break classification."""
-    codes = []
+@dataclass(frozen=True)
+class EngineError:
+    """One PHZ_ERROR line. `fields` are SLAConfig field names, `values` the
+    thresholds and the actual settings; either is None when the line carries
+    none (or carries something that is not a list of names / a name->number
+    map, which is dropped rather than passed on)."""
+
+    code: str
+    fields: Optional[Tuple[str, ...]] = None
+    values: Optional[Dict[str, float]] = None
+
+
+def _fields_of(payload: dict) -> Optional[Tuple[str, ...]]:
+    fields = payload.get("fields")
+    if isinstance(fields, list) and fields and all(isinstance(f, str) for f in fields):
+        return tuple(fields)
+    return None
+
+
+def _values_of(payload: dict) -> Optional[Dict[str, float]]:
+    values = payload.get("values")
+    if not isinstance(values, dict) or not values:
+        return None
+    # bool is an int in Python; a flag is not a threshold.
+    if not all(isinstance(k, str) and isinstance(v, (int, float)) and not isinstance(v, bool)
+               for k, v in values.items()):
+        return None
+    return dict(values)
+
+
+def engine_errors(stdout: str) -> Tuple[EngineError, ...]:
+    """Every failure the engine declared on stdout, in output order. A line
+    that is not valid JSON, or has no string "code", is skipped: a garbled
+    report must fall back to the string layer, not break classification."""
+    errors = []
     for line in stdout.splitlines():
         if not line.startswith(ENGINE_ERROR_PREFIX):
             continue
@@ -52,8 +82,22 @@ def engine_codes(stdout: str) -> Tuple[str, ...]:
             continue
         code = payload.get("code") if isinstance(payload, dict) else None
         if isinstance(code, str):
-            codes.append(code)
-    return tuple(codes)
+            errors.append(EngineError(code, _fields_of(payload), _values_of(payload)))
+    return tuple(errors)
+
+
+def engine_codes(stdout: str) -> Tuple[str, ...]:
+    """Every code the engine declared on stdout, in output order."""
+    return tuple(e.code for e in engine_errors(stdout))
+
+
+def engine_error_for(stdout: str, code: Optional[str]) -> Optional[EngineError]:
+    """The engine's own report of `code`, or None when it did not declare it.
+    A classifier attaches the fields and values only through this, so the
+    numbers can never ride on a code other than the one they describe."""
+    if code is None:
+        return None
+    return next((e for e in engine_errors(stdout) if e.code == code), None)
 
 
 @dataclass(frozen=True)

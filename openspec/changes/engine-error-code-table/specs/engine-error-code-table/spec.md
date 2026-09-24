@@ -56,6 +56,28 @@ JSON MUST 含 `code`；MAY 含 `fields`（後端 `SLAConfig` 的 snake_case 欄�
 - **WHEN** 同一個失敗情境分別由新引擎與舊引擎產生輸出
 - **THEN** 兩者的分類結果 MUST 為同一個代號
 
+### Requirement: 引擎回報的數值須送達前端
+
+當分類出的代號就是引擎在 `PHZ_ERROR` 行宣告的代號時，系統 SHALL 把該行的 `fields` 與 `values` 原樣存進 job 狀態，並在 job 狀態端點的失敗回應 `data` 中帶出。分類出的代號與引擎宣告的不同時（例如字串層命中、或引擎代號未登錄而退回 fallback），MUST NOT 帶出這兩欄。
+
+前端 SHALL 在數值齊全時顯示帶數值的文案；數值不全或沒有數值時 SHALL 顯示該代號原本的固定文案，MUST NOT 顯示未替換的參數佔位字。
+
+#### Scenario: 底墊角度不足
+- **WHEN** 一個 job（支撐生成或切片）因 `PAD_CONFIG_INVALID` 失敗，引擎回報 `min_pad_wall_slope` 51.4、`pad_wall_slope` 50
+- **THEN** job 狀態端點的失敗回應 `data.values` 含這兩個值，`data.fields` 含 `pad_wall_slope`、`pad_wall_thickness`、`pad_brim_size`
+- **AND** 切片失敗的 toast 與卡片顯示的訊息含 `51.4°`
+
+（前端目前的切片流程會先把支撐烘焙進模型、以 `supports_enable=0`／`pad_enable=0` 切片，底墊參數到不了引擎。四個帶數值的代號裡，切片流程可能實際碰到的是曝光時間（它是切片參數），此情境未實測。支撐生成失敗的 toast 不在本變更範圍。）
+
+#### Scenario: 舊版引擎沒有數值
+- **WHEN** 同一個失敗由不輸出 `PHZ_ERROR` 行的引擎產生
+- **THEN** 失敗回應不帶 `fields`／`values`
+- **AND** 前端顯示該代號原本的固定文案
+
+#### Scenario: 舊的 job 狀態檔
+- **WHEN** 讀取一個沒有 `error_fields`／`error_values` 的既有 `status.json`
+- **THEN** 讀取 MUST 成功，兩欄視為沒有
+
 ### Requirement: 未登錄的引擎代號須退回 fallback
 
 當引擎輸出的代號不存在於 `agent/error_codes.py` 登錄檔時，系統 SHALL 退回 fallback 代號，MUST NOT 將未登錄的代號原封不動傳給前端。

@@ -159,7 +159,7 @@
   - 先同步 `api/error_codes.json`，對帳測試 5 則紅；補 key 與文案後 `9 passed` ✅
   - `npm run test:unit`：`3730 passed / 6 failed / 7 skipped`，與 open-support-param-panel 記錄的基準完全相同（同 3 個檔案、同 6 則），新增失敗 0。
   - `npm run lint`：25 errors 全在未碰過的 3 個檔案（`boundaryBrush.js` 18、`sceneCoordinator.js` 6、`AddPrintersDialog.vue` 1）；碰過的檔案 0 問題；`--fix` 沒有改到任何其他檔案。
-  - 未在 dev server 實際觸發：要讓前端看到這個錯誤，得讓後端寫支撐 STL 失敗，UI 操作做不到。留到 8.5／8.6 驗收一起處理。
+  - 未在 dev server 實際觸發：要讓前端看到這個錯誤，得讓後端寫支撐 STL 失敗，UI 操作做不到。留到 9.5／9.6 驗收一起處理。
 
 ## 6. 拆除 legacy exit-code 分支
 
@@ -209,19 +209,53 @@
 - [x] 7.5 **指標更新 MUST 與依賴它的 Python 改動落在同一個 commit / PR。** 分兩次進的話，其他人跑契約測試會對舊 fork code 執行並誤判通過。
   - 檢查：該 PR 的 diff 同時包含 `third_party/prusaslicer_fork` 指標與 `agent/` 的改動
   - **實際結果**：同一個 superproject commit 同時包含指標、`agent/`、測試、樣本、docs、openspec 與兩支 scripts。`.gitmodules` 的 SSH→HTTPS 本機改動依使用者決定**不納入**。
-  - **push 狀態**：fork push 被拒（本機 GitHub 帳號 `HeidiiiH` 對 `MaxShih147/PrusaSlicer` 沒有寫入權限，403）。fork 沒 push 之前 superproject 也**不得** push，否則別人會拿到抓不到的指標。兩邊都待處理。
+  - **push 狀態**：第一次 push fork 被拒（本機 GitHub 帳號 `HeidiiiH` 當時對 `MaxShih147/PrusaSlicer` 沒有寫入權限，403）。2026-09-24 使用者取得 collaborator 權限後依序 push：fork `4c697465d..2efc83952`、superproject `8a1fd0c..d70f012`；遠端的指標與 fork 遠端 tip 都是 `2efc8395` ✅。DS-Online 的 5.4 改動另 push `02dd36b4..12d8235b`。
 
-## 8. 驗收
+## 8. 引擎回報的數值帶到前端（2026-09-24 驗收時補進本單）
 
-- [ ] 8.1 `pytest agent/tests -q` 與 0.2 基準相比無新增失敗
-- [ ] 8.2 `test_exit_code_independence.py` 全綠且無 xfail
-- [ ] 8.3 引擎代號清單 ↔ Python 登錄檔雙向對帳測試全綠
-- [ ] 8.4 `python -m agent.tools.error_codes --check` 回零
-- [ ] 8.5 手動：違規底墊參數跑一次切片，前端顯示的訊息**含具體角度數值**，不是籠統的「參數不正確」
-- [ ] 8.6 手動：完整切一次正常模型，確認整套改動未影響正常流程
-- [ ] 8.7 三項 commit 一致性驗證通過（7.4）
+> **為什麼補**：驗收 9.5 時查證（當時的 9.5 寫的是「違規底墊參數跑一次切片」；實測後發現切片流程碰不到底墊參數，9.5 已改寫，見第 9 節），引擎的 `fields`／`values` 到 Python 就斷了：`engine_codes()` 只取代號，job 狀態只存 `error_code` 與 stderr 英文，前端的文案也是固定字。原本沒有任何 task 負責這段，9.5 照字面不可能過。使用者決定補進本單。
+>
+> 範圍（使用者決定）：後端把所有代號的 `fields`／`values` 原樣轉傳；前端為引擎目前會帶數值的四個代號寫帶參數的文案（共六種：底墊的角度與外擴、抬升高度、支撐底部與底墊間距、曝光時間與首層曝光時間）。沒有數值時一律退回原本的固定文案。
 
-## 9. 下一版才做（不在本單）
+- [x] 8.1 後端：`engine_rules` 解析 `PHZ_ERROR` 行的 `fields`／`values`；兩個分類器在「歸因出的代號＝引擎宣告的代號」時帶出這兩欄。
+  - 測試：真實樣本，新引擎的底墊失敗帶出 `min_pad_wall_slope 51.4`、`pad_wall_slope 50` 與三個 fields；舊引擎沒有數值。support 與 slice 兩條流程都測。
+  - **實際結果**：`agent/tests/test_engine_error_values.py`（5 則）先紅後綠。
+    - `engine_errors()` 解析整行，`engine_codes()` 改建在它上面（同一個 parser）；型別不對的 `fields`／`values` 各自丟掉，不影響代號。
+    - 兩個分類器改成薄殼：原本的判斷邏輯原封不動移到 `_classify()`，外層只在引擎宣告的代號＝歸因出的代號時用 `engine_error_for()` 掛上數值。`classify_support_result()` 簽名不變（有測試檢查它不收 returncode）。
+    - 守門：support 流程的曝光失敗會路由到 fallback，引擎的曝光數值不得掛上去（真實樣本）。mutation 驗證：讓 `engine_error_for()` 無視代號，這則轉紅。
+- [x] 8.2 後端：`status.json` 存 `error_fields`／`error_values`；job 狀態端點的失敗回應在 `data` 帶 `fields`／`values`。舊的 `status.json` 沒有這兩欄照常讀得到。
+  - **實際結果**：`agent/tests/test_engine_error_values_api.py`（5 則）先紅後綠：round-trip、舊檔、端點回應，以及 `run_slicing`／`run_support_generation` 兩個寫入點各一則接線測試。沒有數值時兩欄**省略**（不是 null），既有的 `test_progress_does_not_disturb_the_failure_path` 釘住的回應形狀照舊通過。
+- [x] 8.3 前端：錯誤 helper 依代號與數值選出帶參數的 key 並給參數；數值不全時退回固定文案，不得出現未替換的 `{placeholder}`。
+  - **實際結果**：`src/services/errors.js` 新增 `VALUED_DETAIL_KEYS`（六種）與 `getSlicingDetail()`。門檻值取兩位小數且往拒絕的反方向捨入（`min_*` 進位、`max_*` 捨去），避免顯示引擎仍會拒絕的數字；加 epsilon 吸收浮點誤差（`51.4 * 100` 是 `5140.000000000001`）。`backendErrorValues.spec.js` 8 則行為測試先紅後綠。
+- [x] 8.4 前端：切片失敗的 toast 與切片卡片接上 helper（支撐生成失敗的 toast 不在範圍，使用者決定）。
+  - 測試：後端回帶數值的切片失敗，toast 收到的參數含 `51.4`。
+  - **實際結果**：`SlicingError` 從它包住的 `BackendError`（axios 由失敗回應建出）取 `data.values` 成 `backendValues`，`normalizeSlicingError` 不必改。`useSlicedFilesStore` 的 toast 帶 `detailParams`、失敗記錄存 `errorValues`；`SliceCard` 用同一個 helper。store 測試先紅（仍是固定文案）後綠；沒數值時 toast 的參數形狀與原本相同，既有測試不受影響。
+- [x] 8.5 前端：六個新 key 的四語系文案；~~`api/README.md`~~ `api/slicing_core.md` 補失敗回應的 `fields`／`values` 契約（失敗回應的說明原本就在這份）。
+  - 驗證：四語系對帳測試全綠
+  - **實際結果**：六種 × 四語系用真的 vue-i18n 渲染（24 則）：數字都出現、沒有殘留 `{}`。mutation 驗證：把 tw 一個佔位字拼錯，對應那一則轉紅。用詞沿用各語系既有的欄位名稱（例：底墊牆面斜度、底墊外擴尺寸、底座安全距離）；「首層曝光時間」／「首层曝光时间」／「初期露光時間」在語系檔裡原本沒有，是新詞，待確認。
 
-- [ ] 9.1 **刪除字串比對層。** 條件：本單的 3.4 對帳測試全綠，且含新引擎的 bundle 已出過一次。條件未成立前不得刪除——刪了就沒有對照組。
+## 9. 驗收
+
+- [x] 9.1 `pytest agent/tests -q` 與 0.2 基準相比無新增失敗
+  - **實際結果**：`2 failed, 1297 passed`，失敗的 2 則就是 0.2 的基準 ✅
+- [x] 9.2 `test_exit_code_independence.py` 全綠且無 xfail
+  - **實際結果**：`15 passed` ✅
+- [x] 9.3 引擎代號清單 ↔ Python 登錄檔雙向對帳測試全綠
+  - **實際結果**：`2 passed` ✅
+- [x] 9.4 `python -m agent.tools.error_codes --check` 回零
+  - **實際結果**：`exit=0` ✅
+- [x] 9.5 ~~手動：違規底墊參數跑一次切片，前端顯示的訊息**含具體角度數值**，不是籠統的「參數不正確」~~
+  - **改寫（2026-09-24，使用者決定）**：實測發現前端的切片流程**碰不到底墊參數**：切片前會先把支撐烘焙進模型，切片 job 固定 `supports_enable=0`、`pad_enable=0`、底墊斜度為預設 90（實測 job `958bf59c` 的 `config.ini`）。支撐編輯器裡的底墊參數再怎麼違規，切片都不會出 `PAD_CONFIG_INVALID`。引擎回報底墊數值的 UI 路徑只有「生成支撐」，它的失敗 toast 使用者決定不納入本單。
+  - 因此 9.5 改以下列兩點驗收：
+    - 前端實際操作：支撐編輯器把底墊斜度設 50（牆厚 2、外擴 1.6），欄位下即時顯示 `pad_wall_slope must be at least 51.4° …`（前置檢查，add-support-param-validation）✅
+    - 引擎數值一路送到切片 toast：由 8.1–8.4 的自動化測試證明（真實引擎輸出 → 分類 → `status.json` → API → toast 參數 `51.4`）✅
+  - 實測過程：為了讓切片真的送到引擎，在瀏覽器分頁內暫時讓 `/support-params/validate` 連不上，模擬 D1「檢查站離線就放行」；事後重新整理分頁還原，未改任何程式碼。
+- [x] 9.6 手動：完整切一次正常模型，確認整套改動未影響正常流程
+  - **實際結果**：前端 dev server＋後端（`slicer-engine/` 已換成本單的引擎 `2efc8395`）從 UI 完整切一次專案「untitled (6) (1)」：job `958bf59c` 完成、1017 層，preview、PRZ 產出，Sliced files 出現新卡片 `Batch_1M_001.prz` ✅。`status.json` 的新欄位 `error_fields`／`error_values` 在成功時為 null。
+- [x] 9.7 三項 commit 一致性驗證通過（7.4）
+  - **實際結果**：`git submodule status`、fork HEAD、Bundle 的 `source-chain.json` 三者都是 `2efc8395` ✅（Section 8 沒有動到 fork）
+
+## 10. 下一版才做（不在本單）
+
+- [ ] 10.1 **刪除字串比對層。** 條件：本單的 3.4 對帳測試全綠，且含新引擎的 bundle 已出過一次。條件未成立前不得刪除——刪了就沒有對照組。
   - 刪除後省下 9 條字串常數、對應契約測試，以及「引擎改寫訊息文字就靜默壞掉」的長期風險。

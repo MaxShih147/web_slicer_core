@@ -24,6 +24,7 @@
 - **15 處 `return 1` 改為 `return false`**（`CLI/ProcessActions.cpp` L400 · 417 · 426 · 432 · 436 · 442 · 451 · 457 · 477 · 484 · 500 · 512 · 516 · 679 · 737）。
 - **D6：支撐 mesh 寫檔失敗改為有代號的失敗。** `Failed to export support mesh to ...` 目前只印 stderr、沒有代號，而且後面沒有 return，支撐流程會 exit 0。改為在**支撐專用模式**輸出結構化錯誤行、登錄新代號 `SUPPORT_MESH_EXPORT_FAILED`，並 `return false`。切片模式照同檔預覽 ZIP 的先例維持原狀：`.sl1` 已寫好，支撐 STL 只給 UI 用，不讓它拖垮切片。
   - （實作時訂正：原寫三個訊息。另外兩個 `Support mesh is empty`、`Pad skipped: ...` 查證後是**警告**，引擎會繼續跑完，之後印出 `(pad only)` 或 `No support/pad mesh generated`，現行 spec 規定這時為 `COMPLETED` + `SUPPORT_NOT_NEEDED`。印成錯誤行會讓分類器把這些正常完成判成失敗，因此不做。若要讓使用者看到這類警告，需另設計「完成的 job 也能帶警告」的管道，另開單。）
+- **引擎回報的數值帶到前端**（2026-09-24 驗收時補進本單）。後端把 `PHZ_ERROR` 行的 `fields`／`values` 存進 job 狀態，失敗回應的 `data` 帶出這兩欄；前端為會帶數值的四個代號改用帶參數的文案，例如「側壁角度至少要 51.4°（目前 50°）」。沒有數值時照舊顯示固定文案。原本「不改前端」的範圍因此擴大。前端接的是切片失敗的 toast 與卡片；支撐生成失敗的 toast 不在本單（使用者決定）。實測發現前端切片流程會先烘焙支撐、以 `pad_enable=0` 切片，底墊的數值在目前 UI 裡不會走到切片 toast，見 tasks 9.5。
 - **拆除 legacy exit-code 分支。** 刪掉 `merge-engine-result-classifiers` 留下的 `_LEGACY_EXIT0_ONLY_CODES`，並把 `test_exit_code_independence.py` 的兩個 `xfail` 改為正常斷言。
 - **匯出機器可讀的引擎代號清單**，供 Python 登錄檔的契約測試逐項對帳。
 - **字串層退場**：本單**保留**字串比對作為第二層。下一版 bundle 出過之後才刪（條件見 `merge-engine-result-classifiers` design D2）。
@@ -51,7 +52,7 @@
 | `agent/error_codes.py` | 新增 D6 一個代號（原寫三個，見 D6 訂正）；新增引擎清單對帳 |
 | `agent/tests/test_exit_code_independence.py` | 兩個 `xfail` 改為正常斷言 |
 | `Bundle-Launcher/bundle-win/slicer-engine/` | **換 binary**，並更新 `artifact-manifest.json`、`engine_build_id.txt`、`sbom.spdx.json`、`source-chain.json`、`scan-report.json` |
-| DS-Online | 需補 D6 新代號 `SUPPORT_MESH_EXPORT_FAILED` 的四語系文案；其餘不受影響 |
+| DS-Online | 需補 D6 新代號 `SUPPORT_MESH_EXPORT_FAILED` 的四語系文案；切片失敗的 toast 與卡片改用帶數值的文案（六個新 key，四語系）；`api/README.md` 補失敗回應的 `fields`／`values` |
 
 **前置條件**：`merge-engine-result-classifiers` 必須先完成並關單。未解開 exit-code 相依就動 C++，`INVALID_MODEL` 與 `MODEL_OUT_OF_BOUNDS` 會退化成 `JOB_FAILED`。
 

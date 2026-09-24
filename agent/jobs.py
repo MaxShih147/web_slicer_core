@@ -12,7 +12,7 @@ import time
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional, Sequence
 
 from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .engine_job_queue import serialized_engine_job
@@ -268,6 +268,8 @@ def read_job_status(job_id: str) -> dict:
         }
     data.setdefault("error_code", None)
     data.setdefault("support_outcome", None)
+    data.setdefault("error_fields", None)
+    data.setdefault("error_values", None)
     return data
 
 
@@ -277,6 +279,8 @@ def write_job_status(
     error: Optional[str] = None,
     error_code: Optional[str] = None,
     support_outcome: Optional[str] = None,
+    error_fields: Optional[Sequence[str]] = None,
+    error_values: Optional[Dict[str, float]] = None,
     layer_count: Optional[int] = None,
     estimated_print_time: Optional[float] = None,
     resin_volume_ml: Optional[float] = None,
@@ -290,6 +294,8 @@ def write_job_status(
     ``support_outcome`` carries a neutral marker (e.g. ``SUPPORT_NOT_NEEDED``)
     on a COMPLETED job. Both are optional and absent from older status.json
     files, which readers treat as "no specific code" / "no neutral outcome".
+    ``error_fields`` / ``error_values`` are the engine's own report for
+    ``error_code`` (engine-error-code-table Task 8.2), None when it made none.
     """
     status_file = get_job_status_file(job_id)
     data = {
@@ -297,6 +303,8 @@ def write_job_status(
         "error": error,
         "error_code": error_code,
         "support_outcome": support_outcome,
+        "error_fields": list(error_fields) if error_fields is not None else None,
+        "error_values": error_values,
         "layer_count": layer_count,
         "estimated_print_time": estimated_print_time,
         "resin_volume_ml": resin_volume_ml,
@@ -584,6 +592,8 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
                 JobStatus.FAILED,
                 error=failure.error,
                 error_code=failure.error_code,
+                error_fields=failure.fields,
+                error_values=failure.values,
             )
             return
 
@@ -772,6 +782,8 @@ async def run_support_generation(job_id: str, config: Optional[SLAConfig] = None
                     JobStatus.FAILED,
                     error=result.error,
                     error_code=classification.error_code,
+                    error_fields=classification.fields,
+                    error_values=classification.values,
                 )
             else:
                 write_job_status(
