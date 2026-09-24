@@ -30,9 +30,11 @@ exit code 0 且輸出檔存在視為成功，分類器 MUST 回傳 `None`，`run
 
 Path A 的分類順序 SHALL 固定為：validate() 對照表 → process() 例外對照表 → STL parse error → unclassified fallback。validate() 訊息比對 MUST 在固定英文語系下進行（訊息為可翻譯字串，見 design D5）。
 
-> **Web API 可達性說明**：以下所有 Scenario 描述的是分類器的正確行為（若 CLI 輸出對應訊息，分類器即回傳對應 code）。其中 `PAD_CONFIG_INVALID` 與 `SUPPORT_PAD_GAP_CONFLICT` 目前因 `SLAConfig` 未暴露必要欄位（pad 幾何參數、`pad_around_object`）而對 Web API 不可達；其餘 code 均可由 Web API 觸發。
+對照表 MUST 為支撐與切片共用的單一 `ENGINE_RULES`，MUST NOT 為切片流程另行維護一份平行表。
 
-#### Scenario: pad brim 過小（分類器支援；目前 Web API 不可達）
+> **Web API 可達性更新**：`PAD_CONFIG_INVALID` 與 `SUPPORT_PAD_GAP_CONFLICT` 原先因 `SLAConfig` 未暴露 pad 幾何參數而對 Web API 不可達。支撐參數面板開放 30 個欄位後，這兩者**已可由 Web API 觸發**，原註記作廢。
+
+#### Scenario: pad brim 過小
 - **WHEN** stderr 含 `Pad brim size is too small`
 - **THEN** job 狀態為 `FAILED`，`error_code` 為 `PAD_CONFIG_INVALID`，`retryable` 為 false
 
@@ -44,7 +46,7 @@ Path A 的分類順序 SHALL 固定為：validate() 對照表 → process() 例�
 - **WHEN** stderr 含 `Elevation is too low for object`
 - **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_ELEVATION_TOO_LOW`
 
-#### Scenario: 支撐柱底與 pad 間隙衝突（分類器支援；目前 Web API 不可達）
+#### Scenario: 支撐柱底與 pad 間隙衝突
 - **WHEN** stderr 含 `The endings of the support pillars`
 - **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_PAD_GAP_CONFLICT`
 
@@ -56,7 +58,10 @@ Path A 的分類順序 SHALL 固定為：validate() 對照表 → process() 例�
 - **WHEN** stderr 含 `Invalid pinhead diameter`
 - **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_HEAD_TOO_WIDE`
 
----
+#### Scenario: 缺少必要支撐點（本變更新增）
+- **WHEN** stderr 含 `Cannot proceed without support points`
+- **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_POINTS_REQUIRED`
+- **AND** MUST NOT 退化為 `JOB_FAILED`
 
 ### Requirement: Path A — process() 例外須歸因為具體 code
 
@@ -151,4 +156,26 @@ Path A 的分類順序 SHALL 固定為：validate() 對照表 → process() 例�
 #### Scenario: 標記字串變動被偵測
 - **WHEN** CLI 的 validate 訊息（如 `Pad brim size is too small`）或 stderr 標記字串被更動
 - **THEN** 契約測試失敗，提示分類對照表需同步更新
+
+### Requirement: 挖空與切割須攜帶引擎原始錯誤
+
+`generate_hollow` 與 `cut` 失敗時，系統 SHALL 將引擎的原始 stderr 納入 `detail`。寫死的罐頭訊息 MUST 只作為原始輸出為空時的後備，MUST NOT 猜測失敗原因。
+
+#### Scenario: 挖空失敗
+- **WHEN** 挖空流程失敗且引擎 stderr 非空
+- **THEN** `detail` 含引擎原文
+- **AND** MUST NOT 只回傳罐頭訊息
+
+#### Scenario: 切割失敗且引擎無輸出
+- **WHEN** 切割失敗但引擎 stderr 為空
+- **THEN** 回傳罐頭訊息作為後備
+- **AND** 該訊息 MUST NOT 宣稱特定原因（如「切割高度超出範圍」）
+
+### Requirement: 切片路徑須支援支撐專屬的新 code
+
+切片流程 SHALL 能回傳 `SUPPORT_POINT_SAMPLING_FAILED` 與 `SHRINKAGE_COMPENSATION_INVALID`，語意與支撐流程一致。
+
+#### Scenario: 切片時支撐點取樣失敗
+- **WHEN** 切片流程的輸出含 `SLA support point generator has failed.`
+- **THEN** `error_code` 為 `SUPPORT_POINT_SAMPLING_FAILED`，與支撐流程同一個 code
 

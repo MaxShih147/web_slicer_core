@@ -4,7 +4,7 @@ This module IS the registry. `agent/tools/error_codes.py --write` generates
 `docs/err_code_spec.md` and `docs/error_codes.json` from `ALL` below — those
 two files are read-only; edit `note` (and everything else) here instead.
 
-`owner` classification (see openspec/changes/unify-error-code-registry/design.md
+`owner` classification (see openspec/changes/archive/2026-09-24-unify-error-code-registry/design.md
 D2, corrected 2026-09-17 against actual code):
 
 - "engine": the slicing engine can determine this failure from its own

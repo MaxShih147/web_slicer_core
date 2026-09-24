@@ -17,7 +17,7 @@ without re-deriving it from the C++.
 
 Two more checks have no engine validate() counterpart at all, because the
 engine silently mishandles them rather than rejecting them (see
-openspec/changes/add-support-param-validation/design.md and the research
+openspec/changes/archive/2026-09-24-add-support-param-validation/design.md and the research
 that produced this module):
 
   - support_points_density_relative == 0 with no manually-supplied points:

@@ -2,7 +2,7 @@
 Contract test for the error code registry — Task 2.1 (unify-error-code-registry).
 
 `agent/error_codes.py` is the single source of truth for the backend's error
-codes (originally 28, see openspec/changes/unify-error-code-registry/design.md;
+codes (originally 28, see openspec/changes/archive/2026-09-24-unify-error-code-registry/design.md;
 30 after merge-engine-result-classifiers Task 3.1 added
 SUPPORT_POINT_SAMPLING_FAILED and SHRINKAGE_COMPENSATION_INVALID, both
 owner="engine"; 31 after add-support-param-validation Task 4 added
