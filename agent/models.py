@@ -50,6 +50,9 @@ class SLAConfig(BaseModel):
     support_head_penetration: float = 0.2
     support_pillar_diameter: float = 1.0
     support_points_density_relative: int = 100
+    # 同一層上兩個支撐點的最小間距（mm）。0 = 不設下限，等同這個欄位出現前的行為。
+    # 引擎自己的基準是 3.2mm，所以 3.2 會重現既有分布。
+    support_points_min_distance: float = 0.0
     support_object_elevation: float = 5.0
     support_critical_angle: float = 45.0
     # Whether the engine may prop up a lonely tall pillar with pillars of its
