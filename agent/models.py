@@ -50,16 +50,164 @@ class SLAConfig(BaseModel):
     support_head_penetration: float = 0.2
     support_pillar_diameter: float = 1.0
     support_points_density_relative: int = 100
+    # 同一層上兩個支撐點的最小間距（mm）。0 = 不設下限，等同這個欄位出現前的行為。
+    # 引擎自己的基準是 3.2mm，所以 3.2 會重現既有分布。
+    support_points_min_distance: float = 0.0
     support_object_elevation: float = 5.0
     support_critical_angle: float = 45.0
+    # Whether the engine may prop up a lonely tall pillar with pillars of its
+    # own. Manual placement turns it off: one placement should produce one
+    # support, not three.
+    support_auxiliary_pillars: bool = True
 
     @field_validator('support_object_elevation')
     @classmethod
     def enforce_min_elevation(cls, v: float) -> float:
         return max(5.0, v)
 
+    # Support tree global parameters (F1/B2).
+    #
+    # Decision record lives in the *DS-Online* repo, not this one:
+    #   DS-Online/openspec/changes/archive/2026-09-10-add-support-tree-global-params
+    # It covers why "organic" is rejected at the API layer, why
+    # support_max_pillar_link_distance must NOT get a min-value guard, and why
+    # support_base_safety_distance is passed through unmodified. The code landed
+    # here (commit 826786b) without those docs, so name the repo explicitly —
+    # searching this repo's history for the change name finds nothing.
+    #
+    # Engine (PrintConfig.cpp) already registers and reads these options; this
+    # only opens the API entry point. Field names match the engine option key
+    # 1:1 so generate_config_ini's generic field-name-driven write works as-is.
+    support_head_width: float = 1.0
+    support_base_diameter: float = 4.0
+    support_base_height: float = 1.0
+    support_bracing_angle: float = 45.0
+    support_max_bridge_length: float = 15.0
+    # 0 is a legal value (means "no pillar linking") — MUST NOT get a min-value
+    # validator like support_object_elevation's enforce_min_elevation.
+    support_max_pillar_link_distance: float = 10.0
+    support_max_bridges_on_pillar: int = 3
+    support_small_pillar_diameter_percent: float = 50.0
+    support_buildplate_only: bool = False
+
+    # Engine silently clamps values below EPSILON to a constant 0.5mm
+    # (SLAPrint.cpp:81-83). This is pre-existing engine behavior; SHALL NOT be
+    # modified or intercepted here — pass the value through as-is and let API
+    # consumers document the 0→0.5mm behavior themselves.
+    support_base_safety_distance: float = 1.0
+
+    # Engine enum key is a plain string (s_keys_map_SLAPillarConnectionMode:
+    # "zigzag"/"cross"/"dynamic"). Follows the existing plain-str convention
+    # used by display_orientation rather than a real Python Enum.
+    support_pillar_connection_mode: str = "dynamic"
+
+    @field_validator('support_pillar_connection_mode')
+    @classmethod
+    def validate_pillar_connection_mode(cls, v: str) -> str:
+        allowed = {"zigzag", "cross", "dynamic"}
+        if v not in allowed:
+            raise ValueError(f"support_pillar_connection_mode must be one of {sorted(allowed)}")
+        return v
+
+    # Engine enum key (s_keys_map_SLASupportTreeType) only registers
+    # "default"/"branching" — "organic" is a commented-out TODO in
+    # PrintConfig.cpp:227-230 and would fail at the engine's enum
+    # deserialization stage if it reached generate_config_ini. Reject it here.
+    # TODO: "branching" opens the entry point, but its 19 branchingsupport_*
+    # fields are not migrated in this change — the engine falls back to its
+    # own defaults for them (PrusaSlicer only overrides keys actually sent).
+    # Migrate them in bulk the same way as the 9 standard fields above, when
+    # tunable "branching" mode is needed.
+    support_tree_type: str = "default"
+
+    @field_validator('support_tree_type')
+    @classmethod
+    def validate_tree_type(cls, v: str) -> str:
+        allowed = {"default", "branching"}
+        if v not in allowed:
+            raise ValueError(f"support_tree_type must be one of {sorted(allowed)}")
+        return v
+
+    # Declared but not yet functional (parking item): only takes effect when
+    # paired with enforcer/blocker marker volumes on the model
+    # (SLAPrintSteps.cpp:1073, vol->is_support_enforcer()/is_support_blocker()).
+    # sla_operations.py currently has no marker-volume data flow (only
+    # --import-support-points / --prior-supports), so setting this has no
+    # observable effect yet. Needs that data flow as a follow-up feature.
+    support_enforcers_only: bool = False
+
     # Pad settings
     pad_enable: bool = False
+
+    # Pad global parameters (F2/B2).
+    #
+    # Decision record: add-pad-global-params (this repo — code and docs share
+    # the same repo this time, unlike F1's).
+    #
+    # Trap: Pad.hpp's PadConfig struct has a SECOND, DIFFERENT set of defaults
+    # for pad_wall_thickness / pad_wall_height / pad_wall_slope /
+    # pad_object_connector_penetration. This backend runs the
+    # `--load config.ini` path, where PrintConfig.cpp's set_default_value is
+    # what actually applies — Pad.hpp's struct defaults only take effect when
+    # PadConfig is constructed directly in C++ without going through a config
+    # file, which this path never does. Defaults below MUST follow
+    # PrintConfig.cpp, NOT "correct" them to match Pad.hpp.
+    #
+    # Engine (PrintConfig.cpp:4716-4835) already registers and reads these
+    # options; this only opens the API entry point. Field names match the
+    # engine option key 1:1 so generate_config_ini's generic field-name-driven
+    # write works as-is (same mechanism as F1).
+    pad_wall_thickness: float = 2.0
+    pad_wall_height: float = 0.0
+    pad_brim_size: float = 1.6
+    pad_max_merge_distance: float = 50.0
+    pad_around_object: bool = False
+    pad_around_object_everywhere: bool = False
+    pad_object_gap: float = 1.0
+    pad_object_connector_stride: float = 10.0
+    pad_object_connector_width: float = 0.5
+    pad_object_connector_penetration: float = 0.3
+
+    # pad_wall_slope is the ONLY one of these 11 fields that gets an API-layer
+    # range guard (design.md D2). Reason: SLAPrint.cpp:148 converts this to
+    # radians and Pad.hpp:75's bottom_offset() divides by tan(wall_slope) —
+    # 0 degrees means tan(0) == 0, a division by zero producing inf/NaN that
+    # flows straight into geometry. PrintConfig.cpp registers min=45/max=90,
+    # but that range only applies to the GUI slider, not this --load
+    # config.ini path.
+    #
+    # This is NOT a general precedent. Contrast with F1's
+    # support_max_pillar_link_distance, which MUST NOT get a min-value guard
+    # because 0 is an engine-defined legal value ("no pillar linking"). The
+    # test here is "does this value have a defined engine semantics, or does
+    # it just blow up a formula" — not "add a range check to every field".
+    pad_wall_slope: float = 90.0
+
+    @field_validator('pad_wall_slope')
+    @classmethod
+    def validate_pad_wall_slope(cls, v: float) -> float:
+        if not (45 <= v <= 90):
+            raise ValueError(f"pad_wall_slope must be between 45 and 90 degrees, got {v}")
+        return v
+
+    # zero-elevation-only fields (design.md D4): pad_around_object_everywhere,
+    # pad_object_gap, pad_object_connector_stride/_width/_penetration (all
+    # declared above, alongside the other standard pad_* fields) are only
+    # read by the engine when is_zero_elevation() is true — SLAPrint.cpp:48-51
+    # defines that as `pad_enable AND pad_around_object` (both, not either).
+    # When that condition is false, the engine silently ignores these 5
+    # values — no error, no effect on output.
+    #
+    # These 5 fields SHALL NOT get any model_validator or conditional
+    # wiring here. Rejecting them when the switches are off would break
+    # save/load round-tripping (a saved param file always carries every
+    # field) for no engine-side benefit — the engine already handles the
+    # "off" case cleanly. Same precedent as F1's branchingsupport_* fields
+    # ("harmless to send, just inert").
+    #
+    # Also note: Pad.cpp:66's EPSILON guard makes
+    # pad_object_connector_stride/_width == 0 silently produce no connector
+    # sticks (not an error) — this is pre-existing engine behavior.
 
     # Hollow settings
     hollowing_enable: bool = False

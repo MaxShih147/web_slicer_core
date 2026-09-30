@@ -1,6 +1,8 @@
 """Structured API error codes matching err_code_spec.md."""
 
+import inspect
 import secrets
+import sys
 
 from fastapi.responses import JSONResponse
 
@@ -42,6 +44,10 @@ def validation_error(message: str) -> APIError:
 
 def missing_body(message: str = "Required field or file is missing") -> APIError:
     return APIError("MISSING_BODY", message, 400, retryable=False)
+
+
+def config_validation_error(message: str) -> APIError:
+    return APIError("CONFIG_VALIDATION_ERROR", message, 422, retryable=False)
 
 
 def job_not_found(job_id: str = None) -> APIError:
@@ -213,6 +219,59 @@ def support_generation_failed(detail: str = None) -> APIError:
     )
 
 
+def support_points_model_mismatch(detail: str = None) -> APIError:
+    """The imported support point list does not describe the model being sliced.
+
+    Not retryable: the fingerprint comparison is deterministic, so replaying the
+    same list against the same model always fails again. The only fix is to
+    regenerate the points from the current model.
+    """
+    return APIError(
+        "SUPPORT_POINTS_MODEL_MISMATCH",
+        detail
+        or "The supplied support points do not match this model; "
+           "regenerate them from the current model",
+        422,
+        retryable=False,
+    )
+
+
+def support_point_sampling_failed(detail: str = None) -> APIError:
+    return APIError(
+        "SUPPORT_POINT_SAMPLING_FAILED",
+        detail or "The SLA support point generator failed to sample this model; "
+                  "try adjusting the model's orientation slightly",
+        422,
+        retryable=False,
+    )
+
+
+def support_mesh_export_failed(detail: str = None) -> APIError:
+    """The support was generated, but its STL could not be written.
+
+    500 and retryable, unlike the other support codes: a failed file write is
+    the server's disk or permissions, not a setting the user can fix, so the
+    same request may well succeed the next time.
+    """
+    return APIError(
+        "SUPPORT_MESH_EXPORT_FAILED",
+        detail or "The support mesh was generated but could not be written to disk",
+        500,
+        retryable=True,
+    )
+
+
+def shrinkage_compensation_invalid(detail: str = None) -> APIError:
+    return APIError(
+        "SHRINKAGE_COMPENSATION_INVALID",
+        detail or "The object transform is not invertible (a zero scale or a zero "
+                  "shrinkage compensation), so support points cannot be mapped back "
+                  "to the input model",
+        422,
+        retryable=False,
+    )
+
+
 # ─── slicing error codes ───────────────────────────────────────────────────────
 # Correspond to classified SLA slicing failures (see slicing_classifier.py).
 # Follow the same 422 / retryable=False convention as the geometry-failure family.
@@ -260,3 +319,38 @@ def pad_generation_failed(detail: str = None) -> APIError:
         422,
         retryable=False,
     )
+
+
+# ─── registry-derived lookup (unify-error-code-registry Task 4.1) ─────────────
+
+def factory_registry() -> dict:
+    """Map every error code to the factory above that produces it.
+
+    Derived by calling each factory in this module and reading the `code` off
+    its returned APIError — not a hand-maintained dict (agent/error_codes.py
+    design D3: factory signatures aren't uniform enough to codegen, but a
+    lookup table built from them at runtime needs no maintenance at all).
+
+    Used by api_v2.py to build its code -> factory table, and by
+    test_error_code_contract.py to verify it agrees with the registry.
+    """
+    registry = {}
+    for _, fn in inspect.getmembers(sys.modules[__name__], inspect.isfunction):
+        if fn.__module__ != __name__:
+            continue
+        sig = inspect.signature(fn)
+        if sig.return_annotation is not APIError:
+            continue  # excludes this function itself (-> dict), not an error factory
+        kwargs = {
+            name: "test-value"
+            for name, param in sig.parameters.items()
+            if param.default is inspect.Parameter.empty
+        }
+        code = fn(**kwargs).code
+        if code in registry:
+            raise ValueError(
+                f"two factories produce code={code!r}: {registry[code].__name__} and "
+                f"{fn.__name__} — each code must have exactly one factory"
+            )
+        registry[code] = fn
+    return registry

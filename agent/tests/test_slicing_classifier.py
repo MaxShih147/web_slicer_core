@@ -20,6 +20,8 @@ Coverage:
 import pytest
 
 from agent.slicing_classifier import (
+    MODEL_MISMATCH_CODE,
+    MODEL_MISMATCH_MARKER,
     SliceClassification,
     _EMPTY_MODEL_CODE,
     _EMPTY_MODEL_MARKER,
@@ -32,6 +34,121 @@ from agent.slicing_classifier import (
 )
 
 _MODEL = "model.stl"
+
+
+# ─── Step 0: imported support points reject the model ─────────────────────────
+
+class TestStep0ModelMismatch:
+    """The slice flow also accepts --import-support-points, so it must attribute
+    a fingerprint rejection to the same dedicated code as the support flow.
+
+    Without this rule the run lands on Step 4 (exit != 0) or Step 7 (exit 0) with
+    error_code=None, which the API renders as a bare JOB_FAILED — indistinguishable
+    from any other slice failure.
+    """
+
+    # What the CLI actually emits: the marker on stderr, ordinary chatter on
+    # stdout, no .sl1 written because the abort precedes print->apply().
+    STDERR = MODEL_MISMATCH_MARKER
+    STDOUT = "Loading model file"
+
+    @pytest.mark.parametrize("exit_code", [0, 1, 2, -1])
+    def test_attributed_regardless_of_exit_code(self, exit_code):
+        """Both paths: the marker wins whatever the process returned.
+
+        The fork exits 0 from several failing paths, so the exit code must not
+        be part of this decision.
+        """
+        result = classify_slice_result(
+            exit_code, self.STDOUT, self.STDERR, _MODEL, False
+        )
+        assert result is not None
+        assert result.error_code == MODEL_MISMATCH_CODE
+
+    def test_exit_zero_is_not_left_unclassified(self):
+        """Regression: exit 0 used to fall to Step 7 with error_code=None."""
+        result = classify_slice_result(0, self.STDOUT, self.STDERR, _MODEL, False)
+        assert result.error_code is not None
+        assert result.error != "Output file not created"
+
+    def test_nonzero_exit_is_not_left_unclassified(self):
+        """Regression: exit 1 used to fall to Step 4 with error_code=None."""
+        result = classify_slice_result(1, self.STDOUT, self.STDERR, _MODEL, False)
+        assert result.error_code is not None
+        assert not result.error.startswith("Exit code 1:")
+
+    def test_marker_on_stdout_is_also_caught(self):
+        """Both streams are scanned, so a stream reshuffle cannot downgrade it."""
+        result = classify_slice_result(0, self.STDERR, "", _MODEL, False)
+        assert result.error_code == MODEL_MISMATCH_CODE
+
+    def test_wins_over_a_validate_error(self):
+        """Ordering: Step 0 precedes Step 1 and Step 6.x."""
+        combined = self.STDERR + chr(10) + "Invalid pinhead diameter"
+        for exit_code in (0, 1):
+            result = classify_slice_result(exit_code, "", combined, _MODEL, False)
+            assert result.error_code == MODEL_MISMATCH_CODE
+
+    def test_wins_over_out_of_bounds(self):
+        """Ordering: Step 0 precedes Step 5."""
+        result = classify_slice_result(
+            0, _OUT_OF_BOUNDS_MARKER, self.STDERR, _MODEL, False
+        )
+        assert result.error_code == MODEL_MISMATCH_CODE
+
+    def test_output_file_does_not_rescue_the_run(self):
+        """Fail-closed: an .sl1 must never be accepted from a rejected point list.
+
+        Cannot happen today (the abort precedes slicing), so this pins the
+        direction rather than reproducing an observed run.
+        """
+        result = classify_slice_result(0, self.STDOUT, self.STDERR, _MODEL, True)
+        assert result is not None
+        assert result.error_code == MODEL_MISMATCH_CODE
+
+    def test_detail_carries_the_marker(self):
+        """The stored error string must show why the run was rejected."""
+        result = classify_slice_result(0, self.STDOUT, self.STDERR, _MODEL, False)
+        assert MODEL_MISMATCH_MARKER in result.error
+
+    def test_accepts_raw_bytes(self):
+        """run_slicing hands back bytes, not str."""
+        result = classify_slice_result(
+            0, b"", MODEL_MISMATCH_MARKER.encode("utf-8"), _MODEL, False
+        )
+        assert result.error_code == MODEL_MISMATCH_CODE
+
+    def test_absent_marker_does_not_trigger_the_code(self):
+        """Teeth: an ordinary failure must not pick up this code by accident."""
+        result = classify_slice_result(1, "", "Invalid pinhead diameter", _MODEL, False)
+        assert result.error_code == "SUPPORT_HEAD_TOO_WIDE"
+
+    def test_healthy_run_still_succeeds(self):
+        """Teeth: a clean run with no marker still returns None."""
+        assert classify_slice_result(0, self.STDOUT, "", _MODEL, True) is None
+
+    def test_shares_one_literal_with_the_support_classifier(self):
+        """Both classifiers must key on the same string, not two copies.
+
+        The contract test pins the support classifier's constant against the
+        fork source; sharing the object is what extends that cover to here.
+        """
+        from agent import support_classifier
+
+        assert MODEL_MISMATCH_MARKER == support_classifier.MODEL_MISMATCH_MARKER
+        assert MODEL_MISMATCH_CODE == support_classifier.MODEL_MISMATCH_CODE
+
+    def test_both_classifiers_agree_on_the_same_output(self):
+        """The same CLI text must produce the same code on either flow."""
+        from agent.support_classifier import classify_support_result
+
+        slice_result = classify_slice_result(
+            0, self.STDOUT, self.STDERR, _MODEL, False
+        )
+        support_result = classify_support_result(
+            stdout=self.STDOUT, stderr=self.STDERR, support_stl_exists=False
+        )
+        assert slice_result.error_code == support_result.error_code == MODEL_MISMATCH_CODE
 
 
 # ─── success ──────────────────────────────────────────────────────────────────

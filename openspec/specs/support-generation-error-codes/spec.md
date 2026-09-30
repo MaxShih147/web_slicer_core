@@ -37,6 +37,8 @@
 
 當 `stderr` 命中已知的 `SLAPrint::validate()` 錯誤訊息時，系統 SHALL 將 job 標為 `FAILED` 並回傳對照表定義的具體 `error_code`。比對 MUST 在固定的英文語系下進行（validate 訊息為可翻譯字串）。
 
+對照表 MUST 為支撐與切片共用的單一 `ENGINE_RULES`，MUST NOT 為支撐流程另行維護一份平行表。
+
 #### Scenario: pinhead 直徑過大
 - **WHEN** `stderr` 含 `Invalid pinhead diameter`
 - **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_HEAD_TOO_WIDE`，`retryable` 為 false
@@ -57,11 +59,15 @@
 - **WHEN** `stderr` 含支撐柱底部落於物件與 pad 間隙的訊息
 - **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_PAD_GAP_CONFLICT`
 
+#### Scenario: 底墊 brim 過小（本變更新增）
+- **WHEN** `stderr` 含 `Pad brim size is too small`
+- **THEN** job 狀態為 `FAILED`，`error_code` 為 `PAD_CONFIG_INVALID`
+- **AND** MUST NOT 退化為 `SUPPORT_GENERATION_FAILED`
+
 #### Scenario: 非支撐專屬的 validate 錯誤落 fallback
 - **WHEN** `stderr` 含未被對照表指派專屬代碼的 validate 錯誤（如 `Exposition time is out of printer profile bounds`）
 - **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_GENERATION_FAILED`，並保留原始訊息
-
----
+- **AND** 該訊息在規則表上 MUST 以 `fallback_by_design` 顯式標記
 
 ### Requirement: 模型出界須歸因為 MODEL_OUT_OF_BOUNDS
 
@@ -112,17 +118,12 @@
 
 當結果無法命中任何已知的成功、中性或失敗標記時，系統 SHALL 採 fail-closed：job 狀態 MUST 為 `FAILED`，`error_code` 為 `SUPPORT_GENERATION_FAILED`，並保留原始 `stdout` / `stderr`。系統 MUST NOT 在無正向證據時將未知情況推定為成功或中性。
 
-#### Scenario: 寫檔失敗但 exit code 為 0
-- **WHEN** `stderr` 含 `Failed to export support mesh`、無支撐 STL、且未命中任何正向標記
-- **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_GENERATION_FAILED`
-- **AND** 此情境 MUST NOT 被歸類為 `SUPPORT_NOT_NEEDED`
+（原本的「寫檔失敗但 exit code 為 0」情境移到下方的「支撐 mesh 寫檔失敗須歸因為 SUPPORT_MESH_EXPORT_FAILED」：寫檔失敗現在有專屬代號，不再是無法歸因。）
 
 #### Scenario: 同時偵測到互斥標記
 - **WHEN** `stdout` 同時含成功標記與 `SUPPORT_NOT_NEEDED` 標記（例如非預期的多物件輸出）
 - **THEN** 系統走 fail-closed，job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_GENERATION_FAILED`
 - **AND** 系統 MUST NOT 任選其一標記作為權威結論
-
----
 
 ### Requirement: 狀態端點須回傳 error_code 與 supportOutcome
 
@@ -149,3 +150,85 @@ GET 狀態端點 SHALL 對失敗 job 回傳其具體 `error_code`，並對中性
 #### Scenario: 標記字串變動被偵測
 - **WHEN** CLI 的 stdout 標記（如 `(pad only)`）或 validate 訊息字串被更動
 - **THEN** 契約測試失敗，提示分類對照表需同步更新
+
+### Requirement: 支撐點與模型不一致須歸因為 SUPPORT_POINTS_MODEL_MISMATCH
+
+當 CLI 輸出顯示傳入的支撐點清單與當前模型的指紋不符時，系統 SHALL 將 job 標為 `FAILED` 並回傳 `SUPPORT_POINTS_MODEL_MISMATCH`，`retryable` MUST 為 false。此歸因 SHALL 優先於 fail-closed 的 `SUPPORT_GENERATION_FAILED`，使呼叫端能區分「模型已變更」與「支撐生成本身失敗」這兩種本質不同的情況。
+
+此錯誤不可重試的理由是：重試同一組輸入必然得到相同的指紋比對結果，唯一的解法是重新產生支撐點。
+
+#### Scenario: 指紋不符歸因為專屬代碼
+- **WHEN** CLI 輸出命中支撐點指紋不符的標記
+- **THEN** job 狀態 SHALL 為 `FAILED`，`error_code` SHALL 為 `SUPPORT_POINTS_MODEL_MISMATCH`，`retryable` SHALL 為 false
+
+#### Scenario: 不得落入 fail-closed 的泛用代碼
+- **WHEN** CLI 輸出命中支撐點指紋不符的標記且未命中任何其他失敗標記
+- **THEN** `error_code` MUST NOT 為 `SUPPORT_GENERATION_FAILED`
+
+#### Scenario: 不得被誤判為中性成功
+- **WHEN** CLI 因指紋不符而終止，因此未產出支撐 STL 也未輸出任何正向標記
+- **THEN** 此情境 MUST NOT 被歸類為 `SUPPORT_NOT_NEEDED`
+- **AND** `hasSupportMesh` SHALL 為 false
+
+### Requirement: 指紋不符的標記須為不可翻譯的原始字串
+
+CLI 用以宣告指紋不符的輸出標記 SHALL 為原始英文字串字面值，MUST NOT 包在 `_u8L()` 或 `I18N::translate` 之內。分類器對此標記的比對 SHALL 與既有標記一致地以英文子字串進行，且 MUST NOT 將 CLI 的 `returncode` 納入判定條件。
+
+#### Scenario: 標記不隨語系改變
+- **GIVEN** 引擎在非英文語系下執行
+- **WHEN** 發生支撐點指紋不符
+- **THEN** 輸出的標記字串 SHALL 與英文語系下完全相同
+- **AND** 分類器 SHALL 仍能正確歸因
+
+#### Scenario: 分類不依賴 exit code
+- **WHEN** CLI 因指紋不符終止且 `returncode` 為 0
+- **THEN** 分類器 SHALL 仍歸因為 `SUPPORT_POINTS_MODEL_MISMATCH`
+
+### Requirement: 指紋不符標記須納入契約測試
+
+指紋不符的標記字串 SHALL 納入既有的契約 / golden 測試，直接對 CLI 實際輸出進行斷言，使該字串被更動時能被測試擋下。
+
+#### Scenario: 標記字串變動被偵測
+- **WHEN** CLI 的指紋不符標記字串被更動
+- **THEN** 契約測試 SHALL 失敗，並提示分類對照表需同步更新
+
+### Requirement: 支撐點取樣失敗須歸因為專屬 code
+
+當引擎回報支撐點產生器自身失敗時，系統 SHALL 回傳 `SUPPORT_POINT_SAMPLING_FAILED`，MUST NOT 退化為 `SUPPORT_GENERATION_FAILED`。引擎在此情況已提供可行的修正建議（調整模型角度），該建議 MUST 保留在 `detail` 中。
+
+#### Scenario: 支撐點產生器失敗
+- **WHEN** 輸出含 `SLA support point generator has failed.`
+- **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_POINT_SAMPLING_FAILED`
+- **AND** `detail` 保留引擎原始訊息
+
+### Requirement: 收縮補償為零須歸因為專屬 code
+
+當引擎因物件轉換矩陣不可逆（零縮放或零收縮補償）而中止時，系統 SHALL 回傳 `SHRINKAGE_COMPENSATION_INVALID`。收縮補償為使用者可調欄位，此情況可被觸發。
+
+#### Scenario: 收縮補償設為 0
+- **WHEN** 輸出含 `the object transform is not invertible`
+- **THEN** job 狀態為 `FAILED`，`error_code` 為 `SHRINKAGE_COMPENSATION_INVALID`
+- **AND** MUST NOT 靜默結束或退化為 fallback
+
+### Requirement: 支撐 mesh 寫檔失敗須歸因為 SUPPORT_MESH_EXPORT_FAILED
+
+支撐專用模式下，引擎無法寫出 `*_support.stl` 時 SHALL 在 stdout 輸出 `code` 為 `SUPPORT_MESH_EXPORT_FAILED` 的結構化錯誤行，stderr 照舊印 `Failed to export support mesh to <path>`，並以非 0 的 exit code 結束。分類器 SHALL 將其歸因為 `SUPPORT_MESH_EXPORT_FAILED`，代號與英文字串任一命中即可。
+
+切片模式下同一個寫檔失敗 MUST NOT 讓切片失敗：`.sl1` 在寫支撐 STL 之前已完成，支撐 STL 只供 UI 顯示（與同檔預覽 ZIP 寫檔失敗的處理一致）。
+
+#### Scenario: 新版引擎寫檔失敗
+- **WHEN** 支撐專用模式下 `*_support.stl` 無法寫入
+- **THEN** stdout 含 `PHZ_ERROR` 行，`code` 為 `SUPPORT_MESH_EXPORT_FAILED`
+- **AND** exit code 不為 0
+- **AND** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_MESH_EXPORT_FAILED`
+- **AND** 此情境 MUST NOT 被歸類為 `SUPPORT_NOT_NEEDED`
+
+#### Scenario: 舊版引擎只有英文字串
+- **WHEN** `stderr` 含 `Failed to export support mesh`、無支撐 STL、無結構化錯誤行
+- **THEN** job 狀態為 `FAILED`，`error_code` 為 `SUPPORT_MESH_EXPORT_FAILED`
+
+#### Scenario: 切片模式不受影響
+- **WHEN** 切片模式（`--export-sla --export-support-stl`）下 `*_support.stl` 無法寫入
+- **THEN** `.sl1` 照常產出，exit code 為 0，stdout MUST NOT 含 `PHZ_ERROR` 行
+- **AND** 切片結果判定為成功
+

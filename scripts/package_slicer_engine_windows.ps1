@@ -267,13 +267,24 @@ $pdbInBin = Get-ChildItem -LiteralPath $BinDir -Filter "*.pdb" -Recurse -ErrorAc
 if ($pdbInBin) { throw "Consumer bin must not contain PDB files" }
 
 $buildId = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+# engine_commit is the commit of the engine SOURCE, i.e. the fork submodule,
+# not this repo: the SBOM and source-chain.json carry it as the Corresponding
+# Source reference. It used to read this repo's HEAD, which never matched the
+# submodule pointer (engine-error-code-table Section 7). A fork with
+# uncommitted changes is refused: no commit describes such a binary.
+$ForkRoot = Join-Path $RepoRoot "third_party\prusaslicer_fork"
 $engineCommit = "unknown"
 try {
-    Push-Location $RepoRoot
+    Push-Location $ForkRoot
     $engineCommit = (git rev-parse HEAD 2>$null)
     if (-not $engineCommit) { $engineCommit = "unknown" }
+    $forkDirty = (git status --porcelain 2>$null)
 } finally {
     Pop-Location
+}
+if ($engineCommit -eq "unknown") { throw "Cannot read the fork commit at $ForkRoot" }
+if ($forkDirty) {
+    throw "Fork has uncommitted changes; commit them first so engine_commit describes this binary:`n$forkDirty"
 }
 
 $archivedPdbs = @(Get-ChildItem -LiteralPath $SymbolDir -Filter "*.pdb" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })

@@ -18,6 +18,7 @@ from agent.errors import (
     support_head_penetration_invalid,
     support_head_too_wide,
     support_pad_gap_conflict,
+    support_points_model_mismatch,
     support_points_required,
 )
 from agent.api_v2 import _ERROR_CODE_FACTORIES, _error_from_status
@@ -31,6 +32,10 @@ SUPPORT_FACTORY_CASES = [
     (support_pad_gap_conflict, "SUPPORT_PAD_GAP_CONFLICT", 422, False),
     (model_out_of_bounds, "MODEL_OUT_OF_BOUNDS", 422, False),
     (support_generation_failed, "SUPPORT_GENERATION_FAILED", 422, False),
+    # 8.1: imported point list does not describe this model. 422 / not retryable
+    # for the same reason as the rest of the family — replaying the identical
+    # input against the identical model always fails the same way.
+    (support_points_model_mismatch, "SUPPORT_POINTS_MODEL_MISMATCH", 422, False),
 ]
 
 # The support codes that MUST be registered so _error_from_status can return
@@ -90,6 +95,33 @@ class TestErrorCodeRegistry:
         """1.2: _error_from_status 依 stored error_code 回傳具體 code，而非 JOB_FAILED。"""
         err = _error_from_status({"error_code": code, "error": "boom"})
         assert err.code == code
+
+    def test_classifier_code_resolves_to_the_mismatch_factory(self):
+        """8.1/8.2: the code the classifier emits must resolve end-to-end.
+
+        Cross-checks the classifier constant against the registry rather than a
+        hand-typed string, so renaming one side without the other is caught.
+        """
+        from agent.support_classifier import MODEL_MISMATCH_CODE
+
+        err = _error_from_status({"error_code": MODEL_MISMATCH_CODE, "error": "boom"})
+        assert err.code == MODEL_MISMATCH_CODE
+        assert err.code != "JOB_FAILED"
+        assert err.http_status == 422
+        assert err.retryable is False
+
+    def test_mismatch_response_body_reports_not_retryable(self):
+        """8.1: the wire response the caller actually sees carries retryable=false."""
+        import json
+
+        from agent.support_classifier import MODEL_MISMATCH_CODE
+
+        response = support_points_model_mismatch().to_response()
+        assert response.status_code == 422
+        body = json.loads(bytes(response.body))
+        assert body["success"] is False
+        assert body["code"] == MODEL_MISMATCH_CODE
+        assert body["data"]["retryable"] is False
 
     def test_error_from_status_falls_back_when_code_unknown(self):
         """1.2: 未知/缺 error_code 時回退為 JOB_FAILED（向後相容）。"""

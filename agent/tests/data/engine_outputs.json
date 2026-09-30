@@ -1,0 +1,402 @@
+{
+ "about": "Real CLI output captured for engine-error-code-table Tasks 3.6 and 4. 'coded' = engine built from the fork with EngineErrorCodes.hpp; 'legacy' = the pre-change packaged engine. Progress lines (N% => ...) removed; everything else verbatim.",
+ "coded_engine_fork_commit": "2efc8395206bcae5690d50e78ce2013a1e99fd00",
+ "records": [
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "pad_config_invalid",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"PAD_CONFIG_INVALID\",\"fields\":[\"pad_wall_slope\",\"pad_wall_thickness\",\"pad_brim_size\"],\"values\":{\"min_pad_wall_slope\":51.4,\"pad_wall_slope\":50}}",
+   "stderr": "Pad brim size is too small for the current configuration.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "head_too_wide",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_HEAD_TOO_WIDE\",\"fields\":[\"support_head_front_diameter\",\"support_pillar_diameter\"]}",
+   "stderr": "Invalid pinhead diameter\nPinhead front diameter should be smaller than the Pillar diameter.\nPlease check value of Pinhead front diameter in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "head_penetration_invalid",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_HEAD_PENETRATION_INVALID\",\"fields\":[\"support_head_penetration\",\"support_head_width\"]}",
+   "stderr": "Invalid Head penetration\nHead penetration should not be greater than the Head width.\nPlease check value of Head penetration in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "elevation_too_low",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_ELEVATION_TOO_LOW\",\"fields\":[\"support_object_elevation\",\"support_head_front_diameter\",\"support_pillar_diameter\",\"support_head_width\",\"support_head_penetration\"],\"values\":{\"min_support_object_elevation\":2.2,\"support_object_elevation\":1}}",
+   "stderr": "Elevation is too low for object. Use the \"Pad around object\" feature to print the object without elevation.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "pad_gap_conflict",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_PAD_GAP_CONFLICT\",\"fields\":[\"support_base_safety_distance\",\"pad_object_gap\"],\"values\":{\"effective_support_base_safety_distance\":1,\"pad_object_gap\":3}}",
+   "stderr": "The endings of the support pillars will be deployed on the gap between the object and the pad. 'Support base safety distance' has to be greater than the 'Pad object gap' parameter to avoid this.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "exposure_out_of_range",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"EXPOSURE_TIME_OUT_OF_RANGE\",\"fields\":[\"exposure_time\"],\"values\":{\"min_exposure_time\":0,\"max_exposure_time\":100,\"exposure_time\":500}}",
+   "stderr": "Exposition time is out of printer profile bounds.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "mesh_unsliceable",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"MODEL_MESH_UNSLICEABLE\"}",
+   "stderr": "Model named: model.stl can not be sliced: no slice level falls inside the model. The layer height (0.3 mm) is too large relative to the height of the object (0.101733 mm). Try lowering the layer height.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "support_points_model_mismatch",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_POINTS_MODEL_MISMATCH\"}",
+   "stderr": "SUPPORT_POINTS_MODEL_MISMATCH: imported support points do not match this model\n  expected: faces=972248;bbox=-346135,-95571,70000,346135,95571,578663,;checksum=2d3b2cb6e0e6752d\n  actual:   faces=972248;bbox=-173068,-47785,197166,173068,47785,451497,;checksum=6d85b6b4ac44ff38",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "success",
+   "exit_code": 0,
+   "stdout": "Support mesh exported to out_coded_support_success_support.stl (includes supports and pad)",
+   "stderr": "",
+   "output_exists": true
+  },
+  {
+   "engine": "coded",
+   "flow": "support",
+   "scenario": "support_mesh_export_failed",
+   "exit_code": 1,
+   "stdout": "[2026-09-23 17:29:20.085847] [0x000079a8] [error]   its_write_stl_binary: Couldn't open out_coded_support_support_mesh_export_failed_support.stl for writing\nPHZ_ERROR {\"code\":\"SUPPORT_MESH_EXPORT_FAILED\"}",
+   "stderr": "Failed to export support mesh to out_coded_support_support_mesh_export_failed_support.stl",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "pad_config_invalid",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"PAD_CONFIG_INVALID\",\"fields\":[\"pad_wall_slope\",\"pad_wall_thickness\",\"pad_brim_size\"],\"values\":{\"min_pad_wall_slope\":51.4,\"pad_wall_slope\":50}}",
+   "stderr": "Pad brim size is too small for the current configuration.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "head_too_wide",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_HEAD_TOO_WIDE\",\"fields\":[\"support_head_front_diameter\",\"support_pillar_diameter\"]}",
+   "stderr": "Invalid pinhead diameter\nPinhead front diameter should be smaller than the Pillar diameter.\nPlease check value of Pinhead front diameter in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "head_penetration_invalid",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_HEAD_PENETRATION_INVALID\",\"fields\":[\"support_head_penetration\",\"support_head_width\"]}",
+   "stderr": "Invalid Head penetration\nHead penetration should not be greater than the Head width.\nPlease check value of Head penetration in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "elevation_too_low",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_ELEVATION_TOO_LOW\",\"fields\":[\"support_object_elevation\",\"support_head_front_diameter\",\"support_pillar_diameter\",\"support_head_width\",\"support_head_penetration\"],\"values\":{\"min_support_object_elevation\":2.2,\"support_object_elevation\":1}}",
+   "stderr": "Elevation is too low for object. Use the \"Pad around object\" feature to print the object without elevation.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "pad_gap_conflict",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_PAD_GAP_CONFLICT\",\"fields\":[\"support_base_safety_distance\",\"pad_object_gap\"],\"values\":{\"effective_support_base_safety_distance\":1,\"pad_object_gap\":3}}",
+   "stderr": "The endings of the support pillars will be deployed on the gap between the object and the pad. 'Support base safety distance' has to be greater than the 'Pad object gap' parameter to avoid this.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "exposure_out_of_range",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"EXPOSURE_TIME_OUT_OF_RANGE\",\"fields\":[\"exposure_time\"],\"values\":{\"min_exposure_time\":0,\"max_exposure_time\":100,\"exposure_time\":500}}",
+   "stderr": "Exposition time is out of printer profile bounds.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "mesh_unsliceable",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"MODEL_MESH_UNSLICEABLE\"}",
+   "stderr": "Model named: model.stl can not be sliced: no slice level falls inside the model. The layer height (0.3 mm) is too large relative to the height of the object (0.101733 mm). Try lowering the layer height.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "support_points_model_mismatch",
+   "exit_code": 1,
+   "stdout": "PHZ_ERROR {\"code\":\"SUPPORT_POINTS_MODEL_MISMATCH\"}",
+   "stderr": "SUPPORT_POINTS_MODEL_MISMATCH: imported support points do not match this model\n  expected: faces=972248;bbox=-346135,-95571,70000,346135,95571,578663,;checksum=2d3b2cb6e0e6752d\n  actual:   faces=972248;bbox=-173068,-47785,197166,173068,47785,451497,;checksum=6d85b6b4ac44ff38",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "success",
+   "exit_code": 0,
+   "stdout": "Slicing result exported to out_coded_slice_success.sl1",
+   "stderr": "",
+   "output_exists": true
+  },
+  {
+   "engine": "coded",
+   "flow": "slice",
+   "scenario": "support_mesh_export_failed",
+   "exit_code": 0,
+   "stdout": "[2026-09-23 17:29:30.085940] [0x000081c0] [error]   its_write_stl_binary: Couldn't open out_coded_slice_support_mesh_export_failed_support.stl for writing\nSlicing result exported to out_coded_slice_support_mesh_export_failed.sl1",
+   "stderr": "Failed to export support mesh to out_coded_slice_support_mesh_export_failed_support.stl",
+   "output_exists": true
+  },
+  {
+   "engine": "coded",
+   "flow": "hollow",
+   "scenario": "interior_mesh_empty",
+   "exit_code": 1,
+   "stdout": "Generating hollow interior (thickness=2, quality=0.5, closing=2)...",
+   "stderr": "error: interior mesh is empty. Try reducing wall thickness for smaller models.",
+   "output_exists": false
+  },
+  {
+   "engine": "coded",
+   "flow": "hollow",
+   "scenario": "success",
+   "exit_code": 0,
+   "stdout": "Generating hollow interior (thickness=0.5, quality=0.5, closing=2)...\nHollow interior mesh exported to out_coded_hollow_success.stl",
+   "stderr": "",
+   "output_exists": true
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "pad_config_invalid",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Pad brim size is too small for the current configuration.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "head_too_wide",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Invalid pinhead diameter\nPinhead front diameter should be smaller than the Pillar diameter.\nPlease check value of Pinhead front diameter in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "head_penetration_invalid",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Invalid Head penetration\nHead penetration should not be greater than the Head width.\nPlease check value of Head penetration in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "elevation_too_low",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Elevation is too low for object. Use the \"Pad around object\" feature to print the object without elevation.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "pad_gap_conflict",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "The endings of the support pillars will be deployed on the gap between the object and the pad. 'Support base safety distance' has to be greater than the 'Pad object gap' parameter to avoid this.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "exposure_out_of_range",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Exposition time is out of printer profile bounds.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "mesh_unsliceable",
+   "exit_code": 1,
+   "stdout": "",
+   "stderr": "Model named: model.stl can not be sliced: no slice level falls inside the model. The layer height (0.3 mm) is too large relative to the height of the object (0.101733 mm). Try lowering the layer height.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "support_points_model_mismatch",
+   "exit_code": 1,
+   "stdout": "",
+   "stderr": "SUPPORT_POINTS_MODEL_MISMATCH: imported support points do not match this model\n  expected: faces=972248;bbox=-346135,-95571,70000,346135,95571,578663,;checksum=2d3b2cb6e0e6752d\n  actual:   faces=972248;bbox=-173068,-47785,197166,173068,47785,451497,;checksum=6d85b6b4ac44ff38",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "success",
+   "exit_code": 0,
+   "stdout": "Support mesh exported to out_legacy_support_success_support.stl (includes supports and pad)",
+   "stderr": "",
+   "output_exists": true
+  },
+  {
+   "engine": "legacy",
+   "flow": "support",
+   "scenario": "support_mesh_export_failed",
+   "exit_code": 0,
+   "stdout": "[2026-09-23 17:29:45.349001] [0x00005034] [error]   its_write_stl_binary: Couldn't open out_legacy_support_support_mesh_export_failed_support.stl for writing",
+   "stderr": "Failed to export support mesh to out_legacy_support_support_mesh_export_failed_support.stl",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "pad_config_invalid",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Pad brim size is too small for the current configuration.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "head_too_wide",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Invalid pinhead diameter\nPinhead front diameter should be smaller than the Pillar diameter.\nPlease check value of Pinhead front diameter in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "head_penetration_invalid",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Invalid Head penetration\nHead penetration should not be greater than the Head width.\nPlease check value of Head penetration in Print Settings or Material Overrides.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "elevation_too_low",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Elevation is too low for object. Use the \"Pad around object\" feature to print the object without elevation.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "pad_gap_conflict",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "The endings of the support pillars will be deployed on the gap between the object and the pad. 'Support base safety distance' has to be greater than the 'Pad object gap' parameter to avoid this.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "exposure_out_of_range",
+   "exit_code": 0,
+   "stdout": "",
+   "stderr": "Exposition time is out of printer profile bounds.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "mesh_unsliceable",
+   "exit_code": 1,
+   "stdout": "",
+   "stderr": "Model named: model.stl can not be sliced: no slice level falls inside the model. The layer height (0.3 mm) is too large relative to the height of the object (0.101733 mm). Try lowering the layer height.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "support_points_model_mismatch",
+   "exit_code": 1,
+   "stdout": "",
+   "stderr": "SUPPORT_POINTS_MODEL_MISMATCH: imported support points do not match this model\n  expected: faces=972248;bbox=-346135,-95571,70000,346135,95571,578663,;checksum=2d3b2cb6e0e6752d\n  actual:   faces=972248;bbox=-173068,-47785,197166,173068,47785,451497,;checksum=6d85b6b4ac44ff38",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "success",
+   "exit_code": 0,
+   "stdout": "Slicing result exported to out_legacy_slice_success.sl1",
+   "stderr": "",
+   "output_exists": true
+  },
+  {
+   "engine": "legacy",
+   "flow": "slice",
+   "scenario": "support_mesh_export_failed",
+   "exit_code": 0,
+   "stdout": "[2026-09-23 17:29:54.973188] [0x00009bcc] [error]   its_write_stl_binary: Couldn't open out_legacy_slice_support_mesh_export_failed_support.stl for writing\nSlicing result exported to out_legacy_slice_support_mesh_export_failed.sl1",
+   "stderr": "Failed to export support mesh to out_legacy_slice_support_mesh_export_failed_support.stl",
+   "output_exists": true
+  },
+  {
+   "engine": "legacy",
+   "flow": "hollow",
+   "scenario": "interior_mesh_empty",
+   "exit_code": 0,
+   "stdout": "Generating hollow interior (thickness=2, quality=0.5, closing=2)...",
+   "stderr": "error: interior mesh is empty. Try reducing wall thickness for smaller models.",
+   "output_exists": false
+  },
+  {
+   "engine": "legacy",
+   "flow": "hollow",
+   "scenario": "success",
+   "exit_code": 0,
+   "stdout": "Generating hollow interior (thickness=0.5, quality=0.5, closing=2)...\nHollow interior mesh exported to out_legacy_hollow_success.stl",
+   "stderr": "",
+   "output_exists": true
+  }
+ ]
+}

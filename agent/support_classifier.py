@@ -10,6 +10,8 @@ signal (see openspec/changes/add-support-generation-error-codes, design D1).
 
 Decision order (first match wins):
 
+    Step 0  output hits the point/model mismatch marker
+                                                    -> FAILED + SUPPORT_POINTS_MODEL_MISMATCH
     Step 1  stderr hits a known validate() error   -> FAILED + specific code
             stderr hits a non-support validate error-> FAILED + fallback
     Step 2  stdout/stderr hits model-out-of-bounds  -> FAILED + MODEL_OUT_OF_BOUNDS
@@ -19,14 +21,15 @@ Decision order (first match wins):
 
 All markers are matched as English substrings. The validate() strings are
 translatable (``_u8L``), so the engine locale must be pinned to English for
-Step 1 to stay reliable (enforced separately; see Task 7). The stdout markers
-(Step 2-4) are raw literals and are not translated.
+Step 1 to stay reliable (enforced separately; see Task 7). The Step 0 marker and
+the stdout markers (Step 2-4) are raw literals and are not translated.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional, Union
+from dataclasses import dataclass, replace
+from typing import Dict, Optional, Tuple, Union
 
+from .engine_rules import engine_codes, engine_error_for, find_code
 from .models import JobStatus
 
 # Neutral supportOutcome value — NOT an error code; rides on a COMPLETED job.
@@ -35,9 +38,35 @@ SUPPORT_NOT_NEEDED = "SUPPORT_NOT_NEEDED"
 # Fallback error code for anything unattributable (fail-closed).
 FALLBACK_CODE = "SUPPORT_GENERATION_FAILED"
 
+# ─── Step 0: imported support points do not belong to this model ──────────────
+# Printed verbatim to stderr by ProcessActions.cpp before print->apply(), so the
+# run aborts before validate() and before any positive stdout marker can appear.
+# The literal is a contract with the fork; it is defined once in
+# src/libslic3r/SLA/SupportPointIO.hpp as support_points_model_mismatch_marker
+# and is pinned by test_support_string_contract.py.
+#
+# Checked FIRST, ahead of the fail-closed fallback, so "the model changed" is
+# never flattened into the generic "support generation failed" — the two need
+# different fixes on the caller's side (regenerate the points vs. adjust
+# settings). Like every other rule here it keys on text only, never on the
+# returncode: this fork exits 0 from several failing paths.
+MODEL_MISMATCH_MARKER = (
+    "SUPPORT_POINTS_MODEL_MISMATCH: imported support points do not match this model"
+)
+MODEL_MISMATCH_CODE = "SUPPORT_POINTS_MODEL_MISMATCH"
+
 # ─── Step 1: known SLAPrint::validate() messages → specific support code ───────
 # Distinctive English substrings taken from src/libslic3r/SLAPrint.cpp::validate().
 # The messages are mutually exclusive; list order only fixes determinism.
+#
+# merge-engine-result-classifiers: classify_support_result() no longer reads
+# this constant — the real Step 1 lookup queries the shared
+# agent.engine_rules.ENGINE_RULES table (flow="support") instead, so a fix
+# like adding PAD_CONFIG_INVALID to the support flow is a one-line `flows`
+# edit in engine_rules.py, not a second hand-copy here. This tuple is kept,
+# frozen at its original five entries, purely because test_support_classifier
+# .py imports and pins it (`test_validate_map_covers_all_five_specific_codes`)
+# — it documents "what this flow used to see" and no longer needs updating.
 VALIDATE_CODE_MAP = (
     ("Cannot proceed without support points", "SUPPORT_POINTS_REQUIRED"),
     ("Elevation is too low for object", "SUPPORT_ELEVATION_TOO_LOW"),
@@ -49,10 +78,15 @@ VALIDATE_CODE_MAP = (
 # validate() errors that are genuine failures but not support-specific. Matched
 # at Step 1 (before the stdout markers) so a validate failure always wins over a
 # stray marker, per the "Step 1 first" ordering. They route to the fallback code.
-NONSPECIFIC_VALIDATE_MARKERS = (
-    "xposition time is out of printer profile bounds",  # "Exposition"/"Initial exposition"
-    "Disabling the 'Use tilt' function",
-)
+#
+# "Disabling the 'Use tilt' function" moved to ENGINE_RULES as an explicit
+# fallback_by_design=True row (Task 2.4) — the Step 1 `find_code()` call above
+# now catches it, so it is removed from here rather than kept as a second,
+# driftable copy. The exposition message stays local: it is genuinely
+# support-flow-only behavior (the slice flow has its own specific
+# EXPOSURE_TIME_OUT_OF_RANGE code for the same string), and this change's
+# scope is limited to the one marker Task 2.4 named.
+NONSPECIFIC_VALIDATE_MARKERS = ("xposition time is out of printer profile bounds",)
 
 # ─── Step 2: model placement failure (printed on stdout) ──────────────────────
 OUT_OF_BOUNDS_MARKER = "no object is fully inside the print volume"
@@ -72,6 +106,11 @@ class SupportClassification:
     support_outcome: Optional[str] = None
     has_support_mesh: bool = False
     detail: Optional[str] = None
+    # The engine's own report for error_code (SLAConfig field names;
+    # thresholds and actual settings), or None when it did not declare that
+    # code (engine-error-code-table Task 8.1).
+    fields: Optional[Tuple[str, ...]] = None
+    values: Optional[Dict[str, float]] = None
 
 
 def _to_text(stream: Union[str, bytes, bytearray, None]) -> str:
@@ -91,18 +130,55 @@ def classify_support_result(
     stderr: Union[str, bytes, None],
     support_stl_exists: bool,
 ) -> SupportClassification:
-    """Classify a support-only CLI run from its text output (never the exit code)."""
+    """Classify a support-only CLI run from its text output (never the exit
+    code), then attach the engine's fields and values when it declared the
+    code the run was attributed to."""
+    result = _classify(stdout, stderr, support_stl_exists)
+    reported = engine_error_for(_to_text(stdout), result.error_code)
+    if reported is None:
+        return result
+    return replace(result, fields=reported.fields, values=reported.values)
+
+
+def _classify(
+    stdout: Union[str, bytes, None],
+    stderr: Union[str, bytes, None],
+    support_stl_exists: bool,
+) -> SupportClassification:
     out = _to_text(stdout)
     err = _to_text(stderr)
+    declared = engine_codes(out)
+
+    # ── Step 0: imported points reject the model → dedicated code ────────────
+    # Scanned on both streams for the same reason as Step 2: the marker goes to
+    # stderr today, and a future stream reshuffle must not silently downgrade
+    # this to the fallback code.
+    if (MODEL_MISMATCH_CODE in declared
+            or MODEL_MISMATCH_MARKER in err or MODEL_MISMATCH_MARKER in out):
+        return SupportClassification(
+            status=JobStatus.FAILED,
+            error_code=MODEL_MISMATCH_CODE,
+            has_support_mesh=False,
+            detail=_raw_appendix(out, err),
+        )
 
     # ── Step 1: known validate() errors on stderr ────────────────────────────
-    for needle, code in VALIDATE_CODE_MAP:
-        if needle in err:
-            return SupportClassification(
-                status=JobStatus.FAILED,
-                error_code=code,
-                detail=err.strip() or None,
-            )
+    # Queries the shared ENGINE_RULES table (not VALIDATE_CODE_MAP above —
+    # see its docstring) so a fix like PAD_CONFIG_INVALID gaining the
+    # "support" flow (Task 2.2) takes effect here with no code change.
+    rule = find_code("support", err, out)
+    if rule is not None and not rule.fallback_by_design:
+        return SupportClassification(
+            status=JobStatus.FAILED,
+            error_code=rule.code,
+            detail=err.strip() or None,
+        )
+    if rule is not None and rule.fallback_by_design:
+        return SupportClassification(
+            status=JobStatus.FAILED,
+            error_code=FALLBACK_CODE,
+            detail=_raw_appendix(out, err),
+        )
     for needle in NONSPECIFIC_VALIDATE_MARKERS:
         if needle in err:
             # Attributed to the fallback code, so the debug appendix MUST carry
@@ -115,7 +191,8 @@ def classify_support_result(
             )
 
     # ── Step 2: model out of bounds (marker on stdout; scan stderr too) ───────
-    if OUT_OF_BOUNDS_MARKER in out or OUT_OF_BOUNDS_MARKER in err:
+    if (OUT_OF_BOUNDS_CODE in declared
+            or OUT_OF_BOUNDS_MARKER in out or OUT_OF_BOUNDS_MARKER in err):
         return SupportClassification(
             status=JobStatus.FAILED,
             error_code=OUT_OF_BOUNDS_CODE,
