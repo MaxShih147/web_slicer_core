@@ -167,14 +167,30 @@ function Get-ExtractedIconSha256([string]$Path) {
     if ($null -eq $icon) {
         throw "ExtractAssociatedIcon returned null for $Path"
     }
+    # Hash decoded ARGB pixels, not Icon.Save() bytes: Icon.Save() serializes an
+    # HICON from a .ico file and from a PE resource differently, so identical
+    # icons produced different hashes (false gate failure on Windows 10).
+    $bmp = $null
     try {
-        $ms = New-Object System.IO.MemoryStream
-        $icon.Save($ms)
-        $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($ms.ToArray())
+        $bmp = $icon.ToBitmap()
+        $rect = New-Object System.Drawing.Rectangle 0, 0, $bmp.Width, $bmp.Height
+        $data = $bmp.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::ReadOnly,
+            [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        try {
+            $rowBytes = $bmp.Width * 4
+            $pixels = New-Object byte[] ($rowBytes * $bmp.Height)
+            for ($y = 0; $y -lt $bmp.Height; $y++) {
+                $rowPtr = [System.IntPtr]::Add($data.Scan0, $y * $data.Stride)
+                [System.Runtime.InteropServices.Marshal]::Copy($rowPtr, $pixels, $y * $rowBytes, $rowBytes)
+            }
+        } finally {
+            $bmp.UnlockBits($data)
+        }
+        $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($pixels)
         return ([System.BitConverter]::ToString($hash) -replace '-', '').ToLowerInvariant()
     } finally {
+        if ($bmp) { $bmp.Dispose() }
         $icon.Dispose()
-        if ($ms) { $ms.Dispose() }
     }
 }
 
