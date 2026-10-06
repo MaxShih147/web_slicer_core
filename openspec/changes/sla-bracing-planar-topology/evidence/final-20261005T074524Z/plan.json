@@ -1,0 +1,45 @@
+{
+  "out": "D:/repos/web_slicer_core/openspec/changes/sla-bracing-planar-topology/evidence/final-20261005T074524Z/runs.jsonl",
+  "cases": [
+    {
+      "id": "small",
+      "model": "D:/repos/web_slicer_core/third_party/prusaslicer_fork/tests/data/frog_legs.obj",
+      "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-bracing-planar-topology\\evidence\\baseline-20261005T051227Z\\config-small.ini",
+      "repeats": [
+        7,
+        5
+      ],
+      "point_runs": 2
+    },
+    {
+      "id": "medium",
+      "model": "D:\\repos\\web_slicer_core\\scripts\\raster_bench\\work\\fixtures\\secondary-8k-guide-x3\\model.stl",
+      "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-bracing-planar-topology\\evidence\\baseline-20261005T051227Z\\config-medium.ini",
+      "repeats": [
+        5,
+        3
+      ],
+      "point_runs": 2
+    },
+    {
+      "id": "full",
+      "model": "D:\\repos\\web_slicer_core\\scripts\\raster_bench\\work\\fixtures\\primary-16k-guide-x8\\model.stl",
+      "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-bracing-planar-topology\\evidence\\baseline-20261005T051227Z\\config-full.ini",
+      "repeats": [
+        5,
+        3
+      ],
+      "point_runs": 2
+    },
+    {
+      "id": "tall",
+      "model": "builtin:tall_fixture",
+      "config": "D:/repos/web_slicer_core/openspec/changes/sla-bracing-planar-topology/evidence/baseline-20261005T051227Z/config-small.ini",
+      "repeats": [
+        7,
+        5
+      ],
+      "point_runs": 2
+    }
+  ]
+}
