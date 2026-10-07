@@ -32,7 +32,7 @@ that produced this module):
 
 `evaluate()` takes already-clamped, already-validated parameter values (the
 same shape `SLAConfig().model_dump()` produces) — it does not re-implement
-SLAConfig's own validators (e.g. enforce_min_elevation's floor of 5.0). The
+SLAConfig's own validators (e.g. enforce_min_elevation's floor of 0.0). The
 one exception is `support_base_safety_distance`'s near-zero clamp to 0.5mm,
 which happens inside the ENGINE, not in SLAConfig (models.py deliberately
 leaves this field as a passthrough) — see R4 below.
@@ -328,8 +328,8 @@ def compute_clamps(raw_params: dict) -> list:
     input, independent of `evaluate()`."""
     clamps = []
     elevation = raw_params.get("support_object_elevation")
-    if elevation is not None and elevation < 5.0:
-        clamps.append(ClampedField("support_object_elevation", elevation, 5.0))
+    if elevation is not None and elevation < 0.0:
+        clamps.append(ClampedField("support_object_elevation", elevation, 0.0))
     safety = raw_params.get("support_base_safety_distance")
     if safety is not None and safety < _ENGINE_SAFETY_DISTANCE_EPSILON:
         clamps.append(

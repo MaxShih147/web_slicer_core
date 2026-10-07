@@ -85,17 +85,21 @@ class TestProblemsShape:
 
 
 class TestClampedShape:
-    def test_low_elevation_is_clamped_not_rejected(self, client):
+    def test_low_elevation_is_not_clamped(self, client):
         c, _ = client
         body = {**_defaults(), "flow": "support", "supports_enable": True, "support_object_elevation": 3.0}
         resp = c.post("/api/v2/support-params/validate", json=body)
         data = resp.json()
-        assert data["ok"] is True  # a clamp is not a failure
-        assert len(data["clamped"]) == 1
-        clamp = data["clamped"][0]
-        assert clamp["field"] == "support_object_elevation"
-        assert clamp["original"] == 3.0
-        assert clamp["effective"] == 5.0
+        assert not any(x["field"] == "support_object_elevation" for x in data["clamped"])
+
+    def test_negative_elevation_is_clamped_to_zero(self, client):
+        c, _ = client
+        body = {**_defaults(), "flow": "support", "supports_enable": True, "support_object_elevation": -1.0}
+        resp = c.post("/api/v2/support-params/validate", json=body)
+        data = resp.json()
+        clamp = next(x for x in data["clamped"] if x["field"] == "support_object_elevation")
+        assert clamp["original"] == -1.0
+        assert clamp["effective"] == 0.0
 
     def test_near_zero_safety_distance_is_clamped(self, client):
         c, _ = client
