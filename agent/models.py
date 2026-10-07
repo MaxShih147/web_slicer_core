@@ -63,7 +63,7 @@ class SLAConfig(BaseModel):
     @field_validator('support_object_elevation')
     @classmethod
     def enforce_min_elevation(cls, v: float) -> float:
-        return max(5.0, v)
+        return max(0.0, v)
 
     # Support tree global parameters (F1/B2).
     #

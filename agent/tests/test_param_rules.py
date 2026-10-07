@@ -88,7 +88,7 @@ class TestR2SupportHeadPenetrationInvalid:
 class TestR3SupportElevationTooLow:
     # head_fullwidth = front_diameter + pillar_diameter + head_width - penetration
     # Defaults: 0.4 + pillar + 1.0 - 0.2 = pillar + 1.2. Solve pillar so
-    # head_fullwidth == 5.0 exactly (elevation floors at 5.0 via enforce_min_elevation).
+    # head_fullwidth == 5.0 exactly (elevation 5.0 set explicitly).
     PILLAR_AT_BOUNDARY = 5.0 - 1.2
 
     def test_elevation_equal_to_head_fullwidth_passes(self):
