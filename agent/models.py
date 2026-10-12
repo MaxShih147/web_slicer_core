@@ -143,7 +143,12 @@ class SLAConfig(BaseModel):
     # sla_operations.generate_config_ini, which would otherwise hand the CLI an
     # option it rejects). They ride on the config so the whole request is one
     # object and the job's config.json records what was asked for.
-    support_avoid_guide_holes: bool = True
+    #
+    # OFF unless asked for. One-click processing turns it on for a surgical
+    # guide, because orienting the guide is what stands its holes up and puts
+    # support points on their walls. A caller growing supports on their own gets
+    # what they asked for and nothing taken away.
+    support_avoid_guide_holes: bool = False
     support_guide_hole_margin: float = 0.5
 
     # Pad settings

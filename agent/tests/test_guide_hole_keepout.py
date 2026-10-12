@@ -224,11 +224,14 @@ class TestTheSettingReachesTheOperation:
         assert config.support_avoid_guide_holes is False
         assert config.support_guide_hole_margin == pytest.approx(0.9)
 
-    def test_the_keep_out_is_on_unless_the_panel_says_otherwise(self):
+    def test_the_keep_out_is_off_unless_it_is_asked_for(self):
+        # One-click processing asks for it, for a surgical guide. A caller
+        # growing supports on their own gets what they asked for and nothing
+        # taken away, so the default cannot be "on".
         from agent.api_v2 import _convert_v2_config_to_sla
 
         config = _convert_v2_config_to_sla({"layer_height": 0.05})
-        assert config.support_avoid_guide_holes is True
+        assert config.support_avoid_guide_holes is False
         assert config.support_guide_hole_margin == pytest.approx(0.5)
 
     def test_neither_is_written_into_the_engine_config(self, tmp_path):
