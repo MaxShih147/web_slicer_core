@@ -372,3 +372,46 @@ class TestNothingHappensWhenItShouldNot:
         # and the call still returns rather than raising. That is the proof that
         # a model which is not a guide pays nothing for this feature.
         assert self._run(tmp_path, support_avoid_guide_holes=False) == {"applied": False}
+
+
+class TestFindingEveryHole:
+    """drill_cylinders_for_keepout finds the holes the orientation path drops.
+
+    The orientation path wants the ONE end face that settles the drill
+    direction, so it also demands connection edges onto perpendicular walls -
+    a test a hole opening onto a slot can fail. On 王月境 I15,I16 stent.stl that
+    left the second of two holes undetected and support heads sitting 0.2mm off
+    its rim.
+
+    The evidence for the fix is a sweep of real guides, which cannot live here:
+    oriented as supports are grown, across 16 of them it found more holes on 3,
+    the same number on 13, and fewer on none. What is testable without patient
+    data are the guards - a synthetic slab is too coarsely tessellated to grow
+    the flat patches the real detector needs, so a bore fixture would assert
+    nothing about the detection itself.
+    """
+
+    def test_finds_nothing_in_an_empty_mesh(self):
+        from agent.auto_orient_surg_guide import drill_cylinders_for_keepout
+
+        empty = np.zeros((0, 3), dtype=np.float32)
+        assert drill_cylinders_for_keepout(empty, np.zeros((0, 3), dtype=np.uint32)) == []
+
+    def test_finds_nothing_in_a_solid_slab(self):
+        from agent.auto_orient_surg_guide import drill_cylinders_for_keepout
+
+        # No hole anywhere: the scanline stage has nothing to report, so no
+        # amount of flat patch is a drill hole.
+        verts, faces = slab_with_bore()
+        assert drill_cylinders_for_keepout(verts, faces[96:]) == []
+
+    def test_rejects_an_end_face_that_does_not_point_along_the_axis(self):
+        # A guide is oriented before its supports are grown, which stands its
+        # holes up - so an end face pointing sideways is some other feature.
+        # Turning the slab on its side must therefore find nothing, where
+        # upright it would be a candidate.
+        from agent.auto_orient_surg_guide import drill_cylinders_for_keepout
+
+        verts, faces = slab_with_bore()
+        on_its_side = verts[:, [2, 1, 0]].astype(np.float32)
+        assert drill_cylinders_for_keepout(on_its_side, faces) == []

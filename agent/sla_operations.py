@@ -525,7 +525,7 @@ async def keep_supports_out_of_guide_holes(
     try:
         import numpy as np
 
-        from .auto_orient_surg_guide import compute_auto_orientation_surg_guide_detail
+        from .auto_orient_surg_guide import drill_cylinders_for_keepout
         from .guide_hole_keepout import keepout_from_mesh, move_points_off_holes
     except ImportError as exc:                      # pragma: no cover - env only
         logger.warning("[%s] guide hole keep-out unavailable: %s", job_dir.name, exc)
@@ -535,15 +535,15 @@ async def keep_supports_out_of_guide_holes(
     vertices = np.asarray(mesh.vertices, dtype=np.float32)
     faces = np.asarray(mesh.faces, dtype=np.uint32)
 
-    # The detector is asked for its drill-hole search envelopes. It also works
-    # out an orientation, which is no use here - this model is already placed -
-    # but the holes are found by shape, so the answer does not depend on it.
-    detail = await asyncio.to_thread(
-        compute_auto_orientation_surg_guide_detail, vertices, faces, False, True
-    )
+    # EVERY hole, not the one the orientation settled on. The orientation path
+    # demands connection edges onto perpendicular walls as well, which a hole
+    # opening onto a slot can fail - on 王月境 I15,I16 stent.stl that left the
+    # second of two holes undetected and supports landing on its rim. See
+    # drill_cylinders_for_keepout for what it asks instead.
+    cylinders = await asyncio.to_thread(drill_cylinders_for_keepout, vertices, faces)
     keepout = await asyncio.to_thread(
         keepout_from_mesh,
-        vertices, faces, detail.get("cylinders") or [],
+        vertices, faces, cylinders,
         float(getattr(config, "support_guide_hole_margin", 0.5)),
     )
     if keepout is None:
@@ -551,6 +551,7 @@ async def keep_supports_out_of_guide_holes(
         # is nothing to keep off, and no second engine run is spent.
         report["holes"] = 0
         return report
+    report["holes"] = len(cylinders)
     report["hole_faces"] = keepout.face_count
     report["margin"] = keepout.margin
 

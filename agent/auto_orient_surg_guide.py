@@ -886,6 +886,74 @@ def _patch_outer_diam(mesh: _Mesh, P: _Patch) -> float:
     return float(ext.max())
 
 
+def drill_cylinders_for_keepout(
+    vertices: np.ndarray,
+    faces: np.ndarray,
+    axis_tolerance: float = 0.9,
+) -> list:
+    """Every drill-hole end face, for keeping supports out of the holes.
+
+    NOT the orientation path, and it must not become one. Orientation needs the
+    ONE end face that defines the drill direction, and
+    ``_is_drill_patch_by_edges`` earns that by also demanding connection edges
+    onto perpendicular hole walls - a test that a guide whose hole opens onto a
+    slot can fail. Measured on 王月境 I15,I16 stent.stl: three patches pass the
+    scanline test (so all three genuinely have a hole in them), two of them
+    pointing straight down with aspect ratios of 1.01 and 1.04, and only one
+    survives that last stage. The other is the second drill hole, and supports
+    were landing on its rim because nothing downstream knew it was there.
+
+    So for the keep-out the test stops at the scanline stage - "this patch has a
+    hole in it" - and adds one condition of its own instead: the patch must face
+    along the model's own axis. A guide is oriented before supports are grown,
+    which stands its holes up, so a hole's end face points up or down and a
+    patch facing sideways is some other feature. That is what rejects the third
+    of those three, whose normal was [0.48, -0.88, 0.03].
+
+    Args:
+        vertices: (N,3) model vertices, oriented as the supports will be grown
+        faces: (M,3) triangle indices
+        axis_tolerance: how nearly the end face must point along Z
+
+    Returns:
+        ``{center, axis, radius, length}`` per end face, the same loose search
+        envelopes ``_build_drill_cylinders`` gives the orientation path.
+    """
+    mesh = _weld_and_build(np.asarray(vertices, np.float32), np.asarray(faces, np.uint32))
+    patches = _grow_patches(mesh)
+    if not patches:
+        return []
+
+    found: list[_Patch] = []
+    for P in patches:
+        if len(P.faces) < 5 or P.area <= 0.0:
+            continue
+        n = _normalize(P.avg_normal)
+        if _norm(n) < 0.5 or abs(float(n[2])) < axis_tolerance:
+            continue
+        ex, ey = _build_orthonormal_basis(n)
+        vids = np.unique(mesh.fi[np.asarray(P.faces, dtype=np.int64)].reshape(-1).astype(np.int64))
+        if vids.shape[0] < 3:
+            continue
+        q = mesh.v[vids] - np.asarray(P.center, dtype=np.float64)
+        pts = np.column_stack([q @ np.asarray(ex, np.float64), q @ np.asarray(ey, np.float64)])
+        centred = pts - pts.mean(axis=0)
+        _vals, vecs = np.linalg.eigh(np.cov(centred.T))
+        extents = (centred @ vecs).max(axis=0) - (centred @ vecs).min(axis=0)
+        long_edge, short_edge = float(extents.max()), float(extents.min())
+        if not (long_edge > 0.0 and short_edge > 0.0):
+            continue
+        if long_edge < RING_OUTER_DIAM_MIN or long_edge > RING_OUTER_DIAM_MAX:
+            continue
+        if long_edge > RING_MAX_ASPECT * short_edge:
+            continue
+        if not _patch_has_hole_by_scanlines(mesh, P, ex, ey):
+            continue
+        found.append(P)
+
+    return _build_drill_cylinders(mesh, found)
+
+
 def _build_drill_cylinders(mesh: _Mesh, drill_patches: list) -> list:
     """One cylinder per detected candidate end face (no pairing).
 
