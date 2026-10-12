@@ -501,10 +501,13 @@ async def keep_supports_out_of_guide_holes(
     config: SLAConfig,
     input_file: Path,
 ) -> Dict[str, Any]:
-    """Take the support points that sit on a guide's drill holes off the list.
+    """Slide the support heads that sit on a guide's drill hole off it.
 
     A hole has to stay clear for the drill, so no support HEAD may land on its
-    wall or on the rim where that wall meets the outside. Nothing happens unless the setting is on and holes are
+    wall or on the rim where that wall meets the outside. A head that does is
+    moved along the surface to the nearest place that clears it, so the support
+    count holds - see move_points_off_holes for why deleting them was not good
+    enough. Nothing happens unless the setting is on and holes are
     actually found, so a model that is not a guide pays nothing for this.
 
     The list the engine would have used is asked for first (the points-only fast
@@ -523,7 +526,7 @@ async def keep_supports_out_of_guide_holes(
         import numpy as np
 
         from .auto_orient_surg_guide import compute_auto_orientation_surg_guide_detail
-        from .guide_hole_keepout import drop_points_on_holes, keepout_from_mesh
+        from .guide_hole_keepout import keepout_from_mesh, move_points_off_holes
     except ImportError as exc:                      # pragma: no cover - env only
         logger.warning("[%s] guide hole keep-out unavailable: %s", job_dir.name, exc)
         return report
@@ -566,13 +569,16 @@ async def keep_supports_out_of_guide_holes(
             return report
         document = json.loads(points_file.read_text())
 
-    document, dropped = await asyncio.to_thread(drop_points_on_holes, document, keepout)
+    document, moved, dropped = await asyncio.to_thread(
+        move_points_off_holes, document, keepout
+    )
     write_support_points_input(job_dir, document)
-    report.update(applied=True, dropped=dropped, kept=len(document.get("points") or []))
+    report.update(applied=True, moved=moved, dropped=dropped,
+                  kept=len(document.get("points") or []))
     logger.info(
-        "[%s] guide hole keep-out: %d wall face(s) within %.2fmm, dropped %d support "
-        "point(s), kept %d",
-        job_dir.name, keepout.face_count, keepout.margin, dropped, report["kept"],
+        "[%s] guide hole keep-out: %d wall face(s) within %.2fmm, moved %d support "
+        "point(s), dropped %d with nowhere to go, kept %d",
+        job_dir.name, keepout.face_count, keepout.margin, moved, dropped, report["kept"],
     )
     return report
 

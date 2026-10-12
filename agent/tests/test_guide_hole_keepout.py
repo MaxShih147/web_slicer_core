@@ -14,6 +14,7 @@ import pytest
 from agent.guide_hole_keepout import (
     drop_points_on_holes,
     keepout_from_mesh,
+    move_points_off_holes,
     wall_faces,
 )
 
@@ -200,6 +201,100 @@ class TestDroppingPoints:
         out, dropped = drop_points_on_holes({"points": []}, keepout)
         assert dropped == 0
         assert out["points"] == []
+
+
+class TestMovingPointsOffHoles:
+    """A head on a hole is slid clear, not deleted.
+
+    Deleting worked and cost too much: head counts fell one for one (48 to 42 on
+    one guide) because the filtered list is handed to the engine as final, and a
+    hole's opening is a thin edge to leave unsupported.
+    """
+
+    @pytest.fixture
+    def keepout(self):
+        verts, faces = slab_with_bore(bore_radius=2.0, half_height=5.0, half_width=20.0)
+        return keepout_from_mesh(verts, faces, envelope(), margin=0.5)
+
+    def document(self, *positions):
+        return {
+            "model_fingerprint": {"face_count": 104, "vertex_checksum": "abc"},
+            "points": [{"pos": list(p), "type": "island"} for p in positions],
+        }
+
+    def test_keeps_every_head_and_moves_the_ones_on_a_hole(self, keepout):
+        # On the slab's underside, just outside the bore: the shape the measured
+        # guides had, where every point found on a hole sat on a face pointing
+        # straight down.
+        doc = self.document((2.2, 0, -5), (10, 0, -5), (-2.2, 0, -5))
+        out, moved, dropped = move_points_off_holes(doc, keepout)
+
+        assert (moved, dropped) == (2, 0)
+        assert len(out["points"]) == 3
+
+    def test_leaves_the_moved_head_clear_of_the_hole(self, keepout):
+        doc = self.document((2.2, 0, -5))
+        out, moved, _ = move_points_off_holes(doc, keepout)
+
+        assert moved == 1
+        assert not keepout.are_on_a_hole([out["points"][0]["pos"]])[0]
+
+    def test_moves_it_no_further_than_it_has_to(self, keepout):
+        doc = self.document((2.2, 0, -5))
+        out, _, _ = move_points_off_holes(doc, keepout)
+
+        before = np.array([2.2, 0, -5]); after = np.array(out["points"][0]["pos"])
+        # Just clear of the margin, not flung across the model.
+        assert np.linalg.norm(after - before) < 1.5
+
+    def test_keeps_everything_else_about_the_head(self, keepout):
+        doc = self.document((2.2, 0, -5))
+        doc["points"][0]["head_front_radius"] = 0.33
+        out, _, _ = move_points_off_holes(doc, keepout)
+
+        assert out["points"][0]["head_front_radius"] == 0.33
+        assert out["points"][0]["type"] == "island"
+
+    def test_keeps_the_fingerprint(self, keepout):
+        doc = self.document((2.2, 0, -5))
+        out, _, _ = move_points_off_holes(doc, keepout)
+        assert out["model_fingerprint"] == doc["model_fingerprint"]
+
+    def test_leaves_the_document_alone_when_nothing_is_on_a_hole(self, keepout):
+        doc = self.document((10, 0, -5), (-10, 4, -5))
+        out, moved, dropped = move_points_off_holes(doc, keepout)
+
+        assert (moved, dropped) == (0, 0)
+        assert out is doc
+
+    def test_leaves_the_document_alone_without_a_keep_out(self):
+        doc = self.document((2.2, 0, -5))
+        out, moved, dropped = move_points_off_holes(doc, None)
+
+        assert (moved, dropped) == (0, 0)
+        assert out is doc
+
+    def test_drops_a_head_with_nowhere_to_go(self, keepout):
+        # Halfway up the bore wall: every direction across THAT surface is still
+        # the wall, and the openings are further off than the search reaches.
+        # Dropping it is the old behaviour, kept for exactly this case.
+        doc = self.document((2.0, 0.0, 0.0))
+        out, moved, dropped = move_points_off_holes(doc, keepout)
+
+        assert (moved, dropped) == (0, 1)
+        assert out["points"] == []
+
+    def test_a_point_in_mid_air_down_the_bore_is_not_its_business(self, keepout):
+        # The test is a distance to the hole's SURFACE, and the middle of a 2mm
+        # bore is 2mm from it. That is not an oversight: a support point sits on
+        # the model surface by construction, so there is no interior case - and
+        # pretending otherwise is what every attempt at a fitted cylinder was
+        # really failing at.
+        doc = self.document((0.0, 0.0, 0.0))
+        out, moved, dropped = move_points_off_holes(doc, keepout)
+
+        assert (moved, dropped) == (0, 0)
+        assert out is doc
 
 
 class TestTheSettingReachesTheOperation:

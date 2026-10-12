@@ -144,7 +144,8 @@ class GuideHoleKeepOut:
     chamfer between, without any of them being described separately.
     """
 
-    def __init__(self, patch, margin: float):
+    def __init__(self, mesh, patch, margin: float):
+        self._mesh = mesh
         self._patch = patch
         self._margin = float(margin)
         # Built once: the queries come in one list per generation, but building
@@ -152,6 +153,9 @@ class GuideHoleKeepOut:
         import trimesh
 
         self._query = trimesh.proximity.ProximityQuery(patch)
+        self._surface = trimesh.proximity.ProximityQuery(mesh)
+        self._centres = np.asarray(mesh.triangles_center, dtype=np.float64)
+        self._normals = np.asarray(mesh.face_normals, dtype=np.float64)
 
     @property
     def face_count(self) -> int:
@@ -160,6 +164,55 @@ class GuideHoleKeepOut:
     @property
     def margin(self) -> float:
         return self._margin
+
+    def nearest_clear_place(
+        self, position: np.ndarray, normal: np.ndarray
+    ) -> Optional[np.ndarray]:
+        """The nearest spot on the model that is clear of every hole.
+
+        Candidates are stepped outward from the position across its own surface
+        and then put back onto the mesh, rather than taken from the mesh's face
+        centres. Face centres are only as close together as the model happens to
+        be tessellated - on a coarse mesh the nearest one can be further away
+        than the whole search, and the head would be dropped for want of
+        somewhere to go that was there all along.
+
+        A candidate is kept only if it is clear of every hole AND lands on a
+        face whose normal still agrees with the one given, so a head slides
+        along the surface it was placed on rather than hopping onto a different
+        feature. None when nothing within reach qualifies, which leaves the
+        caller to drop the head.
+        """
+        normal = np.asarray(normal, dtype=np.float64) if normal is not None else None
+        if normal is None or not np.any(normal):
+            return None
+        normal = normal / np.linalg.norm(normal)
+
+        # Two directions across the surface. The seed is whichever axis the
+        # normal leans on least, so the cross product never collapses.
+        seed = np.eye(3)[int(np.argmin(np.abs(normal)))]
+        u = np.cross(normal, seed)
+        u /= np.linalg.norm(u)
+        v = np.cross(normal, u)
+
+        angles = np.linspace(0.0, 2.0 * np.pi, _RELOCATE_DIRECTIONS, endpoint=False)
+        radii = np.arange(_RELOCATE_STEP_MM, _RELOCATE_REACH_MM + 1e-9, _RELOCATE_STEP_MM)
+        offsets = (np.cos(angles)[:, None] * u[None, :] + np.sin(angles)[:, None] * v[None, :])
+        probes = (position[None, None, :] + radii[None, :, None] * offsets[:, None, :]).reshape(-1, 3)
+
+        # Back onto the surface: a probe stepped across a curved face leaves it.
+        landed, _, face_of = self._surface.on_surface(probes)
+        agrees = (self._normals[np.asarray(face_of, dtype=np.int64)] @ normal) >= _SAME_SURFACE_DOT
+        if not agrees.any():
+            return None
+
+        places = landed[agrees]
+        clear = _clear_of_holes(self, places)
+        if not clear.any():
+            return None
+
+        places = places[clear]
+        return places[np.argmin(np.linalg.norm(places - position, axis=1))]
 
     def are_on_a_hole(self, points: Sequence[Sequence[float]]) -> np.ndarray:
         """Which of these points sit on a hole, as a boolean mask.
@@ -172,6 +225,26 @@ class GuideHoleKeepOut:
             return np.zeros(0, dtype=bool)
         query = np.asarray(points, dtype=np.float64).reshape(-1, 3)
         return np.abs(self._query.signed_distance(query)) <= self._margin
+
+
+# How far along the surface a head may be slid to get clear of a hole. The
+# points measured sat 0.2mm off a wall and the holes are 1-3mm in radius, so a
+# few millimetres is the distance in question; past that the head would no
+# longer be supporting the place it was put for.
+_RELOCATE_REACH_MM = 4.0
+
+# How finely the search steps outward, and in how many directions across the
+# surface. 0.25mm is well under the margin, so the nearest clear spot is found
+# to within a fraction of the distance being cleared.
+_RELOCATE_STEP_MM = 0.25
+_RELOCATE_DIRECTIONS = 16
+
+# A relocated head stays on the same KIND of surface. All but 2% of the engine's
+# own points sit on downward-facing faces (median normal z of -0.94, and every
+# one of the points found on a hole sat on a face pointing straight down), so a
+# candidate whose normal has turned away from the original's is a different
+# feature of the model, not the same surface a little further along.
+_SAME_SURFACE_DOT = 0.7
 
 
 def keepout_from_mesh(
@@ -197,7 +270,68 @@ def keepout_from_mesh(
         process=False,
     )
     patch = mesh.submesh([indices], append=True)
-    return GuideHoleKeepOut(patch, margin)
+    return GuideHoleKeepOut(mesh, patch, margin)
+
+
+def _clear_of_holes(keepout: "GuideHoleKeepOut", points: np.ndarray) -> np.ndarray:
+    """Which of these candidate positions are far enough from every hole."""
+    if not len(points):
+        return np.zeros(0, dtype=bool)
+    return np.abs(keepout._query.signed_distance(points)) > keepout.margin
+
+
+def move_points_off_holes(
+    document: Dict[str, Any], keepout: Optional["GuideHoleKeepOut"]
+) -> Tuple[Dict[str, Any], int, int]:
+    """Slide the support heads that sit on a drill hole off it.
+
+    Moved rather than removed. Deleting them worked - every element crossing a
+    bore went away with the points that made it - but it cost the supports
+    outright: head counts fell one for one, 48 to 42 on one guide, and the
+    engine does not put them back because the filtered list is handed to it as
+    final. A hole's opening is a thin edge, and leaving that edge unsupported
+    trades a guide the drill cannot pass for one that prints out of shape.
+
+    So each such head is slid along the model's surface to the nearest place
+    that clears the hole, staying on the same kind of surface (see
+    _SAME_SURFACE_DOT). A head with nowhere within reach to go is dropped, which
+    is the old behaviour for the case where moving is not possible.
+
+    Returns the document, how many heads moved, and how many had to be dropped.
+    """
+    points: List[Dict[str, Any]] = document.get("points") or []
+    if keepout is None or not points:
+        return document, 0, 0
+
+    positions = np.asarray(
+        [p.get("pos", (0.0, 0.0, 0.0)) for p in points], dtype=np.float64
+    ).reshape(-1, 3)
+    on_a_hole = keepout.are_on_a_hole(positions)
+    if not on_a_hole.any():
+        return document, 0, 0
+
+    # The surface each of them is on, to keep a moved head on its like.
+    _, _, face_of = keepout._surface.on_surface(positions[on_a_hole])
+    originals = keepout._normals[np.asarray(face_of, dtype=np.int64)]
+
+    kept: List[Dict[str, Any]] = []
+    moved = dropped = 0
+    bad_index = 0
+    for point, position, bad in zip(points, positions, on_a_hole):
+        if not bad:
+            kept.append(point)
+            continue
+        where = keepout.nearest_clear_place(position, originals[bad_index])
+        bad_index += 1
+        if where is None:
+            dropped += 1
+            continue
+        kept.append({**point, "pos": [float(where[0]), float(where[1]), float(where[2])]})
+        moved += 1
+
+    if moved or dropped:
+        document = {**document, "points": kept}
+    return document, moved, dropped
 
 
 def drop_points_on_holes(
