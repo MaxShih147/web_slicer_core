@@ -1,4 +1,4 @@
-"""The drill-hole keep-out: measuring a bore, and dropping what falls in it.
+"""The drill-hole keep-out: finding the wall, and dropping the heads on it.
 
 Built on a synthetic guide rather than a patient model - a slab with a bore
 through it, where the right answer is known rather than measured. The real
@@ -12,9 +12,9 @@ import numpy as np
 import pytest
 
 from agent.guide_hole_keepout import (
-    bores_from_mesh,
-    drop_points_in_bores,
-    is_in_a_bore,
+    drop_points_on_holes,
+    keepout_from_mesh,
+    wall_faces,
 )
 
 
@@ -67,51 +67,31 @@ def envelope(radius=6.0, length=40.0):
              "radius": radius, "length": length}]
 
 
-class TestMeasuringTheBore:
-    def test_measures_the_bore_not_the_envelope_it_was_found_in(self):
-        verts, faces = slab_with_bore(bore_radius=2.0, half_height=5.0)
-        [bore] = bores_from_mesh(verts, faces, envelope(radius=6.0), margin=0.0)
-
-        # The envelope said 6mm and ±40mm; the bore is 2mm and ±5mm.
-        assert bore["bore_radius"] == pytest.approx(2.0, abs=0.05)
-        assert bore["radius"] == pytest.approx(2.0, abs=0.05)
-        assert bore["depth"] == pytest.approx(10.0, abs=0.2)
-
-    def test_the_margin_reaches_past_both_openings(self):
-        verts, faces = slab_with_bore(bore_radius=2.0, half_height=5.0)
-        [bore] = bores_from_mesh(verts, faces, envelope(), margin=0.5)
-
-        assert bore["radius"] == pytest.approx(2.5, abs=0.05)
-        # Past the wall at each end, so the rim circles are covered rather than
-        # grazed.
-        assert bore["low"] == pytest.approx(-5.5, abs=0.2)
-        assert bore["high"] == pytest.approx(5.5, abs=0.2)
-
+class TestFindingTheWall:
     def test_takes_the_wall_and_leaves_the_flat_faces(self):
         verts, faces = slab_with_bore(segments=48)
-        [bore] = bores_from_mesh(verts, faces, envelope(), margin=0.0)
+        idx = wall_faces(verts, faces, envelope())
         # Two triangles per segment of wall, and not one of the four flat ones.
-        assert bore["wall_faces"] == 96
+        assert len(idx) == 96
+        assert set(idx) == set(range(96))
 
-    def test_reports_nothing_for_a_solid_slab(self):
-        # No inward-facing wall anywhere: there is no hole, so there is no
-        # keep-out. Guessing one would carve supports out of a sound model.
+    def test_finds_nothing_in_a_solid_slab(self):
+        # No inward-facing wall anywhere: there is no hole, so there is nothing
+        # to keep off. Guessing one would carve supports out of a sound model.
         verts, faces = slab_with_bore()
-        wall_faces = 96
-        solid_faces = faces[wall_faces:]
-        assert bores_from_mesh(verts, solid_faces, envelope(), margin=0.5) == []
+        assert len(wall_faces(verts, faces[96:], envelope())) == 0
 
-    def test_reports_nothing_without_an_envelope_to_look_in(self):
+    def test_finds_nothing_without_an_envelope_to_look_in(self):
         verts, faces = slab_with_bore()
-        assert bores_from_mesh(verts, faces, [], margin=0.5) == []
+        assert len(wall_faces(verts, faces, [])) == 0
 
-    def test_reports_nothing_for_an_envelope_with_no_axis(self):
+    def test_finds_nothing_for_an_envelope_with_no_axis(self):
         verts, faces = slab_with_bore()
         broken = [{"center": [0, 0, 0], "axis": [0, 0, 0], "radius": 6.0, "length": 40.0}]
-        assert bores_from_mesh(verts, faces, broken, margin=0.5) == []
+        assert len(wall_faces(verts, faces, broken)) == 0
 
-    def test_a_tilted_bore_is_measured_along_its_own_axis(self):
-        verts, faces = slab_with_bore(bore_radius=2.0, half_height=5.0)
+    def test_finds_a_tilted_wall_along_its_own_axis(self):
+        verts, faces = slab_with_bore()
         angle = math.radians(30)
         rot = np.array([
             [1, 0, 0],
@@ -122,48 +102,65 @@ class TestMeasuringTheBore:
         env = [{"center": [0.0, 0.0, 0.0],
                 "axis": [float(x) for x in rot @ np.array([0.0, 0.0, 1.0])],
                 "radius": 6.0, "length": 40.0}]
-        [bore] = bores_from_mesh(tilted, faces, env, margin=0.0)
+        assert len(wall_faces(tilted, faces, env)) == 96
 
-        assert bore["bore_radius"] == pytest.approx(2.0, abs=0.05)
-        assert bore["depth"] == pytest.approx(10.0, abs=0.2)
+    def test_a_wall_of_a_few_stray_facets_is_not_a_hole(self):
+        # Eight faces is noise the envelope happened to catch, not a bore.
+        verts, faces = slab_with_bore(segments=4)
+        assert len(wall_faces(verts, faces, envelope())) == 0
 
 
-class TestWhatCountsAsInside:
+class TestWhatCountsAsOnAHole:
     @pytest.fixture
-    def bore(self):
+    def keepout(self):
         verts, faces = slab_with_bore(bore_radius=2.0, half_height=5.0)
-        return bores_from_mesh(verts, faces, envelope(), margin=0.5)
+        return keepout_from_mesh(verts, faces, envelope(), margin=0.5)
 
-    def test_a_point_down_the_middle_is_inside(self, bore):
-        assert is_in_a_bore([0.0, 0.0, 0.0], bore) is True
+    def test_there_is_no_keep_out_without_a_hole(self):
+        verts, faces = slab_with_bore()
+        assert keepout_from_mesh(verts, faces[96:], envelope(), margin=0.5) is None
 
-    def test_a_point_on_the_wall_is_inside(self, bore):
-        assert is_in_a_bore([2.0, 0.0, 0.0], bore) is True
+    def test_reports_what_it_was_built_from(self, keepout):
+        assert keepout.face_count == 96
+        assert keepout.margin == pytest.approx(0.5)
 
-    def test_a_point_on_the_rim_circle_is_inside(self, bore):
-        # The rim is the circle where the wall meets the outer surface, and it
-        # is one of the places a support may not touch.
-        assert is_in_a_bore([2.0, 0.0, 5.0], bore) is True
+    def test_a_point_on_the_wall_is_on_a_hole(self, keepout):
+        assert keepout.are_on_a_hole([[2.0, 0.0, 0.0]])[0]
 
-    def test_a_point_just_past_the_opening_is_inside_by_the_margin(self, bore):
-        assert is_in_a_bore([0.0, 0.0, 5.4], bore) is True
-        assert is_in_a_bore([0.0, 0.0, 5.6], bore) is False
+    def test_a_point_on_the_rim_circle_is_on_a_hole(self, keepout):
+        # The rim is where the wall meets the outside - the patch's own
+        # boundary, so it needs no separate description.
+        assert keepout.are_on_a_hole([[2.0, 0.0, 5.0]])[0]
 
-    def test_a_point_out_in_the_slab_is_not_inside(self, bore):
-        assert is_in_a_bore([10.0, 0.0, 0.0], bore) is False
+    def test_a_point_within_the_margin_of_the_wall_is_on_a_hole(self, keepout):
+        assert keepout.are_on_a_hole([[2.4, 0.0, 0.0]])[0]
+        assert not keepout.are_on_a_hole([[2.6, 0.0, 0.0]])[0]
 
-    def test_a_point_above_the_hole_is_not_inside(self, bore):
-        assert is_in_a_bore([0.0, 0.0, 20.0], bore) is False
+    def test_a_point_just_past_the_rim_is_on_a_hole(self, keepout):
+        # Just outside the opening, which is where the head the report came
+        # from was sitting - 0.2mm off a wall.
+        assert keepout.are_on_a_hole([[2.0, 0.0, 5.4]])[0]
+        assert not keepout.are_on_a_hole([[2.0, 0.0, 5.6]])[0]
 
-    def test_nothing_is_inside_when_there_are_no_bores(self):
-        assert is_in_a_bore([0.0, 0.0, 0.0], []) is False
+    def test_a_point_out_in_the_slab_is_not(self, keepout):
+        assert not keepout.are_on_a_hole([[10.0, 0.0, 0.0]])[0]
+
+    def test_a_point_well_above_the_slab_is_not(self, keepout):
+        assert not keepout.are_on_a_hole([[0.0, 0.0, 20.0]])[0]
+
+    def test_takes_a_whole_list_at_once(self, keepout):
+        mask = keepout.are_on_a_hole([[2.0, 0, 0], [10.0, 0, 0], [2.0, 0, 5.0]])
+        assert list(mask) == [True, False, True]
+
+    def test_has_nothing_to_say_about_an_empty_list(self, keepout):
+        assert len(keepout.are_on_a_hole([])) == 0
 
 
 class TestDroppingPoints:
     @pytest.fixture
-    def bore(self):
+    def keepout(self):
         verts, faces = slab_with_bore(bore_radius=2.0, half_height=5.0)
-        return bores_from_mesh(verts, faces, envelope(), margin=0.5)
+        return keepout_from_mesh(verts, faces, envelope(), margin=0.5)
 
     def document(self, *positions):
         return {
@@ -171,36 +168,36 @@ class TestDroppingPoints:
             "points": [{"pos": list(p), "type": "island"} for p in positions],
         }
 
-    def test_drops_the_points_in_the_hole_and_keeps_the_rest(self, bore):
-        doc = self.document((0, 0, 0), (10, 0, 0), (2, 0, 5), (-10, 4, 2))
-        out, dropped = drop_points_in_bores(doc, bore)
+    def test_drops_the_heads_on_the_hole_and_keeps_the_rest(self, keepout):
+        doc = self.document((2, 0, 0), (10, 0, 0), (2, 0, 5), (-10, 4, 2))
+        out, dropped = drop_points_on_holes(doc, keepout)
 
         assert dropped == 2
         assert [p["pos"] for p in out["points"]] == [[10, 0, 0], [-10, 4, 2]]
 
-    def test_keeps_the_fingerprint_so_the_engine_still_takes_the_list(self, bore):
+    def test_keeps_the_fingerprint_so_the_engine_still_takes_the_list(self, keepout):
         # The engine refuses a point list that does not belong to the model it
         # was given. A filtered list still belongs to it.
-        doc = self.document((0, 0, 0), (10, 0, 0))
-        out, _ = drop_points_in_bores(doc, bore)
+        doc = self.document((2, 0, 0), (10, 0, 0))
+        out, _ = drop_points_on_holes(doc, keepout)
         assert out["model_fingerprint"] == doc["model_fingerprint"]
 
-    def test_leaves_the_document_alone_when_nothing_falls_in(self, bore):
+    def test_leaves_the_document_alone_when_nothing_is_on_a_hole(self, keepout):
         doc = self.document((10, 0, 0), (-10, 4, 2))
-        out, dropped = drop_points_in_bores(doc, bore)
+        out, dropped = drop_points_on_holes(doc, keepout)
 
         assert dropped == 0
         assert out is doc
 
-    def test_leaves_the_document_alone_when_there_are_no_bores(self):
-        doc = self.document((0, 0, 0))
-        out, dropped = drop_points_in_bores(doc, [])
+    def test_leaves_the_document_alone_when_there_is_no_keep_out(self):
+        doc = self.document((2, 0, 0))
+        out, dropped = drop_points_on_holes(doc, None)
 
         assert dropped == 0
         assert out is doc
 
-    def test_has_nothing_to_do_for_an_empty_list(self, bore):
-        out, dropped = drop_points_in_bores({"points": []}, bore)
+    def test_has_nothing_to_do_for_an_empty_list(self, keepout):
+        out, dropped = drop_points_on_holes({"points": []}, keepout)
         assert dropped == 0
         assert out["points"] == []
 

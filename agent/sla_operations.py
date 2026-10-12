@@ -501,10 +501,10 @@ async def keep_supports_out_of_guide_holes(
     config: SLAConfig,
     input_file: Path,
 ) -> Dict[str, Any]:
-    """Take the support points that fall in a guide's drill holes off the list.
+    """Take the support points that sit on a guide's drill holes off the list.
 
-    A hole has to stay clear for the drill, so no support may start on its wall
-    or either rim. Nothing happens unless the setting is on and holes are
+    A hole has to stay clear for the drill, so no support HEAD may land on its
+    wall or on the rim where that wall meets the outside. Nothing happens unless the setting is on and holes are
     actually found, so a model that is not a guide pays nothing for this.
 
     The list the engine would have used is asked for first (the points-only fast
@@ -523,7 +523,7 @@ async def keep_supports_out_of_guide_holes(
         import numpy as np
 
         from .auto_orient_surg_guide import compute_auto_orientation_surg_guide_detail
-        from .guide_hole_keepout import bores_from_mesh, drop_points_in_bores
+        from .guide_hole_keepout import drop_points_on_holes, keepout_from_mesh
     except ImportError as exc:                      # pragma: no cover - env only
         logger.warning("[%s] guide hole keep-out unavailable: %s", job_dir.name, exc)
         return report
@@ -538,15 +538,18 @@ async def keep_supports_out_of_guide_holes(
     detail = await asyncio.to_thread(
         compute_auto_orientation_surg_guide_detail, vertices, faces, False, True
     )
-    bores = bores_from_mesh(
+    keepout = await asyncio.to_thread(
+        keepout_from_mesh,
         vertices, faces, detail.get("cylinders") or [],
-        margin=float(getattr(config, "support_guide_hole_margin", 0.5)),
+        float(getattr(config, "support_guide_hole_margin", 0.5)),
     )
-    report["holes"] = len(bores)
-    if not bores:
-        # Not a guide, or none of its holes could be measured. Either way there
-        # is nothing to keep out of, and no second engine run is spent.
+    if keepout is None:
+        # Not a guide, or no hole with a wall worth the name. Either way there
+        # is nothing to keep off, and no second engine run is spent.
+        report["holes"] = 0
         return report
+    report["hole_faces"] = keepout.face_count
+    report["margin"] = keepout.margin
 
     supplied = support_points_input_path(job_dir)
     if supplied.exists():
@@ -563,12 +566,13 @@ async def keep_supports_out_of_guide_holes(
             return report
         document = json.loads(points_file.read_text())
 
-    document, dropped = drop_points_in_bores(document, bores)
+    document, dropped = await asyncio.to_thread(drop_points_on_holes, document, keepout)
     write_support_points_input(job_dir, document)
     report.update(applied=True, dropped=dropped, kept=len(document.get("points") or []))
     logger.info(
-        "[%s] guide hole keep-out: %d hole(s), dropped %d support point(s), kept %d",
-        job_dir.name, len(bores), dropped, report["kept"],
+        "[%s] guide hole keep-out: %d wall face(s) within %.2fmm, dropped %d support "
+        "point(s), kept %d",
+        job_dir.name, keepout.face_count, keepout.margin, dropped, report["kept"],
     )
     return report
 
