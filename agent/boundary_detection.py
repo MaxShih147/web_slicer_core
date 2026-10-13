@@ -123,6 +123,89 @@ def _count_self_intersections_xy(pts: np.ndarray) -> int:
     return hits
 
 
+def _boundary_xy_is_simple(pts: np.ndarray, tol: float = 1e-9) -> bool:
+    """True if the closed polyline `pts` (N,2+) is a simple polygon in XY.
+
+    Non-simple means the loop folds back on itself: two non-adjacent segments
+    cross or touch, a vertex is repeated (pinch), or consecutive segments
+    reverse direction (zero-width hairpin). Zero-length edges are ignored.
+    Vectorized in row blocks with an early exit on the first hit.
+    """
+    p = np.asarray(pts, dtype=np.float64)[:, :2]
+    # Drop zero-length edges so a repeated consecutive point doesn't hide a
+    # hairpin tip from the reversal test below.
+    step = np.roll(p, -1, axis=0) - p
+    p = p[np.hypot(step[:, 0], step[:, 1]) > tol]
+    n = len(p)
+    if n < 3:
+        return False
+
+    # Pinch: the same XY point visited twice.
+    q = np.round(p / max(tol, 1e-12)).astype(np.int64)
+    if len(np.unique(q, axis=0)) < n:
+        return False
+
+    d = np.roll(p, -1, axis=0) - p
+    # Hairpin: a segment turns straight back along the previous one.
+    dp = np.roll(d, 1, axis=0)
+    cross_t = dp[:, 0] * d[:, 1] - dp[:, 1] * d[:, 0]
+    dot_t = (dp * d).sum(axis=1)
+    if np.any((dot_t < 0) & (np.abs(cross_t) <= 1e-9 * np.abs(dot_t))):
+        return False
+
+    idx = np.arange(n)
+    block = max(1, 2_000_000 // n)
+    for i0 in range(0, n, block):
+        i = idx[i0:i0 + block, None]
+        ok = (idx[None, :] > i + 1) & ~((i == 0) & (idx[None, :] == n - 1))
+        if not ok.any():
+            continue
+        a = p[i[:, 0]][:, None, :]
+        da = d[i[:, 0]][:, None, :]
+        c = p[None, :, :]
+        dc = d[None, :, :]
+        ac = c - a
+        denom = da[..., 0] * dc[..., 1] - da[..., 1] * dc[..., 0]
+        num_s = ac[..., 0] * dc[..., 1] - ac[..., 1] * dc[..., 0]
+        num_t = ac[..., 0] * da[..., 1] - ac[..., 1] * da[..., 0]
+        par = np.abs(denom) <= 1e-12 * (np.hypot(da[..., 0], da[..., 1]) * np.hypot(dc[..., 0], dc[..., 1]))
+        with np.errstate(invalid="ignore", divide="ignore"):
+            s = num_s / denom
+            t = num_t / denom
+        cross_hit = ~par & (s >= -tol) & (s <= 1 + tol) & (t >= -tol) & (t <= 1 + tol)
+        # Parallel segments only meet if collinear and their extents overlap.
+        la2 = (da ** 2).sum(-1)
+        u0 = (ac * da).sum(-1) / la2
+        u1 = ((ac + dc) * da).sum(-1) / la2
+        collinear = np.abs(num_t) <= tol * np.sqrt(la2)
+        overlap = (np.maximum(u0, u1) >= -tol) & (np.minimum(u0, u1) <= 1 + tol)
+        par_hit = par & collinear & overlap
+        if np.any(ok & (cross_hit | par_hit)):
+            return False
+    return True
+
+
+def _halfedge_topology(faces: np.ndarray, n_verts: int) -> dict:
+    """Edge-level closure stats for a face array.
+
+    boundary: undirected edges used by one face (holes).
+    non_manifold: undirected edges used by 3+ faces.
+    inconsistent: directed halfedges used twice (neighbouring faces with
+    opposite winding).
+    """
+    f = np.asarray(faces, dtype=np.int64)
+    a = f.reshape(-1)
+    b = np.roll(f, -1, axis=1).reshape(-1)
+    nv = np.int64(max(n_verts, 1))
+    _, cu = np.unique(np.minimum(a, b) * nv + np.maximum(a, b), return_counts=True)
+    _, cd = np.unique(a * nv + b, return_counts=True)
+    return {
+        "boundary": int(np.count_nonzero(cu == 1)),
+        "non_manifold": int(np.count_nonzero(cu > 2)),
+        "inconsistent": int(np.count_nonzero(cd > 1)),
+    }
+
+
 def _diagnose_merge(v_before, f_before, mesh_after):
     """Report shell faces that degenerate or flip when merge_vertices collapses
     near-duplicate boundary vertices. Tests the "merge flips the faces above the
@@ -1217,6 +1300,7 @@ def generate_base(
         top_idx = top_idx[::-1]
 
     use_chamfer = False
+    orient_walls = False
     if chamfer:
         # --- Chamfer wall: 3 rings (top → mid → bot) ---
         # Use shapely polygon offset for correct inset geometry
@@ -1290,7 +1374,15 @@ def generate_base(
         # each wall face against a window-smoothed outward direction (robust to
         # the fold jitter) and flip the winding when it would face inward — the
         # wall stays outward-facing without touching the boundary geometry.
+        #
+        # Only a folded (non-simple) boundary needs this. On a simple CCW
+        # polygon the natural winding is already outward everywhere, and any
+        # flip breaks winding consistency with the neighbouring wall quads
+        # (duplicate halfedges on the shared vertical edges), which makes the
+        # result NotManifold for downstream booleans.
         orient_walls = os.environ.get("BASE_GEN_WALL_ORIENT", "1") != "0"
+        if orient_walls and _boundary_xy_is_simple(boundary):
+            orient_walls = False
         if orient_walls:
             W = 6
             bxy = boundary[:, :2]
@@ -1344,13 +1436,28 @@ def generate_base(
     if os.environ.get("BASE_GEN_WALL_DIAG"):
         _diagnose_walls(boundary, wall_faces, new_verts, combined, n, use_chamfer)
 
-    # earcut can emit zero-area triangles on near-collinear segments; drop them
-    # so we don't introduce NotManifold edges downstream.
-    keep = combined.area_faces > 1e-9
+    # earcut emits near-zero-area triangles on near-collinear boundary points.
+    # Keep them: they are still part of the closed surface, and dropping them
+    # opens holes in the bottom face (boundary edges at z=0) that make the
+    # result NotManifold. Only faces with a repeated vertex index are removed —
+    # their edges cancel out pairwise, so removal can't open the surface.
+    f = combined.faces
+    keep = (f[:, 0] != f[:, 1]) & (f[:, 1] != f[:, 2]) & (f[:, 2] != f[:, 0])
     if not keep.all():
         combined.update_faces(keep)
         combined.remove_unreferenced_vertices()
     _mark("wall+bottom+combine")
+
+    topo = _halfedge_topology(combined.faces, len(combined.vertices))
+    print(
+        f"[generate_base] output: faces={len(combined.faces)} "
+        f"closed={topo['boundary'] == 0 and topo['non_manifold'] == 0} "
+        f"winding_consistent={topo['inconsistent'] == 0} "
+        f"boundary_edges={topo['boundary']} non_manifold_edges={topo['non_manifold']} "
+        f"inconsistent_halfedges={topo['inconsistent']} "
+        f"wall_orient={'on' if orient_walls else 'off'}"
+    )
+    _mark("validate")
 
     stl = combined.export(file_type='stl')
     _mark("export")
