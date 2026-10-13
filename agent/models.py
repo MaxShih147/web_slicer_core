@@ -136,6 +136,21 @@ class SLAConfig(BaseModel):
     # observable effect yet. Needs that data flow as a follow-up feature.
     support_enforcers_only: bool = False
 
+    # ─── Not the engine's: this side keeps supports out of a guide's holes ───
+    # A surgical guide's drill holes have to stay clear - a support inside one
+    # is resin where the drill has to go. The engine knows nothing of guide
+    # holes, so these two never reach it (see FRONTEND_ONLY_CONFIG_FIELDS in
+    # sla_operations.generate_config_ini, which would otherwise hand the CLI an
+    # option it rejects). They ride on the config so the whole request is one
+    # object and the job's config.json records what was asked for.
+    #
+    # OFF unless asked for. One-click processing turns it on for a surgical
+    # guide, because orienting the guide is what stands its holes up and puts
+    # support points on their walls. A caller growing supports on their own gets
+    # what they asked for and nothing taken away.
+    support_avoid_guide_holes: bool = False
+    support_guide_hole_margin: float = 0.5
+
     # Pad settings
     pad_enable: bool = False
 

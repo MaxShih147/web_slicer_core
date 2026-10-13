@@ -288,10 +288,21 @@ class OperationResult:
         }
 
 
+# Settings this side acts on and the engine has never heard of. Written into
+# the job's config.json like everything else, but kept out of the INI: the CLI
+# refuses an option it does not know, so one stray name fails the whole run.
+FRONTEND_ONLY_CONFIG_FIELDS = frozenset({
+    "support_avoid_guide_holes",
+    "support_guide_hole_margin",
+})
+
+
 def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
     """Generate a PrusaSlicer INI config file from SLAConfig."""
     lines = ["# Generated SLA config"]
     for field_name, value in config.model_dump().items():
+        if field_name in FRONTEND_ONLY_CONFIG_FIELDS:
+            continue
         if isinstance(value, bool):
             lines.append(f"{field_name} = {1 if value else 0}")
         else:
@@ -383,9 +394,19 @@ async def generate_supports(
     })
     generate_config_ini(detect_config, config_file)
 
+    # Clear the drill holes of a surgical guide before the points are used.
+    # Writes a filtered list to the caller-supplied-points path, which the
+    # command below already imports; does nothing at all for a model with no
+    # holes in it, and nothing if the setting is off.
+    keepout = await keep_supports_out_of_guide_holes(job_dir, config, input_file)
+    # The keep-out writes its own config.ini on the way (the points-only pass
+    # runs at the detection layer height), so this one is written again here -
+    # the run below has to load the config IT asked for.
+    generate_config_ini(detect_config, config_file)
+
     # Save config as JSON for reference
     with open(job_dir / "config.json", "w") as f:
-        json.dump(config.model_dump(), f, indent=2)
+        json.dump({**config.model_dump(), "guide_hole_keepout": keepout}, f, indent=2)
 
     # Build command - export only the support STL. Omitting --export-sla lets
     # the slicer take the support-only fast path: it stops after the pad step,
@@ -401,6 +422,11 @@ async def generate_supports(
     # A caller supplied point list replaces automatic detection. Passed through
     # untouched; the engine checks it against the model's fingerprint and
     # refuses the whole run if it does not belong to this model.
+    #
+    # A guide's drill holes are cleared first, which writes a filtered list to
+    # that same place - so what follows does not need to know whether the list
+    # it is importing was the caller's, the engine's own, or either with the
+    # holes taken out of it.
     import_points = support_points_input_path(job_dir)
     if import_points.exists():
         cmd.extend(["--import-support-points", str(import_points)])
@@ -468,6 +494,94 @@ async def generate_supports(
         metadata={"config": config.model_dump()},
         classification=classification,
     )
+
+
+async def keep_supports_out_of_guide_holes(
+    job_dir: Path,
+    config: SLAConfig,
+    input_file: Path,
+) -> Dict[str, Any]:
+    """Slide the support heads that sit on a guide's drill hole off it.
+
+    A hole has to stay clear for the drill, so no support HEAD may land on its
+    wall or on the rim where that wall meets the outside. A head that does is
+    moved along the surface to the nearest place that clears it, so the support
+    count holds - see move_points_off_holes for why deleting them was not good
+    enough. Nothing happens unless the setting is on and holes are
+    actually found, so a model that is not a guide pays nothing for this.
+
+    The list the engine would have used is asked for first (the points-only fast
+    path), filtered, and written where the generation reads a caller supplied
+    list from - so the generation itself is unchanged. A list the CALLER already
+    supplied is filtered in place instead: it is the list that will be used, and
+    hand-placed points in a drill hole are no more wanted than found ones.
+
+    Returns what was done, for the caller to log and for the job record.
+    """
+    report: Dict[str, Any] = {"applied": False}
+    if not getattr(config, "support_avoid_guide_holes", False):
+        return report
+
+    try:
+        import numpy as np
+
+        from .auto_orient_surg_guide import drill_cylinders_for_keepout
+        from .guide_hole_keepout import keepout_from_mesh, move_points_off_holes
+    except ImportError as exc:                      # pragma: no cover - env only
+        logger.warning("[%s] guide hole keep-out unavailable: %s", job_dir.name, exc)
+        return report
+
+    mesh = await asyncio.to_thread(load_trimesh, str(input_file))
+    vertices = np.asarray(mesh.vertices, dtype=np.float32)
+    faces = np.asarray(mesh.faces, dtype=np.uint32)
+
+    # EVERY hole, not the one the orientation settled on. The orientation path
+    # demands connection edges onto perpendicular walls as well, which a hole
+    # opening onto a slot can fail - on 王月境 I15,I16 stent.stl that left the
+    # second of two holes undetected and supports landing on its rim. See
+    # drill_cylinders_for_keepout for what it asks instead.
+    cylinders = await asyncio.to_thread(drill_cylinders_for_keepout, vertices, faces)
+    keepout = await asyncio.to_thread(
+        keepout_from_mesh,
+        vertices, faces, cylinders,
+        float(getattr(config, "support_guide_hole_margin", 0.5)),
+    )
+    if keepout is None:
+        # Not a guide, or no hole with a wall worth the name. Either way there
+        # is nothing to keep off, and no second engine run is spent.
+        report["holes"] = 0
+        return report
+    report["holes"] = len(cylinders)
+    report["hole_faces"] = keepout.face_count
+    report["margin"] = keepout.margin
+
+    supplied = support_points_input_path(job_dir)
+    if supplied.exists():
+        document = json.loads(supplied.read_text())
+    else:
+        result = await export_support_points(job_dir, config.model_copy(), input_file)
+        points_file = support_points_output_path(job_dir)
+        if not result.success or not points_file.exists():
+            logger.warning(
+                "[%s] guide hole keep-out skipped: the point list could not be read",
+                job_dir.name,
+            )
+            report["error"] = "point export failed"
+            return report
+        document = json.loads(points_file.read_text())
+
+    document, moved, dropped = await asyncio.to_thread(
+        move_points_off_holes, document, keepout
+    )
+    write_support_points_input(job_dir, document)
+    report.update(applied=True, moved=moved, dropped=dropped,
+                  kept=len(document.get("points") or []))
+    logger.info(
+        "[%s] guide hole keep-out: %d wall face(s) within %.2fmm, moved %d support "
+        "point(s), dropped %d with nowhere to go, kept %d",
+        job_dir.name, keepout.face_count, keepout.margin, moved, dropped, report["kept"],
+    )
+    return report
 
 
 async def export_support_points(
