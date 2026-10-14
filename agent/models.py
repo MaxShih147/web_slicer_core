@@ -65,6 +65,38 @@ class SLAConfig(BaseModel):
     def enforce_min_elevation(cls, v: float) -> float:
         return max(0.0, v)
 
+    # Range guards (guard-support-density-bounds design.md D1/D2). Reject only,
+    # never clamp: a silently rewritten value would no longer be the one the
+    # caller saved.
+    #
+    # Density: a negative value reaches the slope path in
+    # SupportPointGenerator.cpp as sqrt(r^2 / density) and turns every radius
+    # into NaN. 0 stays legal — it is the manual-points-only path, and
+    # param_rules' R5 owns the "0 with no manual points" case. 10000 caps the
+    # point count on slopes, which grows roughly linearly with density and has
+    # no engine-side floor.
+    @field_validator('support_points_density_relative')
+    @classmethod
+    def validate_support_points_density_relative(cls, v: int) -> int:
+        if not (0 <= v <= 10000):
+            raise ValueError(
+                f"support_points_density_relative must be between 0 and 10000, got {v}"
+            )
+        return v
+
+    # Past ~1073mm the engine's int32 spacing math overflows. Written as
+    # `not (lo <= v <= hi)` on purpose: NaN compares False against everything,
+    # so `v < lo or v > hi` would let NaN through (FastAPI's json.loads accepts
+    # a bare NaN literal).
+    @field_validator('support_points_min_distance')
+    @classmethod
+    def validate_support_points_min_distance(cls, v: float) -> float:
+        if not (0.0 <= v <= 100.0):
+            raise ValueError(
+                f"support_points_min_distance must be between 0 and 100 mm, got {v}"
+            )
+        return v
+
     # Support tree global parameters (F1/B2).
     #
     # Decision record lives in the *DS-Online* repo, not this one:

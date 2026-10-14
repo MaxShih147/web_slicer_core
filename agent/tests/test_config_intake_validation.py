@@ -14,6 +14,8 @@ seam under test is the function's own logic, not HTTP routing.
 """
 
 import asyncio
+import json
+import math
 
 import pytest
 
@@ -59,6 +61,48 @@ class TestViolatingConfigIsRejected:
             _run(update_slice_job_config(pending_job, request))
         assert exc_info.value.http_status == 422
         assert "pad_wall_slope" in exc_info.value.message
+
+
+class TestSupportPointRangeGuards:
+    """guard-support-density-bounds: the density / min_distance range guards
+    live in SLAConfig, so PUT /config rejects them through the same
+    CONFIG_VALIDATION_ERROR path as pad_wall_slope — and never clamps."""
+
+    def test_negative_density_returns_422_naming_the_field(self, pending_job):
+        request = V2ConfigUpdateRequest(
+            config={"support_points_density_relative": -5}, isAppend=True
+        )
+        with pytest.raises(APIError) as exc_info:
+            _run(update_slice_job_config(pending_job, request))
+        assert exc_info.value.http_status == 422
+        assert exc_info.value.code == "CONFIG_VALIDATION_ERROR"
+        assert exc_info.value.retryable is False
+        assert "support_points_density_relative" in exc_info.value.message
+
+    def test_rejected_density_leaves_saved_value_untouched(self, pending_job):
+        """Not clamped to 10000: the rejected update is simply not saved."""
+        api_v2._pending_jobs[pending_job]["config"] = {"support_points_density_relative": 100}
+        request = V2ConfigUpdateRequest(
+            config={"support_points_density_relative": 20000}, isAppend=True
+        )
+        with pytest.raises(APIError):
+            _run(update_slice_job_config(pending_job, request))
+        assert api_v2._pending_jobs[pending_job]["config"] == {
+            "support_points_density_relative": 100
+        }
+
+    def test_json_nan_literal_min_distance_is_rejected(self, pending_job):
+        """FastAPI parses the body with json.loads, which accepts a bare NaN
+        literal — parse the same way here so the test sees what the endpoint
+        sees."""
+        body = json.loads('{"config": {"support_points_min_distance": NaN}, "isAppend": true}')
+        assert math.isnan(body["config"]["support_points_min_distance"])
+        request = V2ConfigUpdateRequest(**body)
+        with pytest.raises(APIError) as exc_info:
+            _run(update_slice_job_config(pending_job, request))
+        assert exc_info.value.http_status == 422
+        assert "support_points_min_distance" in exc_info.value.message
+        assert "support_points_min_distance" not in api_v2._pending_jobs[pending_job]["config"]
 
 
 class TestLegalConfigUnchangedBehavior:

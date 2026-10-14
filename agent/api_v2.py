@@ -1129,6 +1129,8 @@ async def generate_hollow_only(job_id: str, background_tasks: BackgroundTasks):
         return V2Response(success=True, message="Hollow generation started", data={"currentConfig": config})
     except APIError:
         raise
+    except ValidationError as exc:
+        raise config_validation_error(_config_validation_message(exc))
     except Exception as exc:
         raise internal_error(str(exc))
 

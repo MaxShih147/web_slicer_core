@@ -111,6 +111,44 @@ class TestClampedShape:
         assert clamp["effective"] == 0.5
 
 
+class TestSupportPointRangeGuards:
+    """guard-support-density-bounds: an out-of-range density / min_distance is
+    a SLAConfig construction failure, so this endpoint reports it in
+    problems[] with HTTP 200 instead of raising — and never as a clamp."""
+
+    def test_density_over_limit_is_a_problem_not_an_error(self, client):
+        c, _ = client
+        body = {**_defaults(), "flow": "support", "support_points_density_relative": 10001}
+        resp = c.post("/api/v2/support-params/validate", json=body)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is False
+        problem = next(p for p in data["problems"] if p["code"] == "CONFIG_VALIDATION_ERROR")
+        assert "support_points_density_relative" in problem["fields"]
+
+    def test_out_of_range_min_distance_is_not_reported_as_clamped(self, client):
+        c, _ = client
+        body = {**_defaults(), "flow": "support", "support_points_min_distance": 150}
+        resp = c.post("/api/v2/support-params/validate", json=body)
+        data = resp.json()
+        assert data["ok"] is False
+        assert not any(x["field"] == "support_points_min_distance" for x in data["clamped"])
+
+    def test_zero_density_with_manual_points_is_not_blocked(self, client):
+        """Density 0 stays legal: the manual-points-only path (R5)."""
+        c, _ = client
+        body = {
+            **_defaults(),
+            "flow": "support",
+            "supports_enable": True,
+            "support_points_density_relative": 0,
+            "manual_point_count": 5,
+        }
+        resp = c.post("/api/v2/support-params/validate", json=body)
+        data = resp.json()
+        assert not any("support_points_density_relative" in p["fields"] for p in data["problems"])
+
+
 class TestUnknownShape:
     def test_unknown_field_is_reported_not_rejected(self, client):
         c, _ = client

@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from agent.models import SLAConfig
 from agent.sla_operations import generate_config_ini
@@ -311,3 +312,44 @@ class TestZeroElevationPadFields:
             generate_config_ini(config, ini_path)  # 不應拋例外
             content = ini_path.read_text()
         assert "pad_object_gap = 2.5" in content
+
+
+class TestSupportPointsDensityRelativeRange:
+    """guard-support-density-bounds：密度只接受 0–10000，範圍外一律拒絕，不夾限。"""
+
+    @pytest.mark.parametrize("value", [0, 1, 100, 2204, 10000])
+    def test_legal_values_accepted(self, value):
+        config = SLAConfig(support_points_density_relative=value)
+        assert config.support_points_density_relative == value
+
+    @pytest.mark.parametrize("value", [-1, -100, 10001, 2_000_000_000])
+    def test_illegal_values_rejected(self, value):
+        # 一定拋錯，不會回傳一個被改成邊界值的物件
+        with pytest.raises(ValidationError) as exc_info:
+            SLAConfig(support_points_density_relative=value)
+        assert "support_points_density_relative" in str(exc_info.value)
+
+    def test_error_message_names_the_field(self):
+        """PUT /config 只轉發 err["msg"]、不帶欄位位置，所以欄位名要寫在訊息裡。"""
+        with pytest.raises(ValidationError) as exc_info:
+            SLAConfig(support_points_density_relative=-1)
+        assert "support_points_density_relative" in exc_info.value.errors()[0]["msg"]
+
+
+class TestSupportPointsMinDistanceRange:
+    """guard-support-density-bounds：min_distance 只接受 0–100 mm，NaN／inf 也要擋。"""
+
+    @pytest.mark.parametrize("value", [0.0, 1.5, 100.0])
+    def test_legal_values_accepted(self, value):
+        config = SLAConfig(support_points_min_distance=value)
+        assert config.support_points_min_distance == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [-0.1, 100.01, 1073.0, float("nan"), float("inf"), float("-inf")],
+        ids=["negative", "just-over", "int32-overflow", "nan", "inf", "-inf"],
+    )
+    def test_illegal_values_rejected(self, value):
+        with pytest.raises(ValidationError) as exc_info:
+            SLAConfig(support_points_min_distance=value)
+        assert "support_points_min_distance" in exc_info.value.errors()[0]["msg"]

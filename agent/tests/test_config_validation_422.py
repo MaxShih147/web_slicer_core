@@ -78,6 +78,49 @@ class TestExportSupportPointsReturns422:
         assert "pad_wall_slope" in exc_info.value.message
 
 
+@pytest.fixture
+def min_distance_job(tmp_path, monkeypatch):
+    """A pending job whose saved config carries an out-of-range
+    support_points_min_distance (guard-support-density-bounds) — the kind
+    that reaches these endpoints without having gone through PUT /config."""
+    monkeypatch.setattr(jobs, "JOBS_DIR", tmp_path)
+    job_id = "job-422-min-distance"
+    api_v2._pending_jobs[job_id] = {
+        "config": {"support_points_min_distance": 150},
+        "models": [{"stl_data": _MINIMAL_STL}],
+        "status": "created",
+    }
+    yield job_id
+    api_v2._pending_jobs.pop(job_id, None)
+
+
+class TestSupportPointRangeGuardsReturn422:
+    """/execute builds SLAConfig via _build_sla_config; /generate-supports,
+    /export-support-points and /generate-hollow via _convert_v2_config_to_sla.
+    All four must turn the range guard into 422 CONFIG_VALIDATION_ERROR before
+    scheduling any engine work."""
+
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            api_v2.execute_slice_job,
+            api_v2.generate_supports_only,
+            api_v2.export_support_points_only,
+            api_v2.generate_hollow_only,
+        ],
+        ids=["execute", "generate-supports", "export-support-points", "generate-hollow"],
+    )
+    def test_out_of_range_min_distance_returns_422(self, min_distance_job, endpoint):
+        background = BackgroundTasks()
+        with pytest.raises(APIError) as exc_info:
+            _run(endpoint(min_distance_job, background))
+        assert exc_info.value.http_status == 422
+        assert exc_info.value.code == "CONFIG_VALIDATION_ERROR"
+        assert exc_info.value.retryable is False
+        assert "support_points_min_distance" in exc_info.value.message
+        assert background.tasks == []
+
+
 class TestLegalConfigStillWorks:
     """Sanity: the new except branch must not swallow legal configs."""
 
