@@ -22,6 +22,7 @@ from .models import JobStatus, SLAConfig, _extract_prz_timing_config
 from .preview_scale import preview_scale_for
 from .prz_encoder import _compute_print_time, sl1_layer_names
 from .sla_operations import (
+    EngineTimeoutError,
     generate_config_ini,
     notify_launcher_if_prusa_crashed,
     support_points_input_path,
@@ -871,6 +872,18 @@ async def run_support_generation(job_id: str, config: Optional[SLAConfig] = None
         else:
             write_job_status(job_id, JobStatus.FAILED, error=result.error)
 
+    except EngineTimeoutError as e:
+        # The engine was killed for running too long. Leaving this function is
+        # what frees the engine queue for the next job.
+        write_job_status(
+            job_id,
+            JobStatus.FAILED,
+            error=(
+                "Support generation timed out: the engine was killed after "
+                f"{e.timeout_sec:g} seconds"
+            ),
+            error_code="SUPPORT_GENERATION_FAILED",
+        )
     except Exception as e:
         write_job_status(job_id, JobStatus.FAILED, error=str(e))
 

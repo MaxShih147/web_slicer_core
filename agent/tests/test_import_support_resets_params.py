@@ -34,7 +34,7 @@ def job(tmp_path, monkeypatch):
 
 
 def _stub_cli(monkeypatch, *, stdout=b"(includes supports and pad)\n", stderr=b"", returncode=0):
-    async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None):
+    async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None, timeout_sec=None):
         if stdout_file:
             with open(stdout_file, "wb") as f:
                 f.write(stdout)

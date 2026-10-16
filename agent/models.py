@@ -1,8 +1,9 @@
 """Pydantic models for the web_slicer_core agent API."""
 
+import struct
 from enum import Enum
 from typing import Any, Dict, Optional
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class JobStatus(str, Enum):
@@ -31,6 +32,33 @@ class JobStatusResponse(BaseModel):
     has_support_mesh: bool = False
     has_hollow_mesh: bool = False
     has_cut_mesh: bool = False
+
+
+# Smallest support size (mm) the API accepts: the floor for
+# support_max_bridge_length and for a support point's base_radius_mm on
+# POST /support-points. At 0 the engine's support clustering
+# (`d < max_bridge_length`, `d < base_radius`) can't take the seed point into
+# its own cluster, so the loop never advances and the engine hangs
+# (fix-support-zero-param-engine-hang). The floor is 1e-4 rather than > 0:
+# 0.5 * 5e-324 underflows to 0.0 — the same hang.
+SUPPORT_SIZE_FLOOR_MM = 1e-4
+
+# support_base_diameter is a DIAMETER: the engine halves it into the base radius
+# it writes into every exported support point. Twice the radius floor, so a list
+# read back from GET /support-points always passes POST /support-points.
+SUPPORT_BASE_DIAMETER_FLOOR_MM = 2 * SUPPORT_SIZE_FLOOR_MM
+
+# The radius floor as a single-precision float would hold it (9.999999747e-05).
+# The engine keeps an imported point's base_radius_mm as a float and writes
+# that value on later exports, so a radius of exactly 1e-4 comes back slightly
+# below 1e-4. The per-point check compares against this instead, so whatever
+# the engine exports is accepted again.
+SUPPORT_POINT_RADIUS_FLOOR_F32 = struct.unpack("<f", struct.pack("<f", SUPPORT_SIZE_FLOOR_MM))[0]
+
+# SLAConfig fields that must be finite and at or above their floor above. The
+# API layer maps a validation error on any of these to SUPPORT_PARAM_INVALID
+# instead of CONFIG_VALIDATION_ERROR.
+SUPPORT_POSITIVE_FIELDS = frozenset({"support_max_bridge_length", "support_base_diameter"})
 
 
 class SLAConfig(BaseModel):
@@ -111,10 +139,12 @@ class SLAConfig(BaseModel):
     # only opens the API entry point. Field names match the engine option key
     # 1:1 so generate_config_ini's generic field-name-driven write works as-is.
     support_head_width: float = 1.0
-    support_base_diameter: float = 4.0
+    # ge / allow_inf_nan=False: see SUPPORT_BASE_DIAMETER_FLOOR_MM above.
+    support_base_diameter: float = Field(4.0, ge=SUPPORT_BASE_DIAMETER_FLOOR_MM, allow_inf_nan=False)
     support_base_height: float = 1.0
     support_bracing_angle: float = 45.0
-    support_max_bridge_length: float = 15.0
+    # ge / allow_inf_nan=False: see SUPPORT_SIZE_FLOOR_MM above.
+    support_max_bridge_length: float = Field(15.0, ge=SUPPORT_SIZE_FLOOR_MM, allow_inf_nan=False)
     # 0 is a legal value (means "no pillar linking") — MUST NOT get a min-value
     # validator like support_object_elevation's enforce_min_elevation.
     support_max_pillar_link_distance: float = 10.0

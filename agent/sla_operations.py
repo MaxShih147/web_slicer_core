@@ -77,6 +77,23 @@ def notify_launcher_if_prusa_crashed(returncode: Optional[int]) -> None:
 # detected support points. See generate_supports().
 SUPPORT_DETECTION_LAYER_HEIGHT = 0.15
 
+# Time limit for the support-only engine run (generate_supports). Without one, an
+# engine that never finishes (e.g. its support clustering looping forever on a
+# zero Max Connector Length) holds the serialized engine queue for good. No other
+# CLI run has a limit.
+SUPPORT_GENERATION_TIMEOUT_SEC = 120
+
+# How long to wait for a killed engine to exit and close its pipes.
+_REAP_TIMEOUT_SEC = 10
+
+
+class EngineTimeoutError(Exception):
+    """The engine ran past its time limit and was killed by the agent."""
+
+    def __init__(self, timeout_sec: float):
+        super().__init__(f"engine killed after {timeout_sec:g}s timeout")
+        self.timeout_sec = timeout_sec
+
 # Support point interchange files, named next to their STL counterparts: the
 # caller's list lands in input/ beside support.stl, the engine's export lands in
 # output/ beside model_support.stl.
@@ -316,10 +333,34 @@ def generate_config_ini(config: SLAConfig, output_path: Path) -> None:
         f.write("\n".join(lines) + "\n")
 
 
+async def _kill_and_reap(process) -> tuple[bytes, bytes]:
+    """Kill the engine and wait (bounded) for it to exit and close its pipes.
+
+    Returns whatever output was still in the pipes; what the cancelled first
+    communicate() had already read is lost, so this may be partial.
+    """
+    if process.returncode is None:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass  # exited on its own between the timeout and the kill
+    try:
+        stdout, stderr = await asyncio.wait_for(process.communicate(), _REAP_TIMEOUT_SEC)
+    except asyncio.TimeoutError:
+        logger.error(
+            "Engine pid=%s did not exit within %ss of being killed",
+            process.pid,
+            _REAP_TIMEOUT_SEC,
+        )
+        return b"", b""
+    return stdout or b"", stderr or b""
+
+
 async def run_prusa_cli(
     cmd: List[str],
     stderr_file: Optional[Path] = None,
     stdout_file: Optional[Path] = None,
+    timeout_sec: Optional[float] = None,
 ) -> tuple[int, bytes, bytes]:
     """
     Run PrusaSlicer CLI command.
@@ -330,6 +371,10 @@ async def run_prusa_cli(
     the result MUST read both. Pass ``stdout_file`` / ``stderr_file`` to also
     persist the raw bytes to disk for debugging.
 
+    With ``timeout_sec`` the engine is killed once it runs past the limit: its
+    logs are still written (stderr gets a closing note) and EngineTimeoutError
+    is raised. A cancelled caller kills it too. Without it, the wait is unbounded.
+
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
@@ -339,7 +384,25 @@ async def run_prusa_cli(
         stderr=asyncio.subprocess.PIPE,
         env=_english_locale_env(),  # pin English locale so validate() stays English (D5)
     )
-    stdout, stderr = await process.communicate()
+    if timeout_sec is None:
+        stdout, stderr = await process.communicate()
+    else:
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout_sec)
+        except asyncio.TimeoutError:
+            stdout, stderr = await _kill_and_reap(process)
+            stderr += f"\n[agent] engine killed after {timeout_sec:g}s timeout\n".encode()
+            if stdout_file:
+                with open(stdout_file, "wb") as f:
+                    f.write(stdout)
+            if stderr_file:
+                with open(stderr_file, "wb") as f:
+                    f.write(stderr)
+            # We killed it; it did not crash. No notify_launcher_if_prusa_crashed.
+            raise EngineTimeoutError(timeout_sec)
+        except asyncio.CancelledError:
+            await _kill_and_reap(process)  # e.g. server shutdown: leave no engine behind
+            raise
 
     if stdout_file:
         with open(stdout_file, "wb") as f:
@@ -461,7 +524,9 @@ async def generate_supports(
 
     cmd.append(str(input_file))
 
-    returncode, stdout, stderr = await run_prusa_cli(cmd, stderr_file, stdout_file)
+    returncode, stdout, stderr = await run_prusa_cli(
+        cmd, stderr_file, stdout_file, timeout_sec=SUPPORT_GENERATION_TIMEOUT_SEC
+    )
 
     # Classify purely from the CLI text output — never the exit code. The fork's
     # validate() failures exit 0 (design D1), so returncode is not trusted here;

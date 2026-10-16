@@ -66,7 +66,7 @@ class CapturedCLI:
 def _stub_cli(monkeypatch, *, creates=None, stdout=b"", stderr=b"", returncode=0):
     captured = CapturedCLI()
 
-    async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None):
+    async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None, timeout_sec=None):
         captured.commands.append(list(cmd))
         if creates is not None:
             creates.parent.mkdir(parents=True, exist_ok=True)

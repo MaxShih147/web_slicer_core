@@ -69,6 +69,7 @@ class TestSupportPointRangeGuards:
     CONFIG_VALIDATION_ERROR path as pad_wall_slope — and never clamps."""
 
     def test_negative_density_returns_422_naming_the_field(self, pending_job):
+        """support-param-validation (MODIFIED): 存設定時密度超出範圍"""
         request = V2ConfigUpdateRequest(
             config={"support_points_density_relative": -5}, isAppend=True
         )

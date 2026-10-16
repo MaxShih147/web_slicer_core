@@ -117,6 +117,7 @@ class TestSupportPointRangeGuards:
     problems[] with HTTP 200 instead of raising — and never as a clamp."""
 
     def test_density_over_limit_is_a_problem_not_an_error(self, client):
+        """support-param-validation (MODIFIED): 驗證端點以 problems 回報"""
         c, _ = client
         body = {**_defaults(), "flow": "support", "support_points_density_relative": 10001}
         resp = c.post("/api/v2/support-params/validate", json=body)

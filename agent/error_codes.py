@@ -285,6 +285,24 @@ _SUPPORT: Tuple[ErrorCodeSpec, ...] = (
         note="支撐已產生，但引擎無法把支撐 mesh 寫成 STL 檔（伺服器端寫檔失敗，可重試，`Failed to export support mesh`）",
         engine_needles=("Failed to export support mesh",),
     ),
+    # fix-support-zero-param-engine-hang D7. Python-owned: the engine never
+    # reports these — at 0 it hangs in support clustering instead of failing —
+    # so the API rejects the value before the engine is started.
+    ErrorCodeSpec(
+        code="SUPPORT_PARAM_INVALID",
+        http_status=422,
+        retryable=False,
+        owner="python",
+        note="Max Connector Length（`support_max_bridge_length`）須為不小於 `1e-4`、"
+        "Base Diameter（`support_base_diameter`）須為不小於 `2e-4` 的有限數值，否則引擎支撐分群會無窮迴圈",
+    ),
+    ErrorCodeSpec(
+        code="SUPPORT_POINT_PARAM_INVALID",
+        http_status=422,
+        retryable=False,
+        owner="python",
+        note="手動支撐點的 `base_radius_mm` 不可為 0（含讀入後會變成 0 的極小正數）；負數或省略代表沿用全域 Base Diameter",
+    ),
 )
 
 # ─── slicing codes ──────────────────────────────────────────────────────────────

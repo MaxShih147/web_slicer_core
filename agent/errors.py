@@ -3,30 +3,45 @@
 import inspect
 import secrets
 import sys
+from typing import Optional
 
 from fastapi.responses import JSONResponse
 
 
 class APIError(Exception):
-    def __init__(self, code: str, message: str, http_status: int, retryable: bool = False):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        http_status: int,
+        retryable: bool = False,
+        details: Optional[list] = None,
+    ):
         self.code = code
         self.message = message
         self.http_status = http_status
         self.retryable = retryable
+        # Per-field problems ([{"loc": [...], "msg": ...}]), emitted as
+        # data.errors. Left out of the body entirely when None so every
+        # existing error response stays byte-for-byte the same.
+        self.details = details
         self.trace_id = secrets.token_hex(6)  # 12-char hex
         super().__init__(message)
 
     def to_response(self, headers: dict = None) -> JSONResponse:
+        data = {
+            "retryable": self.retryable,
+            "traceId": self.trace_id,
+        }
+        if self.details is not None:
+            data["errors"] = self.details
         return JSONResponse(
             status_code=self.http_status,
             content={
                 "success": False,
                 "code": self.code,
                 "message": self.message,
-                "data": {
-                    "retryable": self.retryable,
-                    "traceId": self.trace_id,
-                },
+                "data": data,
             },
             headers=headers or {},
         )
@@ -270,6 +285,17 @@ def shrinkage_compensation_invalid(detail: str = None) -> APIError:
         422,
         retryable=False,
     )
+
+
+# fix-support-zero-param-engine-hang D3. `errors` has a default so
+# factory_registry() can still call these with the required argument only.
+
+def support_param_invalid(message: str, errors: Optional[list] = None) -> APIError:
+    return APIError("SUPPORT_PARAM_INVALID", message, 422, retryable=False, details=errors)
+
+
+def support_point_param_invalid(message: str, errors: Optional[list] = None) -> APIError:
+    return APIError("SUPPORT_POINT_PARAM_INVALID", message, 422, retryable=False, details=errors)
 
 
 # ─── slicing error codes ───────────────────────────────────────────────────────

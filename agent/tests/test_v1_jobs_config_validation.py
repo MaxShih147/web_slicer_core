@@ -68,10 +68,16 @@ def upload(main_module, monkeypatch):
         ({"support_points_density_relative": -1}, "support_points_density_relative"),
         ({"support_points_density_relative": 10001}, "support_points_density_relative"),
         ({"support_points_min_distance": 150}, "support_points_min_distance"),
+        # fix-support-zero-param-engine-hang: v1 keeps its 400 shape for the
+        # new floor too (spec: v1 上傳端點擋下連接長度為 0).
+        ({"support_max_bridge_length": 0}, "support_max_bridge_length"),
     ],
-    ids=["negative-density", "density-over-limit", "min-distance-over-limit"],
+    ids=["negative-density", "density-over-limit", "min-distance-over-limit", "zero-connector-length"],
 )
 def test_out_of_range_value_keeps_v1_400(upload, config, field):
+    """support-param-validation (MODIFIED): v1 上傳端點維持 400 /
+    v1 上傳端點擋下連接長度為 0 (create_job is patched to fail, so no job and
+    no engine work can be created)"""
     with pytest.raises(HTTPException) as exc_info:
         upload(config)
     assert exc_info.value.status_code == 400

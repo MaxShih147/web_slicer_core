@@ -53,6 +53,7 @@ def _run(coro):
 
 class TestExecuteReturns422(object):
     def test_invalid_pad_wall_slope_returns_422_not_500(self, pending_job):
+        """support-param-validation (MODIFIED): 側壁角度低於後端下限 (/execute)"""
         with pytest.raises(APIError) as exc_info:
             _run(api_v2.execute_slice_job(pending_job, BackgroundTasks()))
         assert exc_info.value.http_status == 422
@@ -62,6 +63,7 @@ class TestExecuteReturns422(object):
 
 class TestGenerateSupportsReturns422:
     def test_invalid_pad_wall_slope_returns_422_not_500(self, pending_job):
+        """support-param-validation (MODIFIED): 側壁角度低於後端下限 (/generate-supports)"""
         with pytest.raises(APIError) as exc_info:
             _run(api_v2.generate_supports_only(pending_job, BackgroundTasks()))
         assert exc_info.value.http_status == 422
@@ -71,11 +73,35 @@ class TestGenerateSupportsReturns422:
 
 class TestExportSupportPointsReturns422:
     def test_invalid_pad_wall_slope_returns_422_not_500(self, pending_job):
+        """support-param-validation (MODIFIED): 側壁角度低於後端下限 (/export-support-points)"""
         with pytest.raises(APIError) as exc_info:
             _run(api_v2.export_support_points_only(pending_job, BackgroundTasks()))
         assert exc_info.value.http_status == 422
         assert exc_info.value.retryable is False
         assert "pad_wall_slope" in exc_info.value.message
+
+
+class TestAllFourEntryPointsAgree:
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            api_v2.execute_slice_job,
+            api_v2.generate_supports_only,
+            api_v2.export_support_points_only,
+            api_v2.generate_hollow_only,
+        ],
+        ids=["execute", "generate-supports", "export-support-points", "generate-hollow"],
+    )
+    def test_invalid_pad_wall_slope_is_422_everywhere(self, pending_job, endpoint):
+        """support-param-validation (MODIFIED): 四個入口一致"""
+        background = BackgroundTasks()
+        with pytest.raises(APIError) as exc_info:
+            _run(endpoint(pending_job, background))
+        assert exc_info.value.http_status == 422
+        assert exc_info.value.code == "CONFIG_VALIDATION_ERROR"
+        assert exc_info.value.retryable is False
+        assert "pad_wall_slope" in exc_info.value.message
+        assert background.tasks == []
 
 
 @pytest.fixture
@@ -111,6 +137,7 @@ class TestSupportPointRangeGuardsReturn422:
         ids=["execute", "generate-supports", "export-support-points", "generate-hollow"],
     )
     def test_out_of_range_min_distance_returns_422(self, min_distance_job, endpoint):
+        """support-param-validation (MODIFIED): 執行端點遇到 min_distance 超出範圍"""
         background = BackgroundTasks()
         with pytest.raises(APIError) as exc_info:
             _run(endpoint(min_distance_job, background))
