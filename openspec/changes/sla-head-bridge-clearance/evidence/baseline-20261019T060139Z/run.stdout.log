@@ -1,0 +1,24 @@
+2026-10-19T06:01:39Z
+02_e5_d100: T(3+4) median = 5.0 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+02_e10_d100: T(3+4) median = 1.0 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+02_e10_d400: T(3+4) median = 3.0 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+02_mixed_s1: T(3+4) median = 49.4 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+02_mixed_s2: T(3+4) median = 70.7 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+02_mixed_s3: T(3+4) median = 54.0 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+02_mixed_s4: T(3+4) median = 44.5 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+02_mixed_s5: T(3+4) median = 56.0 ms | deleted heads [0, 0, 0] | exits [0, 0, 0]
+China-dragon1: T(3+4) median = 1970.8 ms | deleted heads [3, 3, 3] | exits [0, 0, 0]
+Pikachu: T(3+4) median = 1294.9 ms | deleted heads [2, 2, 2] | exits [0, 0, 0]
+2026-10-19T06:02:27Z
+02_e5_d100: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+02_e10_d100: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+02_e10_d400: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+02_mixed_s1: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+02_mixed_s2: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+02_mixed_s3: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+02_mixed_s4: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+02_mixed_s5: distinct trees 1/5, distinct head paths 1/5 (multithread only: 1 / 1) | exits [0, 0, 0, 0, 0]
+China-dragon1: distinct trees 5/5, distinct head paths 5/5 (multithread only: 4 / 4) | exits [0, 0, 0, 0, 0]
+Pikachu: distinct trees 5/5, distinct head paths 5/5 (multithread only: 4 / 4) | exits [0, 0, 0, 0, 0]
+2026-10-19T06:04:13Z
+2026-10-19T06:04:46Z

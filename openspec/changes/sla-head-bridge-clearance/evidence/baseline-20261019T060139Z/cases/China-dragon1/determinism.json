@@ -1,0 +1,86 @@
+{
+ "case": "China-dragon1",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": "bb022433e0e86903f1340212947e0160e07a24bfe05dc895462fb72dc2869c95",
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.305913,
+    "Routing supports to model surface": 2.846202,
+    "Interconnecting pillars": 0.092689
+   },
+   "T_s": 3.152115,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\det_mt1\\tree.json",
+   "tree_sha256": "245c0a0869f9a9d2b66fb3085315f556395afb910a3c2dcccbe464acb217f411",
+   "label": "mt1",
+   "head_paths_sha256": "467ef663969226ed1e756ad51beb8a1a2a0a2854a95ddfb936de9eb7103bc279"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.36415,
+    "Routing supports to model surface": 2.051721,
+    "Interconnecting pillars": 0.097372
+   },
+   "T_s": 2.415871,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\det_mt2\\tree.json",
+   "tree_sha256": "bc6913b6a95e246e673676bba723677da8cf44d0e90edc6d93c8cd10e56fa571",
+   "label": "mt2",
+   "head_paths_sha256": "e80e484fe678f6bd10034a557e8b27e2e8534b8840b015748eb635a818ce3440"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.363912,
+    "Routing supports to model surface": 2.085909,
+    "Interconnecting pillars": 0.085039
+   },
+   "T_s": 2.449821,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\det_mt3\\tree.json",
+   "tree_sha256": "fb8c44b0fb800f677d95fd2c12f02f4731cc732a3071d8fbee04227191c95e7a",
+   "label": "mt3",
+   "head_paths_sha256": "1de8dfcef9258f6ef288f0d5305874071e47dadbb3be970ad9b553aaed9c20b5"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.30362,
+    "Routing supports to model surface": 2.131683,
+    "Interconnecting pillars": 0.072358
+   },
+   "T_s": 2.435303,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\det_mt4\\tree.json",
+   "tree_sha256": "ec3baaee60011e1b475f69fb497d74ad0e75b0ee01af3074c11b922c8760d779",
+   "label": "mt4",
+   "head_paths_sha256": "7a3b0aa8c0592e2ab6152cb917aa118451ab97b48db44e4d96bdc0a3394844a2"
+  },
+  {
+   "exit": 0,
+   "threads": 1,
+   "steps_s": {
+    "Routing to ground": 0.268435,
+    "Routing supports to model surface": 7.083028,
+    "Interconnecting pillars": 0.110085
+   },
+   "T_s": 7.351463,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\det_t1\\tree.json",
+   "tree_sha256": "dd848092c96d16aedb686ab490cfdeb7dff751d2fc8c5ca280346c93b415c2ff",
+   "label": "t1",
+   "head_paths_sha256": "06ac2d39d5b74d634642d05e1a11a2994da930d51a5a64ea6013db315c804847"
+  }
+ ],
+ "distinct_tree": 5,
+ "distinct_head_paths": 5,
+ "distinct_tree_multithread": 4,
+ "distinct_head_paths_multithread": 4
+}
