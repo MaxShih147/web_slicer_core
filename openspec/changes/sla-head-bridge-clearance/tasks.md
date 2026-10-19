@@ -21,19 +21,19 @@
 
 ## 2. 幾何模組與單元測試
 
-- [ ] 2.1 新增 `src/libslic3r/SLA/BridgeClearance.{hpp,cpp}`（命名空間 `Slic3r::sla::clearance`），加入 `src/libslic3r/CMakeLists.txt`
-- [ ] 2.2 定義 `SAFETY_CLEARANCE = 0.2`、`PrimKind`、`Capsule`、`Prim`、`Contact`；`capsule_dist()` 直接呼叫 `bracing::geom::seg_seg_dist3d`，不另寫第二份
-- [ ] 2.3 實作元件轉膠囊體的對應（design 決策 2 的表格）：掛橋 / 繞路 / prop 取 `r`，`DiffBridge` 取 `max(r, end_r)`，柱取柱腳到柱頂與 `max(r_start, r_end)`，支撐頭取 `pos → junction_point()` 與 `r_back`
-- [ ] 2.4 實作 `ClearanceIndex`：boost 3D R* 樹（`rstar<16, 4>`，`double` 座標），存入外擴 `r` 的 AABB，查詢框外擴 `r + c`；只插入不刪除
-- [ ] 2.5 實作共用柱判定（以 ID 取柱集合並求交集）與完全豁免規則（同一支撐頭路徑內、桿對其端柱、支撐頭對其承載柱）
-- [ ] 2.6 實作 R 接點過濾：`R_P = r_P + r1 + r2 + c`；以俯視二次式解出圓柱內的參數區間；多根共用柱時做區間差集（至多 3 段）；幾乎鉛直的桿以端點判定；任一方被剪光即通過；提供 `joint_clipped_dist()`
-- [ ] 2.7 實作 `ClearanceIndex::violations(cands, c, axis_of)`，回傳全部違規 `Contact`（含座標、距離、門檻、對象種類）；恰等於門檻視為通過
-- [ ] 2.8 `bracing::PlannerConfig::safety_clearance` 的預設值改為引用 `clearance::SAFETY_CLEARANCE`（數值不變）
-- [ ] 2.9 新增 `tests/sla_print/sla_bridge_clearance_tests.cpp`（標籤 `[bridge_clearance]`），加入 `tests/sla_print/CMakeLists.txt`。涵蓋 spec 的情境：高度差 1.5 通過、1.0 違規、45° 傾斜 1.06 違規、恰為 1.2 通過、錐形柱取 0.75、支撐頭膠囊體、半空柱腳下方 5 mm 通過、R = 1.7 / 2.45、同點 90° 通過、同點 10° 違規、共用柱以 ID 判定。另加一個隨機性質測試：比較索引查詢與暴力全比對，結果須完全一致（粗篩不得漏判）
-- [ ] 2.10 **VS 2022 建置**：開啟 `PrusaSlicer.sln`。CMakeLists 有改動，建置時 VS 會先自動重跑 CMake（`ZERO_CHECK`）；若跳出「重新載入方案」，請按「全部重新載入」。組態 `Release`、平台 `x64` → 建置 `libslic3r` → 建置 `sla_print_tests` → 建置 `slicer-engine`
-- [ ] 2.11 **驗證**：`sla_print_tests.exe "[bridge_clearance]"` 全部通過；`sla_print_tests.exe "[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 仍全部通過。以 `--threads 1` 對 02.stl 預設組生成，`tree.json` 雜湊與 1.8 基準線相同（本 Task 不改變任何引擎輸出）
-- [ ] 2.12 **`/code-review` 檢核點**：重點：粗篩外擴量是否保證超集合；區間差集的邊界（端點恰在圓上、整段在內、相切）；浮點退化（零長度線段、平行線段）；常數只有一處定義
-- [ ] 2.13 提交本 Task
+- [x] 2.1 新增 `src/libslic3r/SLA/BridgeClearance.{hpp,cpp}`（命名空間 `Slic3r::sla::clearance`），加入 `src/libslic3r/CMakeLists.txt`
+- [x] 2.2 定義 `SAFETY_CLEARANCE = 0.2`、`PrimKind`、`Capsule`、`Prim`、`Contact`；`capsule_dist()` 直接呼叫 `bracing::geom::seg_seg_dist3d`，不另寫第二份
+- [x] 2.3 實作元件轉膠囊體的對應（design 決策 2 的表格）：掛橋 / 繞路 / prop 取 `r`，`DiffBridge` 取 `max(r, end_r)`，柱取柱腳到柱頂與 `max(r_start, r_end)`，支撐頭取 `pos → junction_point()` 與 `r_back`
+- [x] 2.4 實作 `ClearanceIndex`：boost 3D R* 樹（`rstar<16, 4>`，`double` 座標），存入外擴 `r` 的 AABB，查詢框外擴 `r + c`；只插入不刪除
+- [x] 2.5 實作共用柱判定（以 ID 取柱集合並求交集）與完全豁免規則（同一支撐頭路徑內、桿對其端柱、支撐頭對其承載柱）
+- [x] 2.6 實作 R 接點過濾：`R_P = r_P + r1 + r2 + 0.2`（依 spec 固定用 `SAFETY_CLEARANCE`，L1 也不縮小）；以俯視二次式解出圓柱內的參數區間；多根共用柱時做區間差集（至多 3 段）；幾乎鉛直的桿以端點判定；任一方被剪光即通過；提供 `joint_clipped_dist()`
+- [x] 2.7 實作 `ClearanceIndex::violations(cands, c, axis_of)`，回傳全部違規 `Contact`（含座標、距離、門檻、對象種類）；恰等於門檻視為通過
+- [x] 2.8 `bracing::PlannerConfig::safety_clearance` 的預設值改為引用 `clearance::SAFETY_CLEARANCE`（數值不變）
+- [x] 2.9 新增 `tests/sla_print/sla_bridge_clearance_tests.cpp`（標籤 `[bridge_clearance]`），加入 `tests/sla_print/CMakeLists.txt`。涵蓋 spec 的情境：高度差 1.5 通過、1.0 違規、45° 傾斜 1.06 違規、恰為 1.2 通過、錐形柱取 0.75、支撐頭膠囊體、半空柱腳下方 5 mm 通過、R = 1.7 / 2.45、同點 90° 通過、同點 10° 違規、共用柱以 ID 判定。另加一個隨機性質測試：比較索引查詢與暴力全比對，結果須完全一致（粗篩不得漏判）
+- [x] 2.10 **VS 2022 建置**：開啟 `PrusaSlicer.sln`。CMakeLists 有改動，建置時 VS 會先自動重跑 CMake（`ZERO_CHECK`）；若跳出「重新載入方案」，請按「全部重新載入」。組態 `Release`、平台 `x64` → 建置 `libslic3r` → 建置 `sla_print_tests` → 建置 `slicer-engine`
+- [x] 2.11 **驗證**：`sla_print_tests.exe "[bridge_clearance]"` 全部通過；`sla_print_tests.exe "[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 仍全部通過。以 `--threads 1` 對 02.stl 預設組生成，`tree.json` 雜湊與 1.8 基準線相同（本 Task 不改變任何引擎輸出）
+- [x] 2.12 **`/code-review` 檢核點**：重點：粗篩外擴量是否保證超集合；區間差集的邊界（端點恰在圓上、整段在內、相切）；浮點退化（零長度線段、平行線段）；常數只有一處定義
+- [x] 2.13 提交本 Task
 
 ## 3. 排程拆分重構
 
@@ -43,7 +43,7 @@
 - [ ] 3.4 把 `connect_to_nearpillar()` 拆成 `plan_to_pillar()` 與提交，包含「先長自身短柱再掛過去」的情況
 - [ ] 3.5 把 `connect_to_model_body()` 拆成 `plan_model_anchor()` 與提交。階段一不得寫入共享的 `m_penetration_stats`：統計值隨 plan 攜帶，提交時再累加
 - [ ] 3.6 實作候選清單：第 3(b) 步為中心柱 → 其他柱 → 自立柱；第 4 步為柱 → 繞路 → 錨在模型上。柱依（柱腳距離, 柱 ID）排序，最多保留 K = 8 個模型可行的掛柱候選；只有在沒有任何可行掛柱候選時，才計算繞路 / 自立柱 / 錨柱
-- [ ] 3.7 第 3(a) 步直接記錄每群中心柱的 ID，取代 `m_pillar_index.query(..., 1)`；中心柱建立失敗的群，其候選不含中心柱
+- [ ] 3.7 第 3(a) 步直接記錄每群中心柱的 ID，取代 `m_pillar_index.query(..., 1)`；中心柱建立失敗的群，其候選不含中心柱（中心柱的間距紀錄在 4.1 加入，本 Task 不改中心柱的建立結果）
 - [ ] 3.8 實作兩階段驅動（第 3(b)、4 步）：階段一用 `execution::for_each` 讀不可變快照（builder 唯讀、柱索引複本），結果寫入以支撐頭 ID 為索引的陣列；階段二單執行緒依支撐頭 ID 由小到大提交；候選全滅時以最新狀態重算一次
 - [ ] 3.9 在階段二實作硬規則：一頭一路徑且原子提交；`r_start ≥ r_back`（含掛中心柱）；以提交當下的 `bridgecount < max_bridges_on_pillar` 判定，移除 `:310` / `:374` 的不一致寫法；既有的模型碰撞、`minz`、最大橋長留在階段一
 - [ ] 3.10 沒有任何候選時維持既有行為：第 4 步照舊 `head.invalidate()` 並寫既有警告；第 3(b) 步照舊（自立柱失敗時不另做處理）。兩者都要計數
@@ -55,16 +55,16 @@
 
 ## 4. 間距規則與降級狀態機
 
-- [ ] 4.1 在 `DefaultSupportTree` 加入 `ClearanceIndex` 成員：分類後插入所有有效支撐頭的膠囊體；`adopt_prior_pillars()` 插入凍結柱；第 3(a) 步插入中心柱；每次提交插入該 plan 的全部元件
+- [ ] 4.1 在 `DefaultSupportTree` 加入 `ClearanceIndex` 成員：分類後插入所有有效支撐頭的膠囊體；`adopt_prior_pillars()` 插入凍結柱；第 3(a) 步插入中心柱；每次提交插入該 plan 的全部元件。第 3(a) 步中心柱照原位建立、不進降級；建立後以 c = 0.2 查它對支撐頭的違規，排除原生過密（長出它的支撐頭與被碰支撐頭的膠囊體本身 < 門檻，只計數），其餘每一處寫 info log `centroid_pillar_clearance_recorded pillar=<id> head=<id> dist=<d> required=<r> at (x,y,z)`
 - [ ] 4.2 由 `RoutePlan` 產生待判元件清單（掛橋、自身短柱、繞路段、`DiffBridge`、新柱、錨頭），並帶上 head_id 與柱 ID，供豁免與 R 過濾使用
 - [ ] 4.3 實作純函式的路徑選擇器 `select_route(cands, index, hard_ok, recompute)`：L0（c = 0.2）→ 重算一次 → L1（c = 0）→ L2（重算後第一個通過硬規則者）→ NONE；回傳選中的候選、層級與違規 `Contact`
 - [ ] 4.4 在階段二以 `select_route` 取代 Task 3 的直接提交；硬規則在任何層級都不放寬；斜撐不參與
 - [ ] 4.5 L1 提交寫 info log；L2 提交寫 `WARNING: fallback_intersection_retained head=<id> kind=<route> contacts=<n> at (x,y,z)...`，並把 L2 紀錄（支撐頭、路徑類型、接觸清單）存進 `DefaultSupportTree`，供 Task 6 匯出
-- [ ] 4.6 生成結束時寫一行摘要 log：L1、L2、NONE 次數（寫法比照 `report_penetration_failsafes`）
+- [ ] 4.6 生成結束時寫一行摘要 log：L1、L2、NONE 次數，以及中心柱已記錄接觸數、原生過密數（寫法比照 `report_penetration_failsafes`）
 - [ ] 4.7 單元測試（標籤 `[head_route_select]`）：以假的候選與手動建立的索引驅動 `select_route`，涵蓋 spec 的情境：L0 選第二候選、重算後看見新柱、L1（d = 1.1 對 1.0）、L2、NONE、L2 不放寬粗細與掛橋上限、等距候選以柱 ID 決定
-- [ ] 4.8 引擎層測試（`[head_routing]` 擴充）：在合成網格上刻意製造交叉，結果須沒有未記錄的 A、C、反向 C（每一處都有 L1 或 L2 紀錄）；1 個執行緒與不限制的輸出仍完全相同
+- [ ] 4.8 引擎層測試（`[head_routing]` 擴充）：在合成網格上刻意製造交叉，結果須沒有未記錄的 A、C、反向 C（每一處都有 L1、L2 或 `centroid_pillar_clearance_recorded` 紀錄）；另造一個中心柱貼近非原生過密支撐頭的案例，確認中心柱位置不變且有該行 log；1 個執行緒與不限制的輸出仍完全相同
 - [ ] 4.9 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`
-- [ ] 4.10 **驗證**：`sla_print_tests.exe "[head_route_select],[head_routing],[bridge_clearance],[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 全部通過。對驗收素材：L0 判定下的 A、C、反向 C 剩餘違規（柱碰支撐頭以 `revC_head_net` 計，原生過密的 `revC_head_native` 只記錄），每一處都能在 log 的 L1 / L2 紀錄中找到；D、粗頭掛細柱 = 0；被刪除的支撐頭數不多於基準線；確定性與第 3、4 步耗時門檻同 3.13；記錄 L1、L2 次數，以及柱數、桿數相對基準線的變化
+- [ ] 4.10 **驗證**：`sla_print_tests.exe "[head_route_select],[head_routing],[bridge_clearance],[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 全部通過。對驗收素材：L0 判定下的 A、C、反向 C 剩餘違規（柱碰支撐頭以 `revC_head_net` 計，原生過密的 `revC_head_native` 只記錄），每一處都能在 log 的 L1 / L2 紀錄中找到，中心柱碰支撐頭則在 `centroid_pillar_clearance_recorded` 紀錄中找到（基準線的 mixed_s1、mixed_s2、China-dragon1 三處屬此類）；D、粗頭掛細柱 = 0；被刪除的支撐頭數不多於基準線；確定性與第 3、4 步耗時門檻同 3.13；記錄 L1、L2 次數，以及柱數、桿數相對基準線的變化
 - [ ] 4.11 **`/code-review` 檢核點**：重點：狀態轉移是否完全照 spec 的順序；重算後的保底候選是否取自重算後的清單；豁免與 R 過濾是否只依 ID；違規座標是否正確寫入 log；摘要計數與實際次數一致
 - [ ] 4.12 提交本 Task
 
@@ -86,9 +86,9 @@
 - [ ] 6.1 在 `SupportTree.hpp` 新增 `TreeWarning`（code、head 索引、route、contacts），由 `DefaultSupportTree` 的 L2 紀錄轉入；head 索引需換算成匯出 `heads[]` 的索引
 - [ ] 6.2 `SupportTreeIO.hpp`：只有在有 L2 紀錄時才寫出頂層 `warnings` 陣列，欄位依 spec；`version` 維持 2
 - [ ] 6.3 IO 測試（`[sla_io]` 擴充）：沒有警告時沒有 `warnings` 鍵且 `version` 為 2；有一筆警告時，`code`、`head`、`route`、`contacts[].pos/with/dist/required` 都正確
-- [ ] 6.4 新增 C++ 量測 `tests/sla_print/sla_head_bridge_metrics.{hpp,cpp}`，直接讀 builder：A、B、C、反向 C、D、重複柱對、粗頭掛細柱、L1、L2、NONE、未記錄的違規數；附單元測試（標籤 `[head_bridge_metrics]`），以小型手造支撐樹驗證每一種計數
+- [ ] 6.4 新增 C++ 量測 `tests/sla_print/sla_head_bridge_metrics.{hpp,cpp}`，直接讀 builder：A、B、C、反向 C、D、重複柱對、粗頭掛細柱、L1、L2、NONE、中心柱已記錄接觸數、原生過密數、未記錄的違規數（L1、L2、中心柱紀錄與原生過密都不算未記錄）；附單元測試（標籤 `[head_bridge_metrics]`），以小型手造支撐樹驗證每一種計數
 - [ ] 6.5 確認 agent 對 `warnings` 只做原樣轉送：執行 `.venv\Scripts\python -m pytest agent/tests/test_support_points_wiring.py agent/tests/test_support_e2e.py`，結果與合併前相同
-- [ ] 6.6 **最終驗收**：以最終引擎對所有驗收素材執行 6.4 的量測與 `evidence/tools/` 腳本。逐條核對 spec「回歸與效能門檻」（輸入為基準線的固定支撐點清單）：D / 粗頭掛細柱 / 重複柱對（`dup_truss_pairs` 與 `pairs_excess`）= 0；未記錄的違規 = 0（原生過密只記錄）；被刪除的支撐頭數不多於基準線；確定性（4 次 + `--threads 1`）；第 3、4 步耗時門檻；planar 參考模型的回歸門檻。把結果與基準線的對照寫入 `evidence/final-<UTC 時間>/FINAL.md`，L1、L2、柱數、桿數只記錄趨勢
+- [ ] 6.6 **最終驗收**：以最終引擎對所有驗收素材執行 6.4 的量測與 `evidence/tools/` 腳本。逐條核對 spec「回歸與效能門檻」（輸入為基準線的固定支撐點清單）：D / 粗頭掛細柱 / 重複柱對（`dup_truss_pairs` 與 `pairs_excess`）= 0；未記錄的違規 = 0（原生過密只記錄；中心柱碰支撐頭以 `centroid_pillar_clearance_recorded` 計為已記錄）；被刪除的支撐頭數不多於基準線；確定性（4 次 + `--threads 1`）；第 3、4 步耗時門檻；planar 參考模型的回歸門檻。把結果與基準線的對照寫入 `evidence/final-<UTC 時間>/FINAL.md`，L1、L2、柱數、桿數只記錄趨勢
 - [ ] 6.7 重建受影響的支撐網格黃金檔（若有既有測試以改動前的支撐輸出為準）；提交說明註明這是刻意的幾何變更
 - [ ] 6.8 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`；最後對整個方案按「建置方案」一次，確認沒有其他目標因本變更而無法編譯
 - [ ] 6.9 **驗證**：`sla_print_tests.exe` 不帶參數全跑，除了 1.7 記錄的既有失敗之外全部通過；`openspec validate sla-head-bridge-clearance` 通過

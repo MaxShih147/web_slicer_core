@@ -295,6 +295,7 @@ support-tree 的 `version` SHALL 維持 2。沒有任何 L2 提交時，匯出 M
 - 所有門檻 SHALL 以基準線匯出的固定支撐點清單（`evidence/baseline-*/inputs/`）為輸入判定，以隔離支撐點生成與支撐頭放置本身的不確定性。
 - A、C、反向 C 的每一處剩餘違規（以 L0 間隙判定），SHALL 都對應到一筆 L1 log 或 L2 `warnings` 紀錄；沒有紀錄的違規數 SHALL 為 0。
 - 柱與支撐頭的接觸中，若該柱由某支撐頭長出，而該支撐頭與被碰支撐頭兩者的膠囊體（不做共用柱剪除）間距本身即 < `r1 + r2 + 0.2 mm`，屬支撐點原生過密，不在本能力範圍內：這類接觸 SHALL 不列入上述「沒有紀錄的違規」，但其數量 SHALL 被記錄。第 3(a) 步的中心柱 MUST NOT 進入降級狀態機。
+- 第 3(a) 步的中心柱 SHALL 維持原位建立，MUST NOT 因間距而移位、改道或降級。中心柱的柱身與非原生過密的支撐頭間距 < `r1 + r2 + 0.2 mm` 時，系統 SHALL 以 info 等級寫一行 log，內容以 `centroid_pillar_clearance_recorded` 起頭，並含柱 ID、支撐頭 ID、距離、門檻與接觸座標；這類接觸視為已記錄的邊界，SHALL 不列入「沒有紀錄的違規」，其數量 SHALL 計入生成結束的摘要 log。
 - 被刪除的支撐頭數 MUST NOT 多於改動前的引擎。
 - 第 3、4 步的合計耗時 SHALL ≤ T + max(0.1 × T, 50 ms)，T 為改動前（`release/v1.0.6` 合入 planar 後）於同一台機器、同一編譯設定下的量測值。
 - L1 次數、L2 次數、柱數與桿數 SHALL 被記錄，供人判讀趨勢，不作為通過門檻。
@@ -309,6 +310,13 @@ support-tree 的 `version` SHALL 維持 2。沒有任何 L2 提交時，匯出 M
 - **WHEN** P 的柱身與 h2 的間距不足門檻
 - **THEN** 這一處 MUST NOT 計入沒有紀錄的反向 C 違規，且 SHALL 計入原生過密的數量
 - **AND** P MUST NOT 因此改走降級狀態機
+
+#### Scenario: 中心柱貼近非原生過密的支撐頭
+- **GIVEN** 中心柱 P 的柱身與支撐頭 h2 的間距 1.16 mm，門檻 1.2 mm；長出 P 的支撐頭與 h2 的膠囊體間距 ≥ 門檻（不是原生過密）
+- **WHEN** 第 3(a) 步建立 P
+- **THEN** P SHALL 照原位建立，且 MUST NOT 進入降級狀態機
+- **AND** log SHALL 含一行以 `centroid_pillar_clearance_recorded` 起頭、含 P、h2 與接觸座標的訊息
+- **AND** 這一處 SHALL 視為已記錄，MUST NOT 計入沒有紀錄的反向 C 違規
 
 #### Scenario: 支撐頭不因本變更減少
 - **WHEN** 以改動前與改動後的引擎為同一驗收素材生成支撐
