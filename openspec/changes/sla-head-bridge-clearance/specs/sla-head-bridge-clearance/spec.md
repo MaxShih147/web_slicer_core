@@ -280,7 +280,7 @@ support-tree 的 `version` SHALL 維持 2。沒有任何 L2 提交時，匯出 M
 
 ### Requirement: 常數不開放設定
 
-安全間隙 0.2 mm SHALL 是與 `sla-bracing-topology` 共用的同一個引擎內常數。每個支撐頭保留的掛柱候選數上限 K 為引擎內常數（初值 8）。兩者 MUST NOT 經由設定檔或 API 開放。
+安全間隙 0.2 mm SHALL 是與 `sla-bracing-topology` 共用的同一個引擎內常數。每個支撐頭保留的掛柱候選數上限 K 為引擎內常數，定案為 4（初值 8，依效能量測校正）。兩者 MUST NOT 經由設定檔或 API 開放。
 
 #### Scenario: 設定不影響間隙
 - **WHEN** 於切片設定中加入任何名為 `safety_clearance` 的鍵

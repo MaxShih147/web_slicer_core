@@ -37,21 +37,21 @@
 
 ## 3. 排程拆分重構
 
-- [ ] 3.1 定義 `RoutePlan`（`to_pillar`、`own_pillar`、`ground_route`、`model_anchor`）與 `BuildRecipe`（提交時要重放的 builder 呼叫，含 `BridgeKind`、owner、底座、接合點），放在 SLA 目錄的內部標頭
-- [ ] 3.2 把 `create_ground_pillar()`（含 `search_widening_path`、零墊高修正橋）拆成 `plan_ground_pillar()`（只讀）與提交函式。保留原函式作為「規劃 + 提交」的包裝，讓第 3(a) 步與其他呼叫者行為不變
-- [ ] 3.3 把 `connect_to_ground()`、`search_ground_route()` 拆成 `plan_ground_route()` 與提交；確認優化器仍為 `seed(0)`
-- [ ] 3.4 把 `connect_to_nearpillar()` 拆成 `plan_to_pillar()` 與提交，包含「先長自身短柱再掛過去」的情況
-- [ ] 3.5 把 `connect_to_model_body()` 拆成 `plan_model_anchor()` 與提交。階段一不得寫入共享的 `m_penetration_stats`：統計值隨 plan 攜帶，提交時再累加
-- [ ] 3.6 實作候選清單：第 3(b) 步為中心柱 → 其他柱 → 自立柱；第 4 步為柱 → 繞路 → 錨在模型上。柱依（柱腳距離, 柱 ID）排序，最多保留 K = 8 個模型可行的掛柱候選；只有在沒有任何可行掛柱候選時，才計算繞路 / 自立柱 / 錨柱
-- [ ] 3.7 第 3(a) 步直接記錄每群中心柱的 ID，取代 `m_pillar_index.query(..., 1)`；中心柱建立失敗的群，其候選不含中心柱（中心柱的間距紀錄在 4.1 加入，本 Task 不改中心柱的建立結果）
-- [ ] 3.8 實作兩階段驅動（第 3(b)、4 步）：階段一用 `execution::for_each` 讀不可變快照（builder 唯讀、柱索引複本），結果寫入以支撐頭 ID 為索引的陣列；階段二單執行緒依支撐頭 ID 由小到大提交；候選全滅時以最新狀態重算一次
-- [ ] 3.9 在階段二實作硬規則：一頭一路徑且原子提交；`r_start ≥ r_back`（含掛中心柱）；以提交當下的 `bridgecount < max_bridges_on_pillar` 判定，移除 `:310` / `:374` 的不一致寫法；既有的模型碰撞、`minz`、最大橋長留在階段一
-- [ ] 3.10 沒有任何候選時維持既有行為：第 4 步照舊 `head.invalidate()` 並寫既有警告；第 3(b) 步照舊（自立柱失敗時不另做處理）。兩者都要計數
-- [ ] 3.11 新增引擎層測試（標籤 `[head_routing]`），使用程式內產生的小型合成網格（例如蘑菇形，讓支撐頭朝向模型）：(a) 以 `tbb::global_control` 限制 1 個執行緒與不限制，各生成一次，第 3、4 步的 head / pillar / bridge 記錄完全相同；(b) 每點尺寸混合時，從同一接合點出發的掛橋數皆 ≤ 1，且沒有支撐頭同時有自立柱與掛橋；(c) 沒有粗頭掛細柱
-- [ ] 3.12 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`。若新增了標頭或測試檔，VS 會先自動重跑 CMake，跳出提示時按「全部重新載入」
-- [ ] 3.13 **驗證**：`sla_print_tests.exe "[head_routing],[bridge_clearance],[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 全部通過。對驗收素材執行 `evidence/tools/`（一律加 `--inputs evidence/baseline-20261019T060139Z/inputs`）：D = 0、粗頭掛細柱 = 0；China-dragon1 與 Pikachu 各跑 4 次再加 `--threads 1`，第 3、4 步記錄的雜湊全部相同；第 3、4 步耗時 ≤ T + max(0.1T, 50 ms)；被刪除的支撐頭數不多於基準線。A、B、C 本 Task 尚未處理，只記錄
-- [ ] 3.14 **`/code-review` 檢核點**：重點：階段一是否有任何共享狀態寫入（builder、索引、統計、`head().bridge_id`）；提交重放與原函式的 builder 呼叫是否逐一對應（owner、`BridgeKind`、`own_*`、底座）；排序的平手規則；重算是否確實只發生一次
-- [ ] 3.15 提交本 Task
+- [x] 3.1 定義 `RoutePlan`（`to_pillar`、`own_pillar`、`ground_route`、`model_anchor`）與 `BuildRecipe`（提交時要重放的 builder 呼叫，含 `BridgeKind`、owner、底座、接合點），放在 SLA 目錄的內部標頭
+- [x] 3.2 把 `create_ground_pillar()`（含 `search_widening_path`、零墊高修正橋）拆成 `plan_ground_pillar()`（只讀）與提交函式。保留原函式作為「規劃 + 提交」的包裝，讓第 3(a) 步與其他呼叫者行為不變
+- [x] 3.3 把 `connect_to_ground()`、`search_ground_route()` 拆成 `plan_ground_route()` 與提交；確認優化器仍為 `seed(0)`
+- [x] 3.4 把 `connect_to_nearpillar()` 拆成 `plan_to_pillar()` 與提交，包含「先長自身短柱再掛過去」的情況
+- [x] 3.5 把 `connect_to_model_body()` 拆成 `plan_model_anchor()` 與提交。階段一不得寫入共享的 `m_penetration_stats`：統計值隨 plan 攜帶，提交時再累加
+- [x] 3.6 實作候選清單：第 3(b) 步為中心柱 → 其他柱 → 自立柱；第 4 步為柱 → 繞路 → 錨在模型上。柱依（柱腳距離, 柱 ID）排序，最多保留 K = 4 個模型可行的掛柱候選（初值 8，於 3.13 依效能量測校正）；只有在沒有任何可行掛柱候選時，才計算繞路 / 自立柱 / 錨柱
+- [x] 3.7 第 3(a) 步直接記錄每群中心柱的 ID，取代 `m_pillar_index.query(..., 1)`；中心柱建立失敗的群，其候選不含中心柱（中心柱的間距紀錄在 4.1 加入，本 Task 不改中心柱的建立結果）
+- [x] 3.8 實作兩階段驅動（第 3(b)、4 步）：階段一用 `execution::for_each` 讀不可變快照（builder 唯讀、柱索引複本），結果寫入以支撐頭 ID 為索引的陣列；階段二單執行緒依支撐頭 ID 由小到大提交；候選全滅時以最新狀態重算一次
+- [x] 3.9 在階段二實作硬規則：一頭一路徑且原子提交；`r_start ≥ r_back`（含掛中心柱）；以提交當下的 `bridgecount < max_bridges_on_pillar` 判定，移除 `:310` / `:374` 的不一致寫法；既有的模型碰撞、`minz`、最大橋長留在階段一
+- [x] 3.10 沒有任何候選時維持既有行為：第 4 步照舊 `head.invalidate()` 並寫既有警告；第 3(b) 步照舊（自立柱失敗時不另做處理）。兩者都要計數
+- [x] 3.11 新增引擎層測試（標籤 `[head_routing]`），使用程式內產生的小型合成網格（例如蘑菇形，讓支撐頭朝向模型）：(a) 以 `tbb::global_control` 限制 1 個執行緒與不限制，各生成一次，第 3、4 步的 head / pillar / bridge 記錄完全相同；(b) 每點尺寸混合時，從同一接合點出發的掛橋數皆 ≤ 1，且沒有支撐頭同時有自立柱與掛橋；(c) 沒有粗頭掛細柱
+- [x] 3.12 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`。若新增了標頭或測試檔，VS 會先自動重跑 CMake，跳出提示時按「全部重新載入」
+- [x] 3.13 **驗證**：`sla_print_tests.exe "[head_routing],[bridge_clearance],[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 全部通過。對驗收素材執行 `evidence/tools/`（一律加 `--inputs evidence/baseline-20261019T060139Z/inputs`）：D = 0、粗頭掛細柱 = 0；China-dragon1 與 Pikachu 各跑 4 次再加 `--threads 1`，第 3、4 步記錄的雜湊全部相同；第 3、4 步耗時 ≤ T + max(0.1T, 50 ms)；被刪除的支撐頭數不多於基準線。A、B、C 本 Task 尚未處理，只記錄
+- [x] 3.14 **`/code-review` 檢核點**：重點：階段一是否有任何共享狀態寫入（builder、索引、統計、`head().bridge_id`）；提交重放與原函式的 builder 呼叫是否逐一對應（owner、`BridgeKind`、`own_*`、底座）；排序的平手規則；重算是否確實只發生一次
+- [x] 3.15 提交本 Task
 
 ## 4. 間距規則與降級狀態機
 
