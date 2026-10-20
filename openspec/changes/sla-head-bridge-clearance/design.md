@@ -222,11 +222,11 @@ struct RoutePlan {
 - 只有在沒有任何可行 to_pillar 候選時，才計算 ground_route / own_pillar / model_anchor。這和舊流程走到這一步的條件相同。
 - 第 3(b) 步的候選順序：中心柱 → 其他柱（依距離）→ own_pillar。第 4 步：柱（依距離）→ ground_route → model_anchor。
 
-**階段二的重算**：若某頭在 L0 下所有階段一候選都因間距或即時狀態（決策 8 的硬規則）失敗，就以「當下最新狀態」重算一次 `plan_routes`。這次會看得到前面剛提交的柱，並補算階段一略過的 ground_route / own_pillar / model_anchor。每頭至多重算一次，重算在單執行緒中進行。
+**階段二的重算**：若某頭在 L0 下所有階段一候選都因間距或即時狀態（決策 8 的硬規則）失敗，就以「當下最新狀態」重算一次 `plan_routes`。這次會看得到前面剛提交的柱，並補算階段一略過的 ground_route / own_pillar / model_anchor。每頭至多重算一次，重算在單執行緒中進行。為了不讓重算的繞路搜尋在單執行緒中排隊，階段一先預判：掛柱候選對本步開始時的 `ClearanceIndex` 已全部違規的支撐頭，必然會重算（已提交的只增不減），它的退路就在階段一平行算好，但先不列入候選，等重算時才列入。選路順序與結果不變（Task 4.10：China-dragon1 第 4 步重算由 Task 3 的 24 次增為 37 次，耗時超過門檻後加入）。
 
 **確定性的論證**：階段一的輸入是不可變快照，各頭結果存在以頭 ID 為索引的陣列，不受排程影響。階段二的走訪順序固定，重算只讀取當下狀態，而當下狀態只由更小 ID 的提交決定。所有排序都有明確的平手規則（距離相同比柱 ID）。builder 的 ID 與陣列順序依提交順序產生。因此第 3(b)、4 步的輸出與執行緒數無關。`beam_mesh_hit` 內部的平行取樣取的是最小值，與順序無關，不影響此論證。繞路的方向搜尋（`sla::plan_ground_detour`，基因演算法）靠 `seed(0)` 得到固定結果，前提是每個搜尋獨占自己的 NLopt 亂數狀態：NLopt 2.5 只在第一次 configure 偵測 thread-local，重新 configure 時 `THREADLOCAL` 會變成空的，亂數狀態就成為整個行程共用，因此 `deps/+NLopt` 在 MSVC 下明確指定 `__declspec(thread)`；階段一每個支撐頭的規劃包在 `tbb::this_task_arena::isolate` 中，執行緒在搜尋內等待平行的網格測試時，不會插入另一個頭的搜尋。（曾試過把搜尋改為循序，China-dragon1 第 3、4 步升到 7165.5 ms，不採用。）
 
-**第 3(a) 步**（中心柱）維持循序、依群順序，但改為直接記錄每群中心柱的 ID，取代 `m_pillar_index.query(..., 1)`；中心柱建立失敗的群，其他頭的候選清單不含中心柱。中心柱維持原位建立，不進降級邏輯。它是整群的受力主幹，不因零點幾毫米的間隙差而移位。此時 `ClearanceIndex` 中已有所有支撐頭（決策 7），所以建立後以 c = 0.2 查一次中心柱對支撐頭的違規：長出它的支撐頭與被碰支撐頭本身就過近者屬原生過密，只計數；其餘每一處寫一行 info log `centroid_pillar_clearance_recorded pillar=<id> head=<id> dist=<d> required=<r> at (x,y,z)`，視為已記錄的邊界（2026-10-19 裁決）。
+**第 3(a) 步**（中心柱）維持循序、依群順序，但改為直接記錄每群中心柱的 ID，取代 `m_pillar_index.query(..., 1)`；中心柱建立失敗的群，其他頭的候選清單不含中心柱。中心柱維持原位建立，不進降級邏輯。它是整群的受力主幹，不因零點幾毫米的間隙差而移位。此時 `ClearanceIndex` 中已有所有支撐頭（決策 7），所以建立後以 c = 0.2 查一次中心柱對支撐頭的違規：長出它的支撐頭與被碰支撐頭本身就過近者屬原生過密，只計數；其餘每一處寫一行 info log `centroid_pillar_clearance_recorded pillar=<id> head=<id> dist=<d> required=<r> at (x,y,z) with=<kind>`（`with` 為被碰元件的種類，Task 4.11 加入），視為已記錄的邊界（2026-10-19 裁決）。
 
 **替代方案：** 第 4 步直接改單執行緒。實測重模型整體慢 50%～100%，不採用。另一個替代方案是全域規劃（先收集所有頭的候選再排序）。新柱與繞路會改變候選集合，形成遞迴依賴，不採用。
 
@@ -256,6 +256,12 @@ struct RoutePlan {
 - **L2 的紀錄**：log 寫一行 `WARNING: fallback_intersection_retained head=<id> kind=<plan.kind> contacts=<n> at (x,y,z)...`（`BOOST_LOG_TRIVIAL(warning)`），並把該頭與 `Contact` 清單加進匯出（決策 10）。
 - L1 只記 info log 與量測計數，不寫入匯出。
 - 斜撐不參與此狀態機。planar 對違規斜撐的處理維持「不建該根桿」。
+- **實作補充（Task 4）**：
+  - 選擇器是純函式 `select_route(cands, index, axis_of, hard_ok, recompute)`（`RoutePlan.{hpp,cpp}`）。`hard_ok` 呼叫 `hard_rules_ok()`，它是掛橋上限與粗細的唯一比較處。
+  - L1、L2 紀錄的接觸，一律是選中路徑在 L0（c = 0.2）下的全部接觸，每筆的 `required` 為 `r1 + r2 + 0.2`。這樣 L0 判定下的每一處剩餘違規都能在紀錄中找到。決策 10 匯出的 `required`（`r1 + r2`）由 Task 6 從同一筆紀錄換算。
+  - L1 的 log 為 `clearance_relaxed head=<id> kind=<route> contacts=<n> at (x,y,z) ...`（info）。生成結束的摘要為 `Default support tree: head route clearance: L1 <n>, L2 <n>, none <n>, centre pillar contacts recorded <n>, support point spacing <n>`。
+  - 支撐頭的承載柱在分類時還不知道，所以支撐頭先以「無承載柱」插入索引；提交路徑時以 `ClearanceIndex::set_carrier()` 補上（坐在其上的柱，否則掛橋終點柱，與 support-tree 匯出相同）。只改 ID，不改膠囊體，也不刪除元件。
+  - 中心柱的判定涵蓋其整條規劃（零墊高修正橋、加寬段與柱），原生過密只適用於柱對支撐頭。紀錄與 log 同時存入 `ClearanceReport`，由 `DefaultSupportTree::execute()` 的選填參數交給呼叫端。
 
 ### 決策 7：反向 C 的落實點
 
@@ -316,6 +322,16 @@ support-tree 維持 `version: 2`，新增選填的頂層陣列 `warnings`。沒�
 - [planar 分支不含 `02f19db4e` 及其後的 v1.0.6 commit，合併有衝突] → `interconnect_pillars()` 採 planar 版本；其餘檔案逐一檢查，並在合併後先跑 planar 的向量與 IO 測試，確認基底正確，再開始本變更。
 - [`02f19db4e` 的提交說明提到前端 `supportInterconnect.js` 鏡像了「一根柱只主動連一個鄰居」，合入 planar 後前後端規則不一致] → 由 DS-online 的後續移植變更處理；本變更的 Impact 已列出。
 
+## Known Limitations
+
+Task 4 的 `/code-review`（4.11）提出、決定不在本變更處理的事項。驗收素材上都沒有造成未記錄的違規。
+
+1. **被刪除的支撐頭留在索引中。** 第 4 步找不到路徑的支撐頭會被刪除（`invalidate()`），但它在分類時插入 `ClearanceIndex` 的膠囊體不會移除（索引只插入不刪除）。ID 較大的支撐頭仍會避開這個已經不存在的頭，可能因此重算或降級，紀錄中的 `with_head` 也可能指向它。驗收素材上，被刪除的頭為 China-dragon1 3 個、Pikachu 2 個，與基準線相同。要修正需要讓索引能停用元件，樹可能改變。
+2. **第 3(b)、4 步的原生過密不排除於降級。** spec 的原生過密（柱由某支撐頭長出，而該頭與被碰支撐頭本身就過近）只在第 3(a) 步的中心柱排除並計數。第 3(b)、4 步新長的柱碰到這類支撐頭時，照常走降級，並記成 L1 或 L2。因此這些接觸都有紀錄，但 L2 次數包含了支撐點間距本身造成的部分（mixed 案例每例 L2 39～57 次）。要排除需修改 spec 的降級定義。
+3. **承載柱延後綁定。** 支撐頭在分類時不知道承載柱，要等它的路徑提交後才以 `set_carrier()` 補上。在此之前，通往它將來承載柱的桿會把它整根判定，不做 R 剪除，結果偏保守：ID 較小的頭可能因此降級，且這筆紀錄在最終的樹中已不構成違規。不預先指定承載柱，因為支撐頭不一定掛到預期的柱，預先指定會漏判。
+4. **中心柱紀錄可能多報。** 中心柱依 spec 在第 3(a) 步判定，此時同群支撐頭還沒有承載柱。之後若它們掛上這根中心柱，該接觸即成為「支撐頭對其承載柱」而豁免，但已寫下的 `centroid_pillar_clearance_recorded` 不會撤回。驗收素材上只有 mixed_s1、mixed_s2、China-dragon1 各 1 筆，與基準線最終樹中量到的三處相同。
+5. **China-dragon1 的耗時餘裕。** 第 3、4 步中位數 2146.2 ms，門檻 2167.9 ms，餘裕 21.7 ms，單次量測有 2 次超過門檻（Open Questions 3）。階段一的預判只看本步開始時的間距，沒有考慮階段二才被填滿的掛橋上限與同一步先提交的元件；這類重算仍在單執行緒中規劃退路（含繞路搜尋）。Task 5、6 若在第 3、4 步增加計算，須重新量測；可行的下一步是讓預判也涵蓋「目標柱在本步開始時只剩一個掛橋名額」的候選。
+
 ## Migration Plan
 
 1. 自 `release/v1.0.6` 建立修復分支。fork 合入 `feat/sla-bracing-planar-topology`（衝突採 planar 版本），主專案合入對應分支並更新子模組指標。
@@ -329,6 +345,6 @@ support-tree 維持 `version: 2`，新增選填的頂層陣列 `warnings`。沒�
 
 1. ~~完全沒有模型可行路徑的支撐頭。~~ 已裁決：本變更引入的間距與避讓規則，在任何情況下都不會導致任何支撐頭被刪除；若支撐頭因模型幾何全向物理阻擋（既有模型干涉）而完全無任何可行路徑，則維持既有行為。proposal 已同步收窄。
 2. **斜撐對支撐頭。** planar 沒有把支撐頭當障礙物，斜撐可能穿過支撐頭的錐體。本變更未納入，是否另案處理待定。
-3. ~~K 的初值。~~ 已定案：K = 4。初值 8 在 3.13 的效能驗收中，China-dragon1 第 3、4 步耗時 3357.7 ms，超過門檻 2167.9 ms。先在 `plan_to_pillar` 加入水平距離早退，並把模型碰撞測試移到所有廉價檢查之後，降為 2237.7 ms；10 個驗收案例的樹逐位元不變。K 再改為 4 後為 2099.1 ms，Pikachu 為 1329.1 ms（門檻 1424.4 ms），兩者都通過。10 個驗收案例的樹在 K = 8 與 K = 4 下逐位元相同。
+3. ~~K 的初值。~~ 已定案：K = 4。初值 8 在 3.13 的效能驗收中，China-dragon1 第 3、4 步耗時 3357.7 ms，超過門檻 2167.9 ms。先在 `plan_to_pillar` 加入水平距離早退，並把模型碰撞測試移到所有廉價檢查之後，降為 2237.7 ms；10 個驗收案例的樹逐位元不變。K 再改為 4 後為 2099.1 ms，Pikachu 為 1329.1 ms（門檻 1424.4 ms），兩者都通過。10 個驗收案例的樹在 K = 8 與 K = 4 下逐位元相同。Task 4 加入間距規則後，China-dragon1 第 4 步的重算由 24 次增為 37 次，耗時升為 2255.8 ms（3 次中位數），超過門檻；加入階段一的退路預算（決策 5）後為 2146.2 ms（5 次：2146.2、2448.6、2014.1、2029.0、2257.1 ms，取中位數），Pikachu 為 1283.3 ms（5 次介於 1276.0～1331.9 ms），兩者都通過，10 個驗收案例的樹與預算前逐位元相同。China-dragon1 的餘裕只有 21.7 ms，見 Known Limitations 5。
 4. **L1 是否也寫入匯出。** 目前只記 info log 與量測計數；若前端需要顯示，再改為 `warnings` 中的另一個 code。
 5. **L2 次數的驗收門檻。** 於 specs 定義（例如參考素材上須為 0，或只記錄不設門檻）。

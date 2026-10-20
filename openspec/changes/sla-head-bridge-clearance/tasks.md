@@ -55,18 +55,18 @@
 
 ## 4. 間距規則與降級狀態機
 
-- [ ] 4.1 在 `DefaultSupportTree` 加入 `ClearanceIndex` 成員：分類後插入所有有效支撐頭的膠囊體；`adopt_prior_pillars()` 插入凍結柱；第 3(a) 步插入中心柱；每次提交插入該 plan 的全部元件。第 3(a) 步中心柱照原位建立、不進降級；建立後以 c = 0.2 查它對支撐頭的違規，排除原生過密（長出它的支撐頭與被碰支撐頭的膠囊體本身 < 門檻，只計數），其餘每一處寫 info log `centroid_pillar_clearance_recorded pillar=<id> head=<id> dist=<d> required=<r> at (x,y,z)`
-- [ ] 4.2 由 `RoutePlan` 產生待判元件清單（掛橋、自身短柱、繞路段、`DiffBridge`、新柱、錨頭），並帶上 head_id 與柱 ID，供豁免與 R 過濾使用
-- [ ] 4.3 實作純函式的路徑選擇器 `select_route(cands, index, hard_ok, recompute)`：L0（c = 0.2）→ 重算一次 → L1（c = 0）→ L2（重算後第一個通過硬規則者）→ NONE；回傳選中的候選、層級與違規 `Contact`
-- [ ] 4.4 在階段二以 `select_route` 取代 Task 3 的直接提交；硬規則在任何層級都不放寬；斜撐不參與
-- [ ] 4.5 L1 提交寫 info log；L2 提交寫 `WARNING: fallback_intersection_retained head=<id> kind=<route> contacts=<n> at (x,y,z)...`，並把 L2 紀錄（支撐頭、路徑類型、接觸清單）存進 `DefaultSupportTree`，供 Task 6 匯出
-- [ ] 4.6 生成結束時寫一行摘要 log：L1、L2、NONE 次數，以及中心柱已記錄接觸數、原生過密數（寫法比照 `report_penetration_failsafes`）
-- [ ] 4.7 單元測試（標籤 `[head_route_select]`）：以假的候選與手動建立的索引驅動 `select_route`，涵蓋 spec 的情境：L0 選第二候選、重算後看見新柱、L1（d = 1.1 對 1.0）、L2、NONE、L2 不放寬粗細與掛橋上限、等距候選以柱 ID 決定
-- [ ] 4.8 引擎層測試（`[head_routing]` 擴充）：在合成網格上刻意製造交叉，結果須沒有未記錄的 A、C、反向 C（每一處都有 L1、L2 或 `centroid_pillar_clearance_recorded` 紀錄）；另造一個中心柱貼近非原生過密支撐頭的案例，確認中心柱位置不變且有該行 log；1 個執行緒與不限制的輸出仍完全相同
-- [ ] 4.9 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`
-- [ ] 4.10 **驗證**：`sla_print_tests.exe "[head_route_select],[head_routing],[bridge_clearance],[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 全部通過。對驗收素材：L0 判定下的 A、C、反向 C 剩餘違規（柱碰支撐頭以 `revC_head_net` 計，原生過密的 `revC_head_native` 只記錄），每一處都能在 log 的 L1 / L2 紀錄中找到，中心柱碰支撐頭則在 `centroid_pillar_clearance_recorded` 紀錄中找到（基準線的 mixed_s1、mixed_s2、China-dragon1 三處屬此類）；D、粗頭掛細柱 = 0；被刪除的支撐頭數不多於基準線；確定性與第 3、4 步耗時門檻同 3.13；記錄 L1、L2 次數，以及柱數、桿數相對基準線的變化
-- [ ] 4.11 **`/code-review` 檢核點**：重點：狀態轉移是否完全照 spec 的順序；重算後的保底候選是否取自重算後的清單；豁免與 R 過濾是否只依 ID；違規座標是否正確寫入 log；摘要計數與實際次數一致
-- [ ] 4.12 提交本 Task
+- [x] 4.1 在 `DefaultSupportTree` 加入 `ClearanceIndex` 成員：分類後插入所有有效支撐頭的膠囊體；`adopt_prior_pillars()` 插入凍結柱；第 3(a) 步插入中心柱；每次提交插入該 plan 的全部元件。第 3(a) 步中心柱照原位建立、不進降級；建立後以 c = 0.2 查它對支撐頭的違規，排除原生過密（長出它的支撐頭與被碰支撐頭的膠囊體本身 < 門檻，只計數），其餘每一處寫 info log `centroid_pillar_clearance_recorded pillar=<id> head=<id> dist=<d> required=<r> at (x,y,z)`
+- [x] 4.2 由 `RoutePlan` 產生待判元件清單（掛橋、自身短柱、繞路段、`DiffBridge`、新柱、錨頭），並帶上 head_id 與柱 ID，供豁免與 R 過濾使用
+- [x] 4.3 實作純函式的路徑選擇器 `select_route(cands, index, hard_ok, recompute)`：L0（c = 0.2）→ 重算一次 → L1（c = 0）→ L2（重算後第一個通過硬規則者）→ NONE；回傳選中的候選、層級與違規 `Contact`
+- [x] 4.4 在階段二以 `select_route` 取代 Task 3 的直接提交；硬規則在任何層級都不放寬；斜撐不參與
+- [x] 4.5 L1 提交寫 info log；L2 提交寫 `WARNING: fallback_intersection_retained head=<id> kind=<route> contacts=<n> at (x,y,z)...`，並把 L2 紀錄（支撐頭、路徑類型、接觸清單）存進 `DefaultSupportTree`，供 Task 6 匯出
+- [x] 4.6 生成結束時寫一行摘要 log：L1、L2、NONE 次數，以及中心柱已記錄接觸數、原生過密數（寫法比照 `report_penetration_failsafes`）
+- [x] 4.7 單元測試（標籤 `[head_route_select]`）：以假的候選與手動建立的索引驅動 `select_route`，涵蓋 spec 的情境：L0 選第二候選、重算後看見新柱、L1（d = 1.1 對 1.0）、L2、NONE、L2 不放寬粗細與掛橋上限、等距候選以柱 ID 決定
+- [x] 4.8 引擎層測試（`[head_routing]` 擴充）：在合成網格上刻意製造交叉，結果須沒有未記錄的 A、C、反向 C（每一處都有 L1、L2 或 `centroid_pillar_clearance_recorded` 紀錄）；另造一個中心柱貼近非原生過密支撐頭的案例，確認中心柱位置不變且有該行 log；1 個執行緒與不限制的輸出仍完全相同
+- [x] 4.9 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`
+- [x] 4.10 **驗證**：`sla_print_tests.exe "[head_route_select],[head_routing],[bridge_clearance],[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io]"` 全部通過。對驗收素材：L0 判定下的 A、C、反向 C 剩餘違規（柱碰支撐頭以 `revC_head_net` 計，原生過密的 `revC_head_native` 只記錄），每一處都能在 log 的 L1 / L2 紀錄中找到，中心柱碰支撐頭則在 `centroid_pillar_clearance_recorded` 紀錄中找到（基準線的 mixed_s1、mixed_s2、China-dragon1 三處屬此類）；D、粗頭掛細柱 = 0；被刪除的支撐頭數不多於基準線；確定性與第 3、4 步耗時門檻同 3.13；記錄 L1、L2 次數，以及柱數、桿數相對基準線的變化
+- [x] 4.11 **`/code-review` 檢核點**：重點：狀態轉移是否完全照 spec 的順序；重算後的保底候選是否取自重算後的清單；豁免與 R 過濾是否只依 ID；違規座標是否正確寫入 log；摘要計數與實際次數一致
+- [x] 4.12 提交本 Task
 
 ## 5. planar 整合與向量
 
