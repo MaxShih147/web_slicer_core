@@ -98,7 +98,7 @@
 
 ### Requirement: 同一對柱只能有一組斜撐
 
-斜撐 SHALL 以無序柱對（canonical pair，`(min(a,b), max(a,b))`）為唯一鍵。任何建立斜撐的路徑，包含全域貪婪、救援、保底、`attach()` 與 `run_greedy_for()`，遇到已有斜撐的柱對 SHALL 拒絕，原因為 `duplicate_pair`，且 MUST NOT 建立任何桿。`duplicate_pair` SHALL 加入原因代碼與向量格式，既有原因代碼的意義不變。
+斜撐 SHALL 以無序柱對（canonical pair，`(min(a,b), max(a,b))`）為唯一鍵。任何建立斜撐的路徑，包含全域貪婪、救援、保底、`attach()` 與 `run_greedy_for()`，MUST NOT 對已有斜撐的柱對建立任何桿。全域貪婪、救援、保底與 `run_greedy_for()` 在產生候選時 SHALL 排除已有斜撐的柱對，因此不會產生該柱對的決策；`attach()` 由呼叫者直接指定柱對，遇到已有斜撐的柱對 SHALL 拒絕，原因為 `duplicate_pair`。`duplicate_pair` SHALL 加入原因代碼與向量格式，既有原因代碼的意義不變。
 
 #### Scenario: 重複呼叫 attach
 - **GIVEN** 主柱 35 與輔助柱 94 已由 `attach(35, 94)` 建立一組斜撐

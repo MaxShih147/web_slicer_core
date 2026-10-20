@@ -268,7 +268,7 @@ struct RoutePlan {
 所有會長出新柱的地方，都必須先把柱的膠囊體與其附帶的桿放進 RoutePlan / 待判清單，通過 `violations()` 才能提交：
 
 - 第 3(b) 步的 own_pillar，以及第 4 步的 ground_route 與 model_anchor：屬於 RoutePlan，自動經過決策 6。
-- 第 6 步輔助柱：planar 在 `try_attach()` 之前，由轉接層以注入的 `ObstacleClearFn` 判定候選輔助柱（柱膠囊體 + prop 桿）對 `ClearanceIndex` 是否通過（c = 0.2）。不通過的角度視為不可放置，與現行「垂直路徑不通」同等處理。輔助柱不降級，因為它不承載支撐頭，放不下就不放。
+- 第 6 步輔助柱：在 `try_attach()` 之前，由 `DefaultSupportTree` 直接查 `ClearanceIndex`，判定候選輔助柱（柱膠囊體 + prop 桿）是否通過（c = 0.2）；同一根主柱同一角度的多根候選輔助柱，彼此也以 `pair_contact` 判定（決策 9 第 3 點）。不通過的角度視為不可放置，與現行「垂直路徑不通」同等處理。輔助柱不降級，因為它不承載支撐頭，放不下就不放。
 - 第 3(a) 步的中心柱：建立時插入索引供後續判定。此時沒有掛橋可被刺穿，但可能貼近支撐頭；依決策 5，只寫 `centroid_pillar_clearance_recorded` log，不降級、不移位。
 - 凍結柱（`--prior-supports`）：以柱膠囊體插入索引。它們的舊桿沒有資料，列為既有限制。
 
@@ -288,6 +288,8 @@ struct RoutePlan {
 3. **輔助柱的反向 C。** `try_attach()` 不變；由 `DefaultSupportTree` 在呼叫它之前先做決策 7 的檢查。`BracingPlanner` 不感知 `ClearanceIndex`。
 4. **共用常數。** `PlannerConfig::safety_clearance` 預設值改為 `clearance::SAFETY_CLEARANCE`。
 5. **向量。** 在 `tests/data/sla_bracing_vectors/` 新增：共用柱但碰撞點在 R 外（拒絕）、碰撞點在 R 內（接受）、`attach` 重複柱對（`duplicate_pair`）；並更新 `MANIFEST.sha256`。既有 42 組向量的期望值不變，只有「共用柱的掛橋豁免」對應的向量需要確認仍落在 R 內。
+
+   實作補充：`head_bar_owner_exempt.json` 原本的 head 桿標為接在柱 0（`b: 0`），幾何上卻從 (3,-3,11) 橫越到 (3,3,11)，離柱 0 軸心 3 mm，並沒有接到柱 0；新規則只在 R（1.7 mm）內豁免，它會從 4 根桿變成 2 根。引擎產生的掛橋必定終止於所接柱的軸心，所以改的是向量的輸入，不是期望值：桿改為從 (3,-3,9) 接到 (0,0,9)，與斜撐最近 0.58 mm、接觸點距軸心 0.47 mm，落在 R 內，期望仍為「接受，4 根桿」。舊幾何代表的情況（接觸在 R 外）由新向量 `shared_joint_outside_r.json` 涵蓋。另兩組新向量為 `shared_joint_r_per_point.json`（半徑 0.75，R = 2.45）與 `attach_duplicate_pair.json`；向量格式新增選填的 `"attach": [[a, b], ...]`，在保底之後依序呼叫 `attach()`，階段名為 `attach`。
 
 ### 決策 10：匯出與 log 格式
 
@@ -324,13 +326,16 @@ support-tree 維持 `version: 2`，新增選填的頂層陣列 `warnings`。沒�
 
 ## Known Limitations
 
-Task 4 的 `/code-review`（4.11）提出、決定不在本變更處理的事項。驗收素材上都沒有造成未記錄的違規。
+`/code-review` 提出、決定不在本變更處理的事項：第 1～5 項來自 Task 4（4.11），第 6、7 項來自 Task 5（5.9）。驗收素材上都沒有造成未記錄的違規。
 
 1. **被刪除的支撐頭留在索引中。** 第 4 步找不到路徑的支撐頭會被刪除（`invalidate()`），但它在分類時插入 `ClearanceIndex` 的膠囊體不會移除（索引只插入不刪除）。ID 較大的支撐頭仍會避開這個已經不存在的頭，可能因此重算或降級，紀錄中的 `with_head` 也可能指向它。驗收素材上，被刪除的頭為 China-dragon1 3 個、Pikachu 2 個，與基準線相同。要修正需要讓索引能停用元件，樹可能改變。
 2. **第 3(b)、4 步的原生過密不排除於降級。** spec 的原生過密（柱由某支撐頭長出，而該頭與被碰支撐頭本身就過近）只在第 3(a) 步的中心柱排除並計數。第 3(b)、4 步新長的柱碰到這類支撐頭時，照常走降級，並記成 L1 或 L2。因此這些接觸都有紀錄，但 L2 次數包含了支撐點間距本身造成的部分（mixed 案例每例 L2 39～57 次）。要排除需修改 spec 的降級定義。
 3. **承載柱延後綁定。** 支撐頭在分類時不知道承載柱，要等它的路徑提交後才以 `set_carrier()` 補上。在此之前，通往它將來承載柱的桿會把它整根判定，不做 R 剪除，結果偏保守：ID 較小的頭可能因此降級，且這筆紀錄在最終的樹中已不構成違規。不預先指定承載柱，因為支撐頭不一定掛到預期的柱，預先指定會漏判。
 4. **中心柱紀錄可能多報。** 中心柱依 spec 在第 3(a) 步判定，此時同群支撐頭還沒有承載柱。之後若它們掛上這根中心柱，該接觸即成為「支撐頭對其承載柱」而豁免，但已寫下的 `centroid_pillar_clearance_recorded` 不會撤回。驗收素材上只有 mixed_s1、mixed_s2、China-dragon1 各 1 筆，與基準線最終樹中量到的三處相同。
 5. **China-dragon1 的耗時餘裕。** 第 3、4 步中位數 2146.2 ms，門檻 2167.9 ms，餘裕 21.7 ms，單次量測有 2 次超過門檻（Open Questions 3）。階段一的預判只看本步開始時的間距，沒有考慮階段二才被填滿的掛橋上限與同一步先提交的元件；這類重算仍在單執行緒中規劃退路（含繞路搜尋）。Task 5、6 若在第 3、4 步增加計算，須重新量測；可行的下一步是讓預判也涵蓋「目標柱在本步開始時只剩一個掛橋名額」的候選。
+   Task 5 驗收（5.8，2026-10-20）：China-dragon1 第 3、4 步在 CPU 空閒（量測前後 1～10%）時量了兩輪各 5 次，中位數 2123.4 ms（2038.7～2282.7 ms）與 2262.6 ms（1894.5、2063.2、2262.6、2264.4、2361.2 ms），後者超過門檻 94.7 ms；Pikachu 兩輪 1392.0 ms 與 1285.6 ms，皆在門檻 1424.4 ms 內。Task 5 只改第 6 步（`interconnect_pillars()` 與 `BracingPlanner`），第 3、4 步的程式未動；10 個驗收案例的第 3、4 步產物（`head_paths` 雜湊）與 Task 4 逐位元相同，被刪支撐頭數也相同。整棵樹因第 6 步的斜撐與輔助柱規則改變而不同，這是本 Task 的預期變化。因此判定此為 Task 4 留下的 21.7 ms 餘裕在這台筆電上的量測波動（同一程式每輪 5 次的中位數相差約 140 ms），不是 Task 5 的退步；經裁決照現況結案。Task 6 最終驗收（6.6）仍以門檻判定，屆時若仍不過，須先處理第 4 步的耗時。
+6. **端柱不明的既有斜撐桿，改以 R 外判定。** `BracingPlanner::add_truss_bar()` 遇到兩端相同、或有一端不是已知柱的斜撐桿，會把它當成一般障礙桿（`ObstacleBar`）。以前它接在本組端柱上就整根豁免，現在只在該柱的 R 內豁免，R 外的部分照常判定，可能讓新斜撐桿被拒（`z_clear_fail`）。目前的引擎走不到這條路：斜撐只在 `interconnect()` 建立，`interconnect_pillars()` 開始時 builder 沒有斜撐桿，凍結柱也不帶入舊桿。只有直接呼叫 planner（例如 `bars` 含端柱不明之 `truss` 的向量）會遇到。
+7. **共通向量不表達叢集成員的軸心與上下端半徑。** 向量的 `pillars` 沒有 `r_end` 與 `braceable` 欄位，所以「叢集成員以自身軸心與半徑計算 R_P」與「R_P 取 max(r_start, r_end)」只由 C++ 單元測試（`[bracing_planner]` 的 "a bar ending on a cluster member is clipped by that member"）守護。移植版若在這兩點出錯，45 組向量仍會通過。要補須擴充向量格式（選填的 `r_end`、`braceable`）並新增一組叢集成員向量。
 
 ## Migration Plan
 

@@ -70,16 +70,16 @@
 
 ## 5. planar 整合與向量
 
-- [ ] 5.1 修改 `BracingPlanner::evaluate` 第 6 步：障礙桿與斜撐組端柱（含叢集成員）的柱集合有交集時，以 `clearance::joint_clipped_dist` 判定（叢集成員以自身軸心與半徑計算 `R_P`）；沒有交集時維持原判定；救援 / 保底模式的逐桿 3D 判定不變
-- [ ] 5.2 `BracingPlanner::attach()` 開頭檢查 `built_pair(a, b)`，命中回傳新原因 `Reason::duplicate_pair`；`reason_name()` 加入 `"duplicate_pair"`；`accept()` 加 debug assert，禁止對已有斜撐的柱對再接受
-- [ ] 5.3 輔助柱階段：在 `try_attach()` 之前，由 `DefaultSupportTree` 檢查候選輔助柱的柱身與 prop 桿對 `ClearanceIndex`（c = 0.2）。不通過的角度視為不可放置；放置後把新柱與 prop 桿插入索引
-- [ ] 5.4 新增共通向量至 `tests/data/sla_bracing_vectors/`：共用柱且接觸在 R 內（接受）、共用柱但接觸在 R 外（`z_clear_fail`）、同一柱對嘗試兩次（`duplicate_pair`）；必要時擴充向量格式以表達 `attach` 操作；以 LF 重建 `MANIFEST.sha256`
-- [ ] 5.5 確認既有 42 組向量的期望值全部不變，特別是 `head_bar_owner_exempt.json` 須落在 R 內而仍被接受。若有任何既有向量因本變更而改變結果，停下並回報，不得自行修改期望值
-- [ ] 5.6 planner 單元測試（`[bracing_planner]` 擴充）：B 收窄的接受與拒絕、叢集成員的 R、`attach` 重複柱對、`run_greedy_for` 不產生已建柱對
-- [ ] 5.7 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`
-- [ ] 5.8 **驗證**：`sla_print_tests.exe "[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io],[bridge_clearance],[head_route_select],[head_routing]"` 全部通過。02.stl 預設組的重複柱對 = 0；所有驗收素材中「共用柱、接觸在 R 外」的 B = 0；planar 的三個參考模型仍符合 planar 的回歸門檻（俯視違規 0、穿柱 0、孤立高柱 0、連接階段耗時門檻）；記錄輔助柱數的變化
-- [ ] 5.9 **`/code-review` 檢核點**：重點：planner 是否仍不依賴網格與 builder；叢集成員的軸心與半徑是否用對；新原因代碼是否在 C++ 與向量格式中名稱一致；MANIFEST 是否為 LF 且雜湊正確
-- [ ] 5.10 提交本 Task
+- [x] 5.1 修改 `BracingPlanner::evaluate` 第 6 步：障礙桿與斜撐組端柱（含叢集成員）的柱集合有交集時，以 `clearance::joint_clipped_dist` 判定（叢集成員以自身軸心與半徑計算 `R_P`）；沒有交集時維持原判定；救援 / 保底模式的逐桿 3D 判定不變
+- [x] 5.2 `BracingPlanner::attach()` 開頭檢查 `built_pair(a, b)`，命中回傳新原因 `Reason::duplicate_pair`；`reason_name()` 加入 `"duplicate_pair"`；`accept()` 加 debug assert，禁止對已有斜撐的柱對再接受
+- [x] 5.3 輔助柱階段：在 `try_attach()` 之前，由 `DefaultSupportTree` 檢查候選輔助柱的柱身與 prop 桿對 `ClearanceIndex`（c = 0.2）。不通過的角度視為不可放置；放置後把新柱與 prop 桿插入索引
+- [x] 5.4 新增共通向量至 `tests/data/sla_bracing_vectors/`：共用柱且接觸在 R 內（接受）、共用柱但接觸在 R 外（`z_clear_fail`）、同一柱對嘗試兩次（`duplicate_pair`）；必要時擴充向量格式以表達 `attach` 操作；以 LF 重建 `MANIFEST.sha256`
+- [x] 5.5 確認既有 42 組向量的期望值全部不變，特別是 `head_bar_owner_exempt.json` 須落在 R 內而仍被接受。若有任何既有向量因本變更而改變結果，停下並回報，不得自行修改期望值。（實作時：原向量的 head 桿標為接在柱 0，實際卻在 x = 3 橫越、離柱 0 軸心 3 mm，不在 R 內，新規則下會從 4 根桿變 2 根。經裁決改其輸入幾何，讓桿確實終止於柱 0 軸心、接觸點距軸心 0.47 mm（R = 1.7），期望值「接受，4 根桿」不變；詳見 design 決策 9 第 5 點）
+- [x] 5.6 planner 單元測試（`[bracing_planner]` 擴充）：B 收窄的接受與拒絕、叢集成員的 R、`attach` 重複柱對、`run_greedy_for` 不產生已建柱對
+- [x] 5.7 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`
+- [x] 5.8 **驗證**：`sla_print_tests.exe "[bracing_planner],[bracing_vectors],[bracing_metrics],[sla_io],[bridge_clearance],[head_route_select],[head_routing]"` 全部通過。02.stl 預設組的重複柱對 = 0；所有驗收素材中「共用柱、接觸在 R 外」的 B = 0；planar 的三個參考模型仍符合 planar 的回歸門檻（俯視違規 0、穿柱 0、孤立高柱 0、連接階段耗時門檻）；記錄輔助柱數的變化
+- [x] 5.9 **`/code-review` 檢核點**：重點：planner 是否仍不依賴網格與 builder；叢集成員的軸心與半徑是否用對；新原因代碼是否在 C++ 與向量格式中名稱一致；MANIFEST 是否為 LF 且雜湊正確
+- [x] 5.10 提交本 Task
 
 ## 6. 警告匯出與驗收工具
 
