@@ -45,6 +45,8 @@ from .errors import (
     model_not_found,
     no_drain_holes,
     no_hex_grid_cells,
+    support_param_invalid,
+    support_point_param_invalid,
     support_points_required,
     validation_error,
 )
@@ -67,7 +69,16 @@ from .jobs import (
     run_cut_operation,
     write_job_status,
 )
-from .models import BooleanOperation, JobStatus, SLAConfig, _extract_prz_timing_config, gate_blur
+from .models import (
+    SUPPORT_POINT_RADIUS_FLOOR_F32,
+    SUPPORT_POSITIVE_FIELDS,
+    SUPPORT_SIZE_FLOOR_MM,
+    BooleanOperation,
+    JobStatus,
+    SLAConfig,
+    _extract_prz_timing_config,
+    gate_blur,
+)
 from .sla_operations import (
     generate_drain_holes,
     generate_hex_grid,
@@ -273,6 +284,31 @@ def _config_validation_message(exc: ValidationError) -> str:
     )
 
 
+def _is_support_param_error(err: Dict[str, Any]) -> bool:
+    """fix-support-zero-param-engine-hang D2: does this pydantic error belong
+    to one of SUPPORT_POSITIVE_FIELDS? Only loc[0] is checked, not the error
+    type, so any future constraint on these fields maps the same way. A
+    model_validator error has an empty loc and is never a support error."""
+    loc = err.get("loc") or ()
+    return len(loc) >= 1 and loc[0] in SUPPORT_POSITIVE_FIELDS
+
+
+def _config_error_from_validation(exc: ValidationError) -> APIError:
+    """Turn an SLAConfig ValidationError into the API error to raise.
+
+    SUPPORT_PARAM_INVALID if ANY failing field is a support positive field
+    (with every error, support or not, listed in data.errors), otherwise
+    CONFIG_VALIDATION_ERROR exactly as before. data.errors carries only
+    loc/msg: exc.errors() items can hold a ValueError in ctx, which is not
+    JSON-serialisable."""
+    errors = exc.errors()
+    message = _config_validation_message(exc)
+    if any(_is_support_param_error(err) for err in errors):
+        details = [{"loc": list(err["loc"]), "msg": err["msg"]} for err in errors]
+        return support_param_invalid(message, errors=details)
+    return config_validation_error(message)
+
+
 def _save_model_to_job(model_data: dict, input_path) -> None:
     """Write model bytes to *input_path*, raising INVALID_MODEL / VALIDATION_ERROR as needed.
 
@@ -433,6 +469,22 @@ async def create_slice_job(request: V2SliceCreateRequest):
     Models are added separately, and slicing starts on execute.
     """
     try:
+        # fix-support-zero-param-engine-hang D4: validate the initial config
+        # before any job exists, through the DS-Online -> SLAConfig conversion
+        # that /generate-supports, /export-support-points and /generate-hollow
+        # use. SLAConfig only, no param_rules (some rules need support points
+        # that arrive after the job is created). The converter only reads the
+        # config, so what gets stored below is exactly what the caller sent.
+        if request.config:
+            try:
+                _convert_v2_config_to_sla(request.config)
+            except ValidationError as exc:  # a ValueError subclass: keep it first
+                raise _config_error_from_validation(exc)
+            except (TypeError, AttributeError, ValueError) as exc:
+                # A malformed structure the converter can't walk, e.g.
+                # "Print": null or a non-numeric "center". Rejected rather than
+                # let through, so a 0 hidden in it can't reach a pending job.
+                raise config_validation_error(f"config has an invalid structure: {exc}")
         job_id = create_job_id()
         _pending_jobs[job_id] = {
             "config": request.config or {},
@@ -455,6 +507,15 @@ def _raise_for_first_problem(problems: List[ValidateProblemOut]) -> None:
     the matching registry-derived APIError (422). Reuses _ERROR_CODE_FACTORIES
     (unify-error-code-registry) rather than a second code->factory mapping."""
     problem = problems[0]
+    if problem.code == "SUPPORT_PARAM_INVALID":
+        # Only reachable when SLAConfig itself failed, so every problem here is
+        # a field validation error; list them all (support or not) in
+        # data.errors, and name each field in the message, which a bare
+        # pydantic msg ("Input should be ...") does not.
+        raise support_param_invalid(
+            "; ".join(f"{'.'.join(p.fields)}: {p.suggestion}" for p in problems),
+            errors=[{"loc": p.fields, "msg": p.suggestion} for p in problems],
+        )
     factory = _ERROR_CODE_FACTORIES.get(problem.code, config_validation_error)
     raise factory(problem.suggestion)
 
@@ -530,12 +591,16 @@ def _run_param_validation(
     except ValidationError as exc:
         problems = [
             ValidateProblemOut(
-                code="CONFIG_VALIDATION_ERROR",
+                code="SUPPORT_PARAM_INVALID" if _is_support_param_error(err) else "CONFIG_VALIDATION_ERROR",
                 fields=[str(loc) for loc in err["loc"]],
                 suggestion=err["msg"],
             )
             for err in exc.errors()
         ]
+        # fix-support-zero-param-engine-hang D2: support problems first, so
+        # PUT /config's _raise_for_first_problem() raises SUPPORT_PARAM_INVALID.
+        # sorted() is stable: pydantic's order holds within each group.
+        problems.sort(key=lambda p: p.code != "SUPPORT_PARAM_INVALID")
         return SupportParamValidateResponse(ok=False, problems=problems, clamped=clamped, unknown=unknown)
 
     rule_problems = param_rules.evaluate(
@@ -789,7 +854,7 @@ async def execute_slice_job(
     except APIError:
         raise
     except ValidationError as exc:
-        raise config_validation_error(_config_validation_message(exc))
+        raise _config_error_from_validation(exc)
     except Exception as exc:
         raise internal_error(str(exc))
 
@@ -834,7 +899,7 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
     except APIError:
         raise
     except ValidationError as exc:
-        raise config_validation_error(_config_validation_message(exc))
+        raise _config_error_from_validation(exc)
     except Exception as exc:
         raise internal_error(str(exc))
 
@@ -883,7 +948,7 @@ async def export_support_points_only(job_id: str, background_tasks: BackgroundTa
     except APIError:
         raise
     except ValidationError as exc:
-        raise config_validation_error(_config_validation_message(exc))
+        raise _config_error_from_validation(exc)
     except Exception as exc:
         raise internal_error(str(exc))
 
@@ -911,6 +976,11 @@ async def get_support_points(job_id: str):
         content=points_path.read_bytes(),
         media_type="application/json",
     )
+
+
+# How many bad points a SUPPORT_POINT_PARAM_INVALID message names before it
+# switches to "and N more".
+_MAX_LISTED_BAD_POINTS = 10
 
 
 @router.post("/slices/{job_id}/support-points", response_model=V2Response)
@@ -954,6 +1024,45 @@ async def set_support_points(job_id: str, request: Request):
     if pending.get("support_stl"):
         raise validation_error(
             "A support point list cannot be combined with an uploaded support mesh"
+        )
+
+    # fix-support-zero-param-engine-hang D5: a base_radius_mm of 0 hangs the
+    # engine's support clustering. The engine stores it as a float and reads
+    # `v >= 0` as "this point sets its own size", so reject
+    # 0 <= v < SUPPORT_POINT_RADIUS_FLOOR_F32 (1e-4 as a float holds it): that
+    # covers -0.0 and tiny positives that become 0.0f, while negatives (follow
+    # the global setting) and a missing key pass. The float form of the floor
+    # lets a radius the engine itself exported (1e-4 written back at float
+    # precision) through again. NaN is not caught here (0 <= NaN is False) and needs no catching: a
+    # NaN literal is not valid JSON to the engine, which rejects the whole file
+    # and fails the job instead of hanging. Non-object points and non-numeric
+    # values are likewise left to the engine as before.
+    bad = []
+    for i, point in enumerate(parsed["points"]):
+        if not isinstance(point, dict) or "base_radius_mm" not in point:
+            continue
+        value = point["base_radius_mm"]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        if 0 <= value < SUPPORT_POINT_RADIUS_FLOOR_F32:
+            bad.append((i, value))
+    if bad:
+        # The message names at most _MAX_LISTED_BAD_POINTS points and states the
+        # hint once, so a list with thousands of zero radii can't blow up the
+        # response; data.errors still has every point (spec: list all of them).
+        listed = ", ".join(
+            f"points[{i}].base_radius_mm (got {value!r})" for i, value in bad[:_MAX_LISTED_BAD_POINTS]
+        )
+        more = len(bad) - _MAX_LISTED_BAD_POINTS
+        if more > 0:
+            listed += f" and {more} more"
+        raise support_point_param_invalid(
+            f"{listed}: must be at least {SUPPORT_SIZE_FLOOR_MM}; use a positive radius, "
+            f"or omit it / use a negative value to follow the global base diameter",
+            errors=[
+                {"loc": ["points", i, "base_radius_mm"], "msg": f"must be at least {SUPPORT_SIZE_FLOOR_MM}"}
+                for i, _ in bad
+            ],
         )
 
     pending["support_points"] = raw
@@ -1129,6 +1238,8 @@ async def generate_hollow_only(job_id: str, background_tasks: BackgroundTasks):
         return V2Response(success=True, message="Hollow generation started", data={"currentConfig": config})
     except APIError:
         raise
+    except ValidationError as exc:
+        raise _config_error_from_validation(exc)
     except Exception as exc:
         raise internal_error(str(exc))
 

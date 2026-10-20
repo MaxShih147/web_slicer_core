@@ -1,8 +1,9 @@
 """Pydantic models for the web_slicer_core agent API."""
 
+import struct
 from enum import Enum
 from typing import Any, Dict, Optional
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class JobStatus(str, Enum):
@@ -31,6 +32,33 @@ class JobStatusResponse(BaseModel):
     has_support_mesh: bool = False
     has_hollow_mesh: bool = False
     has_cut_mesh: bool = False
+
+
+# Smallest support size (mm) the API accepts: the floor for
+# support_max_bridge_length and for a support point's base_radius_mm on
+# POST /support-points. At 0 the engine's support clustering
+# (`d < max_bridge_length`, `d < base_radius`) can't take the seed point into
+# its own cluster, so the loop never advances and the engine hangs
+# (fix-support-zero-param-engine-hang). The floor is 1e-4 rather than > 0:
+# 0.5 * 5e-324 underflows to 0.0 — the same hang.
+SUPPORT_SIZE_FLOOR_MM = 1e-4
+
+# support_base_diameter is a DIAMETER: the engine halves it into the base radius
+# it writes into every exported support point. Twice the radius floor, so a list
+# read back from GET /support-points always passes POST /support-points.
+SUPPORT_BASE_DIAMETER_FLOOR_MM = 2 * SUPPORT_SIZE_FLOOR_MM
+
+# The radius floor as a single-precision float would hold it (9.999999747e-05).
+# The engine keeps an imported point's base_radius_mm as a float and writes
+# that value on later exports, so a radius of exactly 1e-4 comes back slightly
+# below 1e-4. The per-point check compares against this instead, so whatever
+# the engine exports is accepted again.
+SUPPORT_POINT_RADIUS_FLOOR_F32 = struct.unpack("<f", struct.pack("<f", SUPPORT_SIZE_FLOOR_MM))[0]
+
+# SLAConfig fields that must be finite and at or above their floor above. The
+# API layer maps a validation error on any of these to SUPPORT_PARAM_INVALID
+# instead of CONFIG_VALIDATION_ERROR.
+SUPPORT_POSITIVE_FIELDS = frozenset({"support_max_bridge_length", "support_base_diameter"})
 
 
 class SLAConfig(BaseModel):
@@ -65,6 +93,38 @@ class SLAConfig(BaseModel):
     def enforce_min_elevation(cls, v: float) -> float:
         return max(0.0, v)
 
+    # Range guards (guard-support-density-bounds design.md D1/D2). Reject only,
+    # never clamp: a silently rewritten value would no longer be the one the
+    # caller saved.
+    #
+    # Density: a negative value reaches the slope path in
+    # SupportPointGenerator.cpp as sqrt(r^2 / density) and turns every radius
+    # into NaN. 0 stays legal — it is the manual-points-only path, and
+    # param_rules' R5 owns the "0 with no manual points" case. 10000 caps the
+    # point count on slopes, which grows roughly linearly with density and has
+    # no engine-side floor.
+    @field_validator('support_points_density_relative')
+    @classmethod
+    def validate_support_points_density_relative(cls, v: int) -> int:
+        if not (0 <= v <= 10000):
+            raise ValueError(
+                f"support_points_density_relative must be between 0 and 10000, got {v}"
+            )
+        return v
+
+    # Past ~1073mm the engine's int32 spacing math overflows. Written as
+    # `not (lo <= v <= hi)` on purpose: NaN compares False against everything,
+    # so `v < lo or v > hi` would let NaN through (FastAPI's json.loads accepts
+    # a bare NaN literal).
+    @field_validator('support_points_min_distance')
+    @classmethod
+    def validate_support_points_min_distance(cls, v: float) -> float:
+        if not (0.0 <= v <= 100.0):
+            raise ValueError(
+                f"support_points_min_distance must be between 0 and 100 mm, got {v}"
+            )
+        return v
+
     # Support tree global parameters (F1/B2).
     #
     # Decision record lives in the *DS-Online* repo, not this one:
@@ -79,10 +139,12 @@ class SLAConfig(BaseModel):
     # only opens the API entry point. Field names match the engine option key
     # 1:1 so generate_config_ini's generic field-name-driven write works as-is.
     support_head_width: float = 1.0
-    support_base_diameter: float = 4.0
+    # ge / allow_inf_nan=False: see SUPPORT_BASE_DIAMETER_FLOOR_MM above.
+    support_base_diameter: float = Field(4.0, ge=SUPPORT_BASE_DIAMETER_FLOOR_MM, allow_inf_nan=False)
     support_base_height: float = 1.0
     support_bracing_angle: float = 45.0
-    support_max_bridge_length: float = 15.0
+    # ge / allow_inf_nan=False: see SUPPORT_SIZE_FLOOR_MM above.
+    support_max_bridge_length: float = Field(15.0, ge=SUPPORT_SIZE_FLOOR_MM, allow_inf_nan=False)
     # 0 is a legal value (means "no pillar linking") — MUST NOT get a min-value
     # validator like support_object_elevation's enforce_min_elevation.
     support_max_pillar_link_distance: float = 10.0
@@ -135,6 +197,21 @@ class SLAConfig(BaseModel):
     # --import-support-points / --prior-supports), so setting this has no
     # observable effect yet. Needs that data flow as a follow-up feature.
     support_enforcers_only: bool = False
+
+    # ─── Not the engine's: this side keeps supports out of a guide's holes ───
+    # A surgical guide's drill holes have to stay clear - a support inside one
+    # is resin where the drill has to go. The engine knows nothing of guide
+    # holes, so these two never reach it (see FRONTEND_ONLY_CONFIG_FIELDS in
+    # sla_operations.generate_config_ini, which would otherwise hand the CLI an
+    # option it rejects). They ride on the config so the whole request is one
+    # object and the job's config.json records what was asked for.
+    #
+    # OFF unless asked for. One-click processing turns it on for a surgical
+    # guide, because orienting the guide is what stands its holes up and puts
+    # support points on their walls. A caller growing supports on their own gets
+    # what they asked for and nothing taken away.
+    support_avoid_guide_holes: bool = False
+    support_guide_hole_margin: float = 0.5
 
     # Pad settings
     pad_enable: bool = False

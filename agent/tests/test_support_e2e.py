@@ -71,7 +71,7 @@ def _run(job_id, config):
 
 
 def _stub_cli(monkeypatch, *, stdout=b"", stderr=b"", returncode=0):
-    async def fake(cmd, stderr_file=None, stdout_file=None):
+    async def fake(cmd, stderr_file=None, stdout_file=None, timeout_sec=None):
         if stdout_file:
             with open(stdout_file, "wb") as f:
                 f.write(stdout)

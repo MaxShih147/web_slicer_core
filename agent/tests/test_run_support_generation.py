@@ -26,6 +26,7 @@ import pytest
 from agent import jobs
 from agent import sla_operations
 from agent.models import JobStatus
+from agent.tests.test_run_prusa_cli_streams import _FakeProc
 
 
 @pytest.fixture
@@ -42,7 +43,7 @@ def _stub_cli(monkeypatch, *, stdout=b"", stderr=b"", returncode=0):
     """Replace run_prusa_cli with a fake that writes the given bytes to the log
     files (as the real one does) and returns them, without launching a process."""
 
-    async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None):
+    async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None, timeout_sec=None):
         if stdout_file:
             with open(stdout_file, "wb") as f:
                 f.write(stdout)
@@ -164,3 +165,77 @@ class TestFailClosed:
         assert data["status"] == JobStatus.FAILED.value
         assert data["error_code"] == "SUPPORT_GENERATION_FAILED"
         assert data["has_support_mesh"] is False
+
+class TestEngineTimeout:
+    def test_timeout_writes_failed_with_generation_code(self, job, monkeypatch):
+        """support-generation-error-codes: 引擎卡住超過 120 秒（job 層）"""
+        seen = {}
+
+        async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None, timeout_sec=None):
+            seen["timeout_sec"] = timeout_sec
+            raise sla_operations.EngineTimeoutError(timeout_sec)
+
+        monkeypatch.setattr(sla_operations, "run_prusa_cli", fake_run_prusa_cli)
+
+        data = _run(job)
+
+        assert seen["timeout_sec"] == sla_operations.SUPPORT_GENERATION_TIMEOUT_SEC == 120
+        assert data["status"] == JobStatus.FAILED.value
+        assert data["error_code"] == "SUPPORT_GENERATION_FAILED"
+        assert "timed out" in data["error"]
+        assert "120 seconds" in data["error"]
+        assert data["support_outcome"] is None
+        assert data["has_support_mesh"] is False
+
+
+class TestWithinLimitUnchanged:
+    """support-generation-error-codes: 時限內完成不受影響 (task 4.3)
+
+    The same engine output is run through the real run_prusa_cli twice: once
+    with the limit, once on the old unbounded path (limit None, which takes the
+    plain communicate() it always did). status.json - and with it the
+    classification - and both logs must come out byte-for-byte the same.
+    """
+
+    @pytest.mark.parametrize(
+        "stdout, stderr, stl_on_disk",
+        [
+            (b"Generated (supports only)\n", b"", True),
+            (b"Exported (pad only)\n", b"", False),
+            (
+                b"",
+                b"Invalid pinhead diameter\nPinhead front diameter should be smaller than the Pillar diameter.",
+                False,
+            ),
+            (b"totally unexpected chatter", b"weird", False),
+        ],
+        ids=["supports", "pad-only", "validate-error", "unattributable"],
+    )
+    def test_same_result_as_unbounded_path(
+        self, tmp_path, monkeypatch, stdout, stderr, stl_on_disk
+    ):
+        monkeypatch.setattr(jobs, "JOBS_DIR", tmp_path)
+
+        async def fake_exec(*cmd, **kwargs):
+            return _FakeProc(stdout, stderr, 0)
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+        def run(job_id, limit):
+            monkeypatch.setattr(sla_operations, "SUPPORT_GENERATION_TIMEOUT_SEC", limit)
+            job_dir = tmp_path / job_id
+            (job_dir / "input").mkdir(parents=True)
+            (job_dir / "output").mkdir()
+            if stl_on_disk:
+                (job_dir / "output" / "model_support.stl").write_bytes(b"solid support\n")
+            asyncio.run(jobs.run_support_generation(job_id))
+            return tuple(
+                (job_dir / name).read_bytes()
+                for name in ("status.json", "stdout_support.log", "stderr_support.log")
+            )
+
+        bounded = run("bounded", 120)
+        unbounded = run("unbounded", None)
+
+        assert bounded == unbounded
+        assert bounded[1:] == (stdout, stderr)

@@ -102,7 +102,7 @@ class TestRunsStoreWhatTheEngineReported:
         assert data["error_values"] == PAD_VALUES
 
     def test_run_support_generation(self, job, monkeypatch):
-        async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None):
+        async def fake_run_prusa_cli(cmd, stderr_file=None, stdout_file=None, timeout_sec=None):
             return 1, PAD_STDOUT, PAD_STDERR
 
         monkeypatch.setattr(sla_operations, "run_prusa_cli", fake_run_prusa_cli)
