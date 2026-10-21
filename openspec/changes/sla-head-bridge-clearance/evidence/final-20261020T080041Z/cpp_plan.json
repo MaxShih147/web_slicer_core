@@ -1,0 +1,105 @@
+{
+ "out": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\cpp_metrics.jsonl",
+ "cases": [
+  {
+   "id": "02_e5_d100",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e5_d100\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\baseline-20261019T060139Z\\inputs\\pts_02_e5_d100.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "02_e10_d100",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e10_d100\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\baseline-20261019T060139Z\\inputs\\pts_02_e10_d100.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "02_e10_d400",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e10_d400\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\baseline-20261019T060139Z\\inputs\\pts_02_e10_d400.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "02_mixed_s1",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s1\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s1\\points_s1.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "02_mixed_s2",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s2\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s2\\points_s2.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "02_mixed_s3",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s3\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s3\\points_s3.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "02_mixed_s4",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s4\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s4\\points_s4.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "02_mixed_s5",
+   "model": "D:\\tool\\stl\\02.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s5\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s5\\points_s5.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "China-dragon1",
+   "model": "D:\\tool\\stl\\China-dragon1.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\China-dragon1\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\baseline-20261019T060139Z\\inputs\\pts_China-dragon1.json",
+   "repeats": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "Pikachu",
+   "model": "D:\\tool\\stl\\Pikachu.stl",
+   "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\Pikachu\\config.ini",
+   "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\baseline-20261019T060139Z\\inputs\\pts_Pikachu.json",
+   "repeats": [
+    1,
+    1
+   ]
+  }
+ ]
+}

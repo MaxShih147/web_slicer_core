@@ -11,13 +11,21 @@ R_P = r_P + r1 + r2 + 0.2 around P's axis before they are measured (spec
 Counted:
   A        head/route bar x head/route bar of another head's path
   A_prop   head/route bar x prop bar (an auxiliary pillar's bar)
-  B        head/route bar x truss; B_shared_outside_R is the part that shares a
-           pillar with the truss and still collides outside R
+  B        head/route bar x truss, judged the way the bracing planner judges
+           it (sla-head-bridge-clearance Task 5): every pillar the head/route
+           bar ends on that is in the cluster of one of the truss's two end
+           pillars is clipped out, each by its own axis and
+           R = max(r_start, r_end) + r1 + r2 + 0.2. Pillars hug, and so are one
+           cluster, when their axes are closer in plan view than
+           r_start1 + r_start2 + 0.2, directly or through others.
+           B_shared_outside_R is the part where such a pillar was clipped and
+           the two still collide outside R
   C_pillar head/route bar x a pillar that is not one of its ends (auxiliary
            pillars excluded, see revC)
   C_head   head/route bar x another head (pos -> junction point, r_back)
-  revC_aux   an auxiliary pillar x a head/route bar
-  revC_head  any pillar x a head it does not carry, split into
+  revC_aux   an auxiliary pillar or a prop bar x a head, a head/route bar, a
+             pillar it does not end on, or another prop bar (A_prop excluded)
+  revC_head  any other pillar x a head it does not carry, split into
     revC_head_native  the pillar was grown by a head that is itself natively
                       too close to the head it touches (head_x_head): support
                       point spacing, excluded from acceptance by the ruling of
@@ -38,6 +46,11 @@ Counted:
   pairs_excess  sum over pillars of `pairs` (one per accepted bracing group)
            minus the distinct pillars its truss bars reach: a second group on
            a pair that already has one shows here even when its bars differ
+  warnings  the tree's top level "warnings" (heads kept at L2), and the
+           contacts they list
+
+The counts and their names are those of head_bridge_metrics() in the fork's
+tests/sla_print/sla_head_bridge_metrics.cpp, which reads the builder instead.
 
 Shared pillars (R clipping, bar-vs-own-end, head-vs-carrier) are decided by the
 exported indices. Which head a bar belongs to is not exported, so path
@@ -215,11 +228,13 @@ def assign_paths(H, P, B, heads, pillars, bars):
 
 # ── checks ──────────────────────────────────────────────────────────────────
 
-def measure(x, y, margin, pillars, clip_shared=True):
+def measure(x, y, margin, pillars, clip_shared=True, shared=None):
     """(violates, dist, required, contact, shared) for two capsules. With
-    clip_shared, a pillar both touch (by index) is clipped out to R first."""
+    clip_shared, a pillar both touch (by index) is clipped out to R first;
+    `shared`, when given, names the pillars to clip instead."""
     need = x.r + y.r + margin
-    shared = x.pillars & y.pillars if clip_shared else set()
+    if shared is None:
+        shared = x.pillars & y.pillars if clip_shared else set()
     if not shared:
         d, c1, _ = seg_seg(x.s, x.e, y.s, y.e)
         return d < need, d, need, c1, False
@@ -267,7 +282,7 @@ def category(x, y):
         if not is_path_bar(x):
             x, y = y, x
         if not is_path_bar(x):
-            return None, x, y
+            return ("revC_aux" if x.sub == "prop" and y.sub == "prop" else None), x, y
         if is_path_bar(y):
             return "A", x, y
         if y.sub == "prop":
@@ -276,23 +291,54 @@ def category(x, y):
             return "B", x, y
         return None, x, y
     if kinds == ("bar", "pillar"):
-        if not is_path_bar(x) or y.idx in x.pillars:     # a bar vs its own end
+        if y.idx in x.pillars:                           # a bar vs its own end
+            return None, x, y
+        if x.sub == "prop":
+            return "revC_aux", x, y
+        if not is_path_bar(x):
             return None, x, y
         return ("revC_aux" if y.aux else "C_pillar"), x, y
     if kinds == ("bar", "head"):
+        if x.sub == "prop":
+            return "revC_aux", x, y
         return ("C_head" if is_path_bar(x) else None), x, y
     if kinds == ("pillar", "head"):
         if x.idx in y.pillars:                           # a head vs its carrier
             return None, x, y
-        return "revC_head", x, y
+        return ("revC_aux" if x.aux else "revC_head"), x, y
     if kinds == ("head", "head"):
         return "head_x_head", x, y
     return None, x, y
 
 
+def cluster_roots(P):
+    """The cluster of every pillar, by index: the lowest index in it. Axes
+    closer in plan view than r_start1 + r_start2 + 0.2 hug (the bracing
+    planner's rule, BracingPlanner::add_pillar)."""
+    parent = list(range(len(P)))
+
+    def find(i):
+        while parent[i] != i:
+            i = parent[i]
+        return i
+
+    if not P:
+        return []
+    xy = np.array([p["endpt"][:2] for p in P], float)
+    r = np.array([p["r_start"] for p in P], float)
+    for i in range(len(P) - 1):
+        d = np.linalg.norm(xy[i + 1:] - xy[i], axis=1)
+        for j in np.nonzero(d < r[i] + r[i + 1:] + SAFETY)[0]:
+            a, b = find(i), find(i + 1 + int(j))
+            if a != b:
+                parent[max(a, b)] = min(a, b)
+    return [find(i) for i in range(len(P))]
+
+
 def analyze(tree, margin=0.2, keep=50):
     H, P, B, heads, pillars, bars = load(tree)
     assign_paths(H, P, B, heads, pillars, bars)
+    root = cluster_roots(P)
 
     counts = {c: 0 for c in ("A", "A_prop", "B", "B_shared_outside_R", "C_pillar",
                              "C_head", "revC_aux", "revC_head", "revC_head_native",
@@ -318,7 +364,11 @@ def analyze(tree, margin=0.2, keep=50):
         cat, x, y = category(x, y)
         if cat is None or cat == "head_x_head":
             continue
-        bad, d, need, at, shared = measure(x, y, margin, pillars)
+        joints = None
+        if cat == "B":   # x the head/route bar, y the truss
+            ends = {root[q] for q in y.pillars}
+            joints = {pid for pid in x.pillars if root[pid] in ends}
+        bad, d, need, at, shared = measure(x, y, margin, pillars, shared=joints)
         if not bad:
             continue
         rec = {"x": [x.kind if x.kind != "bar" else x.sub, x.idx],
@@ -386,6 +436,8 @@ def analyze(tree, margin=0.2, keep=50):
         "dup_truss_pairs": len(dup_pairs),
         "dup_truss_bars": dup_bars,
         "pairs_excess": sum(e[1] - e[2] for e in excess),
+        "warnings": len(tree.get("warnings", [])),
+        "warning_contacts": sum(len(w.get("contacts", [])) for w in tree.get("warnings", [])),
         "detail": {**contacts, "D": d_heads[:keep], "thick_on_thin": thick[:keep],
                    "dup_truss_pairs": dup_pairs[:keep],
                    "pairs_excess": excess[:keep]},

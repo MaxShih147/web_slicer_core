@@ -1,0 +1,673 @@
+{
+ "02_e10_d100": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 135,
+   "pillars": 65,
+   "aux_pillars": 0,
+   "bars": 595,
+   "bars_by_kind": {
+    "head": 70,
+    "truss": 525
+   },
+   "unassigned_path_bars": 0,
+   "A": 1,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 0,
+   "C_head": 2,
+   "revC_aux": 0,
+   "revC_head": 2,
+   "revC_head_native": 2,
+   "revC_head_net": 0,
+   "head_x_head": 4,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 0,
+   "warning_contacts": 0
+  },
+  "violations": 3,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "L1": 2
+  },
+  "summary": "L1 2, L2 0, none 0, centre pillar contacts recorded 0, support point spacing 4",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "2d1623e1cb8d22bdc94498ad93808b97c100c529a69378508d1dcd178c3333aa",
+  "head_paths_t1_sha256": "ff1798261ac10a930e22bcc7c9e1f3bc6494cf5e92470e06bba9addc1b506cf7",
+  "warnings_check": {
+   "warnings": 0,
+   "l2_lines": 0,
+   "problems": []
+  }
+ },
+ "02_e10_d400": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 491,
+   "pillars": 181,
+   "aux_pillars": 1,
+   "bars": 2318,
+   "bars_by_kind": {
+    "head": 311,
+    "prop": 1,
+    "truss": 2006
+   },
+   "unassigned_path_bars": 0,
+   "A": 98,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 91,
+   "C_head": 175,
+   "revC_aux": 0,
+   "revC_head": 79,
+   "revC_head_native": 79,
+   "revC_head_net": 0,
+   "head_x_head": 212,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 45,
+   "warning_contacts": 270
+  },
+  "violations": 364,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "L1": 51,
+   "L2": 45
+  },
+  "summary": "L1 51, L2 45, none 0, centre pillar contacts recorded 0, support point spacing 130",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "18ad18c7409cfb1a50c21bbb9a62967150aab71e4fc863292f1399a44c6e2cbb",
+  "head_paths_t1_sha256": "cb3b18aad4a0f0cf45ac4d99d94a953c653018c1be709127e5c063a4106ce76a",
+  "warnings_check": {
+   "warnings": 45,
+   "l2_lines": 45,
+   "contacts": 270,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "02_e5_d100": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 130,
+   "pillars": 94,
+   "aux_pillars": 0,
+   "bars": 348,
+   "bars_by_kind": {
+    "head": 36,
+    "truss": 312
+   },
+   "unassigned_path_bars": 0,
+   "A": 0,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 0,
+   "C_head": 0,
+   "revC_aux": 0,
+   "revC_head": 0,
+   "revC_head_native": 0,
+   "revC_head_net": 0,
+   "head_x_head": 2,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 1,
+   "warning_contacts": 1
+  },
+  "violations": 0,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "L2": 1
+  },
+  "summary": "L1 0, L2 1, none 0, centre pillar contacts recorded 0, support point spacing 1",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "d60578210aef9264dbf0dcafc81f7e1f0f65b8523fcfac596de1a3782feec556",
+  "head_paths_t1_sha256": "13d1e7cfc08c74786b260852bbc19f4bee3f6f17cab09ce62226c81cae869431",
+  "warnings_check": {
+   "warnings": 1,
+   "l2_lines": 1,
+   "contacts": 1,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "02_mixed_s1": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 489,
+   "pillars": 260,
+   "aux_pillars": 0,
+   "bars": 1957,
+   "bars_by_kind": {
+    "head": 229,
+    "truss": 1728
+   },
+   "unassigned_path_bars": 0,
+   "A": 18,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 81,
+   "C_head": 85,
+   "revC_aux": 0,
+   "revC_head": 186,
+   "revC_head_native": 186,
+   "revC_head_net": 0,
+   "head_x_head": 211,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 56,
+   "warning_contacts": 222
+  },
+  "violations": 184,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "centre": 1,
+   "L2": 56,
+   "L1": 32
+  },
+  "summary": "L1 32, L2 56, none 0, centre pillar contacts recorded 1, support point spacing 124",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "b09091f5f68b0cc92890378bd0721744e74604c01dac73aa502bdd9c06a66619",
+  "head_paths_t1_sha256": "7cbdb50f156cbf01a39209ef7911ac62bd82307fc45d9fc1d01814df5cff516c",
+  "warnings_check": {
+   "warnings": 56,
+   "l2_lines": 56,
+   "contacts": 222,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "02_mixed_s2": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 489,
+   "pillars": 275,
+   "aux_pillars": 0,
+   "bars": 1842,
+   "bars_by_kind": {
+    "head": 214,
+    "truss": 1628
+   },
+   "unassigned_path_bars": 0,
+   "A": 14,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 64,
+   "C_head": 59,
+   "revC_aux": 0,
+   "revC_head": 194,
+   "revC_head_native": 194,
+   "revC_head_net": 0,
+   "head_x_head": 178,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 57,
+   "warning_contacts": 198
+  },
+  "violations": 137,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "centre": 1,
+   "L1": 27,
+   "L2": 57
+  },
+  "summary": "L1 27, L2 57, none 0, centre pillar contacts recorded 1, support point spacing 110",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "4d0700c65c69e7de10a3813634888f2bba6d75fa8b2fbdf4de07e5c677c77567",
+  "head_paths_t1_sha256": "0609062334e7d1309694280f094a694170eceee5788eb0b661966f21a71518dc",
+  "warnings_check": {
+   "warnings": 57,
+   "l2_lines": 57,
+   "contacts": 198,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "02_mixed_s3": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 489,
+   "pillars": 281,
+   "aux_pillars": 0,
+   "bars": 1970,
+   "bars_by_kind": {
+    "head": 208,
+    "truss": 1762
+   },
+   "unassigned_path_bars": 0,
+   "A": 7,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 83,
+   "C_head": 82,
+   "revC_aux": 0,
+   "revC_head": 259,
+   "revC_head_native": 259,
+   "revC_head_net": 0,
+   "head_x_head": 227,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 56,
+   "warning_contacts": 263
+  },
+  "violations": 172,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "L1": 35,
+   "L2": 56
+  },
+  "summary": "L1 35, L2 56, none 0, centre pillar contacts recorded 0, support point spacing 131",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "480693d6ae0585a9fd52d013d3f02c4b103cbde860ec753c4293cad3fa7fdb76",
+  "head_paths_t1_sha256": "9e4775db599ca892d931e508f0ca0eeaa0599bb043527ca2fe7282cefd17d1c0",
+  "warnings_check": {
+   "warnings": 56,
+   "l2_lines": 56,
+   "contacts": 263,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "02_mixed_s4": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 489,
+   "pillars": 262,
+   "aux_pillars": 2,
+   "bars": 2050,
+   "bars_by_kind": {
+    "head": 229,
+    "prop": 2,
+    "truss": 1819
+   },
+   "unassigned_path_bars": 0,
+   "A": 13,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 63,
+   "C_head": 74,
+   "revC_aux": 0,
+   "revC_head": 145,
+   "revC_head_native": 144,
+   "revC_head_net": 1,
+   "head_x_head": 172,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 42,
+   "warning_contacts": 172
+  },
+  "violations": 151,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "L2": 42,
+   "L1": 29
+  },
+  "summary": "L1 29, L2 42, none 0, centre pillar contacts recorded 0, support point spacing 100",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "197d21232306fbc32b27b14e8e09496085875fec37cc32aff46e611e74433a3a",
+  "head_paths_t1_sha256": "56a08170ee94eba6c2cc1a3deadeecba69415082a36eab44e27672a4cbaa3e49",
+  "warnings_check": {
+   "warnings": 42,
+   "l2_lines": 42,
+   "contacts": 172,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "02_mixed_s5": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 489,
+   "pillars": 261,
+   "aux_pillars": 1,
+   "bars": 1866,
+   "bars_by_kind": {
+    "head": 229,
+    "prop": 1,
+    "truss": 1636
+   },
+   "unassigned_path_bars": 0,
+   "A": 4,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 65,
+   "C_head": 52,
+   "revC_aux": 0,
+   "revC_head": 175,
+   "revC_head_native": 175,
+   "revC_head_net": 0,
+   "head_x_head": 172,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 39,
+   "warning_contacts": 158
+  },
+  "violations": 121,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "L1": 28,
+   "L2": 39
+  },
+  "summary": "L1 28, L2 39, none 0, centre pillar contacts recorded 0, support point spacing 109",
+  "deleted_heads": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "8f7363112ff451f407ba27a942189e96ebdad29f42a9da3ad1ebd2c458ac39c7",
+  "head_paths_t1_sha256": "ef9a63223ca562168d5a1796ca222f2f0f199661a57da82bc80990d4d0939eec",
+  "warnings_check": {
+   "warnings": 39,
+   "l2_lines": 39,
+   "contacts": 158,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "China-dragon1": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 809,
+   "pillars": 755,
+   "aux_pillars": 46,
+   "bars": 3524,
+   "bars_by_kind": {
+    "head": 103,
+    "route": 20,
+    "prop": 46,
+    "truss": 3355
+   },
+   "unassigned_path_bars": 0,
+   "A": 3,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 3,
+   "C_head": 6,
+   "revC_aux": 0,
+   "revC_head": 3,
+   "revC_head_native": 2,
+   "revC_head_net": 1,
+   "head_x_head": 16,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 6,
+   "warning_contacts": 11
+  },
+  "violations": 13,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {
+   "centre": 1,
+   "L1": 4,
+   "L2": 6
+  },
+  "summary": "L1 4, L2 6, none 3, centre pillar contacts recorded 1, support point spacing 0",
+  "deleted_heads": [
+   3,
+   3,
+   3,
+   3,
+   3
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "209e73035dbde53fa2b9853c510a27a6b75c4e208d078463e3d87af0983db043",
+  "head_paths_t1_sha256": "48753cb437f13020cdaf85a36725669a2e73192f672d845a63f2c468a2501ce9",
+  "warnings_check": {
+   "warnings": 6,
+   "l2_lines": 6,
+   "contacts": 11,
+   "problems": [],
+   "problem_count": 0
+  }
+ },
+ "Pikachu": {
+  "metrics": {
+   "margin": 0.2,
+   "heads": 552,
+   "pillars": 491,
+   "aux_pillars": 8,
+   "bars": 3219,
+   "bars_by_kind": {
+    "head": 69,
+    "route": 4,
+    "prop": 8,
+    "truss": 3138
+   },
+   "unassigned_path_bars": 0,
+   "A": 0,
+   "A_prop": 0,
+   "B": 0,
+   "B_shared_outside_R": 0,
+   "C_pillar": 0,
+   "C_head": 0,
+   "revC_aux": 0,
+   "revC_head": 0,
+   "revC_head_native": 0,
+   "revC_head_net": 0,
+   "head_x_head": 0,
+   "D": 0,
+   "thick_on_thin": 0,
+   "dup_truss_pairs": 0,
+   "dup_truss_bars": 0,
+   "pairs_excess": 0,
+   "warnings": 0,
+   "warning_contacts": 0
+  },
+  "violations": 0,
+  "unrecorded": 0,
+  "unrecorded_list": [],
+  "records": {},
+  "summary": "L1 0, L2 0, none 2, centre pillar contacts recorded 0, support point spacing 0",
+  "deleted_heads": [
+   2,
+   2,
+   2,
+   2,
+   2
+  ],
+  "distinct_tree": 1,
+  "distinct_head_paths": 1,
+  "runs": 5,
+  "exits": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "record_sets_distinct": 1,
+  "tree_t1_sha256": "70d9d419cd942c951df00513daa6a4bf17bff17012fe97ad7e172645b381dc19",
+  "head_paths_t1_sha256": "1159b35fbff49a6c42fe344ecbc07eac5ab577f81854f5648fb3d1d39902baf3",
+  "warnings_check": {
+   "warnings": 0,
+   "l2_lines": 0,
+   "problems": []
+  }
+ }
+}

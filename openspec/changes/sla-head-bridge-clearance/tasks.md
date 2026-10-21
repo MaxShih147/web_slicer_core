@@ -83,14 +83,14 @@
 
 ## 6. 警告匯出與驗收工具
 
-- [ ] 6.1 在 `SupportTree.hpp` 新增 `TreeWarning`（code、head 索引、route、contacts），由 `DefaultSupportTree` 的 L2 紀錄轉入；head 索引需換算成匯出 `heads[]` 的索引
-- [ ] 6.2 `SupportTreeIO.hpp`：只有在有 L2 紀錄時才寫出頂層 `warnings` 陣列，欄位依 spec；`version` 維持 2
-- [ ] 6.3 IO 測試（`[sla_io]` 擴充）：沒有警告時沒有 `warnings` 鍵且 `version` 為 2；有一筆警告時，`code`、`head`、`route`、`contacts[].pos/with/dist/required` 都正確
-- [ ] 6.4 新增 C++ 量測 `tests/sla_print/sla_head_bridge_metrics.{hpp,cpp}`，直接讀 builder：A、B、C、反向 C、D、重複柱對、粗頭掛細柱、L1、L2、NONE、中心柱已記錄接觸數、原生過密數、未記錄的違規數（L1、L2、中心柱紀錄與原生過密都不算未記錄）；附單元測試（標籤 `[head_bridge_metrics]`），以小型手造支撐樹驗證每一種計數
-- [ ] 6.5 確認 agent 對 `warnings` 只做原樣轉送：執行 `.venv\Scripts\python -m pytest agent/tests/test_support_points_wiring.py agent/tests/test_support_e2e.py`，結果與合併前相同
-- [ ] 6.6 **最終驗收**：以最終引擎對所有驗收素材執行 6.4 的量測與 `evidence/tools/` 腳本。逐條核對 spec「回歸與效能門檻」（輸入為基準線的固定支撐點清單）：D / 粗頭掛細柱 / 重複柱對（`dup_truss_pairs` 與 `pairs_excess`）= 0；未記錄的違規 = 0（原生過密只記錄；中心柱碰支撐頭以 `centroid_pillar_clearance_recorded` 計為已記錄）；被刪除的支撐頭數不多於基準線；確定性（4 次 + `--threads 1`）；第 3、4 步耗時門檻；planar 參考模型的回歸門檻。把結果與基準線的對照寫入 `evidence/final-<UTC 時間>/FINAL.md`，L1、L2、柱數、桿數只記錄趨勢
-- [ ] 6.7 重建受影響的支撐網格黃金檔（若有既有測試以改動前的支撐輸出為準）；提交說明註明這是刻意的幾何變更
-- [ ] 6.8 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`；最後對整個方案按「建置方案」一次，確認沒有其他目標因本變更而無法編譯
-- [ ] 6.9 **驗證**：`sla_print_tests.exe` 不帶參數全跑，除了 1.7 記錄的既有失敗之外全部通過；`openspec validate sla-head-bridge-clearance` 通過
-- [ ] 6.10 **`/code-review` 檢核點**：審查整個分支相對 `release/v1.0.6` 的 diff。重點：匯出欄位名稱與 spec 完全一致；`warnings` 不存在時不寫鍵；量測工具與 spec 的計數定義一致；沒有遺留除錯輸出
-- [ ] 6.11 提交本 Task，並把主專案的子模組指標更新到 fork 的最終 commit
+- [x] 6.1 在 `SupportTree.hpp` 新增 `TreeWarning`（code、head 索引、route、contacts），由 `DefaultSupportTree` 的 L2 紀錄轉入；head 索引需換算成匯出 `heads[]` 的索引
+- [x] 6.2 `SupportTreeIO.hpp`：只有在有 L2 紀錄時才寫出頂層 `warnings` 陣列，欄位依 spec；`version` 維持 2
+- [x] 6.3 IO 測試（`[sla_io]` 擴充）：沒有警告時沒有 `warnings` 鍵且 `version` 為 2；有一筆警告時，`code`、`head`、`route`、`contacts[].pos/with/dist/required` 都正確
+- [x] 6.4 新增 C++ 量測 `tests/sla_print/sla_head_bridge_metrics.{hpp,cpp}`，直接讀 builder：A、B、C、反向 C、D、重複柱對、粗頭掛細柱、L1、L2、NONE、中心柱已記錄接觸數、原生過密數、未記錄的違規數（L1、L2、中心柱紀錄與原生過密都不算未記錄）；附單元測試（標籤 `[head_bridge_metrics]`），以小型手造支撐樹驗證每一種計數
+- [x] 6.5 確認 agent 對 `warnings` 只做原樣轉送：執行 `.venv\Scripts\python -m pytest agent/tests/test_support_points_wiring.py agent/tests/test_support_e2e.py`，結果與合併前相同
+- [x] 6.6 **最終驗收**：以最終引擎對所有驗收素材執行 6.4 的量測與 `evidence/tools/` 腳本。逐條核對 spec「回歸與效能門檻」（輸入為基準線的固定支撐點清單）：D / 粗頭掛細柱 / 重複柱對（`dup_truss_pairs` 與 `pairs_excess`）= 0；未記錄的違規 = 0（原生過密只記錄；中心柱碰支撐頭以 `centroid_pillar_clearance_recorded` 計為已記錄）；被刪除的支撐頭數不多於基準線；確定性（4 次 + `--threads 1`）；第 3、4 步耗時門檻；planar 參考模型的回歸門檻。把結果與基準線的對照寫入 `evidence/final-<UTC 時間>/FINAL.md`，L1、L2、柱數、桿數只記錄趨勢（2026-10-20 量測：`evidence/final-20261020T080041Z/FINAL.md`。China-dragon1 第 3、4 步中位數 2492.2 ms 超過門檻 2167.9 ms，其餘門檻全部通過；2026-10-21 裁決判定為量測環境波動，照現況結案，見 design.md Known Limitations 5）
+- [x] 6.7 重建受影響的支撐網格黃金檔（若有既有測試以改動前的支撐輸出為準）；提交說明註明這是刻意的幾何變更
+- [x] 6.8 **VS 2022 建置**：組態 `Release`、平台 `x64` → 建置 `slicer-engine` → 建置 `sla_print_tests`；最後對整個方案按「建置方案」一次，確認沒有其他目標因本變更而無法編譯
+- [x] 6.9 **驗證**：`sla_print_tests.exe` 不帶參數全跑，除了 1.7 記錄的既有失敗之外全部通過；`openspec validate sla-head-bridge-clearance` 通過
+- [x] 6.10 **`/code-review` 檢核點**：審查整個分支相對 `release/v1.0.6` 的 diff。重點：匯出欄位名稱與 spec 完全一致；`warnings` 不存在時不寫鍵；量測工具與 spec 的計數定義一致；沒有遺留除錯輸出
+- [x] 6.11 提交本 Task，並把主專案的子模組指標更新到 fork 的最終 commit

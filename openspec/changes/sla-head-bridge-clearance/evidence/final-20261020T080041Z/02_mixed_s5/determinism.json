@@ -1,0 +1,89 @@
+{
+ "case": "02_mixed_s5",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": {
+  "exe": "129c47d88e308681464f766f201bef28e913a4d4ead4ddb529dadfbb26e68628",
+  "slicer_core_dll": "5f3dc6ef3aff44283f75425809fe16788cfa27c0b119774fcf6293c330c5e33c"
+ },
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.010048,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.012952
+   },
+   "T_s": 0.010048,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s5\\runs\\det_mt1\\tree.json",
+   "tree_sha256": "8f7363112ff451f407ba27a942189e96ebdad29f42a9da3ad1ebd2c458ac39c7",
+   "label": "mt1",
+   "head_paths_sha256": "ef9a63223ca562168d5a1796ca222f2f0f199661a57da82bc80990d4d0939eec"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.009529,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.014678
+   },
+   "T_s": 0.009529,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s5\\runs\\det_mt2\\tree.json",
+   "tree_sha256": "8f7363112ff451f407ba27a942189e96ebdad29f42a9da3ad1ebd2c458ac39c7",
+   "label": "mt2",
+   "head_paths_sha256": "ef9a63223ca562168d5a1796ca222f2f0f199661a57da82bc80990d4d0939eec"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.008999,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.014001
+   },
+   "T_s": 0.008999,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s5\\runs\\det_mt3\\tree.json",
+   "tree_sha256": "8f7363112ff451f407ba27a942189e96ebdad29f42a9da3ad1ebd2c458ac39c7",
+   "label": "mt3",
+   "head_paths_sha256": "ef9a63223ca562168d5a1796ca222f2f0f199661a57da82bc80990d4d0939eec"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.01351,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.016002
+   },
+   "T_s": 0.01351,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s5\\runs\\det_mt4\\tree.json",
+   "tree_sha256": "8f7363112ff451f407ba27a942189e96ebdad29f42a9da3ad1ebd2c458ac39c7",
+   "label": "mt4",
+   "head_paths_sha256": "ef9a63223ca562168d5a1796ca222f2f0f199661a57da82bc80990d4d0939eec"
+  },
+  {
+   "exit": 0,
+   "threads": 1,
+   "steps_s": {
+    "Routing to ground": 0.015978,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.013996
+   },
+   "T_s": 0.015978,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_mixed_s5\\runs\\det_t1\\tree.json",
+   "tree_sha256": "8f7363112ff451f407ba27a942189e96ebdad29f42a9da3ad1ebd2c458ac39c7",
+   "label": "t1",
+   "head_paths_sha256": "ef9a63223ca562168d5a1796ca222f2f0f199661a57da82bc80990d4d0939eec"
+  }
+ ],
+ "distinct_tree": 1,
+ "distinct_head_paths": 1,
+ "distinct_tree_multithread": 1,
+ "distinct_head_paths_multithread": 1
+}
