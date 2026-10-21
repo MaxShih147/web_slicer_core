@@ -1,0 +1,252 @@
+{
+ "margin": 0.2,
+ "heads": 130,
+ "pillars": 93,
+ "aux_pillars": 0,
+ "bars": 352,
+ "bars_by_kind": {
+  "head": 37,
+  "truss": 315
+ },
+ "unassigned_path_bars": 0,
+ "A": 0,
+ "A_prop": 0,
+ "B": 5,
+ "B_shared_outside_R": 5,
+ "C_pillar": 0,
+ "C_head": 0,
+ "revC_aux": 0,
+ "revC_head": 0,
+ "revC_head_native": 0,
+ "revC_head_net": 0,
+ "head_x_head": 2,
+ "D": 0,
+ "thick_on_thin": 0,
+ "dup_truss_pairs": 0,
+ "dup_truss_bars": 0,
+ "pairs_excess": 0,
+ "detail": {
+  "A": [],
+  "A_prop": [],
+  "B": [
+   {
+    "x": [
+     "head",
+     8
+    ],
+    "y": [
+     "truss",
+     341
+    ],
+    "dist": 0.0002,
+    "required": 1.2,
+    "at": [
+     29.114,
+     15.618,
+     26.488
+    ]
+   },
+   {
+    "x": [
+     "head",
+     10
+    ],
+    "y": [
+     "truss",
+     296
+    ],
+    "dist": 1.0533,
+    "required": 1.2,
+    "at": [
+     32.421,
+     16.896,
+     28.129
+    ]
+   },
+   {
+    "x": [
+     "head",
+     12
+    ],
+    "y": [
+     "truss",
+     312
+    ],
+    "dist": 1.0781,
+    "required": 1.2,
+    "at": [
+     39.438,
+     22.419,
+     29.825
+    ]
+   },
+   {
+    "x": [
+     "head",
+     14
+    ],
+    "y": [
+     "truss",
+     322
+    ],
+    "dist": 0.7949,
+    "required": 1.2,
+    "at": [
+     40.869,
+     15.711,
+     30.405
+    ]
+   },
+   {
+    "x": [
+     "head",
+     16
+    ],
+    "y": [
+     "truss",
+     244
+    ],
+    "dist": 1.0748,
+    "required": 1.2,
+    "at": [
+     36.536,
+     10.332,
+     28.813
+    ]
+   }
+  ],
+  "B_shared_outside_R": [
+   {
+    "x": [
+     "head",
+     8
+    ],
+    "y": [
+     "truss",
+     341
+    ],
+    "dist": 0.0002,
+    "required": 1.2,
+    "at": [
+     29.114,
+     15.618,
+     26.488
+    ]
+   },
+   {
+    "x": [
+     "head",
+     10
+    ],
+    "y": [
+     "truss",
+     296
+    ],
+    "dist": 1.0533,
+    "required": 1.2,
+    "at": [
+     32.421,
+     16.896,
+     28.129
+    ]
+   },
+   {
+    "x": [
+     "head",
+     12
+    ],
+    "y": [
+     "truss",
+     312
+    ],
+    "dist": 1.0781,
+    "required": 1.2,
+    "at": [
+     39.438,
+     22.419,
+     29.825
+    ]
+   },
+   {
+    "x": [
+     "head",
+     14
+    ],
+    "y": [
+     "truss",
+     322
+    ],
+    "dist": 0.7949,
+    "required": 1.2,
+    "at": [
+     40.869,
+     15.711,
+     30.405
+    ]
+   },
+   {
+    "x": [
+     "head",
+     16
+    ],
+    "y": [
+     "truss",
+     244
+    ],
+    "dist": 1.0748,
+    "required": 1.2,
+    "at": [
+     36.536,
+     10.332,
+     28.813
+    ]
+   }
+  ],
+  "C_pillar": [],
+  "C_head": [],
+  "revC_aux": [],
+  "revC_head": [],
+  "revC_head_native": [],
+  "revC_head_net": [],
+  "head_x_head": [
+   {
+    "x": [
+     "head",
+     5
+    ],
+    "y": [
+     "head",
+     70
+    ],
+    "dist": 0.862,
+    "required": 1.2,
+    "at": [
+     -16.276,
+     22.745,
+     -1.207
+    ]
+   },
+   {
+    "x": [
+     "head",
+     18
+    ],
+    "y": [
+     "head",
+     20
+    ],
+    "dist": 1.0964,
+    "required": 1.2,
+    "at": [
+     -10.491,
+     21.969,
+     0.0
+    ]
+   }
+  ],
+  "D": [],
+  "thick_on_thin": [],
+  "dup_truss_pairs": [],
+  "pairs_excess": []
+ }
+}

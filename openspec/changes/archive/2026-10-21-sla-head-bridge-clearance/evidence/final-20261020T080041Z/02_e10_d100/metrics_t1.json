@@ -1,0 +1,239 @@
+{
+ "margin": 0.2,
+ "heads": 135,
+ "pillars": 65,
+ "aux_pillars": 0,
+ "bars": 595,
+ "bars_by_kind": {
+  "head": 70,
+  "truss": 525
+ },
+ "unassigned_path_bars": 0,
+ "A": 1,
+ "A_prop": 0,
+ "B": 0,
+ "B_shared_outside_R": 0,
+ "C_pillar": 0,
+ "C_head": 2,
+ "revC_aux": 0,
+ "revC_head": 2,
+ "revC_head_native": 2,
+ "revC_head_net": 0,
+ "head_x_head": 4,
+ "D": 0,
+ "thick_on_thin": 0,
+ "dup_truss_pairs": 0,
+ "dup_truss_bars": 0,
+ "pairs_excess": 0,
+ "warnings": 0,
+ "warning_contacts": 0,
+ "detail": {
+  "A": [
+   {
+    "x": [
+     "head",
+     9
+    ],
+    "y": [
+     "head",
+     11
+    ],
+    "dist": 1.0817,
+    "required": 1.2,
+    "at": [
+     -10.47,
+     21.969,
+     -1.7
+    ]
+   }
+  ],
+  "A_prop": [],
+  "B": [],
+  "B_shared_outside_R": [],
+  "C_pillar": [],
+  "C_head": [
+   {
+    "x": [
+     "head",
+     11
+    ],
+    "y": [
+     "head",
+     18
+    ],
+    "dist": 1.0817,
+    "required": 1.2,
+    "at": [
+     -10.175,
+     20.928,
+     -1.7
+    ]
+   },
+   {
+    "x": [
+     "head",
+     9
+    ],
+    "y": [
+     "head",
+     20
+    ],
+    "dist": 1.0817,
+    "required": 1.2,
+    "at": [
+     -10.47,
+     21.969,
+     -1.7
+    ]
+   }
+  ],
+  "revC_aux": [],
+  "revC_head": [
+   {
+    "x": [
+     "pillar",
+     38
+    ],
+    "y": [
+     "head",
+     5
+    ],
+    "dist": 0.896,
+    "required": 1.2,
+    "at": [
+     -16.032,
+     21.948,
+     -1.7
+    ]
+   },
+   {
+    "x": [
+     "pillar",
+     29
+    ],
+    "y": [
+     "head",
+     71
+    ],
+    "dist": 1.0174,
+    "required": 1.2,
+    "at": [
+     -16.282,
+     22.808,
+     -1.7
+    ]
+   }
+  ],
+  "revC_head_native": [
+   {
+    "x": [
+     "pillar",
+     38
+    ],
+    "y": [
+     "head",
+     5
+    ],
+    "dist": 0.896,
+    "required": 1.2,
+    "at": [
+     -16.032,
+     21.948,
+     -1.7
+    ]
+   },
+   {
+    "x": [
+     "pillar",
+     29
+    ],
+    "y": [
+     "head",
+     71
+    ],
+    "dist": 1.0174,
+    "required": 1.2,
+    "at": [
+     -16.282,
+     22.808,
+     -1.7
+    ]
+   }
+  ],
+  "revC_head_net": [],
+  "head_x_head": [
+   {
+    "x": [
+     "head",
+     5
+    ],
+    "y": [
+     "head",
+     71
+    ],
+    "dist": 0.896,
+    "required": 1.2,
+    "at": [
+     -16.282,
+     22.808,
+     -1.218
+    ]
+   },
+   {
+    "x": [
+     "head",
+     16
+    ],
+    "y": [
+     "head",
+     19
+    ],
+    "dist": 1.0766,
+    "required": 1.2,
+    "at": [
+     -10.708,
+     18.933,
+     0.0
+    ]
+   },
+   {
+    "x": [
+     "head",
+     18
+    ],
+    "y": [
+     "head",
+     20
+    ],
+    "dist": 1.0817,
+    "required": 1.2,
+    "at": [
+     -10.47,
+     21.969,
+     0.0
+    ]
+   },
+   {
+    "x": [
+     "head",
+     69
+    ],
+    "y": [
+     "head",
+     70
+    ],
+    "dist": 1.1432,
+    "required": 1.2,
+    "at": [
+     -5.205,
+     21.935,
+     0.0
+    ]
+   }
+  ],
+  "D": [],
+  "thick_on_thin": [],
+  "dup_truss_pairs": [],
+  "pairs_excess": []
+ }
+}

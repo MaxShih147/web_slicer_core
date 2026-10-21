@@ -1,0 +1,7354 @@
+{
+  "model_fingerprint": {
+    "bbox_max": [
+      443899,
+      250000,
+      409258
+    ],
+    "bbox_min": [
+      -308024,
+      0,
+      0
+    ],
+    "face_count": 3640,
+    "vertex_checksum": "d4e8b56aeffd88c0"
+  },
+  "points": [
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.181907653808594,
+        23.345855712890625,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -15.425914764404297,
+        23.347591400146484,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.800230026245117,
+        23.321556091308594,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -17.775312423706055,
+        23.27061653137207,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -18.875532150268555,
+        23.347591400146484,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -20.71270751953125,
+        23.347591400146484,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.992881774902344,
+        23.341976165771484,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.254039764404297,
+        23.279918670654297,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.042343139648438,
+        22.285444259643555,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.09239959716797,
+        20.435827255249023,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.374258041381836,
+        18.662952423095703,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.3853702545166,
+        17.369783401489258,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -19.730043411254883,
+        23.175493240356445,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -19.939611434936523,
+        22.07179069519043,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -18.18250846862793,
+        22.29698944091797,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -18.39228057861328,
+        21.208749771118164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.26674461364746,
+        22.654943466186523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.11245346069336,
+        21.833707809448242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -15.94289493560791,
+        20.931203842163086,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.668023109436035,
+        22.267690658569336,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -13.17552661895752,
+        23.177127838134766,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -13.413256645202637,
+        22.09713363647461,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -13.266341209411621,
+        21.077560424804688,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -15.561159133911133,
+        17.03122901916504,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.421140670776367,
+        23.34267807006836,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.429632186889648,
+        23.34648323059082,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.89971923828125,
+        22.35602378845215,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.782493591308594,
+        21.01278305053711,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.923643112182617,
+        19.45808982849121,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.989764213562012,
+        18.972551345825195,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.80710506439209,
+        20.927875518798828,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.900992393493652,
+        21.968652725219727,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.228957176208496,
+        23.347591400146484,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.114474296569824,
+        23.347591400146484,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.57103157043457,
+        22.056184768676758,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.37240219116211,
+        20.912389755249023,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.357646942138672,
+        18.931196212768555,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.985508918762207,
+        23.342388153076172,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.38519811630249,
+        22.70656394958496,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.389916896820068,
+        21.756776809692383,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.453811168670654,
+        23.347591400146484,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.049497127532959,
+        22.360963821411133,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.406897068023682,
+        20.652732849121094,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.237815856933594,
+        19.297374725341797,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.006817817687988,
+        23.35768699645996,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.6737771034240723,
+        23.188499450683594,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -2.2709009647369385,
+        22.194599151611328,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.4676599502563477,
+        21.749258041381836,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.7694010734558105,
+        20.442808151245117,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.756844997406006,
+        19.943828582763672,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.448552131652832,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.633696556091309,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.803190231323242,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.727682113647461,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.11880874633789,
+        20.777875900268555,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.737212181091309,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -13.471891403198242,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.25526237487793,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.681382179260254,
+        21.06026840209961,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -15.442687034606934,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.537519454956055,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -17.185293197631836,
+        20.533912658691406,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -17.8393497467041,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -19.011667251586914,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -19.53975486755371,
+        20.86078453063965,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -20.15315818786621,
+        19.964811325073242,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -22.123735427856445,
+        19.95918846130371,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.003267288208008,
+        20.02028465270996,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.703475952148438,
+        20.456871032714844,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.691560745239258,
+        21.96169662475586,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -24.387407302856445,
+        23.825000762939453,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -25.399311065673828,
+        23.825000762939453,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -26.433923721313477,
+        23.825000762939453,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -27.422744750976563,
+        23.825000762939453,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -28.41600799560547,
+        23.825000762939453,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        23.27018165588379,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        22.072368621826172,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        20.80422019958496,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        19.545387268066406,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        18.346303939819336,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        17.106931686401367,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        15.966788291931152,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        14.773085594177246,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        13.638486862182617,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        12.398797988891602,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        11.192115783691406,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        9.956802368164063,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        8.68447208404541,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        7.538396835327148,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        6.30476188659668,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        5.131086826324463,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        3.9959819316864014,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        2.8927860260009766,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -29.6274471282959,
+        1.6908060312271118,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -28.28725242614746,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -27.224321365356445,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -26.091867446899414,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -24.979564666748047,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.730112075805664,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -22.500329971313477,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.2880916595459,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -20.050474166870117,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -18.907955169677734,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -17.7186336517334,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.536184310913086,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -15.2515287399292,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.043014526367188,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.792972564697266,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.569402694702148,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.415281295776367,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.260686874389648,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.011817932128906,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.764121055603027,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.607071876525879,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.458031177520752,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.374587059020996,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -2.3034870624542236,
+        1.1750010251998901,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -1.0276440382003784,
+        1.7543150186538696,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        2.981837034225464,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        4.252840042114258,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        5.493102073669434,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        6.649594783782959,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        7.800628185272217,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        8.992518424987793,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        10.194978713989258,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        11.377944946289063,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        12.588780403137207,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        13.832022666931152,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        15.140497207641602,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        16.253543853759766,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        17.438800811767578,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        18.588844299316406,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        19.765945434570313,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        21.110187530517578,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -0.9880179762840271,
+        22.353120803833008,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -1.107342004776001,
+        23.553382873535156,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -2.455878973007202,
+        23.825000762939453,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.993659019470215,
+        16.496681213378906,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.11081600189209,
+        14.995031356811523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.78236198425293,
+        14.995031356811523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.899518966674805,
+        15.668821334838867,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.899518966674805,
+        16.568523406982422,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.641217231750488,
+        17.193727493286133,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.524060249328613,
+        17.900400161743164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.049275398254395,
+        17.900400161743164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.869708061218262,
+        17.768131256103516,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.021191596984863,
+        17.92104148864746,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.399618148803711,
+        17.686904907226563,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.542573928833008,
+        16.247661590576172,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.797497749328613,
+        15.817140579223633,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.9104228019714355,
+        16.099031448364258,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.92442512512207,
+        16.45876121520996,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.35487699508667,
+        16.921152114868164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.965162754058838,
+        17.140472412109375,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.2911601066589355,
+        17.900400161743164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.877910137176514,
+        17.900400161743164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.6264119148254395,
+        17.900400161743164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.4433701038360596,
+        17.78324317932129,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.4433701038360596,
+        17.193727493286133,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.1867780685424805,
+        15.965109825134277,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.3039350509643555,
+        14.995031356811523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.975481033325195,
+        14.995031356811523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.09263801574707,
+        16.169588088989258,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.479576110839844,
+        17.07657241821289,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.760753154754639,
+        15.938074111938477,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.946609973907471,
+        14.995031356811523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.9756550788879395,
+        14.995031356811523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.936758995056152,
+        14.995031356811523,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.843270301818848,
+        14.993565559387207,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.638547897338867,
+        15.007341384887695,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.372039794921875,
+        15.684438705444336,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.292977333068848,
+        16.864641189575195,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.252456665039063,
+        16.9704647064209,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.265629768371582,
+        16.021177291870117,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.928020477294922,
+        21.24034309387207,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -22.802282333374023,
+        21.77120018005371,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -22.134765625,
+        21.978296279907227,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -22.509315490722656,
+        20.88595962524414,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -26.953947067260742,
+        6.601274013519287,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -26.65407943725586,
+        4.053761005401611,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.99843978881836,
+        3.660815954208374,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -27.140247344970703,
+        9.706756591796875,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -25.03510284423828,
+        8.089543342590332,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.518272399902344,
+        6.002132892608643,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.14109992980957,
+        3.9540960788726807,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -27.001279830932617,
+        12.669931411743164,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -24.713464736938477,
+        10.84605884552002,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -22.491859436035156,
+        8.711710929870605,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -20.475116729736328,
+        6.656084060668945,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -18.355968475341797,
+        4.436057090759277,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -15.802043914794922,
+        3.6616199016571045,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -26.683372497558594,
+        15.541446685791016,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -24.4769287109375,
+        13.600152015686035,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -22.11869239807129,
+        11.402241706848145,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -19.788108825683594,
+        9.4589262008667,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -17.62700843811035,
+        7.418581008911133,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -15.20705795288086,
+        6.065959930419922,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.970724105834961,
+        3.9413130283355713,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -27.592247009277344,
+        20.89964485168457,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -27.19462013244629,
+        18.19766616821289,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -23.752042770385742,
+        16.172258377075195,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -21.82871437072754,
+        13.891829490661621,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -19.39101219177246,
+        12.134535789489746,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.99095916748047,
+        10.235228538513184,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.629674911499023,
+        8.672667503356934,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.315191268920898,
+        6.670069217681885,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -10.308886528015137,
+        4.382384777069092,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.9835968017578125,
+        3.6181468963623047,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -25.763744354248047,
+        21.07009506225586,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -24.857929229736328,
+        18.30562400817871,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -20.681547164916992,
+        15.808634757995605,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -18.804473876953125,
+        14.588775634765625,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.551239013671875,
+        12.788945198059082,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.025487899780273,
+        11.392991065979004,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.764381408691406,
+        9.404705047607422,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.510953903198242,
+        7.21239709854126,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.10158109664917,
+        5.927206039428711,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.465153217315674,
+        3.924449920654297,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -18.35681915283203,
+        17.423171997070313,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -16.506818771362305,
+        15.267586708068848,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.051369667053223,
+        14.204214096069336,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -11.254796028137207,
+        12.202715873718262,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.00767993927002,
+        9.891169548034668,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.536455154418945,
+        8.216171264648438,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.038372993469238,
+        6.562317848205566,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.240607976913452,
+        4.0081682205200195,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -14.29883861541748,
+        18.14610481262207,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -8.43295955657959,
+        12.395008087158203,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.17433500289917,
+        10.538164138793945,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.7118279933929443,
+        9.097090721130371,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -9.817233085632324,
+        18.879560470581055,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -6.761532783508301,
+        17.005123138427734,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.708151817321777,
+        12.77180290222168,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -3.5109879970550537,
+        11.604893684387207,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.099564075469971,
+        18.824995040893555,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -2.811155080795288,
+        18.94012451171875,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -2.9329259395599365,
+        13.971563339233398,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -2.3335909843444824,
+        20.451435089111328,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -5.114934921264648,
+        20.8389835357666,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -4.598575115203857,
+        21.997831344604492,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -12.093311309814453,
+        21.92621421813965,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -17.168895721435547,
+        21.504560470581055,
+        0.0
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "island"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -30.39456558227539,
+        24.774999618530273,
+        0.7749996185302734
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -7.195792198181152,
+        24.924999237060547,
+        0.9250003695487976
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -13.195792198181152,
+        24.924999237060547,
+        0.9249996542930603
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        -30.577457427978516,
+        0.22498999536037445,
+        0.7750099897384644
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        6.932168006896973,
+        2.810236930847168,
+        13.225001335144043
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        6.932168006896973,
+        6.810236930847168,
+        13.225001335144043
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        6.932168006896973,
+        12.810236930847168,
+        13.225001335144043
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        6.932168006896973,
+        18.81023597717285,
+        13.225001335144043
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        7.082167148590088,
+        8.737445831298828,
+        13.375
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        7.082167148590088,
+        14.737445831298828,
+        13.375
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        7.082167148590088,
+        20.737445831298828,
+        13.375
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.582167625427246,
+        4.405570983886719,
+        14.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.582167625427246,
+        10.405570983886719,
+        14.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.582167625427246,
+        16.40557098388672,
+        14.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.582167625427246,
+        22.40557289123535,
+        14.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.732169151306152,
+        2.4217519760131836,
+        15.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.732169151306152,
+        6.421751976013184,
+        15.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.732169151306152,
+        12.421751976013184,
+        15.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.732169151306152,
+        18.421751022338867,
+        15.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.88216781616211,
+        8.437767028808594,
+        15.175000190734863
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.88216781616211,
+        14.437767028808594,
+        15.175000190734863
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        8.88216781616211,
+        20.437767028808594,
+        15.175000190734863
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.38216781616211,
+        4.589234828948975,
+        16.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.38216781616211,
+        10.589235305786133,
+        16.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.38216781616211,
+        16.589235305786133,
+        16.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.38216781616211,
+        22.589235305786133,
+        16.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.5321683883667,
+        2.6035571098327637,
+        16.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.5321683883667,
+        6.603557109832764,
+        16.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.5321683883667,
+        12.603556632995605,
+        16.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.5321683883667,
+        18.60355567932129,
+        16.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.682167053222656,
+        8.617735862731934,
+        16.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.682167053222656,
+        14.617735862731934,
+        16.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        10.682167053222656,
+        20.61773681640625,
+        16.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.182168006896973,
+        4.774588108062744,
+        18.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.182168006896973,
+        10.774587631225586,
+        18.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.182168006896973,
+        16.774587631225586,
+        18.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.182168006896973,
+        22.774587631225586,
+        18.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.332168579101563,
+        2.790555000305176,
+        18.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.332168579101563,
+        6.790555000305176,
+        18.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.332168579101563,
+        12.790555000305176,
+        18.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.332168579101563,
+        18.790555953979492,
+        18.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.482169151306152,
+        8.80627155303955,
+        18.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.482169151306152,
+        14.80627155303955,
+        18.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        12.482169151306152,
+        20.806272506713867,
+        18.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        13.982170104980469,
+        4.792934894561768,
+        20.275001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        13.982170104980469,
+        10.792935371398926,
+        20.275001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        13.982170104980469,
+        16.792936325073242,
+        20.275001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        13.982170104980469,
+        22.792936325073242,
+        20.275001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        14.132168769836426,
+        2.7787399291992188,
+        20.424999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        14.132168769836426,
+        6.778739929199219,
+        20.424999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        14.132168769836426,
+        12.778739929199219,
+        20.424999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        14.132168769836426,
+        18.77873992919922,
+        20.424999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        14.282169342041016,
+        8.76429557800293,
+        20.575000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        14.282169342041016,
+        14.76429557800293,
+        20.575000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        14.282169342041016,
+        20.76429557800293,
+        20.575000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.782170295715332,
+        4.622725009918213,
+        22.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.782170295715332,
+        10.622724533081055,
+        22.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.782170295715332,
+        16.622724533081055,
+        22.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.782170295715332,
+        22.622724533081055,
+        22.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.932168960571289,
+        2.6100029945373535,
+        22.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.932168960571289,
+        6.6100029945373535,
+        22.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.932168960571289,
+        12.610002517700195,
+        22.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        15.932168960571289,
+        18.610004425048828,
+        22.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        16.082170486450195,
+        8.597156524658203,
+        22.375
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        16.082170486450195,
+        14.597156524658203,
+        22.375
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        16.082170486450195,
+        20.597156524658203,
+        22.375
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        17.785696029663086,
+        2.3598380088806152,
+        23.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        17.785696029663086,
+        6.359838008880615,
+        23.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        17.785696029663086,
+        10.359837532043457,
+        23.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        17.785696029663086,
+        16.359838485717773,
+        23.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        17.785696029663086,
+        22.359838485717773,
+        23.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        18.045503616333008,
+        4.274641036987305,
+        24.024999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        18.045503616333008,
+        8.274641036987305,
+        24.024999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        18.045503616333008,
+        12.274641036987305,
+        24.024999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        18.045503616333008,
+        18.274639129638672,
+        24.024999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        18.30531120300293,
+        14.148741722106934,
+        24.174999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        18.30531120300293,
+        20.14874267578125,
+        24.174999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        18.801271438598633,
+        23.708728790283203,
+        24.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.344541549682617,
+        5.5853271484375,
+        24.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.344541549682617,
+        9.5853271484375,
+        24.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.344541549682617,
+        15.5853271484375,
+        24.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.344541549682617,
+        21.5853271484375,
+        24.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.449012756347656,
+        1.4766420125961304,
+        24.924999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.604347229003906,
+        7.4706010818481445,
+        24.924999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.604347229003906,
+        11.470601081848145,
+        24.924999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.604347229003906,
+        17.470600128173828,
+        24.924999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.86415672302246,
+        3.356343984603882,
+        25.07499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.86415672302246,
+        13.356344223022461,
+        25.07499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        19.86415672302246,
+        19.35634422302246,
+        25.07499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        20.57343864440918,
+        23.330467224121094,
+        25.525001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.163196563720703,
+        5.397998809814453,
+        25.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.163196563720703,
+        9.397998809814453,
+        25.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.163196563720703,
+        15.397998809814453,
+        25.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.163196563720703,
+        21.398000717163086,
+        25.825000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.240081787109375,
+        1.438905954360962,
+        25.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.423002243041992,
+        7.430523872375488,
+        25.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.423002243041992,
+        11.430523872375488,
+        25.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.423002243041992,
+        17.430524826049805,
+        25.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.682811737060547,
+        3.4625260829925537,
+        26.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.682811737060547,
+        13.462526321411133,
+        26.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        21.682811737060547,
+        19.462526321411133,
+        26.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        22.286579132080078,
+        23.547880172729492,
+        26.575000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        22.981849670410156,
+        5.626306056976318,
+        26.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        22.981849670410156,
+        9.62630558013916,
+        26.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        22.981849670410156,
+        15.62630558013916,
+        26.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        22.981849670410156,
+        21.626306533813477,
+        26.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        23.17387580871582,
+        1.6682699918746948,
+        27.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        23.241655349731445,
+        7.667120933532715,
+        27.024999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        23.241655349731445,
+        11.667120933532715,
+        27.024999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        23.241655349731445,
+        17.6671199798584,
+        27.024999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        23.50146484375,
+        3.7073090076446533,
+        27.174999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        23.50146484375,
+        13.707308769226074,
+        27.174999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        23.50146484375,
+        19.707307815551758,
+        27.174999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        24.174707412719727,
+        23.832061767578125,
+        27.774999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        24.800504684448242,
+        5.9051079750061035,
+        27.92500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        24.800504684448242,
+        9.905107498168945,
+        27.92500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        24.800504684448242,
+        15.905107498168945,
+        27.92500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        24.800504684448242,
+        21.905107498168945,
+        27.92500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        25.04878044128418,
+        1.9435750246047974,
+        28.07499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        25.06031036376953,
+        7.943542003631592,
+        28.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        25.06031036376953,
+        11.943541526794434,
+        28.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        25.06031036376953,
+        17.94354248046875,
+        28.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        25.32011604309082,
+        3.981213092803955,
+        28.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        25.32011604309082,
+        13.981212615966797,
+        28.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        25.32011604309082,
+        19.981212615966797,
+        28.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.619155883789063,
+        6.052186965942383,
+        28.975000381469727
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.619155883789063,
+        10.052186965942383,
+        28.975000381469727
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.619155883789063,
+        16.052186965942383,
+        28.975000381469727
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.619155883789063,
+        22.052188873291016,
+        28.975000381469727
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.878965377807617,
+        2.0164830684661865,
+        29.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.878965377807617,
+        8.016483306884766,
+        29.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.878965377807617,
+        12.016483306884766,
+        29.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.878965377807617,
+        18.016483306884766,
+        29.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        26.37519073486328,
+        23.951995849609375,
+        29.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        27.138771057128906,
+        3.9830660820007324,
+        29.274999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        27.138771057128906,
+        13.983065605163574,
+        29.274999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        27.138771057128906,
+        19.98306655883789,
+        29.274999618530273
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.43781280517578,
+        5.821934223175049,
+        30.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.43781280517578,
+        9.82193374633789,
+        30.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.43781280517578,
+        15.82193374633789,
+        30.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.43781280517578,
+        21.82193374633789,
+        30.025001525878906
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.652324676513672,
+        1.78957998752594,
+        30.17500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.69761848449707,
+        7.789066791534424,
+        30.17500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.69761848449707,
+        11.789067268371582,
+        30.17500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.69761848449707,
+        17.7890682220459,
+        30.17500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.376327514648438,
+        23.763092041015625,
+        30.17500114440918
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.95742416381836,
+        3.7582039833068848,
+        30.32499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.95742416381836,
+        13.758203506469727,
+        30.32499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        28.95742416381836,
+        19.758203506469727,
+        30.32499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.2564640045166,
+        5.594428062438965,
+        31.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.2564640045166,
+        9.594428062438965,
+        31.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.2564640045166,
+        15.594428062438965,
+        31.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.2564640045166,
+        21.59442710876465,
+        31.075000762939453
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.45435905456543,
+        1.5103570222854614,
+        31.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.646263122558594,
+        7.501129150390625,
+        31.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.646263122558594,
+        11.501129150390625,
+        31.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.646263122558594,
+        17.501127243041992,
+        31.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        30.452816009521484,
+        23.49175262451172,
+        31.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        31.058391571044922,
+        3.375555992126465,
+        31.375001907348633
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        31.058391571044922,
+        13.375555992126465,
+        31.375001907348633
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        31.058391571044922,
+        19.37555503845215,
+        31.375001907348633
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        31.882631301879883,
+        5.082714080810547,
+        31.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        31.882631301879883,
+        9.082714080810547,
+        31.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        31.882631301879883,
+        15.082714080810547,
+        31.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        31.882631301879883,
+        21.082714080810547,
+        31.674999237060547
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.29475021362305,
+        6.9449310302734375,
+        31.82499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.29475021362305,
+        10.944931030273438,
+        31.82499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.29475021362305,
+        16.944931030273438,
+        31.82499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.29475021362305,
+        22.944931030273438,
+        31.82499885559082
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.706871032714844,
+        2.7960989475250244,
+        31.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.706871032714844,
+        12.796098709106445,
+        31.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.706871032714844,
+        18.796100616455078,
+        31.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        32.111324310302734,
+        0.8982110023498535,
+        32.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.53111267089844,
+        4.433455944061279,
+        32.27499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.53111267089844,
+        8.433456420898438,
+        32.27499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.53111267089844,
+        14.433456420898438,
+        32.27499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.53111267089844,
+        20.433456420898438,
+        32.27499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.943241119384766,
+        6.223113059997559,
+        32.42499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.943241119384766,
+        10.223113059997559,
+        32.42499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.943241119384766,
+        16.223112106323242,
+        32.42499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.943241119384766,
+        22.223112106323242,
+        32.42499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        34.353675842285156,
+        1.9943510293960571,
+        32.57500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        34.355369567871094,
+        11.99435043334961,
+        32.57500457763672
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        34.355369567871094,
+        17.99435043334961,
+        32.57500457763672
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        33.72635269165039,
+        23.892860412597656,
+        32.57500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.17960739135742,
+        3.5809459686279297,
+        32.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.17960739135742,
+        7.58094596862793,
+        32.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.17960739135742,
+        13.58094596862793,
+        32.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.17960739135742,
+        19.58094596862793,
+        32.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.59172058105469,
+        5.633709907531738,
+        33.02499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.59172058105469,
+        9.633709907531738,
+        33.02499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.59172058105469,
+        15.633709907531738,
+        33.02499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.59172058105469,
+        21.633710861206055,
+        33.02499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        35.5567512512207,
+        23.744712829589844,
+        33.17499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        36.39925003051758,
+        1.9440350532531738,
+        33.32500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        36.415977478027344,
+        11.943964958190918,
+        33.32500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        36.415977478027344,
+        17.9439640045166,
+        33.32500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        36.828086853027344,
+        4.106845855712891,
+        33.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        36.828086853027344,
+        8.10684585571289,
+        33.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        36.828086853027344,
+        14.10684585571289,
+        33.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        36.828086853027344,
+        20.10684585571289,
+        33.474998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        37.24021530151367,
+        6.268672943115234,
+        33.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        37.24021530151367,
+        10.268672943115234,
+        33.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        37.24021530151367,
+        16.268672943115234,
+        33.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        37.24021530151367,
+        22.2686710357666,
+        33.625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.064456939697266,
+        2.570215940475464,
+        33.92499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.064456939697266,
+        12.570216178894043,
+        33.92499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.064456939697266,
+        18.570215225219727,
+        33.92499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.476585388183594,
+        4.7036261558532715,
+        34.07500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.476585388183594,
+        8.703625679016113,
+        34.07500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.476585388183594,
+        14.703625679016113,
+        34.07500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.476585388183594,
+        20.70362663269043,
+        34.07500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        37.20230484008789,
+        24.24512481689453,
+        34.07500457763672
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.888694763183594,
+        6.82590913772583,
+        34.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.888694763183594,
+        10.825908660888672,
+        34.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.888694763183594,
+        16.825908660888672,
+        34.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        38.888694763183594,
+        22.825908660888672,
+        34.224998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        37.654693603515625,
+        0.7745630145072937,
+        34.225006103515625
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.125064849853516,
+        2.7213540077209473,
+        34.67499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.125064849853516,
+        12.721353530883789,
+        34.67499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.125064849853516,
+        18.72135353088379,
+        34.67499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        39.57613754272461,
+        0.9234830141067505,
+        34.82500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.537193298339844,
+        4.6774420738220215,
+        34.82500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.537193298339844,
+        8.677441596984863,
+        34.82500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.537193298339844,
+        14.677441596984863,
+        34.82500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.537193298339844,
+        20.67744255065918,
+        34.82500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.949302673339844,
+        6.632327079772949,
+        34.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.949302673339844,
+        10.63232707977295,
+        34.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.949302673339844,
+        16.632326126098633,
+        34.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.949302673339844,
+        22.632328033447266,
+        34.974998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        40.177696228027344,
+        24.197874069213867,
+        35.125
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.185672760009766,
+        2.488265037536621,
+        35.42499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.185672760009766,
+        12.488265037536621,
+        35.42499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.185672760009766,
+        18.488264083862305,
+        35.42499923706055
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        41.43169403076172,
+        0.8122149705886841,
+        35.57500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.597801208496094,
+        4.43708610534668,
+        35.57500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.597801208496094,
+        8.43708610534668,
+        35.57500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.597801208496094,
+        14.43708610534668,
+        35.57500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.597801208496094,
+        20.43708610534668,
+        35.57500076293945
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        43.009910583496094,
+        6.384181976318359,
+        35.724998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        43.009910583496094,
+        10.38418197631836,
+        35.724998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        43.009910583496094,
+        16.38418197631836,
+        35.724998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        43.009910583496094,
+        22.38418197631836,
+        35.724998474121094
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        42.45433044433594,
+        24.07973861694336,
+        35.875
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        43.83415603637695,
+        2.275209903717041,
+        36.02499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        43.83415603637695,
+        12.2752103805542,
+        36.02499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    },
+    {
+      "base_radius_mm": 2.0,
+      "contact_sphere_radius": 0.0,
+      "head_back_radius_mm": 0.5,
+      "head_front_radius": 0.20000000298023224,
+      "head_penetration_mm": 0.2,
+      "head_width_mm": 1.0,
+      "pos": [
+        43.83415603637695,
+        18.275209426879883,
+        36.02499771118164
+      ],
+      "support_bracing_angle_deg": 45.0,
+      "type": "slope"
+    }
+  ],
+  "version": 1
+}

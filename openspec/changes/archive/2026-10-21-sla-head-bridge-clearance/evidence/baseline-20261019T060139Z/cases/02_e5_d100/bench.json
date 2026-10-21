@@ -1,0 +1,61 @@
+{
+ "case": "02_e5_d100",
+ "model": "D:\\tool\\stl\\02.stl",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": "bb022433e0e86903f1340212947e0160e07a24bfe05dc895462fb72dc2869c95",
+ "reps": 3,
+ "points": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\inputs\\pts_02_e5_d100.json",
+ "points_sha256": "893e903793051bd8c43748a957643e16fa8996b7d311d6e50fdb4a88633a32f2",
+ "T_median_s": 0.005,
+ "step_median_s": {
+  "Routing to ground": 0.005,
+  "Routing supports to model surface": 0.0,
+  "Interconnecting pillars": 0.002001
+ },
+ "deleted_heads": [
+  0,
+  0,
+  0
+ ],
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.005,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.002001
+   },
+   "T_s": 0.005,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e5_d100\\runs\\bench1\\tree.json",
+   "tree_sha256": "52ce12cab00b63507471c6992eef0b0ed2fef2bbff2add25c23c24cb42117065"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.005,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.000996
+   },
+   "T_s": 0.005,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e5_d100\\runs\\bench2\\tree.json",
+   "tree_sha256": "52ce12cab00b63507471c6992eef0b0ed2fef2bbff2add25c23c24cb42117065"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.007003,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.003
+   },
+   "T_s": 0.007003,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e5_d100\\runs\\bench3\\tree.json",
+   "tree_sha256": "52ce12cab00b63507471c6992eef0b0ed2fef2bbff2add25c23c24cb42117065"
+  }
+ ]
+}
