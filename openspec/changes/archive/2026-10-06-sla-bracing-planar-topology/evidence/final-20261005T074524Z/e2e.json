@@ -1,0 +1,54 @@
+[
+ {
+  "job": "67cd0062",
+  "status": "completed",
+  "elapsed_s": 2.1,
+  "model_sha256": "496d75caaa711f497a3e2e0adf1876717ec2df1136715f111544bcc9096e4f5c",
+  "tree_version": 2,
+  "tree_bridges": 111,
+  "tree_pillars": 114,
+  "kinds": {
+   "head": 55,
+   "truss": 56
+  },
+  "bad_kind": 0,
+  "tree_pillars_without_pairs": 0,
+  "tree_pairs_below_links": 0,
+  "pillars_version": 1,
+  "pillars_list": 114,
+  "pillars_list_without_pairs": 0,
+  "route_owned": 0,
+  "route_owned_off_top": 0,
+  "route_unowned": 0,
+  "tree_sha256": "e52b1aa7fa6789243e256099b134a3bdc01a89e16d4c25ba8a68afdf0f892142",
+  "pillars_sha256": "df21f4dd1c8196c4f7e0e2036d1b14aeabd07aa667006398fee886a1865f0aca",
+  "model": "tests/data/frog_legs.obj"
+ },
+ {
+  "job": "c64d17b5",
+  "status": "completed",
+  "elapsed_s": 1.0,
+  "model_sha256": "679d33680711bb81419d1dc427c0ed4727ca7c17580784316a2ba50176ac0cd8",
+  "tree_version": 2,
+  "tree_bridges": 42,
+  "tree_pillars": 17,
+  "kinds": {
+   "head": 4,
+   "route": 1,
+   "prop": 1,
+   "truss": 36
+  },
+  "bad_kind": 0,
+  "tree_pillars_without_pairs": 0,
+  "tree_pairs_below_links": 0,
+  "pillars_version": 1,
+  "pillars_list": 17,
+  "pillars_list_without_pairs": 0,
+  "route_owned": 1,
+  "route_owned_off_top": 0,
+  "route_unowned": 0,
+  "tree_sha256": "0970c36f36cabb9c45e11f0c8e22b76adc8aaa30feaa27f276a41705ac0290d2",
+  "pillars_sha256": "666e3e585d4deb536f7213bc4daae584c2aa9bd97f9bf2b0ace778fdb19a174f",
+  "model": "tests/data/extruder_idler.obj"
+ }
+]

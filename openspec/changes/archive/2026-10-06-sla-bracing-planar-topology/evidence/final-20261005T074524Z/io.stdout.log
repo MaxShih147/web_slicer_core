@@ -1,0 +1,9 @@
+Filters: [.bracing_io] [.bracing_io]
+Randomness seeded to: 4227316531
+{"bridges":111,"case":"small","kinds":{"head":55,"truss":56},"pillars":114}
+{"bridges":489,"case":"medium","kinds":{"head":96,"truss":393},"pillars":120}
+{"bridges":1304,"case":"full","kinds":{"head":261,"truss":1043},"pillars":315}
+{"bridges":392,"case":"tall","kinds":{"head":5,"prop":4,"truss":383},"pillars":36}
+===============================================================================
+All tests passed (9250 assertions in 1 test case)
+

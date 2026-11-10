@@ -1,0 +1,11 @@
+Randomness seeded to: 3766916953
+[2026-10-19 13:55:34.881927] [0x00001af8] [error]   Detected missing Voronoi vertex even after the rotation of input.
+[raster-verify] layer 42: pixel (170, 90) = 255 in clean tile (4, 2), tile pixels [160, 200) x [80, 120)
+[raster-verify] layer 42: pixel (170, 90) = 255 in clean tile (4, 2), tile pixels [160, 200) x [80, 120)
+[raster-verify] layer 5: tile (2, 1) is marked written but its tile row summary is clear
+[raster-verify] layer 5: tile (2, 1) is marked written but its tile row summary is clear
+[raster-verify] layer 0: tile (4, 2) is marked written but its tile row summary is clear
+===============================================================================
+All tests passed (1279217 assertions in 260 test cases)
+
+exit=0

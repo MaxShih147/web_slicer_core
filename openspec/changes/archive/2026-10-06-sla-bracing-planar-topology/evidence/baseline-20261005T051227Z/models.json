@@ -1,0 +1,35 @@
+[
+  {
+    "role": "small",
+    "case": "tests/data/frog_legs.obj",
+    "model": "D:/repos/web_slicer_core/third_party/prusaslicer_fork/tests/data/frog_legs.obj",
+    "model_sha256": "88504bf53c95ee57001dffc46f9bb68b5b5f7cecb3bdd2c80dfb468b30859d59",
+    "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-bracing-planar-topology\\evidence\\baseline-20261005T051227Z\\config-small.ini",
+    "config_sha256": "61206e85fd5160ab697b94089dfc0baae49c5410e79b1bfe1fbf0a1eb6a89b18",
+    "note": "replaces tiny-16k-crown-x1: the crown lies flat and gets 3 points, 2 pillars, 0 truss bars (production engine agrees: --export-support-points wrote 3 points)"
+  },
+  {
+    "role": "medium",
+    "case": "secondary-8k-guide-x3",
+    "model": "D:\\repos\\web_slicer_core\\scripts\\raster_bench\\work\\fixtures\\secondary-8k-guide-x3\\model.stl",
+    "model_sha256": "7cbf7b278f15add02e7ebd524f69b646c802bdbb67e1aeb258b33d14a35a2d31",
+    "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-bracing-planar-topology\\evidence\\baseline-20261005T051227Z\\config-medium.ini",
+    "config_sha256": "e87e5da2fed5a954978ee53ea255f6e78ad5c51c4751decfcdd9b851f4bf7a92"
+  },
+  {
+    "role": "full",
+    "case": "primary-16k-guide-x8",
+    "model": "D:\\repos\\web_slicer_core\\scripts\\raster_bench\\work\\fixtures\\primary-16k-guide-x8\\model.stl",
+    "model_sha256": "d4f571910b46664469d8a47837b348a54940f7c24d1ff21dddc6b60368d79d49",
+    "config": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-bracing-planar-topology\\evidence\\baseline-20261005T051227Z\\config-full.ini",
+    "config_sha256": "61206e85fd5160ab697b94089dfc0baae49c5410e79b1bfe1fbf0a1eb6a89b18"
+  },
+  {
+    "role": "tall",
+    "case": "builtin:tall_fixture",
+    "model": "builtin:tall_fixture",
+    "generator": "make_tall_fixture() in tests/sla_print/sla_bracing_metrics_tests.cpp",
+    "config": "D:/repos/web_slicer_core/openspec/changes/sla-bracing-planar-topology/evidence/baseline-20261005T051227Z/config-small.ini",
+    "note": "generated in code so the baseline covers auxiliary pillars; the input mesh digest is in runs.jsonl (input_mesh_digest)"
+  }
+]

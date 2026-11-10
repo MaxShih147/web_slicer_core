@@ -1,0 +1,122 @@
+{
+ "case": "02_e10_d100",
+ "model": "D:\\tool\\stl\\02.stl",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": {
+  "exe": "129c47d88e308681464f766f201bef28e913a4d4ead4ddb529dadfbb26e68628",
+  "slicer_core_dll": "5f3dc6ef3aff44283f75425809fe16788cfa27c0b119774fcf6293c330c5e33c"
+ },
+ "reps": 5,
+ "points": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\baseline-20261019T060139Z\\inputs\\pts_02_e10_d100.json",
+ "points_sha256": "9f4dde3cfcf7229795a5ef15ad5c9fc40f1f144aa26fbc87bc9968fa57ad1984",
+ "T_median_s": 0.001504,
+ "step_median_s": {
+  "Routing to ground": 0.001504,
+  "Routing supports to model surface": 0.0,
+  "Interconnecting pillars": 0.002005
+ },
+ "deleted_heads": [
+  0,
+  0,
+  0,
+  0,
+  0
+ ],
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.000999,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.003036
+   },
+   "T_s": 0.000999,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e10_d100\\runs\\bench1\\tree.json",
+   "tree_sha256": "2d1623e1cb8d22bdc94498ad93808b97c100c529a69378508d1dcd178c3333aa",
+   "cpu_before": [
+    8.521561,
+    6.522025,
+    7.002665
+   ],
+   "waited_s": 45.3
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.002001,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.001998
+   },
+   "T_s": 0.002001,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e10_d100\\runs\\bench2\\tree.json",
+   "tree_sha256": "2d1623e1cb8d22bdc94498ad93808b97c100c529a69378508d1dcd178c3333aa",
+   "cpu_before": [
+    10.177403,
+    9.170025,
+    7.044578
+   ],
+   "waited_s": 45.3
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.001504,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.002005
+   },
+   "T_s": 0.001504,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e10_d100\\runs\\bench3\\tree.json",
+   "tree_sha256": "2d1623e1cb8d22bdc94498ad93808b97c100c529a69378508d1dcd178c3333aa",
+   "cpu_before": [
+    13.728524,
+    9.374509,
+    6.659329
+   ],
+   "waited_s": 45.4
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.002,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.004
+   },
+   "T_s": 0.002,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e10_d100\\runs\\bench4\\tree.json",
+   "tree_sha256": "2d1623e1cb8d22bdc94498ad93808b97c100c529a69378508d1dcd178c3333aa",
+   "cpu_before": [
+    8.284103,
+    5.569219,
+    7.034996
+   ],
+   "waited_s": 41.9
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.001001,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.002001
+   },
+   "T_s": 0.001001,
+   "deleted_heads": 0,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\02_e10_d100\\runs\\bench5\\tree.json",
+   "tree_sha256": "2d1623e1cb8d22bdc94498ad93808b97c100c529a69378508d1dcd178c3333aa",
+   "cpu_before": [
+    8.57361,
+    8.913409,
+    11.452506
+   ],
+   "waited_s": 59.9
+  }
+ ]
+}

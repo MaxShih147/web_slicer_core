@@ -1,0 +1,61 @@
+{
+ "case": "China-dragon1",
+ "model": "D:\\tool\\stl\\China-dragon1.stl",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": "bb022433e0e86903f1340212947e0160e07a24bfe05dc895462fb72dc2869c95",
+ "reps": 3,
+ "points": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\inputs\\pts_China-dragon1.json",
+ "points_sha256": "b8b934ad6eb14e929d3a38d30dffe2f9b408b661e1373b9a2df8232b22f01fc8",
+ "T_median_s": 1.970846,
+ "step_median_s": {
+  "Routing to ground": 0.286715,
+  "Routing supports to model surface": 1.676875,
+  "Interconnecting pillars": 0.080706
+ },
+ "deleted_heads": [
+  3,
+  3,
+  3
+ ],
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.293971,
+    "Routing supports to model surface": 1.676875,
+    "Interconnecting pillars": 0.080706
+   },
+   "T_s": 1.970846,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\bench1\\tree.json",
+   "tree_sha256": "088bafe51c5a6e4d6dc2f21a17e7fc0db520666497ef5670505eba6021e197c8"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.286715,
+    "Routing supports to model surface": 1.74748,
+    "Interconnecting pillars": 0.081432
+   },
+   "T_s": 2.034195,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\bench2\\tree.json",
+   "tree_sha256": "bc88770dbb54318f03c662a4459cb958027db8299304622fa47756ef9628fe19"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.274862,
+    "Routing supports to model surface": 1.676011,
+    "Interconnecting pillars": 0.076961
+   },
+   "T_s": 1.950873,
+   "deleted_heads": 3,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\China-dragon1\\runs\\bench3\\tree.json",
+   "tree_sha256": "d7857b9b3940ac3535043f1371cc4bb55b267c398d7034bf4f8e0a2e19935ac0"
+  }
+ ]
+}

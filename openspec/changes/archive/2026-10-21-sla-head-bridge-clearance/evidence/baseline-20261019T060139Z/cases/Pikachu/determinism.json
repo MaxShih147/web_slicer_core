@@ -1,0 +1,86 @@
+{
+ "case": "Pikachu",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": "bb022433e0e86903f1340212947e0160e07a24bfe05dc895462fb72dc2869c95",
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.002998,
+    "Routing supports to model surface": 1.292693,
+    "Interconnecting pillars": 0.064663
+   },
+   "T_s": 1.295691,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\det_mt1\\tree.json",
+   "tree_sha256": "9c50f9921fa17f948d57758c739e3e405c8636ec2db8e64db92ecc92b47b5aea",
+   "label": "mt1",
+   "head_paths_sha256": "b78061d4881347ef484504e121b76b98b193f31781c939017b14410236f22809"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.003001,
+    "Routing supports to model surface": 3.654244,
+    "Interconnecting pillars": 0.097029
+   },
+   "T_s": 3.657245,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\det_mt2\\tree.json",
+   "tree_sha256": "ab01af9ded375cc326853cad850bfafcfa33e2d8800a3bb5c95944c3648f796f",
+   "label": "mt2",
+   "head_paths_sha256": "5b5b6bf691f6f91d02054ac1aaa65de5d98ebe249456b663cb6a6535665b285b"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.015515,
+    "Routing supports to model surface": 3.157462,
+    "Interconnecting pillars": 0.111344
+   },
+   "T_s": 3.172977,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\det_mt3\\tree.json",
+   "tree_sha256": "bb014568ed38e9c09443c2f643f62ea8354bb900dbebdf7d9db361d71caeb65a",
+   "label": "mt3",
+   "head_paths_sha256": "0b65584ebeeaa686459628b02b6918fdbc51dca7ea2d4f43490a1646ba1bd8f1"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.001999,
+    "Routing supports to model surface": 3.026088,
+    "Interconnecting pillars": 0.132894
+   },
+   "T_s": 3.028087,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\det_mt4\\tree.json",
+   "tree_sha256": "201c5c89a5c979443ef1ce0717b7a42388233d429161f235df789a5e36ef3c9c",
+   "label": "mt4",
+   "head_paths_sha256": "ed362c5a21048a9544afda1c1fff967d30be45e5832b2ccb3f6dfd838b4fe2c3"
+  },
+  {
+   "exit": 0,
+   "threads": 1,
+   "steps_s": {
+    "Routing to ground": 0.004,
+    "Routing supports to model surface": 4.229551,
+    "Interconnecting pillars": 0.069027
+   },
+   "T_s": 4.233551,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\det_t1\\tree.json",
+   "tree_sha256": "d1652c2a70efa363d0f38571ef773d0ef90d6378a4726082c1a635542a6f23c6",
+   "label": "t1",
+   "head_paths_sha256": "75f64fb10c97d688f095cb8f3d4997d20a55bcd799366a2155311d122fafd708"
+  }
+ ],
+ "distinct_tree": 5,
+ "distinct_head_paths": 5,
+ "distinct_tree_multithread": 4,
+ "distinct_head_paths_multithread": 4
+}

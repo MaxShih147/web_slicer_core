@@ -1,0 +1,86 @@
+{
+ "case": "02_e10_d400",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": "bb022433e0e86903f1340212947e0160e07a24bfe05dc895462fb72dc2869c95",
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.002,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.012011
+   },
+   "T_s": 0.002,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e10_d400\\runs\\det_mt1\\tree.json",
+   "tree_sha256": "d8276403ac9d560b73668699fbbc8028de2da2b7f81a39f599f06ba55c0c82e2",
+   "label": "mt1",
+   "head_paths_sha256": "3dcac19aa9ffdafcc7cc196f0f046a0957ab47906d58d708b7e8eeb1cf52317e"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.004001,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.009999
+   },
+   "T_s": 0.004001,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e10_d400\\runs\\det_mt2\\tree.json",
+   "tree_sha256": "d8276403ac9d560b73668699fbbc8028de2da2b7f81a39f599f06ba55c0c82e2",
+   "label": "mt2",
+   "head_paths_sha256": "3dcac19aa9ffdafcc7cc196f0f046a0957ab47906d58d708b7e8eeb1cf52317e"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.003005,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.008024
+   },
+   "T_s": 0.003005,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e10_d400\\runs\\det_mt3\\tree.json",
+   "tree_sha256": "d8276403ac9d560b73668699fbbc8028de2da2b7f81a39f599f06ba55c0c82e2",
+   "label": "mt3",
+   "head_paths_sha256": "3dcac19aa9ffdafcc7cc196f0f046a0957ab47906d58d708b7e8eeb1cf52317e"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.00351,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.009003
+   },
+   "T_s": 0.00351,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e10_d400\\runs\\det_mt4\\tree.json",
+   "tree_sha256": "d8276403ac9d560b73668699fbbc8028de2da2b7f81a39f599f06ba55c0c82e2",
+   "label": "mt4",
+   "head_paths_sha256": "3dcac19aa9ffdafcc7cc196f0f046a0957ab47906d58d708b7e8eeb1cf52317e"
+  },
+  {
+   "exit": 0,
+   "threads": 1,
+   "steps_s": {
+    "Routing to ground": 0.002,
+    "Routing supports to model surface": 0.0,
+    "Interconnecting pillars": 0.009514
+   },
+   "T_s": 0.002,
+   "deleted_heads": 0,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\02_e10_d400\\runs\\det_t1\\tree.json",
+   "tree_sha256": "d8276403ac9d560b73668699fbbc8028de2da2b7f81a39f599f06ba55c0c82e2",
+   "label": "t1",
+   "head_paths_sha256": "3dcac19aa9ffdafcc7cc196f0f046a0957ab47906d58d708b7e8eeb1cf52317e"
+  }
+ ],
+ "distinct_tree": 1,
+ "distinct_head_paths": 1,
+ "distinct_tree_multithread": 1,
+ "distinct_head_paths_multithread": 1
+}

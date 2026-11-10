@@ -1,0 +1,61 @@
+{
+ "case": "Pikachu",
+ "model": "D:\\tool\\stl\\Pikachu.stl",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": "bb022433e0e86903f1340212947e0160e07a24bfe05dc895462fb72dc2869c95",
+ "reps": 3,
+ "points": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\inputs\\pts_Pikachu.json",
+ "points_sha256": "e6ea412f6cdc2cbbef7c53102789cbe889ba18f1230f4eccf0334c35e71dd060",
+ "T_median_s": 1.294868,
+ "step_median_s": {
+  "Routing to ground": 0.002938,
+  "Routing supports to model surface": 1.292887,
+  "Interconnecting pillars": 0.059744
+ },
+ "deleted_heads": [
+  2,
+  2,
+  2
+ ],
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.002938,
+    "Routing supports to model surface": 1.156773,
+    "Interconnecting pillars": 0.059744
+   },
+   "T_s": 1.159711,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\bench1\\tree.json",
+   "tree_sha256": "f79cbb848f4c246b496aeb6863ba09344fe5e84112f8b3a0ebee27cc5c4c9fd1"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.001981,
+    "Routing supports to model surface": 1.292887,
+    "Interconnecting pillars": 0.075346
+   },
+   "T_s": 1.294868,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\bench2\\tree.json",
+   "tree_sha256": "78a199c04bf061aeace9e578cc86ae7b7e24d55d2ba0de40b01db735a81b0367"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.003999,
+    "Routing supports to model surface": 1.317508,
+    "Interconnecting pillars": 0.058005
+   },
+   "T_s": 1.321507,
+   "deleted_heads": 2,
+   "tree": "C:\\Users\\kwshi\\AppData\\Local\\Temp\\claude\\d--repos-web-slicer-core\\ca9c59ac-e2cf-43a4-908d-e0a73528b8ce\\scratchpad\\baseline-20261019T060139Z\\Pikachu\\runs\\bench3\\tree.json",
+   "tree_sha256": "a38e768d81d54326cb8573e13b6e12a9003bd3ee03512df28f401fcdb4eea26b"
+  }
+ ]
+}

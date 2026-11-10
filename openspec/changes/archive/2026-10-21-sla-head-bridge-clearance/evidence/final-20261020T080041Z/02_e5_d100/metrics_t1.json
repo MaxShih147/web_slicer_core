@@ -1,0 +1,82 @@
+{
+ "margin": 0.2,
+ "heads": 130,
+ "pillars": 94,
+ "aux_pillars": 0,
+ "bars": 348,
+ "bars_by_kind": {
+  "head": 36,
+  "truss": 312
+ },
+ "unassigned_path_bars": 0,
+ "A": 0,
+ "A_prop": 0,
+ "B": 0,
+ "B_shared_outside_R": 0,
+ "C_pillar": 0,
+ "C_head": 0,
+ "revC_aux": 0,
+ "revC_head": 0,
+ "revC_head_native": 0,
+ "revC_head_net": 0,
+ "head_x_head": 2,
+ "D": 0,
+ "thick_on_thin": 0,
+ "dup_truss_pairs": 0,
+ "dup_truss_bars": 0,
+ "pairs_excess": 0,
+ "warnings": 1,
+ "warning_contacts": 1,
+ "detail": {
+  "A": [],
+  "A_prop": [],
+  "B": [],
+  "B_shared_outside_R": [],
+  "C_pillar": [],
+  "C_head": [],
+  "revC_aux": [],
+  "revC_head": [],
+  "revC_head_native": [],
+  "revC_head_net": [],
+  "head_x_head": [
+   {
+    "x": [
+     "head",
+     5
+    ],
+    "y": [
+     "head",
+     70
+    ],
+    "dist": 0.862,
+    "required": 1.2,
+    "at": [
+     -16.276,
+     22.745,
+     -1.207
+    ]
+   },
+   {
+    "x": [
+     "head",
+     18
+    ],
+    "y": [
+     "head",
+     20
+    ],
+    "dist": 1.0964,
+    "required": 1.2,
+    "at": [
+     -10.491,
+     21.969,
+     0.0
+    ]
+   }
+  ],
+  "D": [],
+  "thick_on_thin": [],
+  "dup_truss_pairs": [],
+  "pairs_excess": []
+ }
+}

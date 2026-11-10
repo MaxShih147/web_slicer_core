@@ -1,0 +1,89 @@
+{
+ "case": "Pikachu",
+ "engine": "D:\\repos\\web_slicer_core\\third_party\\prusaslicer_fork\\build\\src\\Release\\slicer-engine.exe",
+ "engine_sha256": {
+  "exe": "129c47d88e308681464f766f201bef28e913a4d4ead4ddb529dadfbb26e68628",
+  "slicer_core_dll": "5f3dc6ef3aff44283f75425809fe16788cfa27c0b119774fcf6293c330c5e33c"
+ },
+ "runs": [
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.003512,
+    "Routing supports to model surface": 1.48478,
+    "Interconnecting pillars": 0.074188
+   },
+   "T_s": 1.488292,
+   "deleted_heads": 2,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\Pikachu\\runs\\det_mt1\\tree.json",
+   "tree_sha256": "70d9d419cd942c951df00513daa6a4bf17bff17012fe97ad7e172645b381dc19",
+   "label": "mt1",
+   "head_paths_sha256": "1159b35fbff49a6c42fe344ecbc07eac5ab577f81854f5648fb3d1d39902baf3"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.008543,
+    "Routing supports to model surface": 1.5215,
+    "Interconnecting pillars": 0.075905
+   },
+   "T_s": 1.530043,
+   "deleted_heads": 2,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\Pikachu\\runs\\det_mt2\\tree.json",
+   "tree_sha256": "70d9d419cd942c951df00513daa6a4bf17bff17012fe97ad7e172645b381dc19",
+   "label": "mt2",
+   "head_paths_sha256": "1159b35fbff49a6c42fe344ecbc07eac5ab577f81854f5648fb3d1d39902baf3"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.002998,
+    "Routing supports to model surface": 1.638041,
+    "Interconnecting pillars": 0.084883
+   },
+   "T_s": 1.641039,
+   "deleted_heads": 2,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\Pikachu\\runs\\det_mt3\\tree.json",
+   "tree_sha256": "70d9d419cd942c951df00513daa6a4bf17bff17012fe97ad7e172645b381dc19",
+   "label": "mt3",
+   "head_paths_sha256": "1159b35fbff49a6c42fe344ecbc07eac5ab577f81854f5648fb3d1d39902baf3"
+  },
+  {
+   "exit": 0,
+   "threads": null,
+   "steps_s": {
+    "Routing to ground": 0.005503,
+    "Routing supports to model surface": 1.60472,
+    "Interconnecting pillars": 0.08134
+   },
+   "T_s": 1.610223,
+   "deleted_heads": 2,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\Pikachu\\runs\\det_mt4\\tree.json",
+   "tree_sha256": "70d9d419cd942c951df00513daa6a4bf17bff17012fe97ad7e172645b381dc19",
+   "label": "mt4",
+   "head_paths_sha256": "1159b35fbff49a6c42fe344ecbc07eac5ab577f81854f5648fb3d1d39902baf3"
+  },
+  {
+   "exit": 0,
+   "threads": 1,
+   "steps_s": {
+    "Routing to ground": 0.006002,
+    "Routing supports to model surface": 5.407047,
+    "Interconnecting pillars": 0.066493
+   },
+   "T_s": 5.413049,
+   "deleted_heads": 2,
+   "tree": "D:\\repos\\web_slicer_core\\openspec\\changes\\sla-head-bridge-clearance\\evidence\\final-20261020T080041Z\\Pikachu\\runs\\det_t1\\tree.json",
+   "tree_sha256": "70d9d419cd942c951df00513daa6a4bf17bff17012fe97ad7e172645b381dc19",
+   "label": "t1",
+   "head_paths_sha256": "1159b35fbff49a6c42fe344ecbc07eac5ab577f81854f5648fb3d1d39902baf3"
+  }
+ ],
+ "distinct_tree": 1,
+ "distinct_head_paths": 1,
+ "distinct_tree_multithread": 1,
+ "distinct_head_paths_multithread": 1
+}
