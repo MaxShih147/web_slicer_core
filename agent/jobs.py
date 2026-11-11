@@ -18,6 +18,7 @@ from typing import Dict, Optional, Sequence
 from . import profiling
 from .config import JOBS_DIR, SLICER_ENGINE_CLI, EXPORT_PROJECT_3MF
 from .engine_job_queue import serialized_engine_job
+from .power_throttling import disable_for_child
 from .models import JobStatus, SLAConfig, _extract_prz_timing_config
 from .preview_scale import preview_scale_for
 from .prz_encoder import _compute_print_time, sl1_layer_names
@@ -608,6 +609,8 @@ async def run_slicing(job_id: str, config: Optional[SLAConfig] = None):
             stderr=asyncio.subprocess.PIPE,
             env=slice_env,
         )
+        # agent-large-model-perf D1: keep Windows EcoQoS from throttling the engine.
+        disable_for_child(process)
 
         # 兩個串流並行 drain（design D2）。只讀 stdout 會在 stderr 管線緩衝區
         # 填滿時死鎖；務必兩條 task 同時跑完再 wait() 收退出碼。
@@ -729,6 +732,7 @@ async def export_project_3mf(job_id: str, input_file: Path, output_dir: Path):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+        disable_for_child(process)
 
         stdout, stderr = await process.communicate()
 

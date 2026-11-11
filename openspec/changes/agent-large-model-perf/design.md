@@ -85,7 +85,7 @@ JSON request body 無法產生 `_LandedModel` 實例，所以 `add_models_to_sli
 
 - `_pending_jobs[job_id]` 建立時加入 `"last_access": time.monotonic()`；`_require_pending()` 與各端點取得 pending 的位置改經 `_touch_pending(job_id)` 更新（集中在一個 helper）。缺少 `last_access` 的項目（例如測試直接塞入的 dict）視為剛存取。
 - 新增 `pending_job_spool_loop()`，每 60 s 呼叫 `_spool_idle_pending_jobs(now)`：對 `models[0]` 仍持有 `stl_data`、且閒置超過門檻的 job，把 bytes 寫到 `JOBS_DIR/.pending_spool/<job_id>.stl`（先寫 `.tmp` 再 `os.replace`，避免寫一半），成功後把 `models[0]` 換成 `{**原項目去掉 stl_data, "spooled": _SpooledModel(path)}`。`validated` 保留原值。寫檔失敗則不動該 job，記 WARNING。
-- `_save_model_to_job()` 遇到 `_SpooledModel`：依 `validated` 決定是否先讀檔驗證，再以 `os.replace` 移到 `input_path`（同一個磁碟區，瞬間完成、不佔額外空間），之後項目改記為 `_LandedModel`。`_SpooledModel` 與 `_LandedModel` 一樣是 JSON 無法產生的伺服器端型別。
+- `_save_model_to_job()` 遇到 `_SpooledModel`：依 `validated` 決定是否先讀檔驗證，再以 `shutil.move` 移到 `input_path`（暫存目錄在 `JOBS_DIR` 下，同一個磁碟區時就是改名，瞬間完成、不佔額外空間；萬一不在同一磁碟區則自動改為複製後刪除），之後項目改記為 `_LandedModel`。`_SpooledModel` 與 `_LandedModel` 一樣是 JSON 無法產生的伺服器端型別。
 - `execute`／`ortho-process` 移除 pending job 時，若暫存檔仍在則刪除。agent 啟動時清空 `.pending_spool/`：重啟後 `_pending_jobs` 是空的，殘留檔案沒有對應的 job。
 - 暫存目錄名稱含 `.`，`_JOB_ID_RE` 不允許 `.`，不會與任何 job id 衝突；它不是 job 目錄，`job_exists()` 與 `GET /slices/{job_id}` 的判斷不受影響。
 - 背景迴圈在 `main.lifespan` 與 PRZ 清理迴圈一起啟動、一起取消；檢查是同步函式、在 event loop 內執行，與端點不會同時修改 `_pending_jobs`。寫檔本身用 `asyncio.to_thread`，期間若 job 被存取或已被移除，寫完後重新確認仍閒置、項目仍是同一個物件才替換，否則刪除剛寫的暫存檔。
@@ -106,12 +106,12 @@ JSON request body 無法產生 `_LandedModel` 實例，所以 `add_models_to_sli
 新增 `agent/stl_io.py`：
 
 - `read_binary_stl_triangles(path) -> np.ndarray | None`：大小恰為 `84 + 50n` 且 `n > 0` 才讀（與 `_fast_load_binary_stl` 相同判準），回傳 `(n, 3, 3) float32`；否則 None。
-- `merge_triangle_vertices(tris) -> (vertices float64, faces int64)`：先移除含非有限座標的面（對應 `remove_infinite_values`），再以 `np.round(v * 10**digits).astype(int64)`（`digits = trimesh.util.decimal_to_digits(trimesh.tol.merge)`，與 `grouping.merge_vertices` 相同）找出唯一列。**頂點順序必須與 trimesh 相同**：trimesh 用 `unique_rows(keep_order=True)`，依第一次出現的順序保留頂點；numpy 版以 `np.unique(axis=0, return_index=True, return_inverse=True)` 取得每個唯一列第一次出現的位置，依該位置重新排序並重算 inverse。結果的 `vertices`、`faces` 與 `trimesh.load(process=True)` 逐元素相同。
+- `merge_triangle_vertices(tris) -> (vertices float64, faces int64)`：先移除含非有限座標的面（對應 `remove_infinite_values`），再以 `np.round(v * 10**digits).astype(int64)`（`digits = trimesh.util.decimal_to_digits(trimesh.tol.merge)`，與 `grouping.merge_vertices` 相同）找出唯一列。**頂點順序必須與 trimesh 相同**：trimesh 用 `unique_rows(keep_order=True)`，依第一次出現的順序保留頂點；numpy 版先為每個角點的三個整數算一個 64-bit hash（splitmix64 串接），以穩定排序分群，再逐列比對同一群內的三個整數是否真的相同；只要發現任何 hash 碰撞就改走精確路徑（`np.unique` 整列比對），所以結果永遠精確，hash 只是讓它快。之後依每群第一次出現的位置重新編號。結果的 `vertices`、`faces` 與 `trimesh.load(process=True)` 逐元素相同。實作時曾用較便宜的「各欄乘常數再 xor」組合 hash，在球體上 17% 的頂點碰撞（座標彼此相關），整個退回精確路徑而變慢；改為串接 splitmix64 後合成 5M 檔沒有碰撞。合成 5M（524 萬面）上 merge 約 3.2 s，`trimesh.load` 約 6.4 s。
 
   為什麼一定要相同：主路徑只把陣列交給 manifold，頂點順序不影響結果；但修補序列（`fill_holes`、`fix_winding`、seam 焊接、平面封蓋）的部分步驟依頂點或邊的順序走訪，順序不同可能得到不同（雖然仍合法）的修補結果，也就是壓印結果會變。逐元素相同可以直接排除這個風險，不需要逐一證明各修補步驟與順序無關。
 - `write_binary_stl(path, vertices, faces)`：以 `np.cross` 算法向量並正規化（長度 0 者為 0），組成 `dtype=[normal 3f4, v 9f4, attr u2]` 的結構陣列一次寫出。
 
-`boolean_operation()`：兩個輸入先試 numpy 路徑，得到 `(verts, faces)` 後直接建 `manifold3d.Mesh(vert_properties=float32, tri_verts=int32)` → `Manifold`。主路徑有效時不建立 `Trimesh`。需要 fallback 時，才以 `trimesh.Trimesh(verts, faces, process=False)` 建立 `mesh_a`／`mesh_b` 交給現有修補序列（因為頂點已合併、無 NaN，`process=False` 與改前的 `process=True` 狀態相同）。ASCII 輸入沿用 `trimesh.load()`。結果：`to_mesh()` → `num_tri == 0` 判空 → `write_binary_stl`；log 改記面數與頂點數，不再計算 `is_watertight`。
+`boolean_operation()`：兩個輸入先試 numpy 路徑，得到 `(verts, faces)` 後直接建 `manifold3d.Mesh(vert_properties=float32, tri_verts=int32)` → `Manifold`。主路徑有效時不建立 `Trimesh`。需要 fallback 時，以改前同樣的 `trimesh.load()` 重新讀入 `mesh_a`／`mesh_b` 交給現有修補序列。實作時原本打算由同一份陣列以 `Trimesh(process=False)` 建立，但 `trimesh.load` 讀 STL 時還會帶入檔案內的面法向量並放進快取，修補步驟（`fix_normals` 等）可能讀到；改為重新讀檔，修補序列拿到的物件與改前完全相同，不需要逐一證明各步驟不受影響。代價只落在需要修補的壞模型上（多讀一次檔）。ASCII 輸入沿用 `trimesh.load()`。結果：`to_mesh()` → `num_tri == 0` 判空 → `write_binary_stl`；log 改記面數與頂點數，不再計算 `is_watertight`。
 
 合併頂點本可交給 `manifold3d.Mesh.merge()`，但 `merge()` 以容差合併並可能改變拓撲，與改前的 trimesh 判準不同；為了等價，主路徑用 numpy 與 trimesh 相同的捨入判準，`Mesh.merge()` 仍只在修補序列中使用（行為不變）。
 

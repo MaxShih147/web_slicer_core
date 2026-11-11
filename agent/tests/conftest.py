@@ -28,3 +28,35 @@ def _isolate_job_progress():
     yield
     jobs.job_progress.clear()
     reset_engine_job_queue_for_tests()
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "real_power_throttling: let agent.power_throttling reach the real Win32 API",
+    )
+
+
+@pytest.fixture(autouse=True)
+def _no_real_power_throttling(request, monkeypatch):
+    """Keep the suite from touching real processes' power settings.
+
+    Engine fakes report made-up pids (4242, ...); on Windows the EcoQoS opt-out
+    (agent-large-model-perf D1) would otherwise OpenProcess() whatever really
+    has that pid. Tests that exercise the module itself opt back in with
+    ``@pytest.mark.real_power_throttling`` and stub the Win32 layer themselves.
+    """
+    if request.node.get_closest_marker("real_power_throttling"):
+        yield
+        return
+    from agent import power_throttling
+
+    calls = []
+
+    def _recording(pid=None, label=""):
+        calls.append((pid, label))
+        return False
+
+    monkeypatch.setattr(power_throttling, "disable_execution_throttling", _recording)
+    power_throttling._test_calls = calls
+    yield

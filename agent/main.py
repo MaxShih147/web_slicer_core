@@ -34,7 +34,13 @@ from .jobs import (
     read_job_status,
     run_slicing,
 )
-from .api_v2 import router as v2_router, prz_session_cleanup_loop
+from .api_v2 import (
+    router as v2_router,
+    prz_session_cleanup_loop,
+    pending_job_spool_loop,
+    clear_pending_spool,
+)
+from . import power_throttling
 
 
 # uvicorn 只設定它自己的 logger，因此 `agent.*` 的訊息在實機上會被整個丟棄——
@@ -53,6 +59,9 @@ if not _agent_logger.handlers:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: preload heavy modules in a background thread so first mesh request is fast."""
+    # agent-large-model-perf D1: the launcher has no foreground window, so
+    # Windows EcoQoS would otherwise run the agent as background work.
+    power_throttling.disable_execution_throttling()
 
     def _preload_heavy_modules() -> None:
         import numpy  # noqa: F401
@@ -65,8 +74,16 @@ async def lifespan(app: FastAPI):
     t = threading.Thread(target=_preload_heavy_modules, daemon=True)
     t.start()
     cleanup_task = asyncio.create_task(prz_session_cleanup_loop())
+    # agent-large-model-perf D4: spool files outlive no restart -- the pending
+    # jobs they belonged to are gone -- then idle jobs spool from here on.
+    try:
+        clear_pending_spool()
+    except Exception:
+        logging.getLogger(__name__).warning("Could not clear the pending-job spool", exc_info=True)
+    spool_task = asyncio.create_task(pending_job_spool_loop())
     yield
     cleanup_task.cancel()
+    spool_task.cancel()
 
 
 app = FastAPI(

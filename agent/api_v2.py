@@ -14,7 +14,10 @@ import re
 import shutil
 import time
 import traceback as tb
+import os
 import uuid
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
 
 if TYPE_CHECKING:
@@ -28,6 +31,7 @@ from starlette.concurrency import iterate_in_threadpool
 
 from .error_codes import ALL as ALL_ERROR_CODES
 from . import param_rules
+from .config import JOBS_DIR
 from .errors import (
     APIError,
     boolean_failed,
@@ -254,24 +258,69 @@ def _require_safe_job_id(job_id: str) -> str:
 def _require_pending(job_id: str) -> dict:
     """Return pending job dict, or raise JOB_NOT_FOUND / JOB_ALREADY_EXECUTED."""
     if job_id in _pending_jobs:
+        _touch_pending(job_id)
         return _pending_jobs[job_id]
     if job_exists(job_id):
         raise job_already_executed(job_id)
     raise job_not_found(job_id)
 
 
+_STL_HEADER_BYTES = 84
+_STL_FACE_BYTES = 50
+# admesh reads bytes 84..211 to decide binary vs ASCII: any byte > 127 there
+# means binary (bundled_deps/admesh/admesh/stlinit.cpp, stl_open_count_facets).
+_ADMESH_SNIFF = slice(84, 84 + 128)
+# UTF-8 BOM and whitespace that may precede "solid" in an ASCII STL.
+_STL_LEADING_JUNK = bytes([0xEF, 0xBB, 0xBF, 0x20, 0x09, 0x0D, 0x0A])
+
+
+def _stl_problem(content: bytes) -> Optional[str]:
+    """Why *content* is not an STL the engine will read as intended, or None.
+
+    Header and size only -- no mesh is parsed (agent-large-model-perf D2,
+    spec stl-upload-validation). The rules follow how slicer-engine's admesh
+    reads the file, not the frontend import check:
+
+    * binary: admesh takes the facet count from the FILE SIZE, not the header,
+      so a binary STL is accepted only when its size is exactly
+      84 + 50 * header_count. Trailing bytes a multiple of 50 long would
+      otherwise be sliced as extra (garbage) triangles.
+    * ASCII: accepted only when admesh would also read it as ASCII (no byte
+      > 127 in bytes 84..211), it starts with "solid" (up to 5 leading BOM /
+      whitespace bytes allowed) and holds at least one "facet".
+    """
+    # add_models_to_slice_job() stores whatever the JSON body held (a str, a
+    # list, ...); only real bytes can be an STL.
+    if not isinstance(content, (bytes, bytearray, memoryview)):
+        return f"expected file bytes, got {type(content).__name__}"
+    content = bytes(content)
+    size = len(content)
+    if size >= _STL_HEADER_BYTES:
+        faces = int.from_bytes(content[80:84], "little")
+        if faces > 0 and size == _STL_HEADER_BYTES + faces * _STL_FACE_BYTES:
+            return None
+    if any(b > 127 for b in content[_ADMESH_SNIFF]):
+        # Only reachable with size > 84: the sniff window starts at byte 84.
+        faces = int.from_bytes(content[80:84], "little")
+        if faces == 0:
+            return "binary STL declares no triangles"
+        return (
+            f"binary STL size {size} does not match its header "
+            f"({faces} triangles need exactly {_STL_HEADER_BYTES + faces * _STL_FACE_BYTES} bytes)"
+        )
+    # At most 5 leading BOM / whitespace bytes, as three's STLLoader allows.
+    if content[:10].lstrip(_STL_LEADING_JUNK)[:5].lower() != b"solid":
+        return "not a binary STL and does not start with 'solid'"
+    if content.find(b"facet") == -1:
+        return "ASCII STL contains no triangles"
+    return None
+
+
 def _validate_stl_bytes(content: bytes, field: str = "model") -> None:
-    """Raise invalid_model if *content* is not a valid STL."""
-    try:
-        mesh = trimesh.load(io.BytesIO(content), file_type="stl")
-        if isinstance(mesh, trimesh.Scene):
-            mesh = mesh.dump(concatenate=True)
-        if not isinstance(mesh, trimesh.Trimesh) or len(mesh.faces) == 0:
-            raise ValueError("empty mesh")
-    except APIError:
-        raise
-    except Exception as exc:
-        raise invalid_model(f"{field} STL content is corrupted or format is invalid: {exc}")
+    """Raise invalid_model if *content* is not an STL the engine reads as intended."""
+    problem = _stl_problem(content)
+    if problem is not None:
+        raise invalid_model(f"{field} STL content is corrupted or format is invalid: {problem}")
 
 
 def _config_validation_message(exc: ValidationError) -> str:
@@ -312,7 +361,7 @@ def _config_error_from_validation(exc: ValidationError) -> APIError:
 def _save_model_to_job(model_data: dict, input_path) -> None:
     """Write model bytes to *input_path*, raising INVALID_MODEL / VALIDATION_ERROR as needed.
 
-    Skips the full trimesh.load() parse in _validate_stl_bytes() only when
+    Skips _validate_stl_bytes() only when
     model_data["validated"] is exactly True — set solely by upload_model_file()
     right after that same content already passed _validate_stl_bytes() once.
     Any other source (use_model_from_job() reading another job's output,
@@ -321,6 +370,27 @@ def _save_model_to_job(model_data: dict, input_path) -> None:
     (missing key, False, or any non-True value) and gets the full parse here —
     this is the only validation these sources ever receive before landing on disk.
     """
+    # Server-side markers first: isinstance() on a type JSON cannot produce, so
+    # a request body carrying "landed"/"spooled" keys never reaches these.
+    landed = model_data.get("landed")
+    if isinstance(landed, _LandedModel):
+        if not landed.path.is_file():
+            raise model_not_found("The model saved for this job is no longer on disk")
+        if not _same_file(landed.path, Path(input_path)):
+            shutil.copyfile(landed.path, input_path)
+        return
+    spooled = model_data.get("spooled")
+    if isinstance(spooled, _SpooledModel):
+        if not spooled.path.is_file():
+            raise model_not_found("The model spooled for this job is no longer on disk")
+        if model_data.get("validated") is not True:
+            _validate_stl_bytes(spooled.path.read_bytes(), "model")
+        # A rename on the same volume (the spool lives under JOBS_DIR); copy +
+        # delete if it ever is not.
+        shutil.move(str(spooled.path), str(input_path))
+        del model_data["spooled"]
+        model_data["landed"] = _LandedModel(Path(input_path))
+        return
     if "stl_data" in model_data:
         content = model_data["stl_data"]
         if model_data.get("validated") is not True:
@@ -331,6 +401,157 @@ def _save_model_to_job(model_data: dict, input_path) -> None:
         raise validation_error("Direct vertex data is not yet supported; please use file upload")
     else:
         raise missing_body("Model must contain stl_data; please use file upload")
+
+
+# ---------------------------------------------------------------------------
+# Pending-job model memory (agent-large-model-perf D3, D4; spec pending-job-memory)
+# ---------------------------------------------------------------------------
+#
+# A pending job keeps its uploaded model as bytes until something writes it to
+# input/model.stl. Two things bound that memory without changing any result:
+#
+#  * D3: once an endpoint has landed the model and kept the job pending
+#    (generate-supports, export-support-points, generate-hollow, cut), the
+#    bytes are dropped and the entry points at the file it wrote.
+#  * D4: bytes of a job idle past a threshold move to a spool file; the job
+#    stays and later calls read the file.
+#
+# Both markers are instances of these private classes. JSON can only produce
+# dicts/lists/strings/numbers, so a client cannot forge one through
+# add_models_to_slice_job() and make the agent copy an arbitrary file.
+
+PENDING_SPOOL_DIR = JOBS_DIR / ".pending_spool"  # "." is not a job-id character
+_DEFAULT_SPOOL_IDLE_SEC = 600.0
+_SPOOL_SCAN_INTERVAL_SEC = 60.0
+
+
+@dataclass(frozen=True)
+class _LandedModel:
+    path: Path
+
+
+@dataclass(frozen=True)
+class _SpooledModel:
+    path: Path
+
+
+def _same_file(a: Path, b: Path) -> bool:
+    try:
+        return a.resolve() == b.resolve()
+    except OSError:
+        return False
+
+
+def _touch_pending(job_id: str) -> None:
+    pending = _pending_jobs.get(job_id)
+    if pending is not None:
+        pending["last_access"] = time.monotonic()
+
+
+def _release_landed_model(pending: dict, input_path) -> None:
+    """Drop models[0]'s bytes once they are on disk at *input_path* (D3)."""
+    models = pending.get("models") or []
+    if not models or "stl_data" not in models[0]:
+        return
+    released = {k: v for k, v in models[0].items() if k != "stl_data"}
+    released["landed"] = _LandedModel(Path(input_path))
+    models[0] = released
+
+
+def _spool_idle_seconds() -> float:
+    raw = os.getenv("AGENT_PENDING_SPOOL_IDLE_SEC")
+    try:
+        value = float(raw) if raw is not None else _DEFAULT_SPOOL_IDLE_SEC
+    except ValueError:
+        return _DEFAULT_SPOOL_IDLE_SEC
+    return value if value > 0 else _DEFAULT_SPOOL_IDLE_SEC
+
+
+def _spool_path(job_id: str) -> Path:
+    return PENDING_SPOOL_DIR / f"{job_id}.stl"
+
+
+def _write_spool_file(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, path)
+
+
+def _discard_spool(job_id: str) -> None:
+    try:
+        _spool_path(job_id).unlink(missing_ok=True)
+    except OSError as exc:
+        logger.warning("Could not remove spool file for job %s: %s", job_id, exc)
+
+
+def clear_pending_spool() -> None:
+    """Startup: _pending_jobs is empty, so every spool file is an orphan."""
+    if not PENDING_SPOOL_DIR.is_dir():
+        return
+    for entry in PENDING_SPOOL_DIR.iterdir():
+        try:
+            entry.unlink()
+        except OSError as exc:
+            logger.warning("Could not remove stale spool file %s: %s", entry.name, exc)
+
+
+async def _spool_idle_pending_jobs(now: Optional[float] = None) -> int:
+    """Move models[0] bytes of idle pending jobs to spool files (D4).
+
+    Returns how many jobs were spooled. A job touched, removed or changed
+    while its file was being written is left as it was and the file dropped.
+    """
+    now = time.monotonic() if now is None else now
+    idle = _spool_idle_seconds()
+    spooled = 0
+    for job_id, pending in list(_pending_jobs.items()):
+        models = pending.get("models") or []
+        if not models or "stl_data" not in models[0]:
+            continue
+        last = pending.get("last_access")
+        if last is None:
+            # Created outside create_slice_job (tests): start the clock now.
+            pending["last_access"] = now
+            continue
+        if now - last < idle:
+            continue
+        model = models[0]
+        data = model["stl_data"]
+        if not isinstance(data, (bytes, bytearray)):
+            continue  # a raw JSON value from add_models; nothing worth spooling
+        path = _spool_path(job_id)
+        try:
+            await asyncio.to_thread(_write_spool_file, path, bytes(data))
+        except Exception as exc:
+            logger.warning("Spooling idle job %s failed, kept in memory: %s", job_id, exc)
+            continue
+        current = _pending_jobs.get(job_id)
+        if (
+            current is not pending
+            or not current.get("models")
+            or current["models"][0] is not model
+            or current.get("last_access") != last
+        ):
+            _discard_spool(job_id)
+            continue
+        replaced = {k: v for k, v in model.items() if k != "stl_data"}
+        replaced["spooled"] = _SpooledModel(path)
+        models[0] = replaced
+        spooled += 1
+        logger.info("Pending job %s idle %.0fs: model moved to spool", job_id, now - last)
+    return spooled
+
+
+async def pending_job_spool_loop() -> None:
+    """Background task started from main.lifespan, like prz_session_cleanup_loop."""
+    while True:
+        await asyncio.sleep(_SPOOL_SCAN_INTERVAL_SEC)
+        try:
+            await _spool_idle_pending_jobs()
+        except Exception:
+            logger.warning("Pending job spool scan failed", exc_info=True)
 
 
 # Derived from agent/error_codes.py + agent/errors.py at import time — no
@@ -490,6 +711,7 @@ async def create_slice_job(request: V2SliceCreateRequest):
             "config": request.config or {},
             "models": [],
             "status": "created",
+            "last_access": time.monotonic(),
         }
         if request.prz_config is not None:
             _pending_jobs[job_id]["prz_config"] = request.prz_config
@@ -767,6 +989,7 @@ async def use_model_from_job(job_id: str, source_job_id: str, source_file: str =
     """
     if job_id not in _pending_jobs:
         raise job_not_found(job_id)
+    _touch_pending(job_id)
 
     source_dir = get_job_dir(source_job_id)
     source_path = source_dir / "output" / source_file
@@ -813,6 +1036,7 @@ async def execute_slice_job(
             raise job_already_executed(job_id)
         raise job_not_found(job_id)
 
+    _touch_pending(job_id)
     pending = _pending_jobs[job_id]
 
     if not pending["models"]:
@@ -848,6 +1072,7 @@ async def execute_slice_job(
                 json.dump(prz_cfg, f)
         sla_config = _build_sla_config(prz_cfg, config, pending.get("center"))
         del _pending_jobs[job_id]
+        _discard_spool(job_id)
         background_tasks.add_task(run_slicing, job_id, sla_config)
         _set_srv_handle(response, started)
         return V2Response(success=True, message="Slicing started", data={"currentConfig": config})
@@ -874,6 +1099,7 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
                 return V2Response(success=True, message="Supports already generated", data={"hasSupportMesh": True})
         raise job_not_found(job_id)
 
+    _touch_pending(job_id)
     pending = _pending_jobs[job_id]
 
     if not pending["models"]:
@@ -895,6 +1121,7 @@ async def generate_supports_only(job_id: str, background_tasks: BackgroundTasks)
         pending["model_saved"] = True
         pending["job_dir"] = str(job_dir)
         background_tasks.add_task(run_support_generation, job_id, sla_config)
+        _release_landed_model(pending, input_path)
         return V2Response(success=True, message="Support generation started", data={"currentConfig": config})
     except APIError:
         raise
@@ -922,6 +1149,7 @@ async def export_support_points_only(job_id: str, background_tasks: BackgroundTa
             )
         raise job_not_found(job_id)
 
+    _touch_pending(job_id)
     pending = _pending_jobs[job_id]
 
     if not pending["models"]:
@@ -940,6 +1168,7 @@ async def export_support_points_only(job_id: str, background_tasks: BackgroundTa
         pending["model_saved"] = True
         pending["job_dir"] = str(job_dir)
         background_tasks.add_task(run_support_points_export, job_id, sla_config)
+        _release_landed_model(pending, input_path)
         return V2Response(
             success=True,
             message="Support point export started",
@@ -1220,6 +1449,7 @@ async def generate_hollow_only(job_id: str, background_tasks: BackgroundTasks):
                 return V2Response(success=True, message="Hollow already generated", data={"hasHollowMesh": True})
         raise job_not_found(job_id)
 
+    _touch_pending(job_id)
     pending = _pending_jobs[job_id]
 
     if not pending["models"]:
@@ -1235,6 +1465,7 @@ async def generate_hollow_only(job_id: str, background_tasks: BackgroundTasks):
         pending["model_saved"] = True
         pending["job_dir"] = str(job_dir)
         background_tasks.add_task(run_hollow_generation, job_id, sla_config)
+        _release_landed_model(pending, input_path)
         return V2Response(success=True, message="Hollow generation started", data={"currentConfig": config})
     except APIError:
         raise
@@ -1264,6 +1495,7 @@ async def cut_model(job_id: str, request: V2CutRequest, background_tasks: Backgr
                 return V2Response(success=True, message="Cut already performed", data={"hasCutMesh": True})
         raise job_not_found(job_id)
 
+    _touch_pending(job_id)
     pending = _pending_jobs[job_id]
 
     if not pending["models"]:
@@ -1276,6 +1508,7 @@ async def cut_model(job_id: str, request: V2CutRequest, background_tasks: Backgr
         pending["model_saved"] = True
         pending["job_dir"] = str(job_dir)
         background_tasks.add_task(run_cut_operation, job_id, request.cut_height, request.keep_mode)
+        _release_landed_model(pending, input_path)
         return V2Response(
             success=True,
             message="Cut operation started",
@@ -2241,6 +2474,7 @@ async def get_slice_job_status(job_id: str, response: Response = None):
 
     # Check pending jobs (not yet executed)
     if job_id in _pending_jobs:
+        _touch_pending(job_id)
         return V2Response(
             success=True,
             data={
@@ -2328,6 +2562,7 @@ async def ortho_process(job_id: str, request: V2OrthoProcessRequest, background_
         input_path = job_dir / "input" / "model.stl"
         _save_model_to_job(pending["models"][0], input_path)
         del _pending_jobs[job_id]
+        _discard_spool(job_id)
 
         from .ortho_pipeline import run_ortho_pipeline
 

@@ -23,7 +23,7 @@
 
 ### Requirement: 主路徑直接以陣列建立 Manifold，修補路徑行為不變
 
-兩個網格皆能以合併後的陣列直接建立有效 `Manifold` 時，`boolean_operation()` SHALL 不建立 `trimesh.Trimesh` 物件。主路徑轉換失敗或得到無效 `Manifold`（依 `boolean-non-manifold-tolerance` 的判定）時，SHALL 由同一份陣列以 `trimesh.Trimesh(process=False)` 建立網格並進入現有修補序列；修補序列的步驟、採用條件與錯誤回傳 SHALL 與改前相同。
+兩個網格皆能以合併後的陣列直接建立有效 `Manifold` 時，`boolean_operation()` SHALL 不建立 `trimesh.Trimesh` 物件。主路徑轉換失敗或得到無效 `Manifold`（依 `boolean-non-manifold-tolerance` 的判定）時，SHALL 以改前相同的 `trimesh.load()` 讀入該兩個網格並進入現有修補序列（修補序列拿到的物件與改前完全相同，包含 STL 檔內的面法向量）；修補序列的步驟、採用條件與錯誤回傳 SHALL 與改前相同。
 
 #### Scenario: 有效網格不經 trimesh
 - **WHEN** 兩個輸入皆為封閉流形的 binary STL
