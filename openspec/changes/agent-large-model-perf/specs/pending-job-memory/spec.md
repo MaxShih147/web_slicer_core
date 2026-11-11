@@ -22,7 +22,7 @@
 
 ### Requirement: 已落地模型之後的操作沿用落地檔案
 
-`_save_model_to_job(model_data, input_path)` 遇到不含 `stl_data`、但記錄了已落地路徑的模型項目時，SHALL 沿用該檔案：路徑與 `input_path` 相同時不重寫；不同時 SHALL 複製該檔案到 `input_path`；檔案不存在時 SHALL 回傳 `MODEL_NOT_FOUND`。已落地的檔案先前已通過驗證，SHALL 不再驗證。
+`_save_model_to_job(model_data, input_path)` 遇到不含 `stl_data`、但記錄了已落地路徑的模型項目時（暫存檔的處理見下一個 requirement），SHALL 沿用該檔案：路徑與 `input_path` 相同時不重寫；不同時 SHALL 複製該檔案到 `input_path`；檔案不存在時 SHALL 回傳 `MODEL_NOT_FOUND`。已落地的檔案先前已通過驗證，SHALL 不再驗證。
 
 同一 job 在 generate-supports 之後呼叫 `execute`、`ortho-process`，或再次呼叫 `generate-supports`／`export-support-points`／`generate-hollow`／`cut`，SHALL 與改前得到相同的 `input/model.stl` 內容與相同結果。
 
@@ -47,20 +47,36 @@
 - **WHEN** 呼叫端以 `use-model-from/{source_job_id}` 引用另一個 job 的輸出作為模型
 - **THEN** 該模型項目 SHALL 仍以 `stl_data` 加 `validated: False` 存入，落地時 SHALL 仍完整驗證，行為與改前相同
 
-### Requirement: 閒置的 pending job 逾時清理
+### Requirement: 閒置 pending job 的模型 bytes 移到磁碟暫存，job 本身不刪除
 
-每個 pending job SHALL 記錄最後存取時間（建立時，以及每次經由 `/slices/{job_id}/…` 端點讀寫該 pending job 時更新）。agent SHALL 在背景定期（每 5 分鐘）移除閒置超過時限的 pending job；時限預設 2 小時，可由環境變數 `AGENT_PENDING_JOB_TTL_SEC` 覆寫（非正數或無法解析時使用預設值）。
+每個 pending job SHALL 記錄最後存取時間（建立時，以及每次經由 `/slices/{job_id}/…` 端點讀寫該 pending job 時更新）。agent SHALL 在背景定期（每 60 秒）檢查：仍以 `stl_data` 持有模型 bytes、且閒置超過門檻的 pending job，SHALL 把該 bytes 寫到暫存目錄 `JOBS_DIR/.pending_spool/<job_id>.stl`，然後改以伺服器端標記記錄暫存檔、移除 `stl_data`。門檻預設 600 秒，可由環境變數 `AGENT_PENDING_SPOOL_IDLE_SEC` 覆寫（非正數或無法解析時使用預設值）。
 
-被移除的 pending job 之後的請求 SHALL 依現有規則回應：job 目錄存在時沿用現有 `JOB_ALREADY_EXECUTED`／「already generated」判斷，不存在時回 `JOB_NOT_FOUND`。清理 MUST NOT 刪除磁碟上的 job 目錄。
+暫存 MUST NOT 刪除或使 pending job 失效：之後對該 job 的任何操作 SHALL 與未暫存時得到相同結果（同樣的 `modelCount`、同樣的 `input/model.stl` 內容、同樣的驗證規則——`validated` 標記保留原值，未驗證的內容在落地時仍會驗證）。暫存目錄名稱含 `.`，不可能與 job id（只允許英數、`_`、`-`）衝突，`GET /slices/{job_id}` 的回應 SHALL 不受影響。
 
-#### Scenario: 閒置超過時限的 pending job 被移除
-- **WHEN** 一個 pending job 最後存取時間距今超過時限，且清理執行
-- **THEN** 該 job SHALL 從 `_pending_jobs` 移除，其 job 目錄（若存在）SHALL 保留
+暫存檔 SHALL 在下列時機刪除：該模型落地為 `input/model.stl` 後（落地方式為移動或複製後刪除）、pending job 被 `execute`／`ortho-process` 移除後、agent 啟動時（重啟後 `_pending_jobs` 本來就是空的，殘留暫存檔沒有對應的 job）。
 
-#### Scenario: 仍在使用的 pending job 不被移除
-- **WHEN** 一個 pending job 在時限內有任何存取
-- **THEN** 清理 SHALL 不移除它
+#### Scenario: 閒置的 pending job 模型移到磁碟
+- **WHEN** 一個 pending job 上傳模型後閒置超過門檻，且背景檢查執行
+- **THEN** 其模型 bytes SHALL 寫入 `JOBS_DIR/.pending_spool/<job_id>.stl`，`stl_data` SHALL 移除
+- **AND** 該 job SHALL 仍在 `_pending_jobs` 中，`GET /slices/{job_id}` 的回應 SHALL 與暫存前相同
 
-#### Scenario: 清理失敗不影響服務
-- **WHEN** 清理過程發生例外
-- **THEN** 系統 SHALL 記 log 並在下一輪繼續，MUST NOT 終止清理迴圈或影響請求處理
+#### Scenario: 暫存後照常切片
+- **WHEN** 已暫存的 pending job 之後呼叫 `execute`
+- **THEN** 切片 SHALL 成功啟動，`input/model.stl` 內容 SHALL 與原上傳的 bytes 相同
+- **AND** 暫存檔 SHALL 在落地後刪除
+
+#### Scenario: 未驗證的內容暫存後仍會驗證
+- **WHEN** 經 `use-model-from` 或 `add_models_to_slice_job()` 加入、`validated` 為 False 的內容被暫存
+- **THEN** 落地時 SHALL 仍執行 `_validate_stl_bytes()`，內容無效時 SHALL 回 `INVALID_MODEL`
+
+#### Scenario: 仍在使用的 pending job 不暫存
+- **WHEN** 一個 pending job 在門檻內有任何存取
+- **THEN** 背景檢查 SHALL 不動它
+
+#### Scenario: agent 重啟後清掉殘留暫存
+- **WHEN** agent 啟動時 `JOBS_DIR/.pending_spool/` 內有檔案
+- **THEN** 系統 SHALL 刪除這些檔案
+
+#### Scenario: 暫存失敗不影響服務
+- **WHEN** 寫入暫存檔失敗（例如磁碟已滿）或背景檢查發生例外
+- **THEN** 該 job SHALL 保持原狀（bytes 仍在記憶體），系統 SHALL 記 WARNING 並在下一輪繼續，MUST NOT 終止背景迴圈或影響請求處理

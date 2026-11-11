@@ -4,12 +4,18 @@
 
 `boolean_operation()` 讀取 `mesh_a`、`mesh_b` 時，對 binary STL（長度恰為 `84 + n × 50` 且 `n > 0`）SHALL 以 numpy 直接讀取三角形頂點，並以 numpy 合併頂點，MUST NOT 呼叫 `trimesh.load()`。頂點合併的判準 SHALL 與 trimesh `merge_vertices` 預設行為相同：座標四捨五入到 `trimesh.tol.merge` 對應的小數位數後完全相同者視為同一頂點。含非有限座標（NaN／Inf）頂點的面 SHALL 移除，與 trimesh `remove_infinite_values` 相同；其餘面的順序與每個面的頂點順序（繞序）SHALL 保留，MUST NOT 移除退化面或重複面（`trimesh.load` 預設 `validate=False`，同樣不移除）。
 
+合併後的頂點陣列 SHALL 依「第一次出現」的順序排列，與 trimesh `unique_rows(keep_order=True)` 相同，MUST NOT 依座標排序。如此 numpy 路徑產生的頂點陣列與面索引陣列 SHALL 與 `trimesh.load(process=True)` 的 `vertices`、`faces` 逐元素相同，修補序列（其中部分步驟受頂點順序影響）的輸入與改前完全一致。
+
 不符合 binary 公式的檔案（ASCII STL 等）SHALL 退回 `trimesh.load()`，行為與改前相同。
 
 #### Scenario: binary STL 讀取結果與 trimesh 等價
 - **WHEN** 以 numpy 路徑與 `trimesh.load(process=True)` 分別讀取同一個 binary STL
-- **THEN** 兩者的面數 SHALL 相等、頂點數 SHALL 相等
-- **AND** 逐面比對的三個頂點座標（依繞序）SHALL 相等
+- **THEN** 兩者的 `vertices` 陣列 SHALL 逐元素相同（含順序）
+- **AND** 兩者的 `faces` 陣列 SHALL 逐元素相同
+
+#### Scenario: 含 NaN 面、重複面、退化面時仍與 trimesh 相同
+- **WHEN** binary STL 含 NaN 座標的面、完全重複的面、以及三點共線的退化面
+- **THEN** numpy 路徑的 `vertices`、`faces` SHALL 與 `trimesh.load(process=True)` 逐元素相同
 
 #### Scenario: ASCII STL 退回 trimesh
 - **WHEN** `mesh_a` 或 `mesh_b` 為 ASCII STL
@@ -26,6 +32,7 @@
 #### Scenario: 非流形輸入仍走修補序列
 - **WHEN** `mesh_a` 為無法直接轉為有效 Manifold 的網格（例如有開口）
 - **THEN** 系統 SHALL 進入與改前相同的修補序列，成功與否及回傳的錯誤訊息、錯誤碼 SHALL 與改前相同
+- **AND** 修補成功時，輸出 STL 的三角形 SHALL 與改前輸出逐面相同（座標與繞序）
 
 ### Requirement: 結果直接以 numpy 寫成 binary STL，且與改前等價
 

@@ -17,19 +17,19 @@
 - [ ] 3.2 新增 `agent/tests/test_validate_stl_header.py`，涵蓋 `stl-upload-validation` 每個 scenario（含 solid header 的 binary、BOM、空 ASCII、截斷、面數 0、尾端多餘 bytes、258 MB 大小的時間上限）
 - [ ] 3.3 確認 `test_save_model_to_job_validation.py`、`test_config_validation_422.py` 等既有驗證測試仍通過；更新仍描述 `trimesh.load()` 的註解與 docstring
 
-## 4. F1-2：pending job 釋放與清理
+## 4. F1-2：pending job 釋放與閒置暫存
 
 - [ ] 4.1 新增 `_LandedModel` 與 `_release_landed_model()`；`_save_model_to_job()` 支援已落地項目（同路徑不寫、不同路徑複製、遺失回 `MODEL_NOT_FOUND`）
 - [ ] 4.2 `generate-supports`、`export-support-points`、`generate-hollow`、`cut` 在背景任務排入後釋放 `models[0]` 的 bytes
 - [ ] 4.3 pending job 加 `last_access`，新增 `_touch_pending()` 並在讀寫 pending 的端點使用
-- [ ] 4.4 新增 `_evict_expired_pending_jobs()` 與 `pending_job_cleanup_loop()`，讀取 `AGENT_PENDING_JOB_TTL_SEC`（預設 7200），在 `main.lifespan` 啟動與取消
-- [ ] 4.5 新增 `agent/tests/test_pending_job_release.py`：釋放後 `modelCount` 不變；同 job 接著 `execute`／再次 generate-supports 成功且 `input/model.stl` 與上傳 bytes 相同；寫檔失敗不釋放；偽造 `"landed"` 欄位無效；落地檔案遺失；`use-model-from` 不受影響；清理依時限移除、不刪目錄、缺 `last_access` 不清、例外不終止迴圈
+- [ ] 4.4 新增 `_SpooledModel`、`_spool_idle_pending_jobs()` 與 `pending_job_spool_loop()`（D4）：讀取 `AGENT_PENDING_SPOOL_IDLE_SEC`（預設 600），閒置 job 的 bytes 寫到 `JOBS_DIR/.pending_spool/`；`_save_model_to_job()` 支援暫存項目（依 `validated` 驗證後移到 `input_path`）；`execute`／`ortho-process` 刪除殘留暫存；`main.lifespan` 啟動時清空暫存目錄並啟動／取消迴圈
+- [ ] 4.5 新增 `agent/tests/test_pending_job_release.py`：釋放後 `modelCount` 不變；同 job 接著 `execute`／再次 generate-supports 成功且 `input/model.stl` 與上傳 bytes 相同；寫檔失敗不釋放；偽造 `"landed"`／`"spooled"` 欄位無效；落地檔案遺失；`use-model-from` 不受影響；暫存的各情境（見 design D6）
 
 ## 5. F1-3：boolean numpy 讀寫
 
-- [ ] 5.1 新增 `agent/stl_io.py`：`read_binary_stl_triangles`、`merge_triangle_vertices`（移除非有限面、與 trimesh 相同的捨入合併）、`write_binary_stl`
+- [ ] 5.1 新增 `agent/stl_io.py`：`read_binary_stl_triangles`、`merge_triangle_vertices`（移除非有限面、與 trimesh 相同的捨入合併、頂點依第一次出現排序）、`write_binary_stl`
 - [ ] 5.2 改寫 `sla_operations.boolean_operation` 主路徑：numpy 讀取 → 直接建 `manifold3d.Mesh` → 運算 → `to_mesh` → `write_binary_stl`；ASCII 退回 `trimesh.load`；fallback 時才以 `Trimesh(process=False)` 建立網格進入既有修補序列；空結果訊息不變
-- [ ] 5.3 新增 `agent/tests/test_boolean_numpy_io.py`：`merge_triangle_vertices` 與 `trimesh.load(process=True)` 逐面等價（含 NaN 面、重複面、退化面）；`write_binary_stl` 可被 trimesh 讀回且法向量正確；以測試內保留的改前參考實作比較 union／difference／intersection、ASCII 輸入、開口輸入的三角形數、`is_watertight`、`is_winding_consistent`、`volume`；空結果
+- [ ] 5.3 新增 `agent/tests/test_boolean_numpy_io.py`：`merge_triangle_vertices` 的 `vertices`、`faces` 與 `trimesh.load(process=True)` 逐元素相同（含順序；含 NaN 面、重複面、退化面）；`write_binary_stl` 可被 trimesh 讀回且法向量正確；以測試內保留的改前參考實作比較 union／difference／intersection、ASCII 輸入、開口輸入的三角形數、`is_watertight`、`is_winding_consistent`、`volume`；開口輸入（修補路徑）的輸出三角形逐面相同；空結果
 - [ ] 5.4 確認 `boolean-non-manifold-tolerance` 相關既有測試全部通過
 
 ## 6. 驗收與交付
