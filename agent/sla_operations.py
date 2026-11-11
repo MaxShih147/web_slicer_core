@@ -28,6 +28,7 @@ from typing import Optional, Dict, Any, List, Union
 import struct
 
 from .config import SLICER_ENGINE_CLI
+from .power_throttling import disable_for_child
 from .models import BooleanOperation, CutConfig, CutMode, JobStatus, SLAConfig
 from .preview_scale import preview_scale_for
 from .support_classifier import SupportClassification, classify_support_result
@@ -384,6 +385,8 @@ async def run_prusa_cli(
         stderr=asyncio.subprocess.PIPE,
         env=_english_locale_env(),  # pin English locale so validate() stays English (D5)
     )
+    # agent-large-model-perf D1: keep Windows EcoQoS from throttling the engine.
+    disable_for_child(process)
     if timeout_sec is None:
         stdout, stderr = await process.communicate()
     else:
@@ -2363,42 +2366,53 @@ def boolean_operation(
                 polygon_regions=_n_regions,
             )
 
-        _stage = "loading mesh_a"
-        mesh_a = trimesh.load(str(mesh_a_path))
-
-        _stage = "loading mesh_b"
-        mesh_b = trimesh.load(str(mesh_b_path))
-
-        # Ensure we have Trimesh objects (not Scene)
-        if isinstance(mesh_a, trimesh.Scene):
-            mesh_a = trimesh.util.concatenate(mesh_a.dump())
-        if isinstance(mesh_b, trimesh.Scene):
-            mesh_b = trimesh.util.concatenate(mesh_b.dump())
-
-        _log.info(f"Boolean {operation.value}: A={len(mesh_a.faces)} faces, B={len(mesh_b.faces)} faces")
-
         # Use manifold3d directly to bypass trimesh's volume check.
         # Manifold can handle non-volume meshes by forcing them through
         # its own internal repair pipeline.
         import manifold3d
         import numpy as np
+        from .stl_io import merge_triangle_vertices, read_binary_stl_triangles, write_binary_stl
+
+        def load_trimesh_as_before(path):
+            """The pre-numpy load: trimesh.load(process=True), Scene flattened."""
+            mesh = trimesh.load(str(path))
+            if isinstance(mesh, trimesh.Scene):
+                mesh = trimesh.util.concatenate(mesh.dump())
+            return mesh
+
+        def load_arrays(path):
+            """(vertices, faces, trimesh-or-None) -- agent-large-model-perf D5.
+
+            A binary STL is read and welded with numpy into the very arrays
+            trimesh.load(process=True) yields (stl_io.merge_triangle_vertices),
+            without building a Trimesh. Anything else (ASCII, padded) still
+            goes through trimesh.load."""
+            tris = read_binary_stl_triangles(path)
+            if tris is not None:
+                verts, faces = merge_triangle_vertices(tris)
+                return verts, faces, None
+            mesh = load_trimesh_as_before(path)
+            return np.asarray(mesh.vertices), np.asarray(mesh.faces), mesh
+
+        def arrays_to_manifold(verts, faces):
+            """Same conversion trimesh_to_manifold always made (float32 / int32)."""
+            mesh_gl = manifold3d.Mesh(
+                vert_properties=np.array(verts, dtype=np.float32),
+                tri_verts=np.array(faces, dtype=np.int32),
+            )
+            return manifold3d.Manifold(mesh_gl)
 
         def trimesh_to_manifold(mesh):
             """Convert trimesh to Manifold, forcing repair for non-volume meshes."""
-            verts = np.array(mesh.vertices, dtype=np.float32)
-            faces = np.array(mesh.faces, dtype=np.int32)
-            mesh_gl = manifold3d.Mesh(vert_properties=verts, tri_verts=faces)
-            return manifold3d.Manifold(mesh_gl)
+            return arrays_to_manifold(mesh.vertices, mesh.faces)
 
-        def manifold_to_trimesh(man):
-            """Convert Manifold back to trimesh."""
-            mesh_gl = man.to_mesh()
-            result_mesh = trimesh.Trimesh(
-                vertices=mesh_gl.vert_properties[:, :3],
-                faces=mesh_gl.tri_verts,
-                process=True,
-            )
-            return result_mesh
+        _stage = "loading mesh_a"
+        verts_a, faces_a, mesh_a = load_arrays(mesh_a_path)
+
+        _stage = "loading mesh_b"
+        verts_b, faces_b, mesh_b = load_arrays(mesh_b_path)
+
+        _log.info(f"Boolean {operation.value}: A={len(faces_a)} faces, B={len(faces_b)} faces")
 
         # --- Primary conversion ---
         # Track whether fallback is needed and why; initialise valid flags to False
@@ -2410,11 +2424,11 @@ def boolean_operation(
 
         try:
             _stage = "converting mesh_a (primary)"
-            man_a = trimesh_to_manifold(mesh_a)
+            man_a = arrays_to_manifold(verts_a, faces_a)
             _a_st, _a_nt, _a_ie, _a_valid = _manifold_props(man_a)
 
             _stage = "converting mesh_b (primary)"
-            man_b = trimesh_to_manifold(mesh_b)
+            man_b = arrays_to_manifold(verts_b, faces_b)
             _b_st, _b_nt, _b_ie, _b_valid = _manifold_props(man_b)
 
         except Exception as e:
@@ -2430,6 +2444,15 @@ def boolean_operation(
         # --- Fallback repair + retry ---
         if _need_fallback:
             _stage = "fallback repair"
+
+            # The repair sequence works on trimesh objects. Rebuild them with
+            # the pre-numpy load so its every step sees exactly the object it
+            # always saw (vertices, faces, face normals from the file, cache).
+            # Only broken inputs pay for this.
+            if mesh_a is None:
+                mesh_a = load_trimesh_as_before(mesh_a_path)
+            if mesh_b is None:
+                mesh_b = load_trimesh_as_before(mesh_b_path)
 
             # Holds a validated Manifold from Mesh.merge() if that path succeeds,
             # allowing the retry block to skip trimesh_to_manifold(mesh_a).
@@ -2538,17 +2561,23 @@ def boolean_operation(
         else:
             return False, f"Unknown operation: {operation}", None
 
+        # agent-large-model-perf D5: write manifold's arrays straight out. The
+        # former Trimesh(process=True) + is_watertight (log only) + export cost
+        # 9 s at 5M faces and changed no triangle: Manifold output is already
+        # welded and closed.
         _stage = "converting result"
-        result = manifold_to_trimesh(result_man)
+        result_gl = result_man.to_mesh()
+        result_faces = np.asarray(result_gl.tri_verts)
+        result_verts = np.asarray(result_gl.vert_properties)[:, :3]
 
         _stage = "checking result"
-        if result is None or (hasattr(result, 'is_empty') and result.is_empty):
+        if len(result_faces) == 0:
             return False, "Boolean operation resulted in empty mesh", None
 
-        _log.info(f"  Result: {len(result.faces)} faces, watertight={result.is_watertight}")
+        _log.info(f"  Result: {len(result_faces)} faces, {len(result_verts)} vertices")
 
-        # Export result
-        result.export(str(output_path))
+        _stage = "writing result"
+        write_binary_stl(output_path, result_verts, result_faces)
         return True, None, None
 
     except Exception as e:
