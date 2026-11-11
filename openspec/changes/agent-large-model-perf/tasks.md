@@ -14,7 +14,7 @@
 ## 3. F1-1：STL header 驗證
 
 - [ ] 3.1 改寫 `api_v2._validate_stl_bytes` 為 header／大小檢查（D2），移除對 `trimesh.load` 的依賴
-- [ ] 3.2 新增 `agent/tests/test_validate_stl_header.py`，涵蓋 `stl-upload-validation` 每個 scenario（含 solid header 的 binary、BOM、空 ASCII、截斷、面數 0、尾端多餘 bytes、258 MB 大小的時間上限）
+- [ ] 3.2 新增 `agent/tests/test_validate_stl_header.py`，涵蓋 `stl-upload-validation` 每個 scenario（含 solid header 的 binary、BOM、空 ASCII、截斷、面數 0、尾端多出 37 bytes 與剛好 50 bytes 都拒絕、solid header＋含 facet＋尾端多餘 bytes 的 binary 拒絕、bytes 84–211 有 > 127 的 ASCII 開頭檔拒絕、258 MB 大小的時間上限）；另加一個測試：以前端 `STLExporter` 同樣格式（`trimesh.exchange.stl.export_stl`）產生的檔案一律接受
 - [ ] 3.3 確認 `test_save_model_to_job_validation.py`、`test_config_validation_422.py` 等既有驗證測試仍通過；更新仍描述 `trimesh.load()` 的註解與 docstring
 
 ## 4. F1-2：pending job 釋放與閒置暫存

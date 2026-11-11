@@ -13,7 +13,7 @@
 ## What Changes
 
 - **E. 排除 EcoQoS 節流**：agent 啟動時對自身程序、每次啟動 slicer-engine 子程序後對該子程序呼叫 `SetProcessInformation(ProcessPowerThrottling)`，`ControlMask = PROCESS_POWER_THROTTLING_EXECUTION_SPEED`、`StateMask = 0`（明確關閉執行速度節流）。僅在 Windows 執行；任何失敗只記 log，不影響 agent 啟動或任務結果。涵蓋 agent 內所有啟動引擎的位置（`jobs.run_slicing`、`jobs` 的 3MF 匯出、`sla_operations.run_prusa_cli`）。
-- **F1-1. 上傳驗證改為 header 檢查**：`_validate_stl_bytes()` 不再呼叫 `trimesh.load()`，改為只檢查 STL 的格式與大小——binary 時面數 > 0 且 `84 + 面數 × 50 ≤ 長度`；否則開頭（容許 UTF-8 BOM 等前置位元組）為 `solid` 且內容含 `facet` 視為 ASCII；其餘以 `INVALID_MODEL` 拒絕。與前端 `assertImportableStl` 的判準一致。
+- **F1-1. 上傳驗證改為 header 檢查**：`_validate_stl_bytes()` 不再呼叫 `trimesh.load()`，改為只檢查 STL 的格式與大小——binary 時面數 > 0 且長度**完全等於** `84 + 面數 × 50`；否則在引擎也會當成 ASCII 讀取（bytes 84–211 無 > 127 的位元組）、開頭（容許 BOM）為 `solid` 且內容含 `facet` 時視為 ASCII；其餘以 `INVALID_MODEL` 拒絕。判準對齊引擎 admesh 的讀檔方式：admesh 依檔案大小反推面數，尾端多餘的位元組會被當成三角形讀入，所以 binary 必須完全相等（比前端匯入檢查的 `≥` 嚴格；前端送出的檔案由 `STLExporter` 產生，大小一定完全相等）。
 - **F1-2. pending job 釋放模型 bytes 並清理逾時 job**：`generate-supports`（以及同樣只寫檔不移除 pending 的 `export-support-points`、`generate-hollow`、`cut`）把模型寫入 `input/model.stl` 後，`models[0]` 改為只記錄已落地的檔案路徑、不再持有 bytes；之後同一 job 的 `execute`／`ortho-process`／再次產生支撐沿用該檔案。另外，上傳後一直沒有被使用的 pending job，閒置超過門檻（預設 10 分鐘）時把模型 bytes 移到磁碟暫存目錄、job 本身保留，之後的操作照常進行，不會因為閒置而失敗。`use-model-from`、`modelCount`、既有錯誤碼行為不變。
 - **F1-3. boolean 的 STL 讀寫改用 numpy**：`boolean_operation()` 以 numpy 直讀 binary STL 並以 numpy 合併頂點（與 trimesh `merge_vertices` 同一判準），直接建 `manifold3d.Mesh`；結果直接取 `to_mesh()` 的陣列以 numpy 寫 binary STL，略過 `Trimesh(process=True)` 與 `is_watertight`。ASCII STL 與主路徑轉換失敗時仍走現有 trimesh 讀取與修補序列，修補行為不變。結果的三角形數、封閉性、繞序與改前一致。
 

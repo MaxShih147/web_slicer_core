@@ -17,7 +17,7 @@
 **Goals:**
 
 - agent 與 slicer-engine 子程序在 Windows 上不受 EcoQoS 執行速度節流。
-- 上傳驗證不再解析 mesh；判準與前端 `assertImportableStl` 一致。
+- 上傳驗證不再解析 mesh；判準與引擎（admesh）讀檔的方式對齊，凡是引擎會讀錯的檔案都在上傳時擋下。
 - 支撐重產不再累積模型 bytes；閒置 pending job 有上限壽命。
 - boolean 的讀寫轉換成本降到 numpy 等級，結果與改前等價（三角形數、封閉、繞序）。
 - F1 在 Windows 與 macOS 上行為一致；E 在 macOS 上完全不執行、不改變任何行為。
@@ -46,11 +46,21 @@
 
 ### D2. `_validate_stl_bytes` 只做 header 檢查
 
-判準見 `stl-upload-validation`。binary 優先：先讀 bytes 80–83 的面數 `n`，`n > 0` 且 `84 + 50n ≤ len` 即接受（這也正確處理 header 以 `solid` 開頭的 binary 檔）。否則去掉開頭至多 5 bytes 的 BOM／空白後檢查 `solid`，再以 `content.find(b"facet")` 確認至少有一個面，以保留改前「空 mesh 拒絕」的語意。
+判準見 `stl-upload-validation`。binary 優先：先讀 bytes 80–83 的面數 `n`，`n > 0` 且 `len == 84 + 50n`（完全相等）即接受（這也正確處理 header 以 `solid` 開頭的 binary 檔）。否則，bytes 84–211 皆不大於 127、去掉開頭至多 5 bytes 的 BOM／空白後以 `solid` 開頭，再以 `content.find(b"facet")` 確認至少有一個面（保留改前「空 mesh 拒絕」的語意），才視為 ASCII。成本：讀 84 bytes、比對 128 bytes、ASCII 時一次位元組搜尋，與檔案大小無關（binary）。
+
+**判準為什麼要對齊引擎，而不是前端**：初版沿用前端 `assertImportableStl` 的 `84 + 50n ≤ len`。檢查引擎讀檔程式（`third_party/prusaslicer_fork/bundled_deps/admesh/admesh/stlinit.cpp`）後發現兩點：
+1. admesh 以「bytes 84–211 中是否有 > 127 的位元組」判斷 binary／ASCII。
+2. binary 時 admesh 以 `(file_size − 84) / 50` 反推面數，**不使用 header 的面數**；只要 `(file_size − 84)` 是 50 的倍數就照讀，header 不符只記 info log。
+
+因此尾端多出 50 的倍數個位元組的檔案，引擎會把多餘的位元組當成三角形讀進去（全為 0 時是落在原點的退化面，亂碼時是隨機三角形），可能切出錯誤的層圖。改前的 `trimesh.load` 會拒絕這種檔案（大小不符時轉 ASCII 解析而失敗），`≤` 會讓它通過，是新的漏洞。改為完全相等即可補上，成本為 0（同樣只讀 header）。ASCII 加上 bytes 84–211 的條件，讓 agent 與引擎對「這是 ASCII」的判斷一致：header 以 `solid` 開頭、內容湊巧含 `facet`、尾端有多餘位元組的 binary 檔，不會被當成 ASCII 放行，而引擎卻以 binary 讀取。
+
+前端 `assertImportableStl` 用 `≥` 沒有問題：它把關的是使用者匯入的原始檔，由依 header 面數讀取的 three.js `STLLoader` 解析，多餘的尾巴會被忽略。送到 agent 的檔案由 `STLExporter` 產生，大小恆為 `84 + 50n`，所以 agent 改用完全相等不影響正常流程。
+
+**仍然偵測不到的情況**：大小正確、但中間位元組被改動的檔案。任何 4 bytes 都是合法的 float32，改前的 `trimesh.load` 同樣偵測不到；上傳走本機 TCP（傳輸層有檢查碼），檔案由前端當場產生，發生機率極低。若要完全排除，可由前端送出 SHA-256、agent 比對（5M 約 0.3–0.5 s），與 F2 依內容 hash 快取共用同一個 hash，留待 F2 設計。
 
 代價：header 檢查不會發現 binary 內容中的 NaN 座標、退化面等。這些在改前同樣不會被拒絕（`trimesh.load` 不 validate），所以拒絕集合實質上只縮小在「大小合格但內容是垃圾」的極少數檔案；這類檔案到引擎或 boolean 時會以引擎既有的錯誤碼失敗。`_boolean_operation_impl` 也走同一個函式，boolean 端對 binary 的讀取另有大小精確檢查（D5）。
 
-改前會在上傳時被拒、改後延到引擎才失敗的檔案：ASCII 開頭正確但後段寫壞、binary 的座標全是 NaN（trimesh 會把面全部移除，變成空 mesh）。這些檔案不會產生錯誤的支撐或切片——引擎讀檔失敗時由 `slicing_classifier` 對應為 `INVALID_MODEL`（讀檔例外或 empty-model 標記），錯誤碼與改前相同；差別只在使用者要等到引擎讀檔（5M 約 30 s）後才看到錯誤，而不是上傳當下。前端匯入時已以相同判準（`assertImportableStl`）檢查，而且前端是先解析過模型才顯示的，這類檔案實際上很難走到 agent。
+改前會在上傳時被拒、改後延到引擎才失敗的檔案：ASCII 開頭正確但後段寫壞、binary 的座標全是 NaN（trimesh 會把面全部移除，變成空 mesh）。這些檔案不會產生錯誤的支撐或切片——引擎讀檔失敗時由 `slicing_classifier` 對應為 `INVALID_MODEL`（讀檔例外或 empty-model 標記），錯誤碼與改前相同；差別只在使用者要等到引擎讀檔（5M 約 30 s）後才看到錯誤，而不是上傳當下。送到 agent 的檔案由前端 `STLExporter` 從已顯示的模型產生，這類檔案實際上很難走到 agent。
 
 - 替代方案：numpy 讀入後檢查 finite → 仍需讀完整個 buffer（5M 約 0.3 s），而且改前並不拒絕 NaN，沒有必要。
 
