@@ -10,6 +10,7 @@
 - `add_models_to_slice_job()` 以 `{"id": ..., **model, "validated": False}` 存入，request body 的任意 key 都會進入模型項目。
 - `boolean_operation()` 的主路徑：`trimesh.load` → `Trimesh` → `manifold3d.Mesh` → `Manifold` → 運算 → `to_mesh` → `Trimesh(process=True)` → `is_watertight`（只為 log）→ `export`。修補序列（`boolean-non-manifold-tolerance`）建立在 `trimesh.Trimesh` 上。
 - `boundary_detection._fast_load_binary_stl()` 已有 numpy 讀 binary STL 的先例（回傳未合併的三角形湯）。
+- agent 與 slicer-engine 同時發布 Windows 與 macOS 版本。目前 agent 只在 `config.py` 依 `sys.platform == "win32"` 分流引擎路徑；交接量測（含 EcoQoS 的排除法）只在 Windows（i9-13900H，大小核）上做過，macOS 沒有任何量測。
 
 ## Goals / Non-Goals
 
@@ -19,6 +20,7 @@
 - 上傳驗證不再解析 mesh；判準與前端 `assertImportableStl` 一致。
 - 支撐重產不再累積模型 bytes；閒置 pending job 有上限壽命。
 - boolean 的讀寫轉換成本降到 numpy 等級，結果與改前等價（三角形數、封閉、繞序）。
+- F1 在 Windows 與 macOS 上行為一致；E 在 macOS 上完全不執行、不改變任何行為。
 
 **Non-Goals:**
 
@@ -27,6 +29,7 @@
 - 只對文字附近區域做 boolean。
 - Bundle-Launcher（Electron）端的節流設定。
 - 釋放 `models[1:]` 的 bytes（這些項目從未被寫檔，現況也未使用；另議）。
+- macOS 的節流對策（App Nap、QoS class、`taskpolicy` 等）。沒有量測證據前不改，見 D7 與 Open Questions。
 
 ## Decisions
 
@@ -88,6 +91,19 @@ JSON request body 無法產生 `_LandedModel` 實例，所以 `add_models_to_sli
 - `test_validate_stl_header.py`：spec 的每個 scenario 一個 case，另加 5M 大小 buffer 的時間上限。
 - `test_pending_job_release.py`：上傳 → generate-supports（背景任務以 monkeypatch 替換）→ bytes 被釋放、`modelCount` 不變 → 同 job `execute` 成功且 `input/model.stl` 與上傳 bytes 相同；偽造 `"landed"` 欄位無效；落地檔案遺失回 `MODEL_NOT_FOUND`；清理迴圈依時限移除、不刪目錄。
 - `test_boolean_numpy_io.py`：D5 的等價性矩陣。
+- 兩個平台都要能跑：以 mock 取代 kernel32 的測試不依賴實際平台（同時 monkeypatch `sys.platform`），在 macOS 上也執行；只有「對自身實際呼叫」的 smoke test 以 `skipif(sys.platform != "win32")` 限定 Windows。另加一個 macOS 上的測試：`disable_execution_throttling()` 回傳 False、未載入 `ctypes.WinDLL`、未記任何 WARNING。
+
+### D7. macOS：E 為 no-op，F1 跨平台，節流另行量測
+
+**E**：`power_throttling` 以 `sys.platform == "win32"` 作唯一閘門，閘門外不 import 任何 Windows 專用符號（`ctypes.WinDLL`、`wintypes` 的 Windows 型別都只在函式內、通過閘門後才取用），確保模組在 macOS 上可正常 import。三處啟動引擎的位置無條件呼叫該函式，由函式自己判斷平台，呼叫端不寫平台分支。
+
+**F1**：
+- D2 的 header 檢查只用 `bytes` 與 `int.from_bytes(..., "little")`，與 CPU 位元組序無關。
+- D5 的 numpy 讀寫明確指定 little-endian dtype（`<f4`、`<u4`、`<u2`），不依賴執行平台的原生位元組序（Apple Silicon 與 x86 都是 little-endian，明確指定是為了不留隱含假設）。
+- D3 的落地檔案沿用使用 `pathlib.Path` 與 `shutil.copyfile`，不假設路徑分隔符或大小寫；同路徑判斷用 `Path.resolve()` 後比較，避免 macOS 上 `/private/var` 與 `/var` 這類符號連結造成誤判而重複複製。
+- D4 的時間用 `time.monotonic()`，不受系統時鐘調整影響，兩個平台相同。
+
+**macOS 節流**：macOS 也有可能讓 agent 變慢的機制——由沒有視窗的 Electron 啟動器帶起的程序可能受 App Nap 影響；Apple Silicon 依程序 QoS class 決定排在效能核心或效率核心。但目前沒有任何量測，無法判斷 agent 或引擎是否真的被降速、降多少，也不知道子程序會繼承什麼 QoS。若貿然加入對策（例如 agent 呼叫 `setpriority`／`pthread_set_qos_class_self_np`，或啟動器呼叫 Electron 的 `powerSaveBlocker.start('prevent-app-suspension')`），可能無效，或影響使用者前景工作的耗電與回應。因此本 change 不處理 macOS 節流，改為在 Open Questions 定義量測方法；有證據後另開 change，對策很可能落在啟動器端（Bundle-Launcher），不在 agent。
 
 ## Risks / Trade-offs
 
@@ -96,11 +112,14 @@ JSON request body 無法產生 `_LandedModel` 實例，所以 `add_models_to_sli
 - [header 檢查放行內容損壞但大小合格的 binary 檔] → 改前同樣不拒絕 NaN／退化面；損壞內容會在引擎或 boolean 階段以既有錯誤碼失敗，錯誤訊息可能較晚出現。
 - [清理移除使用者仍打算使用的 pending job] → 2 小時閒置且以每次存取更新；可用環境變數放寬；被清的 job 回既有錯誤碼，前端重開 job 即可。
 - [numpy 合併頂點與 trimesh 在極端座標（|x| > 9e10）時整數溢位] → 牙科模型座標在 ±1000 mm 內；溢位或非有限時退回 `trimesh.load()` 路徑。
+- [macOS 上其實也有節流，本 change 做完後 Mac 使用者仍偏慢] → F1 的改善在 macOS 上一樣生效；節流部分依 Open Questions 的方法量測後另行處理。
+- [Windows 專用程式碼在 macOS 上 import 失敗，導致 agent 起不來] → D7 規定閘門外不碰 Windows 符號，並以 macOS 上的 import／no-op 測試保護。
 - [結果 STL 不再經 `process=True`，若 manifold 輸出含重複頂點則 STL 內容不同] → binary STL 本來就不存頂點索引，寫出的三角形與 `process=True` 後相同（merge 不改變面的座標）；以等價測試確認。
 
 ## Migration Plan
 
-- 無資料遷移；對外 API 不變。以元件更新發布新 agent，前端不需同步。
+- 無資料遷移；對外 API 不變。以元件更新發布新 agent（Windows 與 macOS 同一份 agent 程式碼），前端不需同步。
+- 發布前在 macOS 上跑一次完整 `pytest agent/tests/`，並實際啟動 agent 做一次上傳 → 產生支撐 → 切片，確認 E 的模組不影響啟動、F1 正常。
 - 回滾：還原 commit 重新發布即可；所有改動都在 agent 內部。
 - 若要以 1.0.6.x hotfix 發出，再評估 cherry-pick 到 `release/v1.0.6`（本 change 從 `dev` 切出，需確認兩邊 `api_v2.py` 差異）。
 
@@ -108,3 +127,4 @@ JSON request body 無法產生 `_LandedModel` 實例，所以 `add_models_to_sli
 
 - 5M 改前後量測需要 `TriangleStress_5M.stl`（向前端索取的合成檔，不可用病患資料）；拿不到時只附合成 box 的相對倍數，並在 PR 說明。
 - pending job TTL 2 小時是否符合前端實際使用節奏，請前端（Chloe）確認。
+- macOS 上 agent 與引擎是否被節流：在 Apple Silicon Mac 上，以同一個 5M 切片比較「從 Terminal 單獨執行 slicer-engine」與「由正常啟動的 agent 啟動」的引擎時間（`SLICE_PROFILING=1` 的 `profile.json`），並以 `taskinfo`／活動監視器記錄兩者的 QoS 與所在核心；同時比較 5M 上傳時間。差距明顯（例如 > 20%）才另開 change 設計對策。

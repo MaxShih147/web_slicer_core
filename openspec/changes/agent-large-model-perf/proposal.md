@@ -19,6 +19,14 @@
 
 不含：F2（模型快取／hash 引用 API，需與 DS-Online 前端共同設計）、F3（引擎 admesh 讀檔修復的超線性成長，屬 `slicer-engine` / `third_party/prusaslicer_fork`）、Bundle-Launcher 修改。對外 API 與錯誤碼沒有 **BREAKING** 變更。
 
+### 平台：Windows 與 macOS
+
+agent 與 slicer-engine 同時發布 Windows 與 macOS 版本（repo 內有 `scripts/*_macos.sh` 建置與打包流程）。本 change 對兩個平台的影響不同：
+
+- **F1（三項）跨平台**：純 Python／numpy／標準庫，不依賴作業系統 API，macOS 得到同樣的驗證、記憶體與 boolean 改善。
+- **E 只處理 Windows**：EcoQoS 是 Windows 的機制。macOS 上節流模組為 no-op（不載入任何系統函式庫、不記 WARNING），行為與改前相同。
+- **macOS 是否有同類節流尚未量測**：macOS 有自己的機制（無視窗 App 的 App Nap、Apple Silicon 依 QoS 把工作排到效率核心），但交接量測只在 Windows 上做，沒有證據顯示 macOS 上的 agent 或引擎被降速。本 change 不針對 macOS 節流做任何改動，只列為待量測項目（見 design 的 Open Questions）；確認有影響後另開 change。
+
 ## Capabilities
 
 ### New Capabilities
@@ -42,6 +50,7 @@
 | `agent/sla_operations.py` | 程式 | `run_prusa_cli` 啟動後關閉節流；`boolean_operation` 讀寫改 numpy |
 | `agent/api_v2.py` | 程式 | `_validate_stl_bytes` 改 header 檢查；`_save_model_to_job` 支援已落地模型；pending job 釋放 bytes 與逾時清理 |
 | `agent/tests/` | 測試 | 新增 STL 驗證、pending job 釋放／清理、boolean 等價性、節流呼叫的單元測試 |
+| 平台 | Windows／macOS | F1 兩個平台都生效；E 只在 Windows 生效，macOS 為 no-op；macOS 需跑一次完整測試確認 |
 | 對外 API | 無變更 | 端點、回應格式、錯誤碼不變；壞檔的拒絕訊息內文可能不同 |
 | 相依套件 | 無新增 | 只用標準庫 `ctypes` 與既有 numpy／manifold3d |
 | 發布 | 元件更新 | 以元件更新發布新 agent；是否以 1.0.6.x hotfix cherry-pick 到 `release/v1.0.6` 另議 |

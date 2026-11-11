@@ -36,5 +36,7 @@
 
 - [ ] 6.1 跑完整 `pytest agent/tests/ -q`，與 1.1 基準比較，沒有新增失敗
 - [ ] 6.2 若取得 5M 測試檔，量改後數字（驗證時間、boolean 各階段、重複支撐的記憶體），與 1.2 並列寫入 change 目錄的 `measurements.md`；量不到時寫明原因與合成檔的替代數字
-- [ ] 6.3 `openspec validate agent-large-model-perf --strict` 通過
-- [ ] 6.4 在功能分支 commit（不 push、不開 PR），等使用者確認；如需 1.0.6.x hotfix 再討論 cherry-pick 到 `release/v1.0.6`
+- [ ] 6.3 在 macOS 上跑完整 `pytest agent/tests/`，並實際啟動 agent 做一次上傳 → 產生支撐 → 切片，確認節流模組為 no-op、F1 正常；沒有 Mac 可用時在交付說明中註明未驗證
+- [ ] 6.4 （選做，可另開 change）依 design Open Questions 的方法在 Apple Silicon Mac 上量測是否有節流，結果記入 `measurements.md`
+- [ ] 6.5 `openspec validate agent-large-model-perf --strict` 通過
+- [ ] 6.6 在功能分支 commit（不 push、不開 PR），等使用者確認；如需 1.0.6.x hotfix 再討論 cherry-pick 到 `release/v1.0.6`
