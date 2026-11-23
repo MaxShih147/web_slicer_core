@@ -81,6 +81,11 @@ if not exist "%CLI_PATH%" (
 )
 set SLICER_ENGINE_BIN=%CLI_PATH%
 
+:: Local Vite origins are not hardcoded in agent/main.py; default them for scripts/run_agent.
+if not defined CORS_ALLOWED_ORIGINS (
+    set "CORS_ALLOWED_ORIGINS=http://localhost:5173,https://localhost:5173,http://127.0.0.1:5173,https://127.0.0.1:5173"
+)
+
 :: TLS resolution order matches agent\config.py: env, then agent\tls\, then Bundle-Launcher (mac, win).
 if defined AGENT_TLS_CERTFILE (
     set CERT_PATH=%AGENT_TLS_CERTFILE%
