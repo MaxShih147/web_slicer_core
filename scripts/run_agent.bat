@@ -86,29 +86,26 @@ if not defined CORS_ALLOWED_ORIGINS (
     set "CORS_ALLOWED_ORIGINS=http://localhost:5173,https://localhost:5173,http://127.0.0.1:5173,https://127.0.0.1:5173"
 )
 
-:: TLS resolution order matches agent\config.py: env, then agent\tls\, then Bundle-Launcher (mac, win).
+:: TLS resolution order matches agent\config.py: env, then a self-generated dev cert in agent\tls\.
+:: No fallback to Bundle-Launcher or any other bundled cert (the old shared key is compromised).
 if defined AGENT_TLS_CERTFILE (
     set CERT_PATH=%AGENT_TLS_CERTFILE%
 ) else (
     set CERT_PATH=%REPO_ROOT%\agent\tls\localhost.crt
-    if not exist "!CERT_PATH!" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.crt
-    if not exist "!CERT_PATH!" set CERT_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.crt
 )
 if defined AGENT_TLS_KEYFILE (
     set KEY_PATH=%AGENT_TLS_KEYFILE%
 ) else (
     set KEY_PATH=%REPO_ROOT%\agent\tls\localhost.key
-    if not exist "!KEY_PATH!" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-mac\agent\tls\localhost.key
-    if not exist "!KEY_PATH!" set KEY_PATH=%REPO_ROOT%\..\Bundle-Launcher\bundle-win\agent\tls\localhost.key
 )
 if not exist "%CERT_PATH%" (
     echo [ERROR] TLS cert not found: %CERT_PATH%
-    echo Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or prepare agent\tls\localhost.crt^|key
+    echo Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or generate a dev cert into agent\tls\localhost.crt^|key (see README Development)
     exit /b 1
 )
 if not exist "%KEY_PATH%" (
     echo [ERROR] TLS key not found: %KEY_PATH%
-    echo Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or prepare agent\tls\localhost.crt^|key
+    echo Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or generate a dev cert into agent\tls\localhost.crt^|key (see README Development)
     exit /b 1
 )
 set AGENT_TLS_CERTFILE=%CERT_PATH%

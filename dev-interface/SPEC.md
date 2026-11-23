@@ -67,7 +67,7 @@ flowchart LR
 
 ### 為什麼要 Vite proxy
 
-Agent 跑 HTTPS，用自簽憑證（`agent/tls/localhost.crt`）。如果瀏覽器直連，會撞到兩道牆：
+Agent 跑 HTTPS，用開發者自己產生的自簽憑證（`agent/tls/localhost.crt`，已 gitignore，產生方式見 `README.md` Development；repo 不再附憑證，也不再從 Bundle-Launcher 借用）。如果瀏覽器直連，會撞到兩道牆：
 
 1. **憑證警告**。瀏覽器擋掉自簽憑證的 fetch。要手動開一次 `https://127.0.0.1:5179/api/health` 點「繼續前往」。換 profile 就要再點一次。
 2. **CORS**。Agent 的允許來源寫死在 `agent/main.py:82-119`，只涵蓋 port 5173–5178 和 3000。
