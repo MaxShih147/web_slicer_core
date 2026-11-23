@@ -636,12 +636,22 @@ $PRUSA_SLICER_BIN --version
 
 ### CORS errors in browser
 
-The backend includes CORS middleware for common localhost dev origins and `https://dentalslice.onrender.com`.
-To add more origins without editing code, set:
+The agent hardcodes the SlicerGo Dental hosted UIs plus production dsonline
+(`https://dev.slicergo-dental.phrozen3d.info`,
+`https://release.slicergo-dental.phrozen3d.info`,
+`https://slicergo-dental.phrozen3d.info`,
+`https://dsonline.phrozen3d.info`).
+Localhost and other transitional origins must be supplied via env:
 
 ```bash
-export CORS_ALLOWED_ORIGINS="https://your-ui.example.com,https://another.example.com"
+# macOS / Linux
+export CORS_ALLOWED_ORIGINS="http://localhost:5173,https://localhost:5173,https://dev.dsonline.phrozen3d.info,https://release.dsonline.phrozen3d.info"
+
+# Windows (cmd)
+set CORS_ALLOWED_ORIGINS=http://localhost:5173,https://localhost:5173,https://dev.dsonline.phrozen3d.info,https://release.dsonline.phrozen3d.info
 ```
+
+`scripts/run_agent.bat` / `scripts/run_agent.sh` set a localhost default when the variable is unset.
 
 ### Support mesh not appearing
 

@@ -94,50 +94,14 @@ app = FastAPI(
 )
 
 # CORS configuration:
-# - local development ports
-# - hosted UI origin for local-agent bridge
-# - optional comma-separated overrides via CORS_ALLOWED_ORIGINS env var
+# - shipped allowlist: SlicerGo Dental + production dsonline hosted UIs
+# - local / other transitional origins via CORS_ALLOWED_ORIGINS (comma-separated)
+# - onrender and ds-online.com origins are intentionally not hardcoded
 _cors_origins = {
-    "https://release.dsonline.phrozen3d.info",
-    "https://dev.dsonline.phrozen3d.info",
-    "https://dsonline.phrozen3d.info",
     "https://dev.slicergo-dental.phrozen3d.info",
     "https://release.slicergo-dental.phrozen3d.info",
     "https://slicergo-dental.phrozen3d.info",
-    "https://dentalslice.onrender.com",
-    "https://dental-testing.onrender.com",
-    "https://ya-ke-nei-bu-ce-shi.onrender.com",
-    # DS-Online branch: cloud HTTPS UI -> local HTTPS agent (Safari mixed-content test)
-    "https://safari-mixed-content-local-https.onrender.com",
-    "https://localhost:5173",   # DS-Online (default Vite port)
-    "https://127.0.0.1:5173",
-    "https://localhost:5174",   # web_slicer_core React UI (alternate port)
-    "https://127.0.0.1:5174",
-    "https://localhost:5175",
-    "https://127.0.0.1:5175",
-    "https://localhost:5176",
-    "https://127.0.0.1:5176",
-    "https://localhost:5177",
-    "https://127.0.0.1:5177",
-    "https://localhost:5178",   # DS-Online (when other ports in use)
-    "https://127.0.0.1:5178",
-    "https://localhost:3000",   # Common dev port
-    "https://127.0.0.1:3000",
-    # Local dev fallback while frontend dev server still runs on HTTP.
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "http://localhost:5175",
-    "http://127.0.0.1:5175",
-    "http://localhost:5176",
-    "http://127.0.0.1:5176",
-    "http://localhost:5177",
-    "http://127.0.0.1:5177",
-    "http://localhost:5178",
-    "http://127.0.0.1:5178",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "https://dsonline.phrozen3d.info",
 }
 _extra_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
 if _extra_cors_origins.strip():

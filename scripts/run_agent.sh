@@ -40,6 +40,11 @@ if [ ! -f "$CLI_PATH" ]; then
 fi
 export SLICER_ENGINE_BIN="$CLI_PATH"
 
+# Local Vite origins are not hardcoded in agent/main.py; default them for scripts/run_agent.
+if [ -z "${CORS_ALLOWED_ORIGINS:-}" ]; then
+  export CORS_ALLOWED_ORIGINS="http://localhost:5173,https://localhost:5173,http://127.0.0.1:5173,https://127.0.0.1:5173"
+fi
+
 # TLS resolution order matches agent/config.py: env, then agent/tls/, then Bundle-Launcher (mac, win).
 if [ -n "${AGENT_TLS_CERTFILE:-}" ]; then
   CERT_PATH="$AGENT_TLS_CERTFILE"
