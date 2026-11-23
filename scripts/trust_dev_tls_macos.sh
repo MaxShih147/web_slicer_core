@@ -41,9 +41,7 @@ resolve_cert_path() {
   fi
   for c in \
     "$REPO_ROOT/agent/tls/localhost.crt" \
-    "$REPO_ROOT/tls/localhost.crt" \
-    "$REPO_ROOT/../Bundle-Launcher/bundle-mac/agent/tls/localhost.crt" \
-    "$REPO_ROOT/../Bundle-Launcher/bundle-win/agent/tls/localhost.crt"; do
+    "$REPO_ROOT/tls/localhost.crt"; do
     [[ -f "$c" ]] && { printf '%s' "$c"; return 0; }
   done
   return 1
@@ -94,7 +92,7 @@ fi
 CERT="$(resolve_cert_path)" || true
 if [[ -z "${CERT:-}" ]] || [[ ! -f "$CERT" ]]; then
   echo "TLS certificate not found."
-  echo "  Place PEM at: $REPO_ROOT/agent/tls/localhost.crt (or $REPO_ROOT/tls/localhost.crt)"
+  echo "  Generate your own dev cert (README Development) at: $REPO_ROOT/agent/tls/localhost.crt (or $REPO_ROOT/tls/localhost.crt)"
   echo "  Or set AGENT_TLS_CERTFILE, BUNDLE_TLS_CERT_PATH, or SSL_CERTFILE to an existing .crt/.pem."
   exit 1
 fi

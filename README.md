@@ -561,7 +561,21 @@ at — see `agent/preview_scale.py`.
 
 ### Backend Development
 
-From the **repository root** (the scripts run the agent with **HTTPS** on `https://127.0.0.1:5179` and require TLS cert/key; see `agent/tls/` or `scripts/trust_dev_tls_*.sh` / `scripts/trust_dev_tls_windows.ps1`).
+From the **repository root** (the scripts run the agent with **HTTPS** on `https://127.0.0.1:5179` and require a TLS cert/key).
+
+**Dev TLS certificate.** No certificate or key is committed to this repo, and the agent never falls back to a cert from Bundle-Launcher or any other checkout (the shared `localhost.key` that used to ship here leaked and must not be used). Either point `AGENT_TLS_CERTFILE` / `AGENT_TLS_KEYFILE` at your own cert and key, or generate a personal dev cert into `agent/tls/` (gitignored) once:
+
+```bash
+mkdir -p agent/tls
+openssl req -x509 -newkey rsa:2048 -nodes -days 825 \
+  -keyout agent/tls/localhost.key -out agent/tls/localhost.crt \
+  -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+  -addext "basicConstraints=critical,CA:FALSE" \
+  -addext "extendedKeyUsage=serverAuth"
+```
+
+The cert is `CA:FALSE`, so trusting it only vouches for `localhost`/`127.0.0.1`, not for other sites. Then trust it once with `scripts/trust_dev_tls_macos.sh` or `scripts/trust_dev_tls_windows.ps1`. Packaged installs don't use this: the Launcher creates a per-machine cert at install time and passes its path through the env vars above.
 
 **macOS / Linux**
 

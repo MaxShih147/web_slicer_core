@@ -158,11 +158,12 @@ scripts\run_agent.bat
 cert／key 解析順序（與 `run_agent.sh`／`agent/config.py` 一致）：
 
 1. 環境變數 `AGENT_TLS_CERTFILE`／`AGENT_TLS_KEYFILE`
-2. `agent/tls/localhost.crt`＋`agent/tls/localhost.key`
-3. `../Bundle-Launcher/bundle-mac/agent/tls/` 或 `bundle-win/agent/tls/`（若並列 checkout）
+2. 自己產生的開發憑證 `agent/tls/localhost.crt`＋`agent/tls/localhost.key`（已 gitignore）
+
+不再 fallback 到 `../Bundle-Launcher/...` 或任何打包內附的憑證：舊的共用 `localhost.key` 已外洩，不得再使用或複製。
 
 **cert 找不到時：**
-- 從 Bundle-Launcher 複製 `localhost.crt`／`localhost.key` 到 `agent/tls/`，或設上述環境變數。
+- 依 `README.md` Development 的 `openssl` 指令自行產生開發憑證到 `agent/tls/`，或設上述環境變數。**不要**從 Bundle-Launcher 或安裝包複製 `localhost.crt`／`localhost.key`。
 - 瀏覽器仍不信任：先跑 `trust_dev_tls_macos.sh`／`trust_dev_tls_windows.ps1`（把開發憑證加入系統信任）。
 - curl 測試：`curl -vk https://127.0.0.1:5179/`（`-k` 可略過驗證做煙測）。
 
@@ -727,7 +728,7 @@ CLI 參數與 PrusaSlicer 完全相同（`--export-sla` / `--export-support-stl`
 | PE icon gate FAIL | win | 確認 SoT `resources/icons/slicer-engine.ico` 存在且 clean 重編過 console；勿只改 package／rcedit。Explorer 清單舊圖≠PE 錯（Shell cache） |
 | agent 找不到 CLI | 雙 | 設 `SLICER_ENGINE_BIN` 指向 build tree 或正式包 binary |
 | Win QA 蓋掉 consumer staging | win | 用 bat `qa package`，或手動 `-OutRoot …\slicer-engine-qa`（見 §4.3） |
-| TLS／cert 找不到 | 雙 | 跑 `trust_dev_tls_*`；或準備 `agent/tls/localhost.crt|key`（§2.5） |
+| TLS／cert 找不到 | 雙 | 自行產生 `agent/tls/localhost.crt|key` 或設 `AGENT_TLS_*`，再跑 `trust_dev_tls_*`（§2.5） |
 | crash 報告抓錯檔 | 雙 | 用 pid＋時間對應；勿只取最新 `.ips`／`.dmp`（§6.1） |
 | atos／cdb 還原出亂名或失敗 | 雙 | UUID／GUID 與 `engine_build_id` 不一致；換對次 symbols（§6.2） |
 | 驗收堆疊出現 `Slic3r::` 但正式包應已 strip | 雙 | 測試機掛了私有 dSYM／PDB／`_NT_SYMBOL_PATH`；清空後重測（§6.1） |

@@ -46,16 +46,10 @@ def _resolve_tls_path(env_name: str, default_filename: str) -> Path:
     if env_value:
         return Path(env_value)
 
-    candidates = [
-        TLS_DIR / default_filename,
-        # Cross-repo dev fallback: reuse Bundle-Launcher prepared certs.
-        REPO_ROOT.parent / "Bundle-Launcher" / "bundle-mac" / "agent" / "tls" / default_filename,
-        REPO_ROOT.parent / "Bundle-Launcher" / "bundle-win" / "agent" / "tls" / default_filename,
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    # Keep primary default for clearer error message on startup.
+    # Dev-only fallback: a cert/key the developer generated themselves into
+    # agent/tls/ (gitignored). Packaged builds always get per-machine paths
+    # from the Launcher via the env vars above. Never fall back to a bundled
+    # or sibling-repo certificate: the old shared localhost key is compromised.
     return TLS_DIR / default_filename
 
 

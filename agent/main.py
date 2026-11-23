@@ -1100,7 +1100,8 @@ def main():
         raise RuntimeError(
             "TLS cert/key not found. "
             f"cert={TLS_CERT_PATH}, key={TLS_KEY_PATH}. "
-            "Provide AGENT_TLS_CERTFILE/AGENT_TLS_KEYFILE or prepare agent/tls/localhost.crt|key."
+            "Set AGENT_TLS_CERTFILE/AGENT_TLS_KEYFILE, or generate a dev cert into "
+            "agent/tls/localhost.crt|key (see README Development)."
         )
     uvicorn.run(
         app,

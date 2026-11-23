@@ -29,9 +29,7 @@ function Resolve-AgentCertPath {
     }
     $candidates = @(
         (Join-Path $RepoRoot 'agent\tls\localhost.crt'),
-        (Join-Path $RepoRoot 'tls\localhost.crt'),
-        (Join-Path $RepoRoot '..\Bundle-Launcher\bundle-mac\agent\tls\localhost.crt'),
-        (Join-Path $RepoRoot '..\Bundle-Launcher\bundle-win\agent\tls\localhost.crt')
+        (Join-Path $RepoRoot 'tls\localhost.crt')
     )
     foreach ($p in $candidates) {
         if (Test-Path -LiteralPath $p) { return $p }
@@ -93,7 +91,7 @@ function Ensure-WindowsTrust([string]$CertPath) {
 $certPath = Resolve-AgentCertPath
 if (-not $certPath) {
     Write-Host "TLS certificate not found."
-    Write-Host "  Place PEM at: $(Join-Path $RepoRoot 'agent\tls\localhost.crt') (or $(Join-Path $RepoRoot 'tls\localhost.crt'))"
+    Write-Host "  Generate your own dev cert (README Development) at: $(Join-Path $RepoRoot 'agent\tls\localhost.crt') (or $(Join-Path $RepoRoot 'tls\localhost.crt'))"
     Write-Host "  Or set AGENT_TLS_CERTFILE, BUNDLE_TLS_CERT_PATH, or SSL_CERTFILE to an existing .crt/.pem."
     exit 1
 }

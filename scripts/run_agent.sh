@@ -40,35 +40,16 @@ if [ ! -f "$CLI_PATH" ]; then
 fi
 export SLICER_ENGINE_BIN="$CLI_PATH"
 
-# TLS resolution order matches agent/config.py: env, then agent/tls/, then Bundle-Launcher (mac, win).
-if [ -n "${AGENT_TLS_CERTFILE:-}" ]; then
-  CERT_PATH="$AGENT_TLS_CERTFILE"
-else
-  CERT_PATH=""
-  for c in \
-    "$REPO_ROOT/agent/tls/localhost.crt" \
-    "$REPO_ROOT/../Bundle-Launcher/bundle-mac/agent/tls/localhost.crt" \
-    "$REPO_ROOT/../Bundle-Launcher/bundle-win/agent/tls/localhost.crt"; do
-    if [ -f "$c" ]; then CERT_PATH="$c"; break; fi
-  done
-fi
-if [ -n "${AGENT_TLS_KEYFILE:-}" ]; then
-  KEY_PATH="$AGENT_TLS_KEYFILE"
-else
-  KEY_PATH=""
-  for k in \
-    "$REPO_ROOT/agent/tls/localhost.key" \
-    "$REPO_ROOT/../Bundle-Launcher/bundle-mac/agent/tls/localhost.key" \
-    "$REPO_ROOT/../Bundle-Launcher/bundle-win/agent/tls/localhost.key"; do
-    if [ -f "$k" ]; then KEY_PATH="$k"; break; fi
-  done
-fi
+# TLS resolution order matches agent/config.py: env, then a self-generated dev cert in agent/tls/.
+# No fallback to Bundle-Launcher or any other bundled cert (the old shared key is compromised).
+CERT_PATH="${AGENT_TLS_CERTFILE:-$REPO_ROOT/agent/tls/localhost.crt}"
+KEY_PATH="${AGENT_TLS_KEYFILE:-$REPO_ROOT/agent/tls/localhost.key}"
 if [ -z "$CERT_PATH" ] || [ ! -f "$CERT_PATH" ] || [ -z "$KEY_PATH" ] || [ ! -f "$KEY_PATH" ]; then
     echo "ERROR: TLS cert/key not found."
     echo "Checked:"
     echo "  cert: $CERT_PATH"
     echo "  key : $KEY_PATH"
-    echo "Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or prepare agent/tls/localhost.crt|key."
+    echo "Set AGENT_TLS_CERTFILE and AGENT_TLS_KEYFILE, or generate a dev cert into agent/tls/localhost.crt|key (see README Development)."
     exit 1
 fi
 export AGENT_TLS_CERTFILE="$CERT_PATH"
