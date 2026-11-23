@@ -65,6 +65,20 @@
       "note": "Job 上沒有模型，或指定的 source 檔案不存在"
     },
     {
+      "code": "ORIGIN_FORBIDDEN",
+      "http_status": 403,
+      "retryable": false,
+      "owner": "python",
+      "note": "寫入請求的 Origin 不在 CORS 白名單"
+    },
+    {
+      "code": "PAYLOAD_TOO_LARGE",
+      "http_status": 413,
+      "retryable": false,
+      "owner": "python",
+      "note": "寫入請求 Content-Length 超過 500MB 上限"
+    },
+    {
       "code": "INVALID_MODEL",
       "http_status": 422,
       "retryable": false,

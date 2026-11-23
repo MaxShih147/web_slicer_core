@@ -61,6 +61,14 @@ def missing_body(message: str = "Required field or file is missing") -> APIError
     return APIError("MISSING_BODY", message, 400, retryable=False)
 
 
+def origin_forbidden(message: str = "Origin not allowed") -> APIError:
+    return APIError("ORIGIN_FORBIDDEN", message, 403, retryable=False)
+
+
+def payload_too_large(message: str = "Payload too large (max 500 MB)") -> APIError:
+    return APIError("PAYLOAD_TOO_LARGE", message, 413, retryable=False)
+
+
 def config_validation_error(message: str) -> APIError:
     return APIError("CONFIG_VALIDATION_ERROR", message, 422, retryable=False)
 

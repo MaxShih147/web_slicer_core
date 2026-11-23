@@ -41,6 +41,8 @@ from .api_v2 import (
     clear_pending_spool,
 )
 from . import power_throttling
+from .cors import cors_origins as _cors_origins, enable_cors as _enable_cors, cors_headers_for_request
+from .origin_write_guard import OriginWriteGuardMiddleware
 
 
 # uvicorn 只設定它自己的 logger，因此 `agent.*` 的訊息在實機上會被整個丟棄——
@@ -93,26 +95,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS configuration:
-# - shipped allowlist: SlicerGo Dental + production dsonline hosted UIs
-# - local / other transitional origins via CORS_ALLOWED_ORIGINS (comma-separated)
-# - onrender and ds-online.com origins are intentionally not hardcoded
-_cors_origins = {
-    "https://dev.slicergo-dental.phrozen3d.info",
-    "https://release.slicergo-dental.phrozen3d.info",
-    "https://slicergo-dental.phrozen3d.info",
-    "https://dsonline.phrozen3d.info",
-}
-_extra_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
-if _extra_cors_origins.strip():
-    _cors_origins.update(
-        origin.strip()
-        for origin in _extra_cors_origins.split(",")
-        if origin.strip()
-    )
-
-_enable_cors = os.getenv("ENABLE_CORS", "true").lower() in ("true", "1", "yes")
-
+# CORS: allowlist lives in agent.cors (shared with Origin write guard).
 if _enable_cors:
     app.add_middleware(
         CORSMiddleware,
@@ -121,6 +104,10 @@ if _enable_cors:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# Origin write gate: added after CORS so it is outermost; short-circuit responses
+# attach CORS headers themselves (see OriginWriteGuardMiddleware).
+app.add_middleware(OriginWriteGuardMiddleware)
 
 # Global exception handler to catch unhandled errors
 from fastapi.exceptions import RequestValidationError
@@ -133,13 +120,7 @@ from .errors import APIError, file_not_found, internal_error, job_not_found, job
 
 def _cors_headers(request: Request) -> dict:
     """Return CORS headers for the given request's origin, if allowed."""
-    headers = {}
-    if _enable_cors:
-        origin = request.headers.get("origin", "")
-        if origin in _cors_origins:
-            headers["access-control-allow-origin"] = origin
-            headers["access-control-allow-credentials"] = "true"
-    return headers
+    return cors_headers_for_request(request)
 
 
 @app.exception_handler(APIError)

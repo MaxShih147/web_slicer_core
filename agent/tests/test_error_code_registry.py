@@ -37,8 +37,8 @@ import pytest
 
 from agent.error_codes import ALL, ErrorCodeSpec
 
-EXPECTED_TOTAL = 34
-EXPECTED_OWNER_COUNTS = collections.Counter({"engine": 16, "python": 18})
+EXPECTED_TOTAL = 36
+EXPECTED_OWNER_COUNTS = collections.Counter({"engine": 16, "python": 20})
 
 
 class TestRegistryShape:

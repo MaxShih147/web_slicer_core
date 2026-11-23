@@ -32,6 +32,8 @@ hand-maintained prose and is left untouched by --write. -->
 | `JOB_STILL_PROCESSING` | 200 | true | Job 尚未完成，無法下載結果 |
 | `JOB_FAILED` | 409 | false | Job 執行失敗，無法下載結果 |
 | `MODEL_NOT_FOUND` | 404 | false | Job 上沒有模型，或指定的 source 檔案不存在 |
+| `ORIGIN_FORBIDDEN` | 403 | false | 寫入請求的 Origin 不在 CORS 白名單 |
+| `PAYLOAD_TOO_LARGE` | 413 | false | 寫入請求 Content-Length 超過 500MB 上限 |
 | `INVALID_MODEL` | 422 | false | STL 內容損壞、格式無效、或幾何載入失敗 |
 | `FILE_NOT_FOUND` | 404 | false | 輸出檔案不存在（job 完成但檔案遺失） |
 | `BOOLEAN_FAILED` | 422 | false | Boolean 幾何計算失敗（non-manifold、self-intersecting 等） |

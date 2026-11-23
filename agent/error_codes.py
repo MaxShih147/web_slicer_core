@@ -115,6 +115,20 @@ _GENERIC: Tuple[ErrorCodeSpec, ...] = (
         owner="python",
         note="Job 上沒有模型，或指定的 source 檔案不存在",
     ),
+    ErrorCodeSpec(
+        code="ORIGIN_FORBIDDEN",
+        http_status=403,
+        retryable=False,
+        owner="python",
+        note="寫入請求的 Origin 不在 CORS 白名單",
+    ),
+    ErrorCodeSpec(
+        code="PAYLOAD_TOO_LARGE",
+        http_status=413,
+        retryable=False,
+        owner="python",
+        note="寫入請求 Content-Length 超過 500MB 上限",
+    ),
 )
 
 # ─── model / mesh preprocessing codes ──────────────────────────────────────────
