@@ -76,7 +76,7 @@
       "http_status": 413,
       "retryable": false,
       "owner": "python",
-      "note": "寫入請求 Content-Length 超過 500MB 上限"
+      "note": "寫入請求 Content-Length 超過 550MB 上限"
     },
     {
       "code": "INVALID_MODEL",

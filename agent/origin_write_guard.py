@@ -3,7 +3,7 @@
 Rules (deliberately different from local-library-service):
 - Missing Origin → allow (local scripts).
 - Origin present but not in CORS allowlist → 403 ORIGIN_FORBIDDEN.
-- Origin allowed → enforce Content-Length ≤ 500 MiB before call_next.
+- Origin allowed → enforce Content-Length ≤ 550 MiB before call_next.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from .cors import cors_headers_for_request, cors_origins, enable_cors
 from .errors import origin_forbidden, payload_too_large
 
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
-MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MiB
+MAX_UPLOAD_BYTES = 550 * 1024 * 1024  # 550 MiB
 
 
 class OriginWriteGuardMiddleware(BaseHTTPMiddleware):
@@ -34,7 +34,7 @@ class OriginWriteGuardMiddleware(BaseHTTPMiddleware):
 
         origin = request.headers.get("origin")
         if not origin:
-            # No Origin → allow (local scripts). Do not apply the 500MB gate here.
+            # No Origin → allow (local scripts). Do not apply the 550MB gate here.
             return await call_next(request)
 
         if origin not in cors_origins:
