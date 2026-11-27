@@ -127,7 +127,7 @@ _GENERIC: Tuple[ErrorCodeSpec, ...] = (
         http_status=413,
         retryable=False,
         owner="python",
-        note="寫入請求 Content-Length 超過 500MB 上限",
+        note="寫入請求 Content-Length 超過 550MB 上限",
     ),
 )
 

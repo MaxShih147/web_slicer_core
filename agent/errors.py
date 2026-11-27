@@ -65,7 +65,7 @@ def origin_forbidden(message: str = "Origin not allowed") -> APIError:
     return APIError("ORIGIN_FORBIDDEN", message, 403, retryable=False)
 
 
-def payload_too_large(message: str = "Payload too large (max 500 MB)") -> APIError:
+def payload_too_large(message: str = "Payload too large (max 550 MB)") -> APIError:
     return APIError("PAYLOAD_TOO_LARGE", message, 413, retryable=False)
 
 
