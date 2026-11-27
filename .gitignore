@@ -127,3 +127,17 @@ scripts/raster_bench/work/
 /*.pwmo
 /*.pwms
 /*.pwmx
+
+
+#######################################
+# TLS material (never commit)
+#######################################
+
+# The shared localhost key once committed here leaked (2026-11 incident).
+# Packaged builds get per-machine certs from the Launcher; developers
+# generate their own dev cert into agent/tls/ (see README Development).
+agent/tls/*.key
+agent/tls/*.crt
+**/tls/*.key
+**/tls/*.crt
+**/tls/*.pem
